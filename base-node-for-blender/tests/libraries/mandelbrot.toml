@@ -1,0 +1,17 @@
+# i32 the Mandelbrot Set: its Geometry Nodes groups are not shipped in a .blend, the add-on's Python
+# (made with Node To Python) builds them. Its code was read before it was run: its one operator only
+# creates node groups and adds a Nodes modifier to the active object.
+name = "i32 the Mandelbrot Set"
+author = "Osipenkov | Art"
+homepage = "https://extensions.blender.org/add-ons/i32-the-mandelbrot-set/"
+license = "GPL-3.0-or-later"
+# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# committed: a new version is one line here. The baseline keeps names, statuses and hashes.
+# Needs Blender 5.2 or later (blender_version_min).
+version = "1.0.3"
+url = "https://extensions.blender.org/download/sha256:db3afe337e319b0a42ca1d4731c281924be16a7f583eb4f9f9ea27d9e9f81947/add-on-i32-the-mandelbrot-set-v1.0.3.zip"
+sha256 = "db3afe337e319b0a42ca1d4731c281924be16a7f583eb4f9f9ea27d9e9f81947"   # of the .zip
+
+[generate]
+# Installed in a throwaway user profile, then this operator, with an empty mesh object active.
+operator = "i32_the_mandelbrot_set.i32_the_mandelbrot_set_1"

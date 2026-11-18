@@ -1,0 +1,288 @@
+// Surface Deform Basic, from Cartesian Caramel's Everyday Nodes
+// Author: Cartesian Caramel
+// Source: https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1 (6c078f7)
+// License: CC0-1.0, https://creativecommons.org/publicdomain/zero/1.0/
+// Written by Base Node from tests/fixtures/everyday_geometry_nodes.blend;
+// to write it again: BASE_NODE_UPDATE_FIXTURES=1, see tests/fixtures/README.md
+
+geometry graph ".deform curves"(
+    Curves: Geometry,
+    "Deform Surface": Geometry
+) -> (Curves: Geometry) {
+  "deformation" {
+    position = Position() @ hide
+    separate_components = SeparateComponents(Curves)
+    domain_size = DomainSize(separate_components.curve, component: CURVE)
+    boolean_math = not domain_size.point_count @ hide
+    warning = Warning(show: boolean_math, message: "No Curves in Geometry")
+  }
+  "curve sample position" {
+    position_2 = Position() @ hide
+    evaluate_at_index = EvaluateAtIndex(
+      value: position_2,
+      index: PointsOfCurve().point_index,
+      data_type: FLOAT_VECTOR) @ hide
+    evaluate_on_domain = EvaluateOnDomain(
+      value: evaluate_at_index,
+      domain: CURVE,
+      data_type: FLOAT_VECTOR)
+  }
+  "rest" {
+    sample_nearest_surface = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation = AxesToRotation(
+      primary_axis: sample_nearest_surface_2.value,
+      secondary_axis: sample_nearest_surface_3.value) @ hide
+    combine_transform = CombineTransform(
+      translation: sample_nearest_surface.value,
+      rotation: axes_to_rotation) @ hide
+  }
+  "deform" {
+    sample_nearest_surface_4 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
+      sample_position: evaluate_on_domain,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation_2 = AxesToRotation(
+      primary_axis: sample_nearest_surface_5.value,
+      secondary_axis: sample_nearest_surface_6.value) @ hide
+    combine_transform_2 = CombineTransform(
+      translation: sample_nearest_surface_4.value,
+      rotation: axes_to_rotation_2) @ hide
+  }
+  "deformation" .. {
+    invert_matrix = InvertMatrix(matrix: combine_transform) @ hide
+    multiply_matrices = MultiplyMatrices(
+      Matrix: combine_transform_2,
+      Matrix_001: invert_matrix.matrix) @ hide
+    transform_point = TransformPoint(
+      vector: position,
+      transform: EvaluateOnDomain(
+        value: multiply_matrices,
+        domain: CURVE,
+        data_type: FLOAT4X4)) @ hide
+    switch = Switch(
+      switch: domain_size.point_count,
+      true_: SetPosition(separate_components.curve, position: transform_point),
+      input_type: GEOMETRY) @ hide
+  }
+  return (Curves: switch)
+}
+
+geometry graph ".deform instances"(
+    Instances: Geometry,
+    "Deform Surface": Geometry
+) -> (Instances: Geometry) {
+  "deformation" {
+    instance_transform = InstanceTransform() @ hide
+    separate_components = SeparateComponents(Instances)
+    domain_size = DomainSize(separate_components.instances, component: INSTANCES)
+    boolean_math = not domain_size @ hide
+  }
+  "rest" {
+    sample_nearest_surface = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation = AxesToRotation(
+      primary_axis: sample_nearest_surface_2.value,
+      secondary_axis: sample_nearest_surface_3.value) @ hide
+    combine_transform = CombineTransform(
+      translation: sample_nearest_surface.value,
+      rotation: axes_to_rotation) @ hide
+  }
+  "deform" {
+    sample_nearest_surface_4 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation_2 = AxesToRotation(
+      primary_axis: sample_nearest_surface_5.value,
+      secondary_axis: sample_nearest_surface_6.value) @ hide
+    combine_transform_2 = CombineTransform(
+      translation: sample_nearest_surface_4.value,
+      rotation: axes_to_rotation_2) @ hide
+  }
+  "deformation" .. {
+    invert_matrix = InvertMatrix(matrix: combine_transform) @ hide
+    multiply_matrices_2 = MultiplyMatrices(
+      Matrix: combine_transform_2,
+      Matrix_001: invert_matrix.matrix) @ hide
+    multiply_matrices = MultiplyMatrices(
+      Matrix: multiply_matrices_2,
+      Matrix_001: instance_transform) @ hide
+    switch = Switch(
+      switch: domain_size,
+      true_: SetInstanceTransform(separate_components.instances, transform: multiply_matrices),
+      input_type: GEOMETRY) @ hide
+  }
+  warning = Warning(show: boolean_math, message: "No Instances in Geometry")
+  return (Instances: switch)
+}
+
+geometry graph ".deform points"(Geometry: Geometry, "Deform Surface": Geometry) -> Geometry {
+  "Surface Deformation" {
+    position = Position() @ hide
+    separate_components = SeparateComponents(Geometry)
+  }
+  "rest" {
+    sample_nearest_surface = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation = AxesToRotation(
+      primary_axis: sample_nearest_surface_2.value,
+      secondary_axis: sample_nearest_surface_3.value) @ hide
+    combine_transform = CombineTransform(
+      translation: sample_nearest_surface.value,
+      rotation: axes_to_rotation) @ hide
+  }
+  "deform" {
+    sample_nearest_surface_4 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface(
+      deform_surface,
+      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
+      data_type: FLOAT_VECTOR) @ hide
+    axes_to_rotation_2 = AxesToRotation(
+      primary_axis: sample_nearest_surface_5.value,
+      secondary_axis: sample_nearest_surface_6.value) @ hide
+    combine_transform_2 = CombineTransform(
+      translation: sample_nearest_surface_4.value,
+      rotation: axes_to_rotation_2) @ hide
+  }
+  "Surface Deformation" .. {
+    invert_matrix = InvertMatrix(matrix: combine_transform) @ hide
+    multiply_matrices = MultiplyMatrices(
+      Matrix: combine_transform_2,
+      Matrix_001: invert_matrix.matrix) @ hide
+    transform_point = TransformPoint(vector: position, transform: multiply_matrices) @ hide
+    set_position = SetPosition(
+      separate_components.mesh
+        + separate_components.curve
+        + separate_components.grease_pencil
+        + separate_components.point_cloud,
+      position: transform_point)
+  }
+  return set_position
+}
+
+geometry graph "Surface Deform Basic"(
+    Geometry: Geometry,
+    Mode: Menu(
+      description: "Which geometry the modifier will operate on",
+      optional_label: true) = "Mesh/Points",
+    "Surface Object": Object(optional_label: true),
+    "Surface rest_position": String(optional_label: true) = "rest_position",
+    UVMap: String(optional_label: true) = "UVMap",
+    "Show Surface rest_position": Bool
+) -> Geometry {
+  "Deform geometry by mesh surface"
+  "rest position" {
+    named_attribute = NamedAttribute(name: surface_rest_position, data_type: FLOAT_VECTOR)
+  }
+  "deform object" {
+    object_info = ObjectInfo(object: surface_object, transform_space: RELATIVE)
+  }
+  "deform loc,nrm,tan" {
+    position = Position() @ hide
+    normal = Normal(legacy_corner_normals: true) @ hide
+  }
+  "rest loc,nrm,tan" {
+    position_2 = Position() @ hide
+    normal_2 = Normal(legacy_corner_normals: true) @ hide
+  }
+  "smooth tangent" {
+    uvtangent = UVTangent(uv: NamedAttribute(name: UVMap, data_type: FLOAT_VECTOR).attribute)
+  }
+  "deform loc,nrm,tan" .. {
+    store_named_attribute = object_info.geometry
+      |> StoreNamedAttribute(name: "dp", value: position, data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute(name: "dn", value: normal.normal, data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute(name: "dt", value: uvtangent, data_type: FLOAT_VECTOR, domain: CORNER)
+  }
+  "rest position" .. {
+    set_position = SetPosition(store_named_attribute, position: named_attribute.attribute) @ hide
+    vector_math = length(
+      AttributeStatistic(
+        store_named_attribute,
+        attribute: named_attribute.attribute,
+        data_type: FLOAT_VECTOR).range) @ hide
+    compare = vector_math == 0.0 @ hide
+    switch = Switch(switch: compare, false_: set_position, input_type: GEOMETRY) @ hide
+  }
+  "rest loc,nrm,tan" .. {
+    store_named_attribute_2 = switch
+      |> StoreNamedAttribute(name: "rp", value: position_2, data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute(name: "rn", value: normal_2.normal, data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute(name: "rt", value: uvtangent, data_type: FLOAT_VECTOR, domain: CORNER)
+  }
+  warning = Warning(show: compare, message: "Invalid rest_position on surface object")
+  "debug" {
+    geometry_to_instance = GeometryToInstance(switch) @ hide
+    join_geometry = Geometry + geometry_to_instance
+  }
+  switch_2 = Switch(
+    switch: show_surface_rest_position,
+    false_: MenuSwitch(
+      menu: Mode,
+      "Mesh/Points": deform_points(Geometry, deform_surface: store_named_attribute_2),
+      Curves: deform_curves(Geometry, deform_surface: store_named_attribute_2),
+      Instances: deform_instances(Geometry, deform_surface: store_named_attribute_2)).output,
+    true_: join_geometry,
+    input_type: GEOMETRY) @ hide
+  return switch_2
+}

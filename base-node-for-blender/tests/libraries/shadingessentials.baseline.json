@@ -1,0 +1,25 @@
+{
+ "library": "Shading Nodes Essentials",
+ "version": "Blender 5.3.0",
+ "sha256": "ffdaf64a4777233f6e47799bad17825a6c1e07c500eb1d9d0c23997f745327ee",
+ "blender": "5.3.0",
+ "summary": "4 ok",
+ "groups": {
+  "Combine Cylindrical": {
+   "status": "ok",
+   "text": "3f9f15c98b4e1286"
+  },
+  "Combine Spherical": {
+   "status": "ok",
+   "text": "2afd3cec34934526"
+  },
+  "Separate Cylindrical": {
+   "status": "ok",
+   "text": "3539ee5497d857a8"
+  },
+  "Separate Spherical": {
+   "status": "ok",
+   "text": "49cdb91b601a9656"
+  }
+ }
+}

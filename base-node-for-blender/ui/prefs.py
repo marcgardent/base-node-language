@@ -1,0 +1,126 @@
+from types import SimpleNamespace
+
+import bpy
+
+# The add-on's own package: "base_node" from the sources, "bl_ext.<repo>.base_node" once installed
+ROOT = __package__.rpartition(".")[0]
+
+KEYS = (
+    ("CTRL", "Ctrl+Space", "The developers' standard. In .bn texts only, in place of Blender's Maximize Area: "
+                           "Ctrl+Alt+Space still shows the area full screen"),
+    ("ALT", "Alt+Space", "Free in Blender; KDE sometimes uses it for KRunner"),
+    ("SHIFT", "Shift+Space", "Always free, less convenient"),
+)
+
+HIGHLIGHT_MODES = (
+    ("standard", "Standard Syntax", "Classic syntax highlighting"),
+    ("origin", "Origin (Stdlib vs Local)", "Differentiate standard library modules and namespaces from local graphs"),
+)
+
+# When the add-on runs from the sources (tests), it has no preferences entry
+DEFAULTS = SimpleNamespace(
+    complete_key="CTRL", auto_complete=False, live_apply=True, show_comments=True, signature=True, highlight=True, pipe_symbol=True, module_folder="",
+    highlight_mode="standard",
+    color_stdlib=(0.0, 0.78, 0.65), color_local=(0.95, 0.75, 0.20), color_warning=(0.95, 0.30, 0.25)
+)
+
+
+def get():
+    addon = bpy.context.preferences.addons.get(ROOT)
+    return addon.preferences if addon else DEFAULTS
+
+
+def apply_folders(self=None, context=None):
+    """Give the host the folders where `use name` looks for name.bn: the user's one, then the bundled stdlib."""
+    from ..host import modules
+    folder = get().module_folder
+    modules.FOLDERS[:] = ([folder] if folder else []) + [modules.STDLIB]
+
+
+def redraw_nodes():
+    for win in bpy.context.window_manager.windows:
+        for area in win.screen.areas:
+            if area.type == "NODE_EDITOR":
+                area.tag_redraw()
+
+
+def update_keys(self, context):
+    from . import keys
+    keys.bind()
+
+
+class BaseNodePreferences(bpy.types.AddonPreferences):
+    bl_idname = ROOT
+
+    complete_key: bpy.props.EnumProperty(
+        name="Suggestions", items=KEYS, default="CTRL", update=update_keys,
+        description="Shortcut that opens suggestions in a .bn text editor")
+    module_folder: bpy.props.StringProperty(
+        name="Module Folder", subtype="DIR_PATH", update=apply_folders,
+        description="Where `use name` finds name.bn when the .blend has no text of that name, "
+                    "before the standard library bundled with the add-on")
+    auto_complete: bpy.props.BoolProperty(
+        name="Open after ( , . :", default=False,
+        description="Suggestions open automatically after a parenthesis, comma, period, or colon")
+    live_apply: bpy.props.BoolProperty(
+        name="Apply while typing", default=True,
+        description="In the text of a tree, the tree follows the text as soon as it is valid. "
+                    "Otherwise Alt+P applies it")
+    show_comments: bpy.props.BoolProperty(
+        name="Show comments in the nodes", default=True, update=lambda self, context: redraw_nodes(),
+        description="Draw the comments of the text above the nodes that keep them, in the Node Editor")
+    signature: bpy.props.BoolProperty(
+        name="Show the call's inputs", default=True,
+        description="Under the line, the inputs and outputs of the call the cursor is in")
+    highlight: bpy.props.BoolProperty(
+        name="Highlight", default=True,
+        description="Highlight keywords, nodes, types, and values in .bn text files")
+    pipe_symbol: bpy.props.BoolProperty(
+        name="Show |> as ▷", default=True,
+        description="Draw the pipe as one symbol, except on the lines the cursor or the selection is on. "
+                    "The text keeps |>")
+
+    # Syntax highlighting; a text's `// @target` colors what it uses outside its targets
+    highlight_mode: bpy.props.EnumProperty(
+        name="Highlight Mode", items=HIGHLIGHT_MODES, default="standard",
+        description="Syntax coloring scheme and namespace visualization")
+    color_stdlib: bpy.props.FloatVectorProperty(
+        name="Stdlib / Namespace", subtype="COLOR", size=3, default=(0.0, 0.78, 0.65), min=0.0, max=1.0,
+        description="Highlight color for standard library modules and namespaces (ink2d::, math::)")
+    color_local: bpy.props.FloatVectorProperty(
+        name="Local Graphs", subtype="COLOR", size=3, default=(0.95, 0.75, 0.20), min=0.0, max=1.0,
+        description="Highlight color for user-defined local graphs")
+    color_warning: bpy.props.FloatVectorProperty(
+        name="Non-Portable / Warning", subtype="COLOR", size=3, default=(0.95, 0.30, 0.25), min=0.0, max=1.0,
+        description="Highlight color for what a text uses outside the targets its // @target promises")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "module_folder")
+
+        box_edit = layout.box()
+        box_edit.label(text="Editor & Suggestions", icon="TEXT")
+        box_edit.prop(self, "complete_key")
+        if self.complete_key == "CTRL":
+            box_edit.label(text="In .bn texts, Ctrl+Alt+Space still shows the area full screen", icon="INFO")
+        box_edit.prop(self, "auto_complete")
+        box_edit.prop(self, "live_apply")
+        box_edit.prop(self, "show_comments")
+        box_edit.prop(self, "signature")
+        box_edit.prop(self, "highlight")
+        box_edit.prop(self, "pipe_symbol")
+
+        box_color = layout.box()
+        box_color.label(text="Syntax Coloring", icon="COLOR")
+        box_color.prop(self, "highlight_mode")
+        if self.highlight:
+            col = box_color.column(align=True)
+            col.prop(self, "color_stdlib")
+            col.prop(self, "color_local")
+            col.prop(self, "color_warning")
+
+        layout.label(text="Alt+Z switches an area between a tree and its text; Alt+P applies the text.",
+                     icon="INFO")
+
+
+classes = (BaseNodePreferences,)

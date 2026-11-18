@@ -1,0 +1,180 @@
+"""Render the compositor showcases of the standard library into site/images.
+
+Each showcase is a `.bn` file of examples/ whose last graph becomes the scene's compositor; the
+scene is rendered by Cycles at 640×360 and saved as site/images/<module>.png.
+
+    blender --background --factory-startup --python examples/render_compositor_showcases.py [-- name ...]
+
+With names (mask2d, merge, passes, grade, keying, light, stmap, vr360, grain, qc), only those are rendered.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import math
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+EXT = ROOT / "base-node-for-blender"
+_spec = importlib.util.spec_from_file_location("base_node", EXT / "__init__.py", submodule_search_locations=[str(EXT)])
+base_node = importlib.util.module_from_spec(_spec)
+sys.modules["base_node"] = base_node
+_spec.loader.exec_module(base_node)
+
+import bpy  # noqa: E402
+from mathutils import Vector  # noqa: E402
+
+W, H = 640, 360
+
+
+def empty_scene(scene):
+    """Nothing to render: the showcase draws everything."""
+
+
+def passes_scene(scene):
+    """Three objects on a floor, under a sun and a sky, with the passes that rebuild the beauty."""
+    def material(name, color, roughness, metallic=0.0):
+        m = bpy.data.materials.new(name)
+        bsdf = m.node_tree.nodes["Principled BSDF"]
+        bsdf.inputs["Base Color"].default_value = color
+        bsdf.inputs["Roughness"].default_value = roughness
+        bsdf.inputs["Metallic"].default_value = metallic
+        return m
+
+    def add(op, mat, **kw):
+        op(**kw)
+        o = bpy.context.active_object
+        o.data.materials.append(mat)
+        return o
+
+    add(bpy.ops.mesh.primitive_plane_add, material("floor", (0.55, 0.52, 0.48, 1), 0.6), size=30)
+    s = add(bpy.ops.mesh.primitive_uv_sphere_add, material("red", (0.8, 0.12, 0.08, 1), 0.25),
+            radius=1.0, location=(-2.2, 0.0, 1.0), segments=64, ring_count=32)
+    bpy.ops.object.shade_smooth()
+    add(bpy.ops.mesh.primitive_cube_add, material("blue", (0.1, 0.3, 0.8, 1), 0.5),
+        size=1.6, location=(0.4, 1.2, 0.8), rotation=(0, 0, 0.5))
+    t = add(bpy.ops.mesh.primitive_torus_add, material("gold", (0.9, 0.65, 0.25, 1), 0.2, 1.0),
+            location=(2.6, -0.6, 0.35), major_radius=0.9, minor_radius=0.35)
+    bpy.ops.object.shade_smooth()
+    del s, t
+
+    sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
+    sun.data.energy, sun.data.angle = 3.0, math.radians(4)
+    sun.rotation_euler = (math.radians(50), 0, math.radians(30))
+    scene.collection.objects.link(sun)
+    world = bpy.data.worlds.new("sky")
+    world.color = (0.25, 0.32, 0.45)
+    scene.world = world
+
+    camera = bpy.data.objects.new("camera", bpy.data.cameras.new("camera"))
+    camera.location = (0.0, -9.0, 3.6)
+    camera.rotation_euler = (math.radians(74), 0, 0)
+    scene.collection.objects.link(camera)
+    scene.camera = camera
+    scene.cycles.samples = 64
+
+    layer = scene.view_layers[0]
+    for kind in ("diffuse", "glossy", "transmission"):
+        for part in ("direct", "indirect", "color"):
+            setattr(layer, f"use_pass_{kind}_{part}", True)
+    for p in ("use_pass_emit", "use_pass_environment", "use_pass_z", "use_pass_normal", "use_pass_position"):
+        setattr(layer, p, True)
+
+
+def light_scene(scene):
+    """The scene of the passes showcase with emissive balls and a glowing ring among its objects."""
+    passes_scene(scene)
+
+    def emitter(name, color, strength):
+        m = bpy.data.materials.new(name)
+        m.use_nodes = True
+        nodes = m.node_tree.nodes
+        nodes.clear()
+        emission = nodes.new("ShaderNodeEmission")
+        emission.inputs["Color"].default_value = color
+        emission.inputs["Strength"].default_value = strength
+        output = nodes.new("ShaderNodeOutputMaterial")
+        m.node_tree.links.new(emission.outputs[0], output.inputs[0])
+        return m
+
+    # Lamps placed by where they show: x and y across the frame from 0 to 1, at a distance from the camera
+    bpy.context.view_layer.update()
+    camera = scene.camera
+    half = math.tan(camera.data.angle / 2)
+    lamps = ((0.2, 0.82, 6.0, (1.0, 0.75, 0.4, 1)), (0.47, 0.6, 6.5, (0.5, 0.8, 1.0, 1)),
+             (0.88, 0.84, 7.0, (1.0, 0.4, 0.7, 1)), (0.13, 0.3, 5.0, (0.7, 1.0, 0.6, 1)),
+             (0.43, 0.38, 5.5, (1.0, 0.85, 0.6, 1)), (0.93, 0.33, 6.0, (0.6, 0.7, 1.0, 1)))
+    for i, (u, v, d, color) in enumerate(lamps):
+        ray = Vector(((u - 0.5) * 2 * half, (v - 0.5) * 2 * half * H / W, -1.0)) * d
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.07, location=camera.matrix_world @ ray)
+        bpy.context.active_object.data.materials.append(emitter(f"lamp {i}", color, 20.0))
+    bpy.ops.mesh.primitive_torus_add(location=(0.4, 1.2, 2.0), major_radius=0.7, minor_radius=0.04,
+                                     rotation=(math.radians(70), 0, 0))
+    bpy.context.active_object.data.materials.append(emitter("ring", (1.0, 0.85, 0.6, 1), 6.0))
+
+
+def panorama_scene(scene):
+    """The scene of the passes showcase seen all around: an equirectangular camera among its objects, at 2:1."""
+    passes_scene(scene)
+    camera = scene.camera
+    camera.data.type = "PANO"
+    camera.data.panorama_type = "EQUIRECTANGULAR"
+    camera.location = (0.0, -2.6, 1.2)
+    camera.rotation_euler = (math.radians(90), 0, 0)
+    scene.render.resolution_y = W // 2
+    world = bpy.data.worlds.new("sky texture")
+    world.use_nodes = True
+    nodes = world.node_tree.nodes
+    sky = nodes.new("ShaderNodeTexSky")
+    sky.sun_elevation, sky.sun_rotation, sky.sun_disc = math.radians(25), math.radians(150), False
+    nodes["Background"].inputs["Strength"].default_value = 0.04
+    world.node_tree.links.new(sky.outputs["Color"], nodes["Background"].inputs["Color"])
+    scene.world = world
+
+
+SHOWCASES = {
+    "mask2d": ("mask2d_showcase.bn", empty_scene),
+    "merge": ("merge_showcase.bn", empty_scene),
+    "grade": ("grade_showcase.bn", passes_scene),
+    "stmap": ("stmap_showcase.bn", empty_scene),
+    "qc": ("qc_showcase.bn", passes_scene),
+}
+
+
+def render(name):
+    filename, setup = SHOWCASES[name]
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    base_node.register()
+    from base_node.host import build_source
+
+    scene = bpy.context.scene
+    scene.name = "Scene"
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples, scene.cycles.device = 1, "CPU"
+    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = W, H, 100
+    scene.render.image_settings.file_format = "PNG"
+    scene.view_settings.view_transform = "Standard"
+    setup(scene)
+    if scene.camera is None:
+        camera = bpy.data.objects.new("camera", bpy.data.cameras.new("camera"))
+        scene.collection.objects.link(camera)
+        scene.camera = camera
+
+    path = ROOT / "examples" / filename
+    trees = build_source(path.read_text(encoding="utf-8"), str(path))
+    scene.compositing_node_group = trees[-1]
+    scene.render.filepath = str(ROOT / "site" / "images" / f"{name}.png")
+    bpy.ops.render.render(write_still=True)
+    base_node.unregister()
+    print(f"rendered {filename} -> site/images/{name}.png")
+
+
+def main():
+    names = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else list(SHOWCASES)
+    for name in names:
+        render(name)
+
+
+if __name__ == "__main__":
+    main()

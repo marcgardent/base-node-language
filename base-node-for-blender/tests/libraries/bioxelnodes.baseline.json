@@ -1,0 +1,157 @@
+{
+ "library": "Bioxel Nodes",
+ "version": "v2.0.4",
+ "sha256": "7768cf857939494c527f223267d08c7ad2da8933188899dadca9949630fd3f87",
+ "blender": "5.3.0",
+ "summary": "34 ok",
+ "groups": {
+  "Geometry Nodes": {
+   "status": "ok",
+   "text": "84f6cfa1457ad818",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "NodeGroup": {
+   "status": "ok",
+   "text": "907e92a8baa6eb51"
+  },
+  "Normal Selection": {
+   "status": "ok",
+   "text": "720a42fee161736b"
+  },
+  "O Bioxel Nodes": {
+   "status": "ok",
+   "text": "89c1b812534bb7a3",
+   "warnings": [
+    "'O Region Selection': Group node with no tree, written as Group()"
+   ]
+  },
+  "O Build Structure": {
+   "status": "ok",
+   "text": "9ea0eef72341625a"
+  },
+  "O Color Layer to Color": {
+   "status": "ok",
+   "text": "6ce0696a7ac814fd"
+  },
+  "O Crop Layer": {
+   "status": "ok",
+   "text": "3100644a4d5c2ff9"
+  },
+  "O Cut Small Parts": {
+   "status": "ok",
+   "text": "3658350b84ea43c0"
+  },
+  "O Cut Structure": {
+   "status": "ok",
+   "text": "62d989b504c62d51"
+  },
+  "O Cut to Region": {
+   "status": "ok",
+   "text": "b8d1304f7c13d28b"
+  },
+  "O Cutout by Hue": {
+   "status": "ok",
+   "text": "e13820672e6b03d8"
+  },
+  "O Cutout by Label": {
+   "status": "ok",
+   "text": "c8ce7268730f1b7d"
+  },
+  "O Cutout by Luminous": {
+   "status": "ok",
+   "text": "bf9444c95bbedfdb"
+  },
+  "O Cutout by Range": {
+   "status": "ok",
+   "text": "550b87cc757c7552"
+  },
+  "O Cutout by Threshold": {
+   "status": "ok",
+   "text": "d64f43c422b39817"
+  },
+  "O Debug Layer": {
+   "status": "ok",
+   "text": "768dd5ded924809d"
+  },
+  "O Debug Structure": {
+   "status": "ok",
+   "text": "456123c0b9f9d7ad"
+  },
+  "O Float to Target Digits": {
+   "status": "ok",
+   "text": "596dcac6d53fb3fb"
+  },
+  "O Grid Info": {
+   "status": "ok",
+   "text": "c633dea17427593d"
+  },
+  "O Label Layer to Factor": {
+   "status": "ok",
+   "text": "798559694b8549e9"
+  },
+  "O Layer": {
+   "status": "ok",
+   "text": "9925dfbbeb9ec82d"
+  },
+  "O Layer Info": {
+   "status": "ok",
+   "text": "02fe99faddd364d5"
+  },
+  "O Mesh to Layer": {
+   "status": "ok",
+   "text": "74b46e2b535d8655",
+   "warnings": [
+    "'O Region Selection': Group node with no tree, written as Group()"
+   ]
+  },
+  "O Realize Structure": {
+   "status": "ok",
+   "text": "37d60a5e5926939d"
+  },
+  "O Resample Layer": {
+   "status": "ok",
+   "text": "e1879ca1aea5042d"
+  },
+  "O Sample Layer": {
+   "status": "ok",
+   "text": "37c61c7d51e2c15c"
+  },
+  "O Scalar Layer to Color": {
+   "status": "ok",
+   "text": "23ed1855f9c20bec"
+  },
+  "O Scalar Layer to Factor": {
+   "status": "ok",
+   "text": "0df42e56e8f72bde"
+  },
+  "O Separate Color Layer": {
+   "status": "ok",
+   "text": "1aa7cf468cffd6d7"
+  },
+  "O Slice": {
+   "status": "ok",
+   "text": "a7116378b40c1fe3"
+  },
+  "O Slice View": {
+   "status": "ok",
+   "text": "bea22eb1223dd292",
+   "warnings": [
+    "'Group.003': Group node with no tree, written as Group()"
+   ]
+  },
+  "O Structure to Mesh": {
+   "status": "ok",
+   "text": "b6dd5af6d0c87a86"
+  },
+  "O Transform Layer": {
+   "status": "ok",
+   "text": "f831be4e8ef6a98d"
+  },
+  "O Zero Padding": {
+   "status": "ok",
+   "text": "435e4754c2936835"
+  }
+ }
+}

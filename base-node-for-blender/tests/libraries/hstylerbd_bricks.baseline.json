@@ -1,0 +1,37 @@
+{
+ "library": "H-Style RBD Nodes",
+ "version": "d9a22d0",
+ "sha256": "2a27fbb092a8a16069e09047be6eb8856f784a07f1a194de83cae8ba5df4164d",
+ "blender": "5.3.0",
+ "summary": "7 ok",
+ "groups": {
+  "RBD Assemble": {
+   "status": "ok",
+   "text": "8de5c286d9b67e08"
+  },
+  "RBD Bricks": {
+   "status": "ok",
+   "text": "31e4a6c14bbec432"
+  },
+  "RBD Bullet Solver": {
+   "status": "ok",
+   "text": "9cc49b3bb374448f"
+  },
+  "RBD Configure": {
+   "status": "ok",
+   "text": "54f2e2e499240967"
+  },
+  "RBD Constraints From Rules": {
+   "status": "ok",
+   "text": "3905101baf5a702b"
+  },
+  "RBD Playback": {
+   "status": "ok",
+   "text": "79f4663a3fb3d782"
+  },
+  "RBD Select": {
+   "status": "ok",
+   "text": "6b8418e31f5efac9"
+  }
+ }
+}

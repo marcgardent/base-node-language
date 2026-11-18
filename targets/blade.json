@@ -1,0 +1,146 @@
+{
+  "name": "blade",
+  "description": "Blade's Pixel Nodes (blenderFramework: bf-raster, bf-neural, Cartography): image filters, color, classes, neural networks",
+  "kinds": [
+    "pixel"
+  ],
+  "types": [
+    "Bool",
+    "Classes",
+    "Color",
+    "Float",
+    "Image",
+    "Int",
+    "Vector"
+  ],
+  "zones": [],
+  "implicit": [],
+  "nodes": [
+    "AutoLevels",
+    "Bilateral",
+    "Blur",
+    "BooleanMath",
+    "BrightnessContrast",
+    "ChannelMixer",
+    "ClassColors",
+    "Classifier",
+    "ColorMatch",
+    "ColorRamp",
+    "CombineColor",
+    "CombineHSL",
+    "CombineHSV",
+    "CombineLCh",
+    "CombineLab",
+    "CombineRGB",
+    "CombineYCbCr",
+    "Compare",
+    "Curves",
+    "DenoiseJPEG",
+    "DetectLines",
+    "DetectMapText",
+    "DetectPenStrokes",
+    "DetectText",
+    "DilateErode",
+    "FillClasses",
+    "Flatten",
+    "HueSaturationValue",
+    "Inpaint",
+    "Invert",
+    "Levels",
+    "Math",
+    "Median",
+    "Mix",
+    "NamedLayer",
+    "Posterize",
+    "RemoveText",
+    "SeparateColor",
+    "SeparateHSL",
+    "SeparateHSV",
+    "SeparateLCh",
+    "SeparateLab",
+    "SeparateRGB",
+    "SeparateYCbCr",
+    "SetPixel",
+    "Threshold",
+    "UnsharpMask",
+    "WhiteBalance"
+  ],
+  "translators": {
+    "blender-compositor": {
+      "kinds": {
+        "compositor": "pixel"
+      },
+      "nodes": {
+        "BilateralBlur": {
+          "node": "Bilateral",
+          "inputs": {
+            "size": "radius",
+            "threshold": "tolerance"
+          }
+        },
+        "Blur": {
+          "node": "Blur",
+          "inputs": {
+            "size": "radius"
+          }
+        },
+        "BooleanMath": {
+          "node": "BooleanMath",
+          "inputs": {
+            "Boolean": "a",
+            "Boolean_001": "b"
+          }
+        },
+        "BrightnessContrast": "BrightnessContrast",
+        "ColorRamp": {
+          "node": "ColorRamp",
+          "inputs": {
+            "factor": "image"
+          },
+          "settings": {
+            "color_ramp": "ramp"
+          }
+        },
+        "CombineColor": "CombineColor",
+        "Compare": "Compare",
+        "HueSaturationValue": "HueSaturationValue",
+        "InvertColor": {
+          "node": "Invert",
+          "inputs": {
+            "color": "image"
+          }
+        },
+        "Kuwahara": "blender_interop::kuwahara",
+        "Math": {
+          "node": "Math",
+          "inputs": {
+            "Value": "a",
+            "Value_001": "b"
+          }
+        },
+        "Mix": {
+          "node": "Mix",
+          "settings": {
+            "blend_type": "blend"
+          }
+        },
+        "MixLegacy": {
+          "node": "Mix",
+          "inputs": {
+            "color1": "a",
+            "color2": "b"
+          },
+          "settings": {
+            "blend_type": "blend"
+          }
+        },
+        "Posterize": "Posterize",
+        "RGBCurves": "Curves",
+        "SeparateColor": "SeparateColor"
+      }
+    }
+  },
+  "bridges": [
+    "blade/blender_interop.bn"
+  ]
+}

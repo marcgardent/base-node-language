@@ -1,0 +1,327 @@
+// Base Node Standard Library — Module merge
+// @module merge
+// @version 0.12.0
+// @target blender-compositor
+// @edition 2026
+
+// The Merge operations of compositing, on premultiplied images as the compositor gives them.
+// Each one puts the image a over the image b, as in `fg |> over(bg)`, and works on the four
+// channels: the formula of its comment is the one of red, green, blue and alpha alike, a and b
+// being the alphas of the two images. mix and mask fade the result back to b: b where they are 0.
+// `in`, `out`, `atop`, `stencil` and `mask` are the operators of Porter and Duff; `exclusive or` is
+// their xor, a word the language keeps.
+
+// ---- Alpha ----
+
+compositor graph "alpha of"(image: Color) -> Float {
+  "Alpha of the image"
+  return SeparateColor(image).alpha
+}
+
+compositor graph "with alpha"(image: Color, alpha: Float = 1.0) -> Color {
+  "The colors of the image with this alpha, unchanged"
+  return SetAlpha(image, alpha: alpha, type: "Replace Alpha")
+}
+
+compositor graph premult(image: Color) -> Color {
+  "Colors multiplied by the alpha: a straight image made premultiplied"
+  alpha = alpha_of(image)
+  return with_alpha(image * alpha, alpha)
+}
+
+compositor graph unpremult(image: Color) -> Color {
+  "Colors divided by the alpha, 0 where it is 0: a premultiplied image made straight"
+  alpha = alpha_of(image)
+  return with_alpha(image / alpha, alpha)
+}
+
+compositor graph "copy alpha"(image: Color, from: Color) -> Color {
+  "The colors of the image with the alpha of another"
+  return with_alpha(image, alpha_of(from))
+}
+
+// ---- Combining ----
+
+compositor graph "weighted sum"(a: Color, wa: Float = 1.0, b: Color, wb: Float = 1.0) -> Color {
+  "a times wa plus b times wb, on the four channels"
+  return with_alpha(a * wa + b * wb, alpha_of(a) * wa + alpha_of(b) * wb)
+}
+
+compositor graph keymix(
+    a: Color,
+    b: Color,
+    mask: Float = 1.0 in 0.0..1.0,
+    mix: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "a where the mask is 1, b where it is 0, on the four channels"
+  t = mask * mix
+  return weighted_sum(a, t, b, 1.0 - t)
+}
+
+compositor graph "channel sqrt"(image: Color) -> Color {
+  "Square root of each of the four channels, 0 below 0"
+  c = SeparateColor(image)
+  return CombineColor(
+    red: sqrt(max(c.red, 0.0)),
+    green: sqrt(max(c.green, 0.0)),
+    blue: sqrt(max(c.blue, 0.0)),
+    alpha: sqrt(max(c.alpha, 0.0)))
+}
+
+// ---- Porter-Duff ----
+
+compositor graph over(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A + B(1 - a): a in front of b"
+  return keymix(weighted_sum(a, 1.0, b, 1.0 - alpha_of(a)), b, mask, mix)
+}
+
+compositor graph under(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A(1 - b) + B: a behind b"
+  return keymix(weighted_sum(a, 1.0 - alpha_of(b), b, 1.0), b, mask, mix)
+}
+
+compositor graph in(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "Ab: a where b is"
+  return keymix(weighted_sum(a, alpha_of(b), b, 0.0), b, mask, mix)
+}
+
+compositor graph out(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A(1 - b): a where b is not"
+  return keymix(weighted_sum(a, 1.0 - alpha_of(b), b, 0.0), b, mask, mix)
+}
+
+compositor graph atop(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "Ab + B(1 - a): a over b, only where b is"
+  return keymix(weighted_sum(a, alpha_of(b), b, 1.0 - alpha_of(a)), b, mask, mix)
+}
+
+compositor graph "exclusive or"(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A(1 - b) + B(1 - a): a and b where the other is not (xor)"
+  return keymix(weighted_sum(a, 1.0 - alpha_of(b), b, 1.0 - alpha_of(a)), b, mask, mix)
+}
+
+compositor graph stencil(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "B(1 - a): b with a cut out of it"
+  return keymix(weighted_sum(a, 0.0, b, 1.0 - alpha_of(a)), b, mask, mix)
+}
+
+compositor graph mask(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "Ba: b only where a is"
+  return keymix(weighted_sum(a, 0.0, b, alpha_of(a)), b, mask, mix)
+}
+
+compositor graph matte(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "Aa + B(1 - a): over, for a straight (unpremultiplied) a"
+  aa = alpha_of(a)
+  return keymix(weighted_sum(a, aa, b, 1.0 - aa), b, mask, mix)
+}
+
+compositor graph "conjoint over"(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A + B(1 - a)/b, A where a > b: over for a and b that share their edges"
+  aa = alpha_of(a)
+  ab = alpha_of(b)
+  wb = (1.0 - (aa > ab)) * ((1.0 - aa) / ab)
+  return keymix(weighted_sum(a, 1.0, b, wb), b, mask, mix)
+}
+
+compositor graph "disjoint over"(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A + B where a + b < 1, A + B(1 - a)/b elsewhere: over for a and b that do not overlap"
+  aa = alpha_of(a)
+  ab = alpha_of(b)
+  apart = aa + ab < 1.0
+  wb = apart + (1.0 - apart) * ((1.0 - aa) / ab)
+  return keymix(weighted_sum(a, 1.0, b, wb), b, mask, mix)
+}
+
+// ---- Arithmetic ----
+
+compositor graph copy(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A: a in place of b"
+  return keymix(a, b, mask, mix)
+}
+
+compositor graph plus(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A + B"
+  return keymix(weighted_sum(a, 1.0, b, 1.0), b, mask, mix)
+}
+
+compositor graph minus(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A - B"
+  return keymix(weighted_sum(a, 1.0, b, -1.0), b, mask, mix)
+}
+
+compositor graph from(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "B - A: a taken from b"
+  return keymix(weighted_sum(a, -1.0, b, 1.0), b, mask, mix)
+}
+
+compositor graph average(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "(A + B) / 2"
+  return keymix(weighted_sum(a, 0.5, b, 0.5), b, mask, mix)
+}
+
+compositor graph multiply(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "AB"
+  return keymix(with_alpha(a * b, alpha_of(a) * alpha_of(b)), b, mask, mix)
+}
+
+compositor graph divide(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A / B, 0 where B is 0"
+  return keymix(with_alpha(a / b, alpha_of(a) / alpha_of(b)), b, mask, mix)
+}
+
+compositor graph screen(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "A + B - AB: lightens, as two projectors on one screen"
+  aa = alpha_of(a)
+  ab = alpha_of(b)
+  return keymix(with_alpha(a + b - a * b, aa + ab - aa * ab), b, mask, mix)
+}
+
+compositor graph maximum(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "max(A, B), channel by channel"
+  return keymix(with_alpha(max(a, b), max(alpha_of(a), alpha_of(b))), b, mask, mix)
+}
+
+compositor graph minimum(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "min(A, B), channel by channel"
+  return keymix(with_alpha(min(a, b), min(alpha_of(a), alpha_of(b))), b, mask, mix)
+}
+
+compositor graph difference(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "|A - B|"
+  return keymix(with_alpha(abs(a - b), abs(alpha_of(a) - alpha_of(b))), b, mask, mix)
+}
+
+compositor graph hypot(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "sqrt(A² + B²): a sum of two images that keeps the brighter one"
+  aa = alpha_of(a)
+  ab = alpha_of(b)
+  return keymix(channel_sqrt(with_alpha(a * a + b * b, aa * aa + ab * ab)), b, mask, mix)
+}
+
+compositor graph geometric(
+    a: Color,
+    b: Color,
+    mix: Float = 1.0 in 0.0..1.0,
+    mask: Float = 1.0 in 0.0..1.0
+) -> Color {
+  "2AB / (A + B), 0 where A + B is 0"
+  aa = alpha_of(a)
+  ab = alpha_of(b)
+  return keymix(with_alpha(a * b * 2.0 / (a + b), aa * ab * 2.0 / (aa + ab)), b, mask, mix)
+}

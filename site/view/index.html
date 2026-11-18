@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bn-view — .bn code and node graph</title>
+  <script type="module" src="bn-view.js"></script>
+  <script type="module" src="bn-file.js"></script>
+  <style>
+    :root { color-scheme: dark light; --bg: #0f1115; --text: #e6e9ef; --muted: #939ab0; }
+    @media (prefers-color-scheme: light) { :root { --bg: #fff; --text: #1f2328; --muted: #59636e; } }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 2rem 16px 4rem; }
+    h2 { margin-top: 2.5rem; font-size: 1.1rem; }
+    p, code { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1><code>&lt;bn-view&gt;</code></h1>
+  <p>A <code>.bn</code> text read-only, its code beside its node graph, drawn in the browser by base-node compiled to wasm.
+    The tags say which backends run it.</p>
+
+  <h2>Geometry Nodes, inline</h2>
+  <bn-view><script type="text/bn">
+    use math (bump)
+
+    geometry graph relief(geometry: Geometry, height: Float = 0.4 in 0.0..2.0) -> Geometry {
+      "Displaces vertices along Z using a radial bump"
+      h = bump(length(Position()) / 3.0, 0.5, 0.2) * height
+      return SetPosition(geometry, offset: CombineXYZ(z: h))
+    }
+  </script></bn-view>
+
+  <h2>Sugar or not, the same nodes</h2>
+  <p>A formula draws the node it writes: <code>*</code> is a Math node doing Multiply, <code>==</code> a Compare doing Equal,
+    with the sockets Blender names.</p>
+  <bn-view view="split" height="380"><script type="text/bn">
+    geometry graph flat(edges: Int, height: Float, scale: Float) -> (flat: Bool, size: Float) {
+      return (flat: edges == 1, size: height * scale)
+    }
+  </script></bn-view>
+  <bn-view view="split" height="380"><script type="text/bn">
+    geometry graph flat(edges: Int, height: Float, scale: Float) -> (flat: Bool, size: Float) {
+      return (
+        flat: Compare(a: edges, b: 1, data_type: INT, operation: EQUAL),
+        size: Math(value: height, value_001: scale, operation: MULTIPLY))
+    }
+  </script></bn-view>
+
+  <h2>Download it for Blender</h2>
+  <p>The file button in the bar downloads the text as a <code>.bn</code> file: imported into Blender (<em>File &gt;
+    Import</em>, or dropped from the file manager), the Base Node add-on offers what its head says (the dashed tag).</p>
+  <bn-view src="../drop_example.bn" height="380"></bn-view>
+
+  <h2>Just the file: <code>&lt;bn-file&gt;</code></h2>
+  <p>A card with the title of the <code>.bn</code>, to click to download it for Blender: no code, no graph.</p>
+  <bn-file src="../drop_example.bn"></bn-file>
+  <bn-file><script type="text/bn">
+    geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {
+      return SetPosition(geometry, offset: CombineXYZ(z: height))
+    }
+  </script></bn-file>
+  <bn-file><script type="text/bn">
+    // @title Lift the shadows
+    pixel graph lift(image: Float, amount: Float = 0.2) -> Float {
+      return image + (1.0 - image) * amount
+    }
+  </script></bn-file>
+  <bn-file><script type="text/bn">
+    // @offer library
+    geometry graph g() -> Geometry { return Grid() }
+  </script></bn-file>
+
+  <h2>Pixel Nodes (Blade), portable</h2>
+  <bn-view view="split" height="360"><script type="text/bn">
+    // Brightens the dark parts of an image
+    pixel graph lift(image: Float, amount: Float = 0.2 in 0.0..1.0) -> Float {
+      lifted = image + (1.0 - image) * amount
+      return max(min(lifted, 1.0), 0.0)
+    }
+  </script></bn-view>
+
+  <h2>A file, its graphs to pick from</h2>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-library/main/examples/chrono_hud.bn" height="520"></bn-view>
+
+  <h2>Shader graphs</h2>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-library/main/examples/curve_to_shader.bn" view="nodes"></bn-view>
+
+  <h2>A repeat zone</h2>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-library/main/examples/erosion.bn"></bn-view>
+</main>
+</body>
+</html>

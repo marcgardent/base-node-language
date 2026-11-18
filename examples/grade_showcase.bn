@@ -1,0 +1,24 @@
+use grade
+use merge (keymix)
+
+// The colour tools of grade on one render, in six strips from left to right: the render as it is,
+// grade (blue lift, warm gain), color correct (contrast and darker shadows), saturation 0,
+// hue shift of 90°, exposure of +1 stop.
+// Rendered by examples/render_compositor_showcases.py, on the scene of the passes showcase.
+
+compositor graph strip(image: Color, index: Float) -> Float {
+  "1 on the strip of given index, of six strips across the image, 0 elsewhere"
+  x = ImageCoordinates(image).normalized.x * 6.0
+  return (x >= index) * (x < index + 1.0)
+}
+
+compositor graph "grade showcase"(image: Color) -> Color {
+  "The render in six strips: as it is, grade, color correct, saturation, hue shift, exposure"
+  graded = grade(image, lift: (0.0, 0.01, 0.04), gain: (1.15, 0.98, 0.8), gamma: (1.1, 1.1, 1.1))
+  corrected = color_correct(image, contrast: 1.35, shadows_gain: 0.6)
+  s1 = keymix(graded, image, strip(image, 1.0))
+  s2 = keymix(corrected, s1, strip(image, 2.0))
+  s3 = keymix(saturation(image, 0.0), s2, strip(image, 3.0))
+  s4 = keymix(hue_shift(image, 1.5708), s3, strip(image, 4.0))
+  return keymix(exposure_stops(image, 1.0), s4, strip(image, 5.0))
+}

@@ -1,0 +1,132 @@
+// Base Node Standard Library — Module mask2d
+// @module mask2d
+// @version 0.12.0
+// @target blender-compositor
+// @edition 2026
+
+// Compositor masks drawn by the signed distance fields of math and sdf2d.
+// A shape is placed in the image's uniform coordinates: the origin at the image's center, y up,
+// its larger side from -1 to 1, so that a circle stays round whatever the aspect of the image.
+// A mask is 1 inside and 0 outside; its edge is smoothed over one pixel, plus `feather`, in the
+// same units. Each shape also gives its Distance, to be combined (min, max) or outlined.
+
+use math (sdf_circle, sdf_rectangle, shell)
+use sdf2d (sdf_rounded_box_2d, sdf_regular_polygon_2d, sdf_star_2d)
+
+// ---- Space and edge ----
+
+compositor graph "pixel size"(image: Color) -> Float {
+  "Size of one pixel of the image in its uniform coordinates: 2 over its larger side"
+  size = ImageInfo(image).dimensions
+  return 2.0 / max(size.x, size.y)
+}
+
+compositor graph "shape space"(
+    image: Color,
+    center: Vector = (0.0, 0.0),
+    angle: Float(subtype: ANGLE)
+) -> Vector {
+  "Uniform coordinates of the image, moved to center and turned by angle: where a shape is drawn"
+  return VectorRotate(
+    vector: ImageCoordinates(image).uniform - center,
+    angle: -angle,
+    rotation_type: Z_AXIS)
+}
+
+compositor graph "sdf mask"(image: Color, distance: Float, feather: Float in 0.0..) -> Float {
+  "Mask of a signed distance: 1 inside, 0 outside, its edge smoothed over one pixel plus feather"
+  edge = (pixel_size(image) + feather) * 0.5
+  return MapRange(
+    value: distance,
+    from_min: -edge,
+    from_max: edge,
+    to_min: 1.0,
+    to_max: 0.0,
+    interpolation_type: SMOOTHSTEP)
+}
+
+compositor graph "outline mask"(
+    image: Color,
+    distance: Float,
+    width: Float = 0.02 in 0.0..,
+    feather: Float in 0.0..
+) -> Float {
+  "Mask of a line of given width along the edge of a shape, from its Distance"
+  return sdf_mask(image, shell(distance, width), feather)
+}
+
+// ---- Shapes ----
+
+compositor graph "circle mask"(
+    image: Color,
+    radius: Float = 0.5 in 0.0..,
+    feather: Float in 0.0..,
+    center: Vector = (0.0, 0.0)
+) -> (Mask: Float, Distance: Float) {
+  "Disk of given radius"
+  d = sdf_circle(shape_space(image, center), radius)
+  return (Mask: sdf_mask(image, d, feather), Distance: d)
+}
+
+compositor graph "box mask"(
+    image: Color,
+    "half size": Vector = (0.6, 0.4),
+    roundness: Float = 0.1 in 0.0..,
+    feather: Float in 0.0..,
+    "Transform"(default_closed: true) {
+        center: Vector = (0.0, 0.0),
+        angle: Float(subtype: ANGLE)
+    }
+) -> (Mask: Float, Distance: Float) {
+  "Rectangle of given half size, its corners rounded by roundness"
+  d = sdf_rounded_box_2d(shape_space(image, center, angle), half_size, roundness)
+  return (Mask: sdf_mask(image, d, feather), Distance: d)
+}
+
+compositor graph "polygon mask"(
+    image: Color,
+    radius: Float = 0.5 in 0.0..,
+    sides: Int = 6 in 3..64,
+    feather: Float in 0.0..,
+    "Transform"(default_closed: true) {
+        center: Vector = (0.0, 0.0),
+        angle: Float(subtype: ANGLE)
+    }
+) -> (Mask: Float, Distance: Float) {
+  "Regular polygon of given number of sides"
+  d = sdf_regular_polygon_2d(shape_space(image, center, angle), radius, sides)
+  return (Mask: sdf_mask(image, d, feather), Distance: d)
+}
+
+compositor graph "star mask"(
+    image: Color,
+    radius: Float = 0.5 in 0.0..,
+    points: Int = 5 in 3..32,
+    indent: Float = 0.5 in 0.05..1.0,
+    feather: Float in 0.0..,
+    "Transform"(default_closed: true) {
+        center: Vector = (0.0, 0.0),
+        angle: Float(subtype: ANGLE)
+    }
+) -> (Mask: Float, Distance: Float) {
+  "Regular star of given number of points, indent its inner radius over its outer one"
+  d = sdf_star_2d(shape_space(image, center, angle), radius, points, indent)
+  return (Mask: sdf_mask(image, d, feather), Distance: d)
+}
+
+// ---- Framing ----
+
+compositor graph letterbox(
+    image: Color,
+    aspect: Float = 2.39 in 0.01..,
+    color: Color = (0.0, 0.0, 0.0, 1.0),
+    feather: Float in 0.0..
+) -> (Image: Color, Mask: Float) {
+  "Bars that frame the image to the given aspect: above and below, or at the sides when narrower"
+  size = ImageInfo(image).dimensions
+  larger = max(size.x, size.y)
+  half_x = min(size.x / larger, size.y / larger * aspect)
+  d = sdf_rectangle(ImageCoordinates(image).uniform, CombineXYZ(half_x, half_x / aspect))
+  mask = sdf_mask(image, d, feather)
+  return (Image: Mix(factor: mask, a: color, b: image, data_type: RGBA), Mask: mask)
+}

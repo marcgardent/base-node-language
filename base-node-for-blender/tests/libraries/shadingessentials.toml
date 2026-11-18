@@ -1,0 +1,12 @@
+# Blender's own Essentials of the shader editor, shipped with Blender
+# (datafiles/assets/nodes/shading_nodes_essentials.blend): read where Blender installed it.
+name = "Shading Nodes Essentials"
+author = "Blender Foundation"
+homepage = "https://projects.blender.org/blender/blender-assets"
+license = "CC0-1.0"
+# Nothing fetched: the file is the one of the Blender running the test. Its sha256 is that of
+# Blender 5.3.0's (the version of the CI); another Blender's file fails it until this is bumped.
+version = "Blender 5.3.0"
+bundled = "assets/nodes/shading_nodes_essentials.blend"
+sha256 = "ffdaf64a4777233f6e47799bad17825a6c1e07c500eb1d9d0c23997f745327ee"
+trees = ["shader", "material"]

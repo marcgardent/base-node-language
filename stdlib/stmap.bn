@@ -1,0 +1,121 @@
+// Base Node Standard Library — Module stmap
+// @module stmap
+// @version 0.12.0
+// @target blender-compositor
+// @edition 2026
+
+// Image remapping by STMaps, as Nuke's STMap does it: an STMap is an image whose red and green
+// are, for each of its pixels, the place to take the colour from in another image, from 0 to 1
+// across it, red to the right and green up, at the centres of the pixels: the pixel i of an image
+// of width W is at (i + 0.5) / W. Its alpha is the coverage: 0 where nothing is taken, the result
+// there is transparent. Blue is 0.
+// Each tool comes as its STMap, "… stmap", and as the image remapped by it: the STMap renders
+// the coordinates a tool computes, and can be saved, edited or put together with others.
+// The result has the size of the STMap: an STMap made on a canvas of another size remaps the
+// image to that size.
+
+// ---- STMaps ----
+
+compositor graph "uv ramp"(image: Color) -> Color {
+  "The identity STMap of the image's size: red is u, green is v, at the centre of each pixel; remapped by it, an image stays as it is"
+  p = ImageCoordinates(image).normalized
+  return CombineColor(p.x, p.y, 0.0, 1.0)
+}
+
+compositor graph "stmap of"(u: Float, v: Float, coverage: Float = 1.0) -> Color {
+  "An STMap's pixel: u in red, v in green, the coverage in alpha"
+  return CombineColor(u, v, 0.0, coverage)
+}
+
+compositor graph "stmap apply"(
+    image: Color,
+    stmap: Color,
+    interpolation: Menu = Bilinear
+) -> Color {
+  "The image remapped by the STMap: each pixel the image's colour where the STMap's red and green say, times its alpha; transparent off the image"
+  s = SeparateColor(stmap)
+  return MapUV(image, CombineXYZ(s.red, s.green, s.alpha), interpolation: interpolation)
+}
+
+compositor graph canvas(image: Color, width: Int = 1920, height: Int = 1080) -> Color {
+  "A canvas of this size, in pixels: the image stretched to it, its pixels made by Pixelate, as Scale alone only sets how the image is drawn"
+  return Pixelate(Scale(image, type: Absolute, x: width, y: height), size: 1)
+}
+
+compositor graph "aspect of"(image: Color) -> Float {
+  "The image's width over its height"
+  d = ImageInfo(image).dimensions
+  return d.x / d.y
+}
+
+// ---- Tile and mirror ----
+
+compositor graph "repeat axis"(t: Float, mirror: Bool) -> Float {
+  "The part of t past its floor; in every other tile turned back when mirror is set"
+  f = fract(t)
+  return Switch(switch: mirror, false_: f, true_: f + mod(floor(t), 2.0) * (1.0 - 2.0 * f))
+}
+
+compositor graph "tile stmap"(
+    image: Color,
+    rows: Int = 2 in 1..,
+    columns: Int = 2 in 1..,
+    mirror: Bool
+) -> Color {
+  "The STMap of the image repeated in rows and columns, each tile the whole image; with mirror, every other tile turned over"
+  p = ImageCoordinates(image).normalized
+  return stmap_of(repeat_axis(p.x * columns, mirror), repeat_axis(p.y * rows, mirror))
+}
+
+compositor graph tile(
+    image: Color,
+    rows: Int = 2 in 1..,
+    columns: Int = 2 in 1..,
+    mirror: Bool
+) -> Color {
+  "Nuke's Tile: the image repeated in rows and columns at its own size; with mirror, every other tile turned over"
+  return stmap_apply(image, tile_stmap(image, rows, columns, mirror))
+}
+
+compositor graph "mirror stmap"(image: Color, horizontal: Bool = true, vertical: Bool) -> Color {
+  "The STMap of the image turned over left to right (horizontal), bottom to top (vertical)"
+  p = ImageCoordinates(image).normalized
+  return stmap_of(
+    Switch(switch: horizontal, false_: p.x, true_: 1.0 - p.x),
+    Switch(switch: vertical, false_: p.y, true_: 1.0 - p.y))
+}
+
+compositor graph mirror(image: Color, horizontal: Bool = true, vertical: Bool) -> Color {
+  "Nuke's Mirror: the image turned over left to right (horizontal), bottom to top (vertical)"
+  return stmap_apply(image, mirror_stmap(image, horizontal, vertical))
+}
+
+// ---- Reformat ----
+
+compositor graph "reformat stmap"(
+    image: Color,
+    width: Int = 1920 in 1..,
+    height: Int = 1080 in 1..,
+    mode: Menu = Fit
+) -> Color {
+  "The STMap of the image put on a canvas of this size: whole and centred (Fit), filling it and cut (Fill), or stretched to it (Distort)"
+  p = ImageCoordinates(canvas(image, width, height)).normalized
+  k = aspect_of(image) / (width / height)
+  scale = MenuSwitch(
+    mode,
+    Fit: CombineXYZ(max(1.0, 1.0 / k), max(1.0, k), 1.0),
+    Fill: CombineXYZ(min(1.0, 1.0 / k), min(1.0, k), 1.0),
+    Distort: (1.0, 1.0, 1.0))
+  s = SeparateXYZ(scale.output)
+  return stmap_of((p.x - 0.5) * s.x + 0.5, (p.y - 0.5) * s.y + 0.5)
+}
+
+compositor graph reformat(
+    image: Color,
+    width: Int = 1920 in 1..,
+    height: Int = 1080 in 1..,
+    mode: Menu = Fit
+) -> Color {
+  "Nuke's Reformat: the image on a canvas of this size, whole and centred (Fit), filling it and cut (Fill), or stretched to it (Distort)"
+  return stmap_apply(image, reformat_stmap(image, width, height, mode))
+}

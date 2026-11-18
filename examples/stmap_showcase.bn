@@ -1,0 +1,45 @@
+use mask2d (star_mask)
+use merge (over, with_alpha)
+use stmap
+
+// The tools of stmap on one picture made in the graph, a gradient under a grid with a star in its
+// upper left, each result fitted whole in a tile of three by two. Top row: the picture, its UV
+// ramp (red is u, green is v), tile of two by two with mirror. Bottom row: mirror left to right,
+// reformat to 2:1 by Fill, and the picture through a wavy STMap made from its UV ramp.
+// Rendered by examples/render_compositor_showcases.py.
+
+compositor graph "in cell"(frame: Color, image: Color, column: Float, row: Float) -> Color {
+  "The image fitted whole in the cell of this column and row of three by two on the frame, row 0 at the bottom"
+  p = ImageCoordinates(frame).normalized
+  x = (p.x * 3.0 - column - 0.03) / 0.94
+  y = (p.y * 2.0 - row - 0.04) / 0.92
+  k = aspect_of(image) / (aspect_of(frame) * 0.94 / 3.0 / (0.92 / 2.0))
+  u = (x - 0.5) * max(1.0, 1.0 / k) + 0.5
+  v = (y - 0.5) * max(1.0, k) + 0.5
+  return stmap_apply(image, stmap_of(u, v, (x >= 0.0) * (x <= 1.0) * (y >= 0.0) * (y <= 1.0)))
+}
+
+compositor graph picture(image: Color) -> Color {
+  "A gradient under a grid of eight by six, a star in its upper left"
+  p = ImageCoordinates(image).normalized
+  grid = max(fract(p.x * 8.0) < 0.06, fract(p.y * 6.0) < 0.06)
+  base = CombineColor(0.15 + 0.7 * p.x, 0.25 + 0.35 * p.y, 0.85 - 0.6 * p.x, 1.0)
+  star = star_mask(image, 0.3, 5, 0.45, 0.01, center: (-0.45, 0.3), angle: 0.3).mask
+  lined = Mix(factor: grid * 0.7, a: base, b: (0.05, 0.05, 0.08, 1.0), data_type: RGBA)
+  return Mix(factor: star, a: lined, b: (1.0, 0.85, 0.2, 1.0), data_type: RGBA)
+}
+
+compositor graph "stmap showcase"(image: Color) -> Color {
+  "One picture in six tiles: as it is, its UV ramp, tile, mirror, reformat, a wavy STMap"
+  source = picture(canvas(image, 320, 270))
+  ramp = SeparateColor(uv_ramp(source))
+  wavy = stmap_of(
+    ramp.red + sin(ramp.green * 25.0) * 0.025,
+    ramp.green + sin(ramp.red * 19.0) * 0.025)
+  t1 = over(in_cell(image, source, 0.0, 1.0), in_cell(image, uv_ramp(source), 1.0, 1.0))
+  t2 = over(t1, in_cell(image, tile(source, 2, 2, true), 2.0, 1.0))
+  t3 = over(t2, in_cell(image, mirror(source), 0.0, 0.0))
+  t4 = over(t3, in_cell(image, reformat(source, 320, 160, Fill), 1.0, 0.0))
+  t5 = over(t4, in_cell(image, stmap_apply(source, wavy), 2.0, 0.0))
+  return over(t5, with_alpha((0.06, 0.06, 0.07), 1.0))
+}

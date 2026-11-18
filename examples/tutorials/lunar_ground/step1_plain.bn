@@ -1,0 +1,14 @@
+// @module lunar_ground_step1
+// @title Lunar ground, step 1: a plain that rolls a little
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example lunar_ground
+
+geometry graph lunar_ground(size: Float = 4.0 in 0.1.., resolution: Int = 800 in 2..) -> Geometry {
+  "A square of ground, its heights from a noise"
+  p = Position()
+  plain = (NoiseTexture(vector: p, scale: 0.4, detail: 3.0).factor - 0.5) * 0.3
+  return Grid(size, size, resolution, resolution)
+    |> SetPosition(offset: CombineXYZ(z: plain))
+}

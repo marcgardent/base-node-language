@@ -1,0 +1,157 @@
+// Differential growth of a closed curve in the XY plane, after the public write-ups of
+// Anders Hoff (inconvergent.net, "differential-line") and of Nervous System ("Floraform").
+// Each step moves every point of the curve by three forces:
+//   attraction: a spring to each of its two neighbours along the curve, whose rest length is
+//   a little over `max length`, so that every edge keeps growing;
+//   repulsion from the other points near it, falling to zero at `radius`;
+//   alignment to the midpoint of its neighbours, which smooths the curve;
+// then cuts in two every edge longer than `max length`. The curve grows longer faster than the
+// plane gives it room, so it folds, and the repulsion keeps its folds apart.
+// The points near a point are its neighbours in a triangulation of the plane by the curve,
+// one of its inside (Fill Curve) and one of its outside (Fill Curve with a frame around it):
+// Sample Nearest finds a point itself, and Index of Nearest its neighbour along the curve.
+
+// A field at the point `offset` places further along the curve, the curve closed
+geometry graph along(v: Vector, offset: Int) -> Vector {
+  return EvaluateAtIndex(
+    value: v,
+    index: OffsetPointInCurve(offset: offset).point_index,
+    data_type: FLOAT_VECTOR)
+}
+
+// The repulsion each point of a curve gets from its neighbours in `fill`, a triangulation
+// whose vertices hold the points of the curve: the sum over its edges of (p - q) / |p - q|
+// times (1 - |p - q| / radius), the edges longer than `radius` aside, and the edges of the
+// curve too (those with one face): its neighbours along the curve are the attraction's
+geometry graph repulsion(fill: Geometry, radius: Float) -> Vector {
+  e = EdgeVertices()
+  d = distance(e.position_1, e.position_2)
+  across = EdgeNeighbors().face_count > 1
+  w = Switch(across, 0.0, max(radius - d, 0.0) / (radius * max(d, 1e-09)))
+  // On the points, a field of the edges is the mean of their edges: the mean of w, and of
+  // w * (p + q), from which the sum of w * (p - q) is drawn at each end
+  weight = EvaluateOnDomain(value: w, domain: EDGE)
+  ends = EvaluateOnDomain(
+    value: (e.position_1 + e.position_2) * w,
+    domain: EDGE,
+    data_type: FLOAT_VECTOR)
+  push = (Position() * (2.0 * weight) - ends) * VertexNeighbors().vertex_count
+  return SampleIndex(fill, push, SampleNearest(fill, Position()), data_type: FLOAT_VECTOR)
+}
+
+// One step of growth: the three forces, a move no longer than `step` times `max length`,
+// then the edges longer than `max length` cut in two, while the curve has fewer than `max points`
+geometry graph "growth step"(
+    curve: Geometry,
+    max_length: Float,
+    radius: Float,
+    attraction: Float,
+    repulsion: Float,
+    alignment: Float,
+    step: Float,
+    max_points: Int
+) -> Geometry {
+  p = Position()
+  before = along(p, -1)
+  after = along(p, 1)
+
+  "Attraction and alignment" #teal {
+    // Past its rest length an edge pulls its ends together, short of it pushes them apart
+    rest = max_length * 1.2
+    a = before - p
+    b = after - p
+    pull = a * (1.0 - rest / max(length(a), 1e-09)) + b * (1.0 - rest / max(length(b), 1e-09))
+    smooth = (before + after) * 0.5 - p
+  }
+
+  "Repulsion" #3a7bd5 {
+    // A frame twice `radius` away from the curve, so that its outside is triangulated too
+    box = BoundingBox(curve)
+    size = box.max - box.min + CombineXYZ(4.0 * radius, 4.0 * radius)
+    frame = Quadrilateral(width: size.x, height: size.y)
+      |> TransformGeometry(translation: (box.min + box.max) * 0.5)
+    push = repulsion(FillCurve(curve), radius) + repulsion(FillCurve(curve + frame), radius)
+  }
+
+  move = pull * attraction + smooth * alignment + push * (repulsion * max_length)
+  limit = step * max_length
+  moved = SetPosition(curve, offset: move * min(1.0, limit / max(length(move), 1e-09)))
+
+  "Growth" #peru {
+    // The cuts of a point are those of the edge to the next one: one at most in a step, so
+    // that a curve never has more than twice `max points`
+    room = DomainSize(moved, component: CURVE).point_count < max_points
+    cuts = Switch(room and distance(p, after) > max_length, 0, 1, input_type: INT)
+  }
+  return SubdivideCurve(moved, cuts: cuts)
+}
+
+// A circle of `size`, its radius stirred by noise, with points `max length` apart. Each point
+// keeps in "origin" its direction from the centre, which the points cut between two blend
+geometry graph "growth seed"(size: Float, max_length: Float, noise: Float, seed: Int) -> Geometry {
+  n = max(ceil(6.283185 * size / max_length), 8.0)
+  stir = NoiseTexture(vector: Position(), w: seed, scale: 1.5, noise_dimensions: "4D").factor - 0.5
+  return CurveCircle(resolution: n, radius: size)
+    |> StoreNamedAttribute(name: "origin", value: Position() / size, data_type: FLOAT_VECTOR)
+    |> SetPosition(position: Position() * (1.0 + stir * noise))
+}
+
+geometry graph "differential growth"(
+    curve: Geometry,
+    iterations: Int = 400 in 0..,
+    "max length": Float = 0.02 in 0.0001..,
+    radius: Float = 0.05 in 0.0001..,
+    "max points": Int = 10000 in 3..,
+    "Forces" {
+        attraction: Float = 0.2 in 0.0..1.0,
+        repulsion: Float = 0.5 in 0.0..,
+        alignment: Float = 0.5 in 0.0..1.0,
+        step: Float = 0.25 in 0.0..1.0
+    }
+) -> Geometry {
+  "Grows a closed curve in the XY plane, `iterations` steps at once"
+  // The points of a Bézier or NURBS curve are its control points: it grows as a poly curve
+  grown = repeat(iterations, c: SetSplineType(curve, spline_type: POLY)) {
+    return (
+      c: growth_step(c, max_length, radius, attraction, repulsion, alignment, step, max_points))
+  }
+  return grown.c
+}
+
+geometry graph "growing differential growth"(
+    curve: Geometry,
+    "steps per frame": Int = 4 in 1..,
+    "max length": Float = 0.02 in 0.0001..,
+    radius: Float = 0.05 in 0.0001..,
+    "max points": Int = 10000 in 3..,
+    "Forces" {
+        attraction: Float = 0.2 in 0.0..1.0,
+        repulsion: Float = 0.5 in 0.0..,
+        alignment: Float = 0.5 in 0.0..1.0,
+        step: Float = 0.25 in 0.0..1.0
+    }
+) -> Geometry {
+  "The same curve growing frame after frame: `steps per frame` steps in each"
+  grown = simulate(c: SetSplineType(curve, spline_type: POLY)) {
+    stepped = repeat(steps_per_frame, h: c) {
+      return (
+        h: growth_step(h, max_length, radius, attraction, repulsion, alignment, step, max_points))
+    }
+    return (c: stepped.h)
+  }
+  return grown.c
+}
+
+geometry graph "differential growth coral"(
+    size: Float = 0.4 in 0.01..,
+    iterations: Int = 400 in 0..,
+    "max length": Float = 0.02 in 0.0001..,
+    seed: Int = 0,
+    thickness: Float = 0.006 in 0.0..
+) -> Geometry {
+  "A circle grown into a coral outline, drawn as a tube of `thickness`"
+  grown = growth_seed(size, max_length, 0.3, seed)
+    |> differential_growth(iterations: iterations, max_length: max_length, radius: max_length * 2.5)
+  return CurveToMesh(grown, profile_curve: CurveCircle(resolution: 8, radius: thickness))
+    |> SetShadeSmooth()
+}

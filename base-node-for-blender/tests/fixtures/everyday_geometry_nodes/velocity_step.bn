@@ -1,0 +1,37 @@
+// Velocity Step, from Cartesian Caramel's Everyday Nodes
+// Author: Cartesian Caramel
+// Source: https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1 (6c078f7)
+// License: CC0-1.0, https://creativecommons.org/publicdomain/zero/1.0/
+// Written by Base Node from tests/fixtures/everyday_geometry_nodes.blend;
+// to write it again: BASE_NODE_UPDATE_FIXTURES=1, see tests/fixtures/README.md
+
+geometry graph "Velocity Step"(
+    "Delta Time": Float(hide_value: true) = 0.041666668,
+    ">": Geometry,
+    Selection: Bool(hide_value: true) = true,
+    "" as __string: String = "velocity",
+    Forces: Vector = (0.0, 0.0, -9.81) in -10000.0..10000.0,
+    Damp: Float(subtype: FACTOR) in 0.0..1.0,
+    "Set Velocity": Bool
+) -> (">": Geometry) {
+  math = pow(1.0 - Damp, delta_time) @ hide
+  vector_math_3 = Forces * delta_time @ hide
+  vector_math_2 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
+    + vector_math_3 @ hide
+  switch = Switch(
+    switch: set_velocity,
+    false_: vector_math_2,
+    true_: Forces,
+    input_type: VECTOR) @ hide
+  vector_math = switch * math @ hide
+  vector_math_4 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
+    * delta_time @ hide
+  return (
+    ">": _
+      |> StoreNamedAttribute(
+        selection: Selection,
+        name: __string,
+        value: vector_math,
+        data_type: FLOAT_VECTOR)
+      |> SetPosition(selection: Selection, offset: vector_math_4))
+}

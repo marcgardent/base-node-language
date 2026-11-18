@@ -1,0 +1,17 @@
+{
+ "library": "Principal Components",
+ "version": "Blender 5.3.0",
+ "sha256": "91cb8cada033daab6c6fbb8aef4767782cf75be867a0c2f38ced742160f38a39",
+ "blender": "5.3.0",
+ "summary": "2 ok",
+ "groups": {
+  "Geometry Principal Components": {
+   "status": "ok",
+   "text": "21a07c453958c316"
+  },
+  "Principal Components": {
+   "status": "ok",
+   "text": "a52823cf673e96fd"
+  }
+ }
+}

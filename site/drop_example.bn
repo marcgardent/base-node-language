@@ -1,0 +1,33 @@
+// @module drop_example
+// @version 0.1.0
+// @title Ripples and waves
+// @author Base Node
+// @license MIT
+// @offer library, groups, example, modifier
+// @example ripple_field
+// @modifier "wave modifier"
+// @mesh grid
+
+// A file to drop on Blender: it says what it offers in its head. As a library, `use drop_example`
+// finds its graphs in every .blend; imported, its groups stay in the file; as an example, an object
+// carries the ripple field; as a modifier, the waves move the points of the object it falls on.
+
+geometry graph wave(p: Vector, waves: Float, height: Float) -> Float {
+  "The height of a ripple from the centre at a point"
+  return sin(length(CombineXYZ(p.x, p.y)) * waves) * height
+}
+
+geometry graph ripple_field(count: Int = 40 in 2.., waves: Float = 5.0, height: Float = 0.3) -> Geometry {
+  "Columns on a grid that rise with a ripple from the centre"
+  column = Cube(size: (0.08, 0.08, 1.0)) |> TransformGeometry(translation: (0.0, 0.0, 0.5))
+  rise = wave(Position(), waves, height) + height + 0.05
+  return Grid(4.0, 4.0, count, count)
+    |> MeshToPoints()
+    |> InstanceOnPoints(instance: column, scale: CombineXYZ(1.0, 1.0, rise))
+    |> RealizeInstances()
+}
+
+geometry graph "wave modifier"(geometry: Geometry, waves: Float = 5.0, height: Float = 0.2) -> Geometry {
+  "Moves the points of the mesh up and down with a ripple from the centre"
+  return SetPosition(geometry, offset: CombineXYZ(z: wave(Position(), waves, height)))
+}

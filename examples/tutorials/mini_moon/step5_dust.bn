@@ -1,0 +1,108 @@
+// @module mini_moon_step5
+// @title Mini moon, step 5: dust, and an order to keep
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example mini_moon
+
+geometry graph crater_profile(
+    x: Float,
+    floor_depth: Float = -0.6 in -1.0..0.0,
+    rim_width: Float = 0.5 in 0.0..,
+    rim_steepness: Float = 0.8 in 0.0..,
+    smoothness: Float = 0.25 in 0.0..
+) -> (height: Float) {
+  "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
+  bowl = x * x - 1.0
+  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  outside = min(x - 1.0 - rim_width, 0.0)
+  rim = rim_steepness * outside * outside
+  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+}
+
+geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
+  "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
+  apart = size * 3.0
+  sites = surface
+    |> DistributePointsOnFaces(
+      distance_min: apart,
+      density_max: 4.0 / (apart * apart),
+      seed: seed,
+      distribute_method: POISSON)
+  return sites.points
+    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute(
+      name: "radius",
+      value: RandomValue(min: size * 0.5, max: size, seed: seed))
+    |> StoreNamedAttribute(name: "age", value: RandomValue(seed: seed + 1))
+}
+
+geometry graph crater_layer(
+    p: Vector,
+    sites: Geometry,
+    depth: Float = 0.5 in 0.0..
+) -> (height: Float, young: Float) {
+  "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
+  i = SampleNearest(sites, sample_position: p).index
+  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
+  n = SampleIndex(
+    sites,
+    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
+    index: i,
+    data_type: FLOAT_VECTOR)
+  radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
+  age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
+  v = p - centre
+  across = v - n * (v ⋅ n)
+  wobble = NoiseTexture(vector: p / radius, scale: 1.5).factor
+  x = length(across) / radius * (1.0 + wobble * 0.3)
+  height = crater_profile(x).height * radius * depth * (1.0 - age * 0.7)
+  return (height: height, young: (1.0 - age) * (1.0 - age) * Clamp(1.5 - x))
+}
+
+shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
+  "Small bowls, one in half of the Voronoi cells, scale cells per metre"
+  cell = VoronoiTexture(vector: p, scale: scale, randomness: 0.8)
+  radius = 0.15 + cell.color.x * 0.2
+  x = cell.distance / radius
+  // No Compare in a shader tree: Math's Less Than gives 1 or 0
+  here = Math(cell.color.y, 0.5, operation: LESS_THAN)
+  return (height: min(x * x - 1.0, 0.0) * radius / scale * 0.5 * here)
+}
+
+shader(material: true) graph Regolith() -> (surface: Shader) {
+  "Grey dust, lighter around young craters, grainy and pitted"
+  young = Attribute(attribute_name: "young").factor
+  p = TextureCoordinate().object
+  patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
+  grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
+  // Heights in metres, as the geometry's: Bump at distance 1.0 and strength 1.0 lights them as relief
+  relief = (grain - 0.5) * 0.004 + pits(p, 40.0).height + pits(p + (7.1, 3.3, 0.0), 110.0).height
+  grey = 0.07 + patches * 0.08 + young * 0.2
+  dust = PrincipledBSDF(
+    base_color: CombineColor(red: grey, green: grey, blue: grey * 0.94),
+    roughness: 1.0,
+    normal: Bump(strength: 1.0, distance: 1.0, height: relief))
+  return (surface: dust)
+}
+
+geometry graph mini_moon(
+    radius: Float = 1.0 in 0.0..,
+    subdivisions: Int = 8 in 1..9,
+    largest: Float = 0.3 in 0.0..,
+    layers: Int = 5 in 1..8
+) -> Geometry {
+  "A small moon: a sphere, craters of every size dug along its normals, grey dust"
+  sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
+  p = Position()
+  field = repeat(layers, height: 0.0, young: 0.0, size: largest) {
+    c = crater_layer(p, crater_sites(sphere, size: size, seed: iteration))
+    return (height: height + c.height, young: max(young, c.young), size: size * 0.5)
+  }
+  return sphere
+    |> StoreNamedAttribute(name: "height", value: field.height)
+    |> StoreNamedAttribute(name: "young", value: field.young)
+    |> SetPosition(offset: Normal() * NamedAttribute(name: "height"))
+    |> SetShadeSmooth()
+    |> SetMaterial(material: Regolith)
+}

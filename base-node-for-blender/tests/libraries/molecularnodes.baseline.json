@@ -1,0 +1,2679 @@
+{
+ "library": "Molecular Nodes",
+ "version": "v520.2.0",
+ "sha256": "905e255ddadad7ccf81c8d05063f5df0a227b6b0324afeb3b72143c7003c0644",
+ "blender": "5.3.0",
+ "summary": "403 ok",
+ "groups": {
+  ".Accumulate Domain Transform": {
+   "status": "ok",
+   "text": "a118950fd48ca55c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Backbone Position": {
+   "status": "ok",
+   "text": "09c9e5b0efc53711",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".CA to helix": {
+   "status": "ok",
+   "text": "3551db1f3c6bce0a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".CA to loops": {
+   "status": "ok",
+   "text": "e60602dbede07469",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".CA to sheet": {
+   "status": "ok",
+   "text": "ee69b86ffe9bd3e4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Check End Face Corner": {
+   "status": "ok",
+   "text": "8eb7cde7cd5d9190",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Check HBond": {
+   "status": "ok",
+   "text": "81fc57e29f5f1948",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Cleanup": {
+   "status": "ok",
+   "text": "19dbf1f4522841ac",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Fix Loop Alignment into AH": {
+   "status": "ok",
+   "text": "e1f0f1b82c4458fc",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".HBond Backbone Check": {
+   "status": "ok",
+   "text": "44db6f58710dce3b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Is Extra Bonds": {
+   "status": "ok",
+   "text": "5c8b0c49a23bd889"
+  },
+  ".MN_animate_wiggle_mask_length": {
+   "status": "ok",
+   "text": "1f2d108fdffebd8b"
+  },
+  ".MN_animate_wiggle_mask_res": {
+   "status": "ok",
+   "text": "908c7f6ce79bb54e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_bs_smooth": {
+   "status": "ok",
+   "text": "0299f38161cac39d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_chi_atom_names": {
+   "status": "ok",
+   "text": "e7b53c7d3aa30466",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_constants_atom_name_nucleic": {
+   "status": "ok",
+   "text": "74d810055a052bda"
+  },
+  ".MN_constants_atom_name_peptide": {
+   "status": "ok",
+   "text": "1bea684f0d029ad6"
+  },
+  ".MN_ensure_ures_id": {
+   "status": "ok",
+   "text": "cd7a88d6b1c710e6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_init_tmp_attributes": {
+   "status": "ok",
+   "text": "b3dea6f601518123",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_peptide_chi_values": {
+   "status": "ok",
+   "text": "b18848f9b5b1e827",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_pivot_nucleic": {
+   "status": "ok",
+   "text": "a30cc5acdcabc88f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_pivot_peptide": {
+   "status": "ok",
+   "text": "1cdee1f9475c33b8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_select_attribute": {
+   "status": "ok",
+   "text": "d411c9d1bf2ec8ca",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_select_nucleic": {
+   "status": "ok",
+   "text": "799999a21b2dc274"
+  },
+  ".MN_select_peptide": {
+   "status": "ok",
+   "text": "a37fd27bb34d0e22",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_select_res_name_peptide": {
+   "status": "ok",
+   "text": "0d70b4485637082e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_select_sec_struct": {
+   "status": "ok",
+   "text": "013781f09c26439d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_select_sec_struct_id": {
+   "status": "ok",
+   "text": "5c46654693a11e16",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_surface_smooth_bumps": {
+   "status": "ok",
+   "text": "a4a2d3226a22f81d"
+  },
+  ".MN_topo_assign_backbone": {
+   "status": "ok",
+   "text": "ea9f0cc6c7deddc2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_topo_calc_helix": {
+   "status": "ok",
+   "text": "29e14895c26268bf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_topo_calc_sheet": {
+   "status": "ok",
+   "text": "68334545a4a113d0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_aa_atom_pos": {
+   "status": "ok",
+   "text": "69d545f2b03f1022",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_curve_resample": {
+   "status": "ok",
+   "text": "a1a770c02a67301e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_rotate_res": {
+   "status": "ok",
+   "text": "06b2af8c3605bc9b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_cartoon": {
+   "status": "ok",
+   "text": "99a2092c051d8a5f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_ribbon_nucleic": {
+   "status": "ok",
+   "text": "02067751c2e5c40f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_ribbon_peptide": {
+   "status": "ok",
+   "text": "ca3440ba2af17a24",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_spheres_icosphere": {
+   "status": "ok",
+   "text": "2aaa3186534a0d61",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_spheres_points": {
+   "status": "ok",
+   "text": "d0a0995d13b77ab6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_sticks": {
+   "status": "ok",
+   "text": "efc94d42135bd804",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_surface_new": {
+   "status": "ok",
+   "text": "979c979cff39d35a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_utils_style_surface_sdf": {
+   "status": "ok",
+   "text": "4c681cb087f3ff6c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".MN_world_scale": {
+   "status": "ok",
+   "text": "9aa38d9264675c08"
+  },
+  ".OKLab Matrices": {
+   "status": "ok",
+   "text": "0f7f8d535458de8e"
+  },
+  ".Profile Type Picker": {
+   "status": "ok",
+   "text": "b11d6acdbb4b7169"
+  },
+  ".Relax Surface": {
+   "status": "ok",
+   "text": "4563efa50db76feb",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Sample Atomic Attributes": {
+   "status": "ok",
+   "text": "cddd61511374ea77"
+  },
+  ".Sample Atomic Attributes to Face Corner": {
+   "status": "ok",
+   "text": "1a0b5797cdd21032",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Sample Colors": {
+   "status": "ok",
+   "text": "e3d5c97d83fbedff",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Sample Nucleic Base Values": {
+   "status": "ok",
+   "text": "9d4d851ef39ced04",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Sample from CA curve": {
+   "status": "ok",
+   "text": "3456dc69212a87b4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Surface to Radius": {
+   "status": "ok",
+   "text": "da2e825aaf729209",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Triangulate Mesh": {
+   "status": "ok",
+   "text": "2d37982b57a9767a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".Tweak Arrow Heads": {
+   "status": "ok",
+   "text": "160eb7f01ae1bb2c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".map_bond_type": {
+   "status": "ok",
+   "text": "e75fb05deccef648"
+  },
+  ".surface_compute_density_from_points": {
+   "status": "ok",
+   "text": "26bb00c8dafca8ef",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".tmp_ss_attributes": {
+   "status": "ok",
+   "text": "7895ffa1776e8f1f"
+  },
+  ".utils_bounding_box": {
+   "status": "ok",
+   "text": "bba784502d3e4653",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  ".utils_group_field_at_selection": {
+   "status": "ok",
+   "text": "b5aec1d4927ce359",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "2 Index Angle": {
+   "status": "ok",
+   "text": "d4dfa2d1387a799c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "3 Index Angle": {
+   "status": "ok",
+   "text": "215233d597d687d8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Accumulate Axis Rotation": {
+   "status": "ok",
+   "text": "cdd5c8d01d0e1573",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Angstrom to World": {
+   "status": "ok",
+   "text": "72979bc954731cef",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Action": {
+   "status": "ok",
+   "text": "d9d2230a87426563",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Collection Pick": {
+   "status": "ok",
+   "text": "edc3291a2f400985",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Dihedrals": {
+   "status": "ok",
+   "text": "7a332a97a6d6b4c9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Fraction": {
+   "status": "ok",
+   "text": "9f9c4aa6c67c1a6c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Frames": {
+   "status": "ok",
+   "text": "24d08af2fd5df482",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Peptide to Curve": {
+   "status": "ok",
+   "text": "d7c167c49d3164ee",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Trails": {
+   "status": "ok",
+   "text": "0b16220160dfe652",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Value": {
+   "status": "ok",
+   "text": "1e13b10b6fef759b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Animate Wiggle": {
+   "status": "ok",
+   "text": "9fb3d00d0450d68c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Apply Each Geometry Cache": {
+   "status": "ok",
+   "text": "916f8d82bafcde25",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Apply Geo Cache - Deform Only": {
+   "status": "ok",
+   "text": "d28f9cbc01848b02",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Assembly ID": {
+   "status": "ok",
+   "text": "60287dcf078eaff0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Assembly Instance": {
+   "status": "ok",
+   "text": "d64acad8eece59fe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Atom ID": {
+   "status": "ok",
+   "text": "c904fb9826c50f40",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Atom Name": {
+   "status": "ok",
+   "text": "73fbe8280067e90e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Atomic Number": {
+   "status": "ok",
+   "text": "be868c50be351183",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Atoms to CA Curves": {
+   "status": "ok",
+   "text": "481fc8c0188d8657",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Atoms to Curves": {
+   "status": "ok",
+   "text": "14144ebbb4ab9436",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Attribute Run": {
+   "status": "ok",
+   "text": "f952f88de3da4a26",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Attribute at Index": {
+   "status": "ok",
+   "text": "77ec939f24f18183",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "B Factor": {
+   "status": "ok",
+   "text": "73d75c297aee0370",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone C": {
+   "status": "ok",
+   "text": "9f69cd8ae21e82c2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone CA": {
+   "status": "ok",
+   "text": "7ec54fd3de3d737f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone N": {
+   "status": "ok",
+   "text": "9a8cbac4149454b2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone NH": {
+   "status": "ok",
+   "text": "750e07c2867b3f55",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone O": {
+   "status": "ok",
+   "text": "2c33ae721898f08a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone Positions": {
+   "status": "ok",
+   "text": "67d5cef9c08517b3",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone Vector List": {
+   "status": "ok",
+   "text": "66102e7db06a1483",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Backbone Vectors": {
+   "status": "ok",
+   "text": "03a4c2a037ecdb58",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Between Float": {
+   "status": "ok",
+   "text": "08652b66158d9c99",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Between Integer": {
+   "status": "ok",
+   "text": "cbf078b158380307",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Between Vector": {
+   "status": "ok",
+   "text": "51e732980e60e775",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Bond Count": {
+   "status": "ok",
+   "text": "921dcfe50109c110"
+  },
+  "Boolean AndOr": {
+   "status": "ok",
+   "text": "76776cf52fc86465",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Boolean Any": {
+   "status": "ok",
+   "text": "2a1b8ce1cbabe6a0"
+  },
+  "Boolean First": {
+   "status": "ok",
+   "text": "11c75f534a8e4260",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Boolean Last": {
+   "status": "ok",
+   "text": "1ed444087f190d7a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Boolean Run Fill": {
+   "status": "ok",
+   "text": "c9fd360e8898f07c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Boolean Run Trim": {
+   "status": "ok",
+   "text": "f669d61a5ca0133d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Boolean Shrink": {
+   "status": "ok",
+   "text": "bbae69b1326cd128",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Break Bonds": {
+   "status": "ok",
+   "text": "90db987661b51239",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Break Curves": {
+   "status": "ok",
+   "text": "2c1894ca4aa0da6a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Build Elastic Network": {
+   "status": "ok",
+   "text": "236c14c3f21af853",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "CA Value Float": {
+   "status": "ok",
+   "text": "5194a4b9b1c2705f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "CA Value Vector": {
+   "status": "ok",
+   "text": "8014180a1d846299",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Centre on Selection": {
+   "status": "ok",
+   "text": "e35fe5ba5ac8ebe1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Centroid": {
+   "status": "ok",
+   "text": "76419279df679ad1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Chain ID": {
+   "status": "ok",
+   "text": "5f1347b0cfe7a14c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Chain Parameter": {
+   "status": "ok",
+   "text": "a8c73e1999554c55",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Charge": {
+   "status": "ok",
+   "text": "b5c4db7de23b1e25",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Check Geometry": {
+   "status": "ok",
+   "text": "9b7f7514c04d2759",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Clear Instance Transforms": {
+   "status": "ok",
+   "text": "7140db82104d86df",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Clear Previous World Items": {
+   "status": "ok",
+   "text": "b7a7a5617b6e726d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Collection Effector": {
+   "status": "ok",
+   "text": "923e309f0a1471d7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Collider": {
+   "status": "ok",
+   "text": "8548e2a719d30747",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color": {
+   "status": "ok",
+   "text": "7687cdc3ec165839"
+  },
+  "Color Atomic Number": {
+   "status": "ok",
+   "text": "f7c1885f3d54ce33",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Attribute Map": {
+   "status": "ok",
+   "text": "317cb0cd640760e7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Attribute Random": {
+   "status": "ok",
+   "text": "2ccdd9c69e1ca91c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Backbone": {
+   "status": "ok",
+   "text": "5d40f35655c62fc3",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Common": {
+   "status": "ok",
+   "text": "097d2ba42e714a0e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Element": {
+   "status": "ok",
+   "text": "4179d2e4032b904c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Goodsell": {
+   "status": "ok",
+   "text": "db1c00bf7bbbf42f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Mix Intermediate": {
+   "status": "ok",
+   "text": "f5d91dd23015761d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color OKLab Mix": {
+   "status": "ok",
+   "text": "78a428c13db5033f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color OKLab Offset": {
+   "status": "ok",
+   "text": "c757f4878d98b3ac",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Rainbow": {
+   "status": "ok",
+   "text": "6d967585a23d365a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Res Name": {
+   "status": "ok",
+   "text": "86498fe1c91a07b2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color Secondary Structure": {
+   "status": "ok",
+   "text": "4cd874ddf75f458e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color pLDDT": {
+   "status": "ok",
+   "text": "75b507ca7ced4c3b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Color to LCh": {
+   "status": "ok",
+   "text": "904256313cd82fec"
+  },
+  "Color to OKLab": {
+   "status": "ok",
+   "text": "f595955c161e3b98"
+  },
+  "Constraint Distance": {
+   "status": "ok",
+   "text": "8c9c3baeeaa5046f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Contains Geometry": {
+   "status": "ok",
+   "text": "a52ebc33e57532df",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Convert Space Transform": {
+   "status": "ok",
+   "text": "4ab7777ee509d161",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Copy Solver Data": {
+   "status": "ok",
+   "text": "99f82389279f776d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Cumulative Length": {
+   "status": "ok",
+   "text": "2c1e4f37462935ac"
+  },
+  "Curve Custom Profile": {
+   "status": "ok",
+   "text": "0b70cac2919a88a8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve Endpoint Values": {
+   "status": "ok",
+   "text": "62522793fcadfa2e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve Offset Dihedral": {
+   "status": "ok",
+   "text": "e895275343d59eaf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve Offset Dot": {
+   "status": "ok",
+   "text": "2feac0be59bd7f31",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve Rotation": {
+   "status": "ok",
+   "text": "1f85e1d05dd99674"
+  },
+  "Curve Segment": {
+   "status": "ok",
+   "text": "ec3a6ba1809519db"
+  },
+  "Curve Split Splines": {
+   "status": "ok",
+   "text": "ab1d9326c07464af",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve Transform": {
+   "status": "ok",
+   "text": "2cfc1008fccceb5b"
+  },
+  "Curve Vectors": {
+   "status": "ok",
+   "text": "a20b9f5ee36ea948"
+  },
+  "Curve Visualize": {
+   "status": "ok",
+   "text": "3d8ca5e78b24e5da",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Curve to Mesh with UVMap": {
+   "status": "ok",
+   "text": "4a9561648f91fe63",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Custom Force": {
+   "status": "ok",
+   "text": "0f31934af7fe0300",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Custom/World/Object Space": {
+   "status": "ok",
+   "text": "a5de1f49d8fe42d6"
+  },
+  "DNA From Curve": {
+   "status": "ok",
+   "text": "5f0a37c9204f987a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "DNA Sequence to ID": {
+   "status": "ok",
+   "text": "c528c3be42a9e78c"
+  },
+  "Damping": {
+   "status": "ok",
+   "text": "b15d88fd07617109"
+  },
+  "Density Style ISO Surface": {
+   "status": "ok",
+   "text": "6a184b8a1915b8b0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Density Style Surface": {
+   "status": "ok",
+   "text": "7d2b245b935a4097",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Density Style Wire": {
+   "status": "ok",
+   "text": "944235e4ca282e83",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Dihedral Angle": {
+   "status": "ok",
+   "text": "357c0764b24efe12",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Dihedral Chi Angle": {
+   "status": "ok",
+   "text": "bc9dccdef843270b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Dihedral Nucleic Angle": {
+   "status": "ok",
+   "text": "8057fdd0516f5433",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Dihedral Phi": {
+   "status": "ok",
+   "text": "6e33019499c789a9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Dihedral Psi": {
+   "status": "ok",
+   "text": "4a5c52372c18ff15",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Domain Switch Matrix": {
+   "status": "ok",
+   "text": "7114edca33f38658"
+  },
+  "Edge Group ID": {
+   "status": "ok",
+   "text": "832285e82c6938b7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Edge Info": {
+   "status": "ok",
+   "text": "c548a23d806c4b80",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Edge Length": {
+   "status": "ok",
+   "text": "0cf97f34c568af5a"
+  },
+  "Ensemble Instance": {
+   "status": "ok",
+   "text": "078c83e3de799c25",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Entity ID": {
+   "status": "ok",
+   "text": "1d00efac77ed868e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate Custom Effectors": {
+   "status": "ok",
+   "text": "b4a89d3c1b36b105",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate Effector Attributes": {
+   "status": "ok",
+   "text": "914bda01f6da9ce1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate Forces": {
+   "status": "ok",
+   "text": "813c8a216c8a97c9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate Ordered Bundles": {
+   "status": "ok",
+   "text": "61bef30a40c05dce",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate Per Group": {
+   "status": "ok",
+   "text": "1038717c0389eff9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate on Atoms": {
+   "status": "ok",
+   "text": "43cfcb86b687f517",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evaluate on Instances": {
+   "status": "ok",
+   "text": "023d8127081e2eb8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Evluate While Planar": {
+   "status": "ok",
+   "text": "a5a5ee0c211d77dc",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Expand Boolean": {
+   "status": "ok",
+   "text": "5ac73db559eeb3fd",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Boolean": {
+   "status": "ok",
+   "text": "f7454fd5ddae44ee",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Color": {
+   "status": "ok",
+   "text": "ef96a31b3d9d0962",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Float": {
+   "status": "ok",
+   "text": "7e92940abb14b9c6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Geometry": {
+   "status": "ok",
+   "text": "9a1ca3cdff199368",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Integer": {
+   "status": "ok",
+   "text": "6183d4f2818900b9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Matrix": {
+   "status": "ok",
+   "text": "a0e86da1562d8b78",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Rotation": {
+   "status": "ok",
+   "text": "08f72499816ba42d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fallback Vector": {
+   "status": "ok",
+   "text": "32104edac46fc7f7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Field Remap": {
+   "status": "ok",
+   "text": "0af1579f079ef46f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Find Bonded Atom": {
+   "status": "ok",
+   "text": "509c06e990bef849",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Find Bonds": {
+   "status": "ok",
+   "text": "d7725be9e3a02e20",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Find Connected": {
+   "status": "ok",
+   "text": "2ea41a9f6bb38f04",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "For Each Sim Geometry": {
+   "status": "ok",
+   "text": "6da68175e9c36473",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "For Each Typed Bundle": {
+   "status": "ok",
+   "text": "5f5bec8ff4df72e9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Force Brownian": {
+   "status": "ok",
+   "text": "44a460f012bcf8ce",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Force Gravity": {
+   "status": "ok",
+   "text": "e41c2e2c69273376"
+  },
+  "Force Mesh Collide": {
+   "status": "ok",
+   "text": "d5a3de129a9fbdfc",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Fractionate Float": {
+   "status": "ok",
+   "text": "ecf7c0dd9d6d4289",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Frame ID": {
+   "status": "ok",
+   "text": "051c21f9dbe78a80",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Geoemtry to Planar": {
+   "status": "ok",
+   "text": "7b5d5047c4bebf60",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Geometry Field Remap": {
+   "status": "ok",
+   "text": "944dd3792b14cb48",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Geometry Principal Components": {
+   "status": "ok",
+   "text": "9051239ce6eea8ac",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Get Geometry Atoms": {
+   "status": "ok",
+   "text": "86b3be16342d920a"
+  },
+  "Group Info": {
+   "status": "ok",
+   "text": "04577ad20bc7e41f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Group Parameter": {
+   "status": "ok",
+   "text": "ed0870cc53313ef0"
+  },
+  "Group Pick": {
+   "status": "ok",
+   "text": "d774696f2d7db52d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Group Pick First": {
+   "status": "ok",
+   "text": "4c8a22b36615a75d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Group Pick Index": {
+   "status": "ok",
+   "text": "88ae4d9a11ee2249",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Group Pick Vector": {
+   "status": "ok",
+   "text": "2e0ba48ed1509dbe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "HBond Energy": {
+   "status": "ok",
+   "text": "f3fdc680885d96e8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Hydrogen Bonding Partner": {
+   "status": "ok",
+   "text": "a9a940a6c0c15425",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Image ID": {
+   "status": "ok",
+   "text": "8c27afbe5afbdf48",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Distance": {
+   "status": "ok",
+   "text": "dfbf867fcee9194b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Mix Color": {
+   "status": "ok",
+   "text": "24a7ff1d53b354cf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Mix Float": {
+   "status": "ok",
+   "text": "1a62f137e6c9e599",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Mix Rotation": {
+   "status": "ok",
+   "text": "846b87bfe331f637",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Mix Vector": {
+   "status": "ok",
+   "text": "bb010966b92f1f80",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Index Mixed": {
+   "status": "ok",
+   "text": "66a01d57e8a26738"
+  },
+  "Index to Factor": {
+   "status": "ok",
+   "text": "2750b37d67b2286d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Integer Distance": {
+   "status": "ok",
+   "text": "ff2e02c3d541c472",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Integer Run": {
+   "status": "ok",
+   "text": "8bd1815eedc66560",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Inverse Mass": {
+   "status": "ok",
+   "text": "0b37ad9edb01f1ff",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Alpha Carbon": {
+   "status": "ok",
+   "text": "c7cb2e9350dcde4a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Backbone": {
+   "status": "ok",
+   "text": "dec4535b51d1d9f0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Backbone Edge": {
+   "status": "ok",
+   "text": "588f201fa3acf502",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Boundary Edge": {
+   "status": "ok",
+   "text": "1b1a5d85356fea29",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Effector for Geometry": {
+   "status": "ok",
+   "text": "fc3985ea6163e77e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Even": {
+   "status": "ok",
+   "text": "6d6a32f6f42c817f"
+  },
+  "Is Helix": {
+   "status": "ok",
+   "text": "de07b7effaf4e4bf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Hydrogen": {
+   "status": "ok",
+   "text": "a8ad846f136e7703",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Lipid": {
+   "status": "ok",
+   "text": "bc03d24f760430d6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Loop": {
+   "status": "ok",
+   "text": "6296e32214d01d1b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Nucleic": {
+   "status": "ok",
+   "text": "9a09b6d4ca6cadc7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Peptide": {
+   "status": "ok",
+   "text": "94da9abd35ea2cae",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Sheet": {
+   "status": "ok",
+   "text": "a830bff728eb01bb",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Side Chain": {
+   "status": "ok",
+   "text": "1063817653712152",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Is Solvent": {
+   "status": "ok",
+   "text": "d7871b68b7891997",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "LCh to Color": {
+   "status": "ok",
+   "text": "251475bb5a6972d0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "LCh to OKLab": {
+   "status": "ok",
+   "text": "61b76c0f213f814e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Lag Geometry": {
+   "status": "ok",
+   "text": "8beb9f27a4e184c5",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Lattice Grid": {
+   "status": "ok",
+   "text": "ad3770ebb9b419e8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Lerp Position": {
+   "status": "ok",
+   "text": "da8f1450c06c0f6a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "MN Typed Bundles": {
+   "status": "ok",
+   "text": "5d3e8e7a6c9b3741",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "MN Units": {
+   "status": "ok",
+   "text": "d27dc9e23fd22e31"
+  },
+  "MN_animate_noise_repeat": {
+   "status": "ok",
+   "text": "1864dfe12629d4c7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Mass": {
+   "status": "ok",
+   "text": "58db2cdcb947c496",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Menu Atom Name": {
+   "status": "ok",
+   "text": "7fd2db0d52465f86",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Menu Residue Mask": {
+   "status": "ok",
+   "text": "7fd2406bd2a4236d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Menu Residue Name": {
+   "status": "ok",
+   "text": "b03858cf14eb0cbb",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "NodeGroup": {
+   "status": "ok",
+   "text": "7d9a1f948a5dbf18",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Normalize Field": {
+   "status": "ok",
+   "text": "16faaed001cfc83e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Nucleic Chi": {
+   "status": "ok",
+   "text": "225a3f9e6ac3255f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Nucleic Dihedral": {
+   "status": "ok",
+   "text": "216a2fba8ef6fc50",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "OKLab Offset LCh": {
+   "status": "ok",
+   "text": "f2a47ca926ca98f7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "OKLab to Color": {
+   "status": "ok",
+   "text": "3fff86dc136b27b8"
+  },
+  "OKLab to LCh": {
+   "status": "ok",
+   "text": "2e7ab15634c321f8"
+  },
+  "Object Effector": {
+   "status": "ok",
+   "text": "b9ab943dc6fd42a2"
+  },
+  "Offset Boolean": {
+   "status": "ok",
+   "text": "98711fb8646e7076",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Color": {
+   "status": "ok",
+   "text": "d62fa1cb10b98c8c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Color Attribute": {
+   "status": "ok",
+   "text": "539f023fbd7686e0"
+  },
+  "Offset Curve": {
+   "status": "ok",
+   "text": "4b8c17d11e063718",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Float": {
+   "status": "ok",
+   "text": "077820ce9f37f0c4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Index": {
+   "status": "ok",
+   "text": "087272b1fd72aea9"
+  },
+  "Offset Integer": {
+   "status": "ok",
+   "text": "e3c42f6b9bdd2bc9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Matrix": {
+   "status": "ok",
+   "text": "de6042d615c71f73",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Point Along Curve": {
+   "status": "ok",
+   "text": "1961bef888714768",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Rotation": {
+   "status": "ok",
+   "text": "794bfb61574e9618",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Offset Vector": {
+   "status": "ok",
+   "text": "3c8269fc753cc810",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Override Index": {
+   "status": "ok",
+   "text": "592e755c48d4ed56"
+  },
+  "Peptide Chi": {
+   "status": "ok",
+   "text": "0a2b4c9c209897e9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Peptide Dihedral": {
+   "status": "ok",
+   "text": "64af56c3504d7f2c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Periodic Array": {
+   "status": "ok",
+   "text": "4db6fbd2be806fdf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Periodic Box": {
+   "status": "ok",
+   "text": "eb8c1aecaa0fa0de",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Periodic Image": {
+   "status": "ok",
+   "text": "ff2ca60e168836ee",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Pin Positions": {
+   "status": "ok",
+   "text": "f700f66a964d2a71"
+  },
+  "Pin Rotation": {
+   "status": "ok",
+   "text": "232637850e4efeab"
+  },
+  "Plexus": {
+   "status": "ok",
+   "text": "55faed5a5c051a57",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Point Edge Angle": {
+   "status": "ok",
+   "text": "356f6dca67b11f87",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Points of Edge": {
+   "status": "ok",
+   "text": "e80b2cff5ad8dc92",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Primitive Arrow": {
+   "status": "ok",
+   "text": "cabcf4d52bf6f073",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Primitive Gimbal": {
+   "status": "ok",
+   "text": "ea54ee9fe1ba0e00",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Principal Components": {
+   "status": "ok",
+   "text": "1ecf9031de9c9ebc",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Random Color": {
+   "status": "ok",
+   "text": "118a7ff2d8300d05",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Recip. Ang. Dis": {
+   "status": "ok",
+   "text": "fe47566352334ce3"
+  },
+  "Relative Index": {
+   "status": "ok",
+   "text": "ad08171162585ee5",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Remove Sim Attributes": {
+   "status": "ok",
+   "text": "e81f41d0371484c9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rename Sim Attributes": {
+   "status": "ok",
+   "text": "26b64bfa545390f7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Residue Dihedral Angle": {
+   "status": "ok",
+   "text": "7b301f4ae3845c20",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Residue ID": {
+   "status": "ok",
+   "text": "7841e7b78ba5da6f",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Residue Mask": {
+   "status": "ok",
+   "text": "b585d6aa635f0590",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Residue Name": {
+   "status": "ok",
+   "text": "87fdd1b5e51b3b51",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Residue Parameter": {
+   "status": "ok",
+   "text": "0fdd4a34cd26a7d2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rod Bend/Twist Constraint": {
+   "status": "ok",
+   "text": "990251b96c291ca9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rod Stretch/Shear Constraint": {
+   "status": "ok",
+   "text": "9a02660e4e9b4c3b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rotation RELION": {
+   "status": "ok",
+   "text": "9dd24f3675efe727",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rotation cisTEM": {
+   "status": "ok",
+   "text": "296b96b295b16454",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Rotation from ZYZ": {
+   "status": "ok",
+   "text": "535f35704c32c59e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mix Angle": {
+   "status": "ok",
+   "text": "de39873b4807911b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mix Float": {
+   "status": "ok",
+   "text": "f5fc11823a6e2f37",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mix Vector": {
+   "status": "ok",
+   "text": "ece9683795f3ef01",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mixed Color": {
+   "status": "ok",
+   "text": "7ecb57a7d83af9bf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mixed Rotation": {
+   "status": "ok",
+   "text": "2bbb13a3f4d2e3ab",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Mixed Vector": {
+   "status": "ok",
+   "text": "14c6bb093814acfa",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Nearest Atoms": {
+   "status": "ok",
+   "text": "053fa67a510f47f6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sample Position": {
+   "status": "ok",
+   "text": "82ba438c6667a299"
+  },
+  "Secondary Structure": {
+   "status": "ok",
+   "text": "6ef7420e4091371d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Segment ID": {
+   "status": "ok",
+   "text": "a356c8474827a8b4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Atomic Number": {
+   "status": "ok",
+   "text": "dc7406dad9947650",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Attribute": {
+   "status": "ok",
+   "text": "e5e2dd888a6ca560",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Bonded": {
+   "status": "ok",
+   "text": "512b746e0e8956a9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Cube": {
+   "status": "ok",
+   "text": "cf2edf65106ea942",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Element": {
+   "status": "ok",
+   "text": "2deebc11d2afdc0d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Nucleic Type": {
+   "status": "ok",
+   "text": "14f71359d0d4282e",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Proximity": {
+   "status": "ok",
+   "text": "3c50e17f16166e65",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Res ID": {
+   "status": "ok",
+   "text": "db53826f6edea390",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Res ID Range": {
+   "status": "ok",
+   "text": "5e0b657f48a0bf33",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Res ID String": {
+   "status": "ok",
+   "text": "f471e5e656f3d14d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Res Name": {
+   "status": "ok",
+   "text": "067b8600cf472ae4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Res Whole": {
+   "status": "ok",
+   "text": "1b875b9322bbe066",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Select Sphere": {
+   "status": "ok",
+   "text": "e0d0aa75d83d8b0c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Selected Instances": {
+   "status": "ok",
+   "text": "e013575ff1deb2b4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Separate Atoms": {
+   "status": "ok",
+   "text": "4dd03b209fd343d1",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Separate First Point": {
+   "status": "ok",
+   "text": "80aa02f6e0fdacc7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Separate Polymers": {
+   "status": "ok",
+   "text": "2842f31b7b1954c8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Chi Angle": {
+   "status": "ok",
+   "text": "36aed6b5737748ad",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Color": {
+   "status": "ok",
+   "text": "d3ae5e8f1e1f933a"
+  },
+  "Set Effector": {
+   "status": "ok",
+   "text": "e2790ee814e3cddd",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Friction": {
+   "status": "ok",
+   "text": "fbb437a71c77b6c1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Geo Updater - Deform Only": {
+   "status": "ok",
+   "text": "9bfb8f689f1d2638",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Geometry Tags": {
+   "status": "ok",
+   "text": "83459e8f68cce6fc",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Instancer": {
+   "status": "ok",
+   "text": "a1a6f2dc2d305bc1"
+  },
+  "Set Mass": {
+   "status": "ok",
+   "text": "a8a2ce3110f87d2b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Nucleic Dihedral": {
+   "status": "ok",
+   "text": "733c632b05c5fcae",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Phi Psi Angle": {
+   "status": "ok",
+   "text": "ccad2bc7abe5ce6a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set Previous World Items": {
+   "status": "ok",
+   "text": "b4d3442ce92128a7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Set URes ID": {
+   "status": "ok",
+   "text": "eb5816eb887e2d2a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Setup Structural Rest Data": {
+   "status": "ok",
+   "text": "45c82c43ee9f3eb0",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sim Attributes": {
+   "status": "ok",
+   "text": "0e4020d0f137929c"
+  },
+  "Simplify Cached Collider Info": {
+   "status": "ok",
+   "text": "fdfe2a13c5d03225",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Simulate Curve": {
+   "status": "ok",
+   "text": "fff7561dccedfcf2",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Simulate DNA Guide": {
+   "status": "ok",
+   "text": "6463c072bdb377f7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Simulate Elastic Network": {
+   "status": "ok",
+   "text": "ed5c4a5705182ac7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Simulate on Faces": {
+   "status": "ok",
+   "text": "a34e477647cc861d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Slice Edge Instances": {
+   "status": "ok",
+   "text": "2583a724e7fa317b",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Smooth by Angle": {
+   "status": "ok",
+   "text": "a72ef0e4ef82ee79",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Softness to Compliance": {
+   "status": "ok",
+   "text": "f9943d62fa970f15"
+  },
+  "Sorted Bundle Paths": {
+   "status": "ok",
+   "text": "4d3a1d97b3d7ae28",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Split Curves": {
+   "status": "ok",
+   "text": "75834d86c2fc7d3d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Split to Centred Instances": {
+   "status": "ok",
+   "text": "bcc4e17464a4254a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Starfile Instances": {
+   "status": "ok",
+   "text": "2c5bbca71f364149",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Store Bend Rotation": {
+   "status": "ok",
+   "text": "7bfa8d2247f0bd12",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Store Edge Length": {
+   "status": "ok",
+   "text": "199b35620b878150"
+  },
+  "Store Segment Length": {
+   "status": "ok",
+   "text": "8eb2836f4caa8ce5"
+  },
+  "Store Segment Rotation": {
+   "status": "ok",
+   "text": "0acd23212adda8fc"
+  },
+  "String to List": {
+   "status": "ok",
+   "text": "e7a78321e57581c9"
+  },
+  "Structure Parameter": {
+   "status": "ok",
+   "text": "1c4d368dc4b90ea5",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Ball and Stick": {
+   "status": "ok",
+   "text": "a432ff95c56c8693",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Cartoon": {
+   "status": "ok",
+   "text": "93757f35d8a835e6",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Ribbon": {
+   "status": "ok",
+   "text": "ba67115a6e1f983e",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Spheres": {
+   "status": "ok",
+   "text": "fb337d26f8988743",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Sticks": {
+   "status": "ok",
+   "text": "0bf38adf40fcb242",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Style Surface": {
+   "status": "ok",
+   "text": "4e2af3e821d03dbb",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Sub Group Info": {
+   "status": "ok",
+   "text": "9414d1053d62d29c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Switch Residue Name": {
+   "status": "ok",
+   "text": "b61bfbabf860ff66",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Symmetry ID": {
+   "status": "ok",
+   "text": "890499cbea91bfa1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "TEM Rotation": {
+   "status": "ok",
+   "text": "28809688ecb4f5ca",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Thin Rod Moment of Inertia": {
+   "status": "ok",
+   "text": "74f99bed67f015ff",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Topology DSSP": {
+   "status": "ok",
+   "text": "8e4cef07f8636b2c",
+   "warnings": [
+    "'String.String': quotes and newlines replaced",
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Accumulate": {
+   "status": "ok",
+   "text": "7a7a6ddcb3852db1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Accumulate Point": {
+   "status": "ok",
+   "text": "b4f8c5deb612f37d",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Local": {
+   "status": "ok",
+   "text": "af929ef8ddd14cdd",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Local Axis": {
+   "status": "ok",
+   "text": "232429eeb1765c3c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Mix": {
+   "status": "ok",
+   "text": "c4c17b8253141377",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Transform Relative": {
+   "status": "ok",
+   "text": "2da8b43fe221a2da",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "URes ID": {
+   "status": "ok",
+   "text": "c3032aee4da2b4cf",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Unique Chain ID": {
+   "status": "ok",
+   "text": "8edb5514801da637",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Unique Residue ID": {
+   "status": "ok",
+   "text": "74fe17e3633576c8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Unit Convert": {
+   "status": "ok",
+   "text": "6faee2f4b423c7c8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "VDW Radii": {
+   "status": "ok",
+   "text": "4c53061ccea63d64",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Vector Angle": {
+   "status": "ok",
+   "text": "9bb7e3ab3b030dbe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Vector Direction": {
+   "status": "ok",
+   "text": "07abb4f481ec0d55",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Vector from Point": {
+   "status": "ok",
+   "text": "5193bce2dd39d868"
+  },
+  "Vector in Angstroms": {
+   "status": "ok",
+   "text": "b21c7c48ef5dd8c6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Velocity": {
+   "status": "ok",
+   "text": "91a5dc874478296a"
+  },
+  "Visualize Angle": {
+   "status": "ok",
+   "text": "8ee5b2554e62b3a6",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Visualize Chi Angle": {
+   "status": "ok",
+   "text": "a2249815d101b699",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Visualize Points": {
+   "status": "ok",
+   "text": "b9b63623cf7828c9",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "Visualize Relative Atoms": {
+   "status": "ok",
+   "text": "63512d81b7fe6ed5",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "World to Angstrom": {
+   "status": "ok",
+   "text": "2ce62d9199cca020"
+  },
+  "XPBD Finalise": {
+   "status": "ok",
+   "text": "7b14d842d4b8644a",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Init": {
+   "status": "ok",
+   "text": "da9ce7b0417bf95c",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Simulation": {
+   "status": "ok",
+   "text": "451c96c3c53a2043",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve Curve": {
+   "status": "ok",
+   "text": "18da2d99ea5465f1",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve Edges": {
+   "status": "ok",
+   "text": "641413fe58a6c000",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve Hook": {
+   "status": "ok",
+   "text": "527ac9c72ad937fe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve Points": {
+   "status": "ok",
+   "text": "3f3abf44575736e8",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve Points for Curve": {
+   "status": "ok",
+   "text": "04a6800bc33b30ac",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solve on Faces": {
+   "status": "ok",
+   "text": "47b5a682f67469fe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "XPBD Solver": {
+   "status": "ok",
+   "text": "45c0c9126c3da9fe",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "oxDNA Realize Vectors": {
+   "status": "ok",
+   "text": "2aef2e065deb5dd7",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "oxDNA Recover Vectors": {
+   "status": "ok",
+   "text": "90669bddb4f62945",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "oxDNA Style Ribbon": {
+   "status": "ok",
+   "text": "1ed274d24854ebb4",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  },
+  "oxDNA Vectors": {
+   "status": "ok",
+   "text": "e692f1e001759938",
+   "warnings": [
+    "appearance of Group Input not exported: label"
+   ]
+  }
+ }
+}

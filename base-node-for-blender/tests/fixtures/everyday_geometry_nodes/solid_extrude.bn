@@ -1,0 +1,65 @@
+// Solid Extrude, from Cartesian Caramel's Everyday Nodes
+// Author: Cartesian Caramel
+// Source: https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1 (6c078f7)
+// License: CC0-1.0, https://creativecommons.org/publicdomain/zero/1.0/
+// Written by Base Node from tests/fixtures/everyday_geometry_nodes.blend;
+// to write it again: BASE_NODE_UPDATE_FIXTURES=1, see tests/fixtures/README.md
+
+geometry graph "Solid Extrude"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Thickness: Float = 0.1 in -10000.0..10000.0,
+    Midlevel: Float(subtype: FACTOR) in 0.0..1.0,
+    Multiplier: Float = 1.0 in -10000.0..10000.0,
+    "Even Thickness": Bool,
+    "Keep Bottom": Bool = true
+) -> (Geometry: Geometry, "Original Normal": Vector, Top: Bool, Side: Bool) {
+  normal = Normal(legacy_corner_normals: true)
+  index = Index() @ hide
+  math_4 = Thickness * Multiplier @ hide
+  capture_attribute = CaptureAttribute(
+    Geometry,
+    selection: Selection,
+    Index: index,
+    Value: normal.true_normal,
+    "Value.001": math_4)
+  capture_attribute_2 = CaptureAttribute(
+    capture_attribute.geometry,
+    Value: normal.true_normal,
+    domain: CORNER)
+  {
+    flip_faces = FlipFaces(capture_attribute_2.geometry) @ hide
+    extrude_mesh = ExtrudeMesh(
+      capture_attribute_2.geometry,
+      selection: Selection,
+      offset_scale: 0.0,
+      individual: false)
+    boolean_math = not extrude_mesh.top @ hide
+    switch = Switch(
+      switch: keep_bottom,
+      false_: extrude_mesh.mesh,
+      true_: MergePoints(
+        flip_faces + extrude_mesh.mesh,
+        selection: boolean_math,
+        merge_id: capture_attribute.index),
+      input_type: GEOMETRY) @ hide
+  }
+  vector_math = capture_attribute_2.value ⋅ capture_attribute.value @ hide
+  {
+    math = extrude_mesh.top - Midlevel @ hide
+    math_3 = capture_attribute.value_001
+      / pow(EvaluateOnDomain(value: vector_math, domain: CORNER), 2.0) @ hide
+    switch_2 = Switch(
+      switch: even_thickness,
+      false_: capture_attribute.value_001,
+      true_: math_3) @ hide
+    math_2 = math * switch_2 @ hide
+    vector_math_2 = capture_attribute_2.value * math_2 @ hide
+    set_position = SetPosition(switch, offset: vector_math_2)
+  }
+  return (
+    Geometry: set_position,
+    "Original Normal": capture_attribute_2.value,
+    Top: extrude_mesh.top,
+    Side: extrude_mesh.side)
+}

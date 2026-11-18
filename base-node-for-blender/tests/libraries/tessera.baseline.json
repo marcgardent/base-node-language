@@ -1,0 +1,41 @@
+{
+ "library": "Tessera – Mosaic & Tile Studio",
+ "version": "1.0.0",
+ "sha256": "089e1256f64f79cdab89a70956c9d47f17c5796b0e26a56a4a48e6a357c93000",
+ "blender": "5.3.0",
+ "summary": "8 ok",
+ "groups": {
+  "Tessera Engine": {
+   "status": "ok",
+   "text": "c2bd2389c9b230a5"
+  },
+  "Tessera · Bed": {
+   "status": "ok",
+   "text": "3f466ab27d6c6c67"
+  },
+  "Tessera · Color": {
+   "status": "ok",
+   "text": "fc78e2c090546a5e"
+  },
+  "Tessera · Inset": {
+   "status": "ok",
+   "text": "5536887d855718d0"
+  },
+  "Tessera · Map": {
+   "status": "ok",
+   "text": "4bed46f70d346f04"
+  },
+  "Tessera · Pieces": {
+   "status": "ok",
+   "text": "61476beaf7028318"
+  },
+  "Tessera · Region": {
+   "status": "ok",
+   "text": "4fdd4ed16e4ad810"
+  },
+  "Tessera · Solidify": {
+   "status": "ok",
+   "text": "fd02b01c3477b01b"
+  }
+ }
+}

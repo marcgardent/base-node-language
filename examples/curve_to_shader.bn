@@ -1,0 +1,76 @@
+// A curve exports where each point lies on it, as named attributes; a material reads them back.
+// Geometry Nodes knows the curve (factor, distance, length, which curve, around the tube),
+// the shader does not: stored on the points, the attributes reach the mesh and the render.
+
+shader graph curve_attributes() -> (
+    factor: Float,
+    distance: Float,
+    length: Float,
+    index: Float,
+    angle: Float
+) {
+  "Reads the attributes curve_to_shader stores; angle goes 0 → 1 around the tube"
+  around = Attribute(attribute_name: "curve_around")
+  return (
+    factor: Attribute(attribute_name: "curve_factor").factor,
+    distance: Attribute(attribute_name: "curve_distance").factor,
+    length: Attribute(attribute_name: "curve_length").factor,
+    index: Attribute(attribute_name: "curve_index").factor,
+    angle: atan2(around.vector.y, around.vector.x) / 6.2831855 + 0.5)
+}
+
+shader graph curve_material(
+    start: Color = (0.01, 0.04, 0.15),
+    end: Color = (0.89, 0.38, 0.05),
+    stripes: Float = 8.0 in 0.0..,
+    stripe_width: Float = 0.3 in 0.0..1.0,
+    twist: Float = 1.0,
+    variation: Float = 0.15 in 0.0..1.0
+) -> Shader {
+  "A smart material: a gradient from start to end of each curve, spiral stripes per metre, a hue per curve"
+  c = curve_attributes()
+  "Gradient" #teal {
+    base = Mix(factor: c.factor, a: start, b: end, data_type: RGBA)
+  }
+  "Stripes" #orange {
+    // Stripes per metre, not per curve: a long curve has more of them; twist turns them into a spiral
+    // No Compare in a shader tree: Math's Less Than gives 1 inside a stripe
+    band = Math(
+      Value: fract(c.distance * stripes + c.angle * twist),
+      Value_001: stripe_width,
+      operation: LESS_THAN)
+    striped = Mix(factor: band * 0.6, a: base, b: (0.02, 0.02, 0.02, 1.0), data_type: RGBA)
+  }
+  "One hue per curve" #violet {
+    hue = WhiteNoiseTexture(w: c.index, noise_dimensions: "1D")
+    color = HueSaturationValue(hue: 0.5 + (hue.value - 0.5) * variation, color: striped)
+  }
+  return PrincipledBSDF(base_color: color, roughness: 0.35 + band * 0.3)
+}
+
+geometry graph curve_to_shader(
+    curve: Geometry,
+    radius: Float(subtype: DISTANCE) = 0.05 in 0.0..,
+    resolution: Int = 16 in 3..256,
+    fill_caps: Bool = true
+) -> Geometry {
+  "Sweeps a tube along each curve and stores its coordinates for curve_material"
+  "Along the curve" #teal {
+    // factor 0 → 1 from the start to the end of each curve; distance in metres
+    along = SplineParameter()
+    tagged = curve
+      |> StoreNamedAttribute(name: "curve_factor", value: along.factor)
+      |> StoreNamedAttribute(name: "curve_distance", value: along.length)
+      |> StoreNamedAttribute(name: "curve_length", value: SplineLength().length)
+      |> StoreNamedAttribute(name: "curve_index", value: Index(), data_type: INT, domain: CURVE)
+  }
+  "Around the tube" #orange {
+    // The direction from the axis, not an angle: it has no seam to interpolate across
+    profile = CurveCircle(resolution: resolution)
+      |> StoreNamedAttribute(name: "curve_around", value: Position(), data_type: FLOAT_VECTOR)
+      |> TransformGeometry(scale: CombineXYZ(x: radius, y: radius, z: radius))
+  }
+  return tagged
+    |> CurveToMesh(profile_curve: profile, fill_caps: fill_caps)
+    |> SetMaterial(material: curve_material)
+}

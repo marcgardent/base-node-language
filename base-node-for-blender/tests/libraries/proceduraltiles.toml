@@ -1,0 +1,12 @@
+# Procedural Tiles: the shader node groups of its add-on (proceduralTilesData.blend, committed in
+# the repository): tilings, wallpaper groups and 2D SDFs, all procedural, no image.
+name = "Procedural Tiles"
+author = "Aisun Tang"
+homepage = "https://github.com/AisunTang/Procedural-Tiles"
+license = "GPL-3.0-or-later"
+# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# committed: 36 MB, and a new version is one line here. The baseline keeps names, statuses and hashes.
+version = "a2f21a0 (0.0.4)"
+url = "https://raw.githubusercontent.com/AisunTang/Procedural-Tiles/a2f21a0cb7a868ffd205a2c013f71e50d7c104b4/proceduralTilesData.blend"
+sha256 = "1cdb9604392cd87bc8f7cf66accb2a1f06700157392825bd17e3f00aace51029"
+trees = ["shader", "material"]

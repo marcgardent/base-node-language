@@ -1,0 +1,115 @@
+{
+ "library": "Compositing Nodes Essentials",
+ "version": "Blender 5.3.0",
+ "sha256": "3307ae8ac73d52fdf15b029aea5365086bb30264eb7a8b3508c4d0355cb79f13",
+ "blender": "5.3.0",
+ "summary": "25 ok",
+ "groups": {
+  ".Halation 3.021": {
+   "status": "ok",
+   "text": "0567a7e56785c55e"
+  },
+  ".Multisample Displace Group 2.010": {
+   "status": "ok",
+   "text": "038d6995b9a8f39b"
+  },
+  ".Noise Maschine 3.022": {
+   "status": "ok",
+   "text": "b6954dd8b55dcf08"
+  },
+  ".Noisegroup Internal 3.022": {
+   "status": "ok",
+   "text": "e8084487b890235a",
+   "blender_quirk": [
+    "composite Result"
+   ]
+  },
+  ".log space >1.001": {
+   "status": "ok",
+   "text": "cb80b14342402d85"
+  },
+  "3D to Screen Space": {
+   "status": "ok",
+   "text": "7c1b848a5f34a853"
+  },
+  "Bloom": {
+   "status": "ok",
+   "text": "278c0d64da1df876"
+  },
+  "Cheap Blur 2.001": {
+   "status": "ok",
+   "text": "a68e88a32f702a72"
+  },
+  "Chromatic Aberration": {
+   "status": "ok",
+   "text": "da4544c430a5c50a"
+  },
+  "Combine Cylindrical": {
+   "status": "ok",
+   "text": "69e72dbb59b71ae6"
+  },
+  "Combine Spherical": {
+   "status": "ok",
+   "text": "e4530c49775e2538"
+  },
+  "Film Grain": {
+   "status": "ok",
+   "text": "e050d549a72c281f",
+   "blender_quirk": [
+    "composite Result"
+   ]
+  },
+  "Project with Depth": {
+   "status": "ok",
+   "text": "14022b0cacecb206"
+  },
+  "Retime": {
+   "status": "ok",
+   "text": "d7f20a2f1be23b66"
+  },
+  "Rounded Square Mask": {
+   "status": "ok",
+   "text": "35850e96712f4649"
+  },
+  "Screen to 3D Space": {
+   "status": "ok",
+   "text": "65088a211b8d25d8"
+  },
+  "Sensor Noise": {
+   "status": "ok",
+   "text": "5f198e3e84e2cc19"
+  },
+  "Separate Cylindrical": {
+   "status": "ok",
+   "text": "f833e26fec9b5005"
+  },
+  "Separate Spherical": {
+   "status": "ok",
+   "text": "cc2113c0998d1400"
+  },
+  "Sepia": {
+   "status": "ok",
+   "text": "f2bedf7f0202f5fd"
+  },
+  "Split Toning": {
+   "status": "ok",
+   "text": "9b7604ee46937de6"
+  },
+  "Transform and Project": {
+   "status": "ok",
+   "text": "78ff62b5501752ea"
+  },
+  "Tune Image": {
+   "status": "ok",
+   "text": "43bef71d73a37f0d"
+  },
+  "Unsharp Mask": {
+   "status": "ok",
+   "text": "a93889db047b0e11"
+  },
+  "Vignette": {
+   "status": "ok",
+   "text": "0443e30fc95b221f"
+  }
+ }
+}

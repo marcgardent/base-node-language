@@ -1,0 +1,27 @@
+// Tuples choose the type: no input_type and no data_type is written for the switches below.
+// A 3-tuple makes a Vector Switch, a 4-tuple a Color IndexSwitch and a Color Mix.
+geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..1.0) -> Geometry {
+  "A board of tiles: their colours and sizes are tuples"
+  p = Position()
+  // A checker of cells, by the index of each point of the Grid
+  cell = mod(Index(), count) + floor(Index() / count)
+  r = length(CombineXYZ(p.x, p.y))
+  // Four colours, a 4-tuple each: a Color IndexSwitch
+  tint = IndexSwitch(
+    mod(cell, 4.0),
+    (1.0, 0.3, 0.04, 1.0),
+    (0.02, 0.5, 0.75, 1.0),
+    (1.0, 0.72, 0.06, 1.0),
+    (0.75, 0.06, 0.24, 1.0))
+  // Darker towards the rim: a Color Mix
+  shade = Mix(Clamp(r * 0.42 - 0.1), tint, (0.04, 0.05, 0.08, 1.0))
+  // Tall in the middle, flat around: a Vector Switch
+  size = Switch(r < 1.15, (0.24, 0.24, 0.08), (0.2, 0.2, 0.5))
+  lift = sin(phase * 6.283185 - r * 2.6) * 0.12
+  return Grid(3.9, 3.9, count, count)
+    |> StoreNamedAttribute(name: "tint", value: shade, data_type: FLOAT_COLOR)
+    |> SetPosition(offset: CombineXYZ(z: lift))
+    |> InstanceOnPoints(instance: Cube(size: (1.0, 1.0, 1.0)), scale: size)
+    |> RealizeInstances()
+    |> SetMaterial(material: TupleTiles)
+}

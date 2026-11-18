@@ -1,0 +1,175 @@
+:root {
+  color-scheme: dark light;
+  --bg: #0f1115;
+  --panel: #161920;
+  --border: #262b36;
+  --text: #e6e9ef;
+  --muted: #939ab0;
+  --accent: #4f9cf9;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #59636e;
+    --accent: #0969da;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 2.5rem 1rem 4rem;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+header .home {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 {
+  margin: 2rem 0 0.5rem;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+}
+h2 {
+  margin: 3rem 0 0.75rem;
+  font-size: 1.15rem;
+  font-family: var(--mono);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+h2 .n { color: var(--muted); font-weight: 400; }
+h3 { margin: 1.75rem 0 0.5rem; font-size: 1rem; }
+p.file { margin: 1.25rem 0 -0.5rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+p.file code { font-size: 0.78rem; }
+p, li { margin: 0.6rem 0; }
+.lead { font-size: 1.05rem; }
+.muted { color: var(--muted); }
+code, pre { font-family: var(--mono); font-size: 0.85rem; }
+p code, li code, td code {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+}
+kbd {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+}
+pre {
+  margin: 0;
+  padding: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-x: auto;
+  line-height: 1.45;
+}
+figure { margin: 1rem 0; }
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #000;
+}
+figcaption {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.square img, .square figcaption { max-width: 560px; margin-left: auto; margin-right: auto; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; }
+.cards bn-file { display: block; }
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+.pair figure { margin: 0; }
+.try {
+  margin: 1rem 0;
+  padding: 0.6rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: 0 6px 6px 0;
+}
+.try strong { font-family: var(--mono); font-size: 0.82rem; }
+ol.steps { padding-left: 1.4rem; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+th { background: var(--panel); font-family: var(--mono); font-weight: 600; font-size: 0.82rem; }
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: center;
+  margin: 1.5rem 0;
+  padding: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+.card:hover { border-color: var(--accent); text-decoration: none; }
+.card img { width: 100%; height: auto; border-radius: 4px; display: block; }
+.card h3 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.card p { margin: 0.3rem 0; color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 560px) {
+  .card { grid-template-columns: 1fr; }
+}
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-family: var(--mono);
+}

@@ -1,0 +1,34 @@
+use grade (exposure_stops)
+use merge (over, with_alpha)
+use qc
+use stmap (stmap_apply, stmap_of, aspect_of)
+
+// The test patterns and checks of qc, each fitted whole in a tile of three by two. Top row, the
+// patterns: SMPTE colour bars at 75 %, the colour wheel, a soft radial over the checker of the alpha
+// check. Bottom row, the checks on the render of the passes showcase: as it is, its false colour
+// by stops of luminance, the clip check of the render half a stop over, above 1 in red.
+// Rendered by examples/render_compositor_showcases.py.
+
+compositor graph "in cell"(frame: Color, image: Color, column: Float, row: Float) -> Color {
+  "The image fitted whole in the cell of this column and row of three by two on the frame, row 0 at the bottom"
+  p = ImageCoordinates(frame).normalized
+  x = (p.x * 3.0 - column - 0.03) / 0.94
+  y = (p.y * 2.0 - row - 0.04) / 0.92
+  k = aspect_of(image) / (aspect_of(frame) * 0.94 / 3.0 / (0.92 / 2.0))
+  u = (x - 0.5) * max(1.0, 1.0 / k) + 0.5
+  v = (y - 0.5) * max(1.0, k) + 0.5
+  return stmap_apply(image, stmap_of(u, v, (x >= 0.0) * (x <= 1.0) * (y >= 0.0) * (y <= 1.0)))
+}
+
+compositor graph "qc showcase"(image: Color) -> Color {
+  "Patterns and checks in six tiles: bars, wheel, alpha check / render, false colour, clip check"
+  soft = alpha_check(radial(image, radius: 0.85, softness: 0.8), 20.0).image
+  t1 = over(
+    in_cell(image, color_bars(image), 0.0, 1.0),
+    in_cell(image, color_wheel(image), 1.0, 1.0))
+  t2 = over(t1, in_cell(image, soft, 2.0, 1.0))
+  t3 = over(t2, in_cell(image, image, 0.0, 0.0))
+  t4 = over(t3, in_cell(image, false_color(image), 1.0, 0.0))
+  t5 = over(t4, in_cell(image, clip_check(exposure_stops(image, 0.5)), 2.0, 0.0))
+  return over(t5, with_alpha((0.06, 0.06, 0.07), 1.0))
+}

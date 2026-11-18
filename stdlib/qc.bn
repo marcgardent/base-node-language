@@ -1,0 +1,239 @@
+// Base Node Standard Library — Module qc
+// @module qc
+// @version 0.12.0
+// @target blender-compositor
+// @edition 2026
+
+// Quality control in the compositor, after Nuke: the image generators of test patterns, and the
+// checks a compositor runs on an image to see what its viewer hides.
+// A pattern takes the size of the image it is given, whose pixels it does not read. Its places are
+// in pixels (grid, checkerboard, counted from the bottom-left pixel) or in the image's uniform
+// coordinates, as mask2d draws: the origin at the image's center, y up, its larger side from -1 to 1.
+// Its colours are premultiplied: a pattern drawn on part of the image is transparent elsewhere.
+// A check reads the values as they are in the buffer, premultiplied; its picture is opaque, but for
+// zebra, which leaves the image as it is outside its stripes, and the image of the alpha check.
+// The luminance is Rec. 709's. NaN is not equal to itself, but the compositor's Compare, which tests
+// |a - b| <= ε, finds it so, and min and max return their other operand when one is NaN: NaN is told
+// by max(x, -1) < min(x, 1), which no number gives. A value past ±10³⁰ counts as infinite: an image
+// written by Python is clamped to ±3.4 × 10³⁸, while an infinity made in the graph stays one.
+
+use grade (rec709_luma, gray_of)
+use mask2d (shape_space, sdf_mask)
+use merge (alpha_of, with_alpha, keymix, weighted_sum, over)
+
+// ---- Helpers ----
+
+compositor graph "color times"(color: Color, k: Float = 1.0) -> Color {
+  "The colour times k on the four channels: drawn where k is 1, transparent where it is 0"
+  return with_alpha(color * k, alpha_of(color) * k)
+}
+
+compositor graph frame(image: Color) -> Float {
+  "1 on every pixel of the image, whatever its values, NaN among them: a pattern takes its size from it"
+  return ImageCoordinates(image).normalized.x > -1.0
+}
+
+compositor graph "half extent"(image: Color) -> Vector {
+  "Half the width and half the height of the image in its uniform coordinates: the larger one is 1"
+  d = ImageInfo(image).dimensions
+  return d / max(d.x, d.y)
+}
+
+compositor graph "pixel of"(image: Color) -> Vector {
+  "The column and row of each pixel, from 0 at the bottom-left, as Floats"
+  return ImageCoordinates(image).pixel
+}
+
+compositor graph "soft edge"(d: Float, edge: Float, softness: Float in 0.0..) -> Float {
+  "1 where d is below edge - softness, 0 past edge, a smoothstep between them"
+  return MapRange(
+    value: d,
+    from_min: edge,
+    from_max: edge - max(softness, 1e-06),
+    to_min: 0.0,
+    to_max: 1.0,
+    interpolation_type: SMOOTHSTEP)
+}
+
+compositor graph clamp01(x: Float) -> Float {
+  "x clamped between 0 and 1; 0 for NaN"
+  return min(max(x, 0.0), 1.0)
+}
+
+// ---- Patterns ----
+
+compositor graph constant(image: Color, color: Color = (0.18, 0.18, 0.18, 1.0)) -> Color {
+  "The colour on every pixel, of the image's size"
+  return color_times(color, frame(image))
+}
+
+compositor graph "color bars"(image: Color, level: Float = 0.75 in 0.0..1.0) -> Color {
+  "SMPTE's seven bars at 75 % (level): white, yellow, cyan, green, magenta, red, blue, from left to right, each a seventh of the width"
+  k = floor(ImageCoordinates(image).normalized.x * 7.0)
+  red = mod(floor(k * 0.5), 2.0) < 0.5
+  green = k < 3.5
+  blue = mod(k, 2.0) < 0.5
+  return CombineColor(red * level, green * level, blue * level, frame(image))
+}
+
+compositor graph "color wheel"(image: Color, value: Float = 1.0 in 0.0..) -> Color {
+  "A disk filling the image's smaller side: its hue turns around the center, red to the right, then green and blue counterclockwise; its saturation grows outwards from white"
+  p = ImageCoordinates(image).uniform
+  e = half_extent(image)
+  r = min(e.x, e.y)
+  d = length(p)
+  hue = fract(atan2(p.y, p.x) / 6.2831853)
+  wheel = CombineColor(hue, min(d / r, 1.0), value, 1.0, mode: HSV)
+  return color_times(wheel, sdf_mask(image, d - r, 0.0))
+}
+
+compositor graph ramp(
+    image: Color,
+    from: Color = (0.0, 0.0, 0.0, 1.0),
+    to: Color = (1.0, 1.0, 1.0, 1.0),
+    angle: Float(subtype: ANGLE)
+) -> Color {
+  "From one colour to the other across the whole image, along angle: 0 from left to right, 90° from bottom to top; at 45° from corner to corner"
+  p = ImageCoordinates(image).uniform
+  e = half_extent(image)
+  c = cos(angle)
+  s = sin(angle)
+  t = 0.5 + 0.5 * (p.x * c + p.y * s) / (abs(c) * e.x + abs(s) * e.y)
+  return weighted_sum(from, 1.0 - t, to, t)
+}
+
+compositor graph radial(
+    image: Color,
+    center: Vector = (0.0, 0.0),
+    radius: Float = 0.5 in 0.0..,
+    softness: Float = 0.5 in 0.0..1.0
+) -> Color {
+  "White in a disk of the uniform coordinates, transparent outside: it falls off from radius × (1 - softness) to the radius by a smoothstep"
+  d = length(shape_space(image, center))
+  m = soft_edge(d, radius, radius * softness)
+  return gray_of(m, m)
+}
+
+compositor graph rectangle(
+    image: Color,
+    center: Vector = (0.0, 0.0),
+    size: Vector = (1.0, 0.6),
+    softness: Float in 0.0..
+) -> Color {
+  "White in a rectangle of this size in the uniform coordinates, transparent outside: each side falls off inwards over softness by a smoothstep"
+  p = shape_space(image, center)
+  m = soft_edge(abs(p.x), size.x * 0.5, softness) * soft_edge(abs(p.y), size.y * 0.5, softness)
+  return gray_of(m, m)
+}
+
+compositor graph grid(
+    image: Color,
+    spacing: Float = 32.0 in 1.0..,
+    width: Float = 1.0 in 0.0..,
+    color: Color = (1.0, 1.0, 1.0, 1.0)
+) -> Color {
+  "Lines of the colour, width pixels wide, every spacing pixels from the bottom-left pixel; transparent between them"
+  p = pixel_of(image)
+  return color_times(color, max(mod(p.x, spacing) < width, mod(p.y, spacing) < width))
+}
+
+compositor graph checkerboard(
+    image: Color,
+    size: Float = 32.0 in 1.0..,
+    "Colors" {
+        color0: Color = (0.18, 0.18, 0.18, 1.0),
+        color1: Color = (0.5, 0.5, 0.5, 1.0)
+    }
+) -> Color {
+  "Squares of size pixels from the bottom-left pixel, color0 there and every other one, color1 between"
+  p = pixel_of(image)
+  odd = mod(floor(p.x / size) + floor(p.y / size), 2.0)
+  return keymix(color1, color0, odd)
+}
+
+// ---- Checks ----
+
+compositor graph "is nan"(x: Float) -> Float {
+  "1 where x is NaN: min and max give their other operand then, so that max(x, -1) < min(x, 1), which no number gives"
+  return max(x, -1.0) < min(x, 1.0)
+}
+
+compositor graph "is infinite"(x: Float) -> Float {
+  "1 where x is past ±10³⁰, infinities among them; 0 for NaN"
+  return abs(x) > 1e+30
+}
+
+compositor graph "luma gray"(image: Color) -> Color {
+  "The Rec. 709 luminance of the image as an opaque gray, clamped between 0 and 1, 0 for NaN"
+  return gray_of(clamp01(rec709_luma(image)))
+}
+
+compositor graph "false color"(image: Color) -> Color {
+  "The exposure zones by stops of luminance from middle gray, 0.18, as a fixed palette: under -6 purple, to -4 blue, to -2 teal, to -½ dark gray, ±½ green, to 1½ pink, to 2½ light gray, to 4 yellow, past red; 2½ stops is a luminance of 1"
+  s = log(max(rec709_luma(image), 1e-10) / 0.18, 2.0)
+  c1 = keymix((0.0, 0.1, 0.8, 1.0), constant(image, (0.3, 0.0, 0.45, 1.0)), s >= -6.0)
+  c2 = keymix((0.0, 0.55, 0.65, 1.0), c1, s >= -4.0)
+  c3 = keymix((0.25, 0.25, 0.25, 1.0), c2, s >= -2.0)
+  c4 = keymix((0.1, 0.75, 0.1, 1.0), c3, s >= -0.5)
+  c5 = keymix((0.95, 0.5, 0.65, 1.0), c4, s >= 0.5)
+  c6 = keymix((0.7, 0.7, 0.7, 1.0), c5, s >= 1.5)
+  c7 = keymix((1.0, 0.85, 0.0, 1.0), c6, s >= 2.5)
+  return keymix((1.0, 0.0, 0.0, 1.0), c7, s >= 4.0)
+}
+
+compositor graph "clip check"(
+    image: Color,
+    over_color: Color = (1.0, 0.0, 0.0, 1.0),
+    under_color: Color = (0.0, 0.3, 1.0, 1.0)
+) -> Color {
+  "Where a channel of red, green, blue is above 1, over_color; else where one is below 0, under_color; the rest the image's luminance in gray"
+  c = SeparateColor(image)
+  above = max(max(c.red, c.green), c.blue) > 1.0
+  below = min(min(c.red, c.green), c.blue) < 0.0
+  return keymix(over_color, keymix(under_color, luma_gray(image), below), above)
+}
+
+compositor graph "nan inf check"(
+    image: Color,
+    nan_color: Color = (1.0, 0.0, 1.0, 1.0),
+    inf_color: Color = (0.0, 1.0, 1.0, 1.0)
+) -> Color {
+  "Where a channel of the four is NaN, nan_color; else where one is infinite (past ±10³⁰), inf_color; the rest the image's luminance in gray"
+  c = SeparateColor(image)
+  bad = max(max(is_nan(c.red), is_nan(c.green)), max(is_nan(c.blue), is_nan(c.alpha)))
+  huge = max(
+    max(is_infinite(c.red), is_infinite(c.green)),
+    max(is_infinite(c.blue), is_infinite(c.alpha)))
+  return keymix(nan_color, keymix(inf_color, luma_gray(image), huge), bad)
+}
+
+compositor graph zebra(image: Color, level: Float = 0.95, width: Float = 4.0 in 1.0..) -> Color {
+  "Diagonal stripes, black and white, width pixels wide, where the luminance is above level; the image elsewhere"
+  p = pixel_of(image)
+  stripe = mod(p.x + p.y, 2.0 * width) < width
+  return keymix(gray_of(stripe), image, rec709_luma(image) > level)
+}
+
+compositor graph "alpha check"(
+    image: Color,
+    size: Float = 16.0 in 1.0..
+) -> (Image: Color, Alpha: Color) {
+  "The image over a gray checker of size pixels, and its alpha alone as an opaque gray"
+  checker = checkerboard(image, size, color0: (0.2, 0.2, 0.2, 1.0), color1: (0.4, 0.4, 0.4, 1.0))
+  return (Image: over(image, checker), Alpha: gray_of(alpha_of(image)))
+}
+
+compositor graph heat(x: Float) -> Color {
+  "x from 0 to 1 as heat, opaque: black, red at ⅓, yellow at ⅔, white at 1"
+  return CombineColor(clamp01(x * 3.0), clamp01(x * 3.0 - 1.0), clamp01(x * 3.0 - 2.0), 1.0)
+}
+
+compositor graph "diff view"(a: Color, b: Color, gain: Float = 10.0 in 0.0..) -> Color {
+  "|a - b| × gain as heat: the largest difference of the four channels, black where the images are the same"
+  ca = SeparateColor(a)
+  cb = SeparateColor(b)
+  d = max(
+    max(abs(ca.red - cb.red), abs(ca.green - cb.green)),
+    max(abs(ca.blue - cb.blue), abs(ca.alpha - cb.alpha)))
+  return heat(d * gain)
+}

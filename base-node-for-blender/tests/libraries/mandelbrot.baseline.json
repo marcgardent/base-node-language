@@ -1,0 +1,45 @@
+{
+ "library": "i32 the Mandelbrot Set",
+ "version": "1.0.3",
+ "sha256": "db3afe337e319b0a42ca1d4731c281924be16a7f583eb4f9f9ea27d9e9f81947",
+ "blender": "5.3.0",
+ "summary": "9 ok",
+ "groups": {
+  "i32 2f": {
+   "status": "ok",
+   "text": "7e1426db458e61c0"
+  },
+  "i32 4f": {
+   "status": "ok",
+   "text": "32e6ecf11d4a8d21"
+  },
+  "i32 4p": {
+   "status": "ok",
+   "text": "f3ae3f2736cac43d"
+  },
+  "i32 cMc": {
+   "status": "ok",
+   "text": "a4733b995c563274"
+  },
+  "i32 dAddSub": {
+   "status": "ok",
+   "text": "444818a717a6481d"
+  },
+  "i32 dMulPow2": {
+   "status": "ok",
+   "text": "052c76ad95b6b822"
+  },
+  "i32 mBeB": {
+   "status": "ok",
+   "text": "4658a79fc807e3be"
+  },
+  "i32 mBits": {
+   "status": "ok",
+   "text": "0f72e524e4283214"
+  },
+  "i32 the Mandelbrot Set": {
+   "status": "ok",
+   "text": "502d1f8eca26222a"
+  }
+ }
+}

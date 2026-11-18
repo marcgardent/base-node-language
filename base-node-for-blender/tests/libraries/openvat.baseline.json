@@ -1,0 +1,33 @@
+{
+ "library": "OpenVAT",
+ "version": "43b5196",
+ "sha256": "8291679b701642123fd7c99d1e5aa79eb98816e8eae24c76de1e7021309f407b",
+ "blender": "5.3.0",
+ "summary": "6 ok",
+ "groups": {
+  "ov_calculate-position-vs": {
+   "status": "ok",
+   "text": "1e57eeffb7c219e2"
+  },
+  "ov_generated-pos": {
+   "status": "ok",
+   "text": "71ca3e50894ca495"
+  },
+  "ov_makeSampleVolume": {
+   "status": "ok",
+   "text": "4f0186f26daf394b"
+  },
+  "ov_reconstruct_collection": {
+   "status": "ok",
+   "text": "da1052ff349a7a3e"
+  },
+  "ov_sdf": {
+   "status": "ok",
+   "text": "7a6af4d8a4b4534a"
+  },
+  "ov_vat-decoder-vs": {
+   "status": "ok",
+   "text": "a59ef6d49fe01890"
+  }
+ }
+}

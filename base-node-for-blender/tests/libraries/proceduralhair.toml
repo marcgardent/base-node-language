@@ -1,0 +1,12 @@
+# Blender's own Procedural Hair Node Assets, shipped with Blender
+# (datafiles/assets/nodes/procedural_hair_node_assets.blend): read where Blender installed it.
+name = "Procedural Hair Node Assets"
+author = "Blender Foundation"
+homepage = "https://projects.blender.org/blender/blender-assets"
+license = "CC0-1.0"
+# Nothing fetched: the file is the one of the Blender running the test. Its sha256 is that of
+# Blender 5.3.0's (the version of the CI); another Blender's file fails it until this is bumped.
+version = "Blender 5.3.0"
+bundled = "assets/nodes/procedural_hair_node_assets.blend"
+sha256 = "60112b3022238b9a6571ef6e117a677d9c722f90b26e32fe02742f3c0328e2c4"
+trees = ["geometry"]

@@ -1,0 +1,273 @@
+{
+ "library": "Material Library VX",
+ "version": "b42d686",
+ "sha256": "bad2b36843daf95f7396bd552939c05849d4e2552378378cdfb3fe203ea4e61c",
+ "blender": "5.3.0",
+ "summary": "66 ok",
+ "groups": {
+  "Car3Layer.002": {
+   "status": "ok",
+   "text": "c561fcbb2da6ef93"
+  },
+  "Ceramic.001": {
+   "status": "ok",
+   "text": "cb4da1d192c17330"
+  },
+  "Chrome(brushed).002": {
+   "status": "ok",
+   "text": "aebfa2aa1006bb07"
+  },
+  "Coat II.000": {
+   "status": "ok",
+   "text": "ba514307cdafd3c2"
+  },
+  "Coat II.002": {
+   "status": "ok",
+   "text": "eb81ffb5cd6b0f73"
+  },
+  "Coat II.003": {
+   "status": "ok",
+   "text": "3f7b7d07649e6ba5"
+  },
+  "CondFresnel.002": {
+   "status": "ok",
+   "text": "84020dd97d90d856"
+  },
+  "FlakesHomogeneous.001": {
+   "status": "ok",
+   "text": "e441a581e6b688c9"
+  },
+  "FresnelRoughness.001": {
+   "status": "ok",
+   "text": "970acbd8b21507d6"
+  },
+  "GL_Fresnel.001": {
+   "status": "ok",
+   "text": "1ea892797e8d2d32"
+  },
+  "GL_Schlick.001": {
+   "status": "ok",
+   "text": "5efbe350b1b227eb"
+  },
+  "ME_Contrast_Gloss.001": {
+   "status": "ok",
+   "text": "2fd135c73d6084a1"
+  },
+  "ME_Spec_Reflection.001": {
+   "status": "ok",
+   "text": "a23945d36ba1fc4a"
+  },
+  "Math.Root": {
+   "status": "ok",
+   "text": "7d150873de30be91"
+  },
+  "MetalJewelry.002": {
+   "status": "ok",
+   "text": "aef126f68db37c84"
+  },
+  "MetallicPaint..000": {
+   "status": "ok",
+   "text": "d8e80471995ca6e0"
+  },
+  "NanometerColor.000": {
+   "status": "ok",
+   "text": "9a67406d073c7d05"
+  },
+  "Output 1 if input is equal Value.002": {
+   "status": "ok",
+   "text": "faf9bd631a113543"
+  },
+  "PBR (Specular Setup)": {
+   "status": "ok",
+   "text": "49ee5a1ae038c4f8"
+  },
+  "PBR.Fresnel": {
+   "status": "ok",
+   "text": "bc705aee2752b140"
+  },
+  "Paper.002": {
+   "status": "ok",
+   "text": "ccc2244f46513f48"
+  },
+  "Plastic III.002": {
+   "status": "ok",
+   "text": "ceb67f84ea5bb633"
+  },
+  "SY_CoatedGlossy.000": {
+   "status": "ok",
+   "text": "32d748c885e74416"
+  },
+  "Selector.002": {
+   "status": "ok",
+   "text": "6ad30076d7e907d0"
+  },
+  "Selector0-1.002": {
+   "status": "ok",
+   "text": "bd96240b35682707"
+  },
+  "SpecularLayer": {
+   "status": "ok",
+   "text": "23ae3d41df2e9d0e"
+  },
+  "SpecularReflection.001": {
+   "status": "ok",
+   "text": "df727abf11548d72"
+  },
+  "TE_Crusehd_Velvet_pattern5.002": {
+   "status": "ok",
+   "text": "eaf549afac661272"
+  },
+  "Wood Texture": {
+   "status": "ok",
+   "text": "f00d4f49656f708f"
+  },
+  "WoodP.002": {
+   "status": "ok",
+   "text": "fe656f689e4d0f43"
+  },
+  "fres rough": {
+   "status": "ok",
+   "text": "c033a37557bb8e39"
+  },
+  "material:1970_tiles": {
+   "status": "ok",
+   "text": "f379790db1dc7c2a"
+  },
+  "material:Anodized": {
+   "status": "ok",
+   "text": "6a6e7854f05bb0c5"
+  },
+  "material:Basic Glass": {
+   "status": "ok",
+   "text": "38710ed7fd534bca"
+  },
+  "material:Blaster Bolt (Blue)": {
+   "status": "ok",
+   "text": "0688456c75106477"
+  },
+  "material:Brushed Metal": {
+   "status": "ok",
+   "text": "738deececed48f2d"
+  },
+  "material:Building": {
+   "status": "ok",
+   "text": "e0ed89e9c55afb59"
+  },
+  "material:Car Paint": {
+   "status": "ok",
+   "text": "c1a0a9dbea2042b9"
+  },
+  "material:Ceramic": {
+   "status": "ok",
+   "text": "de23a518541a8c3a"
+  },
+  "material:Ceramic Polished": {
+   "status": "ok",
+   "text": "a44018a2f92ea43e"
+  },
+  "material:Chocolate Swirl": {
+   "status": "ok",
+   "text": "da887747363a789f"
+  },
+  "material:Coated Glossy": {
+   "status": "ok",
+   "text": "7e0d3fc0aee317e5"
+  },
+  "material:Composite Rubber": {
+   "status": "ok",
+   "text": "7ea8b9c26951fba9"
+  },
+  "material:Cranberry Juice": {
+   "status": "ok",
+   "text": "1fe494ec9eac12e6"
+  },
+  "material:Crushed Velvet Eevee": {
+   "status": "ok",
+   "text": "7d954b4a6e20b41e"
+  },
+  "material:Double  Sided": {
+   "status": "ok",
+   "text": "d0f8c5e858f569be"
+  },
+  "material:Facade_Glass": {
+   "status": "ok",
+   "text": "0af9a58e5cae5fab"
+  },
+  "material:Fake Glass": {
+   "status": "ok",
+   "text": "fdb969e45563e9ed"
+  },
+  "material:Fake Shading": {
+   "status": "ok",
+   "text": "30cc5bbeef54925a"
+  },
+  "material:Flaky Tangelo": {
+   "status": "ok",
+   "text": "8fe1d8e921020099"
+  },
+  "material:Fresnel": {
+   "status": "ok",
+   "text": "532f2e7c3741b0f7"
+  },
+  "material:Galvanized Steel": {
+   "status": "ok",
+   "text": "7c11e79beb2e1be1"
+  },
+  "material:Glow Glass": {
+   "status": "ok",
+   "text": "f0705f1b11f66571"
+  },
+  "material:High Gloss Plastic": {
+   "status": "ok",
+   "text": "774544c06f6492c5"
+  },
+  "material:Jewelry": {
+   "status": "ok",
+   "text": "41ede946b3a576db"
+  },
+  "material:Lemon": {
+   "status": "ok",
+   "text": "9cb9470f0c8631d7"
+  },
+  "material:Metalic Paint": {
+   "status": "ok",
+   "text": "3e5d2422b73fc21e"
+  },
+  "material:Metallic Paint Clean": {
+   "status": "ok",
+   "text": "e5727b9a4d363d95"
+  },
+  "material:Molten": {
+   "status": "ok",
+   "text": "7fb0ceff775675f8"
+  },
+  "material:Polished Walnut": {
+   "status": "ok",
+   "text": "0abd0571fbfba150"
+  },
+  "material:Soap Bubble": {
+   "status": "ok",
+   "text": "21a0e25260888e06"
+  },
+  "material:Stars": {
+   "status": "ok",
+   "text": "5c3327d5dfbd5985"
+  },
+  "material:Wire Musgrave": {
+   "status": "ok",
+   "text": "3b4bc840515638fb"
+  },
+  "material:WoodP": {
+   "status": "ok",
+   "text": "705ff967bd85d86c"
+  },
+  "material:wood": {
+   "status": "ok",
+   "text": "5d48fad849fce3db"
+  },
+  "material:wood boards": {
+   "status": "ok",
+   "text": "8d17fb84eda186eb"
+  }
+ }
+}
