@@ -14,6 +14,9 @@ from base_node.targets import IMPLICIT, _bridge, _literal, blender_target, catal
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = catalog(ROOT)
 # The targets shipped with the package and the extension: links in git to targets/
+# The targets of the free part; the studio has its own after them
+TARGETS = ["blade", "blender-compositor", "blender-geometry", "blender-gp", "blender-shader", "gltf"]
+
 SHIPPED = (ROOT / "python" / "base_node" / "_targets", ROOT / "base-node-for-blender" / "lang" / "_targets")
 
 
@@ -182,6 +185,13 @@ def gltf_case(case):
 @pytest.mark.parametrize("case", GLTF_CASES, ids=lambda c: c["name"])
 def test_what_the_gltf_exporter_reads(case):
     assert [i.name for i in check_target(parse(gltf_case(case)), "gltf")] == case["issues"]
+
+
+def test_a_ramp_is_the_value_of_a_property_not_a_node():
+    f = parse("shader graph g(f: Float) -> Color {\n"
+              "  return ColorRamp(factor: f, color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))).color\n"
+              "}\n")
+    assert check_target(f, "blender-shader") == []
 
 
 def test_a_call_to_a_graph_is_read_through_at_its_line():
@@ -382,8 +392,8 @@ def test_a_stdlib_module_used_whole_brings_its_graphs_only():
 
 def test_an_unknown_target_is_an_error():
     f = parse(COMPOSITE)
-    message = "unknown target 'nope'; targets: blade, blender-compositor, blender-geometry, blender-gp, " \
-              "blender-shader, gltf"
+    assert target_names() == TARGETS
+    message = "unknown target 'nope'; targets: " + ", ".join(TARGETS)
     for call in (lambda: load_target("nope"), lambda: check_target(f, "nope"),
                  lambda: check_target([], "nope"), lambda: check_targets(f, ["blade", "nope"]),
                  lambda: translate(f, "blender-compositor", "nope")):
@@ -395,15 +405,16 @@ def test_an_unknown_target_is_an_error():
 def test_what_inference_holds():
     inf = infer(parse(COMPOSITE))
     assert list(inf.fits.items()) == [("blade", "blender-compositor"), ("blender-compositor", None)]
-    assert list(inf.outside) == ["blender-geometry", "blender-gp", "blender-shader", "gltf"]
+    assert list(inf.outside) == [t for t in TARGETS if t not in ("blade", "blender-compositor")]
     assert inf.graphs == [("soften", ["blender-compositor"])]
-    assert inf.lines() == [
+    lines = [
         "Compatible: blender-compositor, blade (translated from blender-compositor)",
         "Outside blender-geometry: node Blur (line 2)",
         "Outside blender-gp: node Blur (line 2)",
         "Outside blender-shader: node Blur (line 2)",
         "Outside gltf: kind compositor (line 1) and 1 more",
     ]
+    assert inf.lines() == lines
 
 
 def test_a_translator_renames_a_node():

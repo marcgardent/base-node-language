@@ -494,7 +494,7 @@ fn the_bridge_module_fits_its_target() {
 #[test]
 fn an_unknown_target_is_an_error() {
     let f = parse(COMPOSITE, "c.bn").unwrap();
-    let message = "unknown target 'nope'; targets: blade, blender-compositor, blender-geometry, blender-gp, blender-shader, gltf";
+    let message = format!("unknown target 'nope'; targets: {}", targets().join(", "));
     let empty = File {
         uses: vec![],
         graphs: vec![],
@@ -513,6 +513,7 @@ fn an_unknown_target_is_an_error() {
         translate(&f, "blender-compositor", "nope").unwrap_err(),
         message
     );
+    assert_eq!(base_node::target_names(), targets());
 }
 
 #[test]
@@ -531,24 +532,38 @@ fn what_inference_holds() {
         ]
     );
     let outside: Vec<&str> = inf.outside.keys().map(String::as_str).collect();
-    assert_eq!(
-        outside,
-        ["blender-geometry", "blender-gp", "blender-shader", "gltf"]
-    );
+    let others: Vec<&str> = targets()
+        .into_iter()
+        .filter(|t| !["blade", "blender-compositor"].contains(t))
+        .collect();
+    assert_eq!(outside, others);
     assert_eq!(
         inf.graphs,
         [("soften".to_owned(), vec!["blender-compositor".to_owned()])]
     );
-    assert_eq!(
-        inf.lines(),
-        [
-            "Compatible: blender-compositor, blade (translated from blender-compositor)",
-            "Outside blender-geometry: node Blur (line 2)",
-            "Outside blender-gp: node Blur (line 2)",
-            "Outside blender-shader: node Blur (line 2)",
-            "Outside gltf: kind compositor (line 1) and 1 more",
-        ]
-    );
+    #[allow(unused_mut)]
+    let mut lines = vec![
+        "Compatible: blender-compositor, blade (translated from blender-compositor)",
+        "Outside blender-geometry: node Blur (line 2)",
+        "Outside blender-gp: node Blur (line 2)",
+        "Outside blender-shader: node Blur (line 2)",
+        "Outside gltf: kind compositor (line 1) and 1 more",
+    ];
+    assert_eq!(inf.lines(), lines);
+}
+
+/// The targets of the free part; the studio has its own after them.
+fn targets() -> Vec<&'static str> {
+    #[allow(unused_mut)]
+    let mut names = vec![
+        "blade",
+        "blender-compositor",
+        "blender-geometry",
+        "blender-gp",
+        "blender-shader",
+        "gltf",
+    ];
+    names
 }
 
 #[test]
@@ -737,6 +752,16 @@ fn what_the_gltf_exporter_reads() {
             .collect();
         assert_eq!(got, want, "{}", case["name"]);
     }
+}
+
+#[test]
+fn a_ramp_is_the_value_of_a_property_not_a_node() {
+    let f = parse(
+        "shader graph g(f: Float) -> Color {\n  return ColorRamp(factor: f, color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))).color\n}\n",
+        "g.bn",
+    )
+    .unwrap();
+    assert!(check_target(&f, "blender-shader").is_empty());
 }
 
 #[test]

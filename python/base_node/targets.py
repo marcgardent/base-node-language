@@ -27,7 +27,7 @@ from pathlib import Path
 
 from . import ast
 from .schema import IMPLICIT as SCHEMA_IMPLICIT
-from .schema import is_material, key
+from .schema import CURVE, CURVES, RAMP, is_material, key
 from .sugar import BINOPS, BOOL_FUNCS, MATH_FUNCS, VECTOR_FUNCS
 
 HERE = Path(__file__).resolve().parent
@@ -51,6 +51,8 @@ ZONES = {"geometry": ["repeat", "foreach", "simulate", "closure"], "shader": ["r
          "compositor": ["repeat"]}
 # An implicit input (`p: Vector = Position()`) is a setting of the group's interface, not a node
 IMPLICIT = sorted(SCHEMA_IMPLICIT)
+# A ramp and curves are the value of a node's property (`color_ramp: Ramp(…)`), not nodes
+DATA_CALLS = {RAMP, CURVE, CURVES}
 
 
 @dataclass(frozen=True)
@@ -230,7 +232,7 @@ def uses(graph, local=frozenset(), modules=frozenset(), every=False):
                 out.append(Use("node", (name,), line, col))
         elif name in bound and name not in local:
             out.append(Use("node", ("EvaluateClosure",), line, col))
-        elif name in local or every:
+        elif name in local or every or name in DATA_CALLS:
             continue
         elif name in BOOL_FUNCS:
             out.append(Use("node", ("BooleanMath",), line, col))

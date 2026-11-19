@@ -31,7 +31,7 @@ use crate::ast::{
 use crate::stdlib;
 
 /// Every target, as `targets/<name>.json`, sorted by name.
-const FILES: [(&str, &str); 6] = [
+const FILES: &[(&str, &str)] = &[
     ("blade", include_str!("../../targets/blade.json")),
     (
         "blender-compositor",
@@ -55,6 +55,9 @@ const BRIDGES: [(&str, &str); 1] = [(
     "blade/blender_interop.bn",
     include_str!("../../targets/blade/blender_interop.bn"),
 )];
+
+/// A ramp and curves are the value of a node's property (`color_ramp: Ramp(…)`), not nodes.
+const DATA_CALLS: [&str; 3] = ["Ramp", "Curve", "Curves"];
 
 /// Implicit inputs (`p: Vector = Position()`): a setting of the group's interface, not a node.
 pub const IMPLICIT: [&str; 6] = [
@@ -545,7 +548,7 @@ fn uses_of(graph: &Graph, local: &Local) -> Vec<Use> {
                     }
                 } else if bound.contains(n) && !local.names.contains(n) {
                     out.push(Use::new("node", &["EvaluateClosure"], line, col));
-                } else if local.names.contains(n) || local.every {
+                } else if local.names.contains(n) || local.every || DATA_CALLS.contains(&n) {
                     continue;
                 } else if BOOL_FUNCS.contains(&n) {
                     out.push(Use::new("node", &["BooleanMath"], line, col));

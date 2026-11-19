@@ -27,7 +27,9 @@ where = ["."]
 include = ["base_node*"]
 
 [tool.setuptools.package-data]
-base_node = ["py.typed", "_targets/*.json", "_targets/*/*.bn"]
+base_node = [
+  "py.typed", "_targets/*.json", "_targets/*/*.bn",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
