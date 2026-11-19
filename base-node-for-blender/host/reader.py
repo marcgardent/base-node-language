@@ -18,7 +18,7 @@ import bpy
 from ..lang import ast, sugar
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..lang.typecheck import infer_type
+from ..lang.typecheck import SWITCH, SWITCH_PROP, SWITCH_VALUES, infer_type, switch_value_type, type_setting
 from ..lang.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
 from ..lang.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
@@ -28,7 +28,7 @@ from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
 from .schema import (PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema, data_value, fresh_item,
                      fresh_item_options, fresh_item_value, fresh_options, item_option_names, option_names, root_panel,
-                     id_name, rounded, same_option, snapshot, socket_keys, text_name, ui_name)
+                     prop_value, rounded, same_option, snapshot, socket_keys, text_name, ui_name)
 
 KINDS = {v: k for k, v in TREE_TYPES.items()}
 IMPLICIT_CALLS = {mode: name for name, (mode, _type) in IMPLICIT.items()}
@@ -1073,7 +1073,7 @@ class GraphReader:
                     data[p.name] = data_literal(p, value, fresh[p.name])
             _values, prop_defaults = self.schema.defaults(self.kind, spec, {})
             for p in spec.props.values():
-                value = id_name(getattr(node, p.name))
+                value = prop_value(node, p.name)
                 if p.name in ALWAYS or not same(value, prop_defaults.get(p.name)):
                     props[p.name] = value
         if spec is not None and spec.bl_idname == JOIN and not props:
@@ -1157,6 +1157,8 @@ class GraphReader:
             if sock.is_multi_input:
                 # Every positional value goes to a multi-input: the inputs after it are named
                 positional = False
+        if spec is not None and spec.bl_idname == SWITCH and SWITCH_PROP in spec.props:
+            self.switch_type(node, spec, incoming, written, props, prop_defaults)
         for pname, value in props.items():
             if isinstance(value, str) and ('"' in value or "\n" in value):
                 self.warn(f"'{node.name}.{pname}': quotes and newlines replaced")
@@ -1189,6 +1191,27 @@ class GraphReader:
             return ast.Pipe(first, rest, 0, 0)
         self.chain_heads.add(id(call))
         return call
+
+    def switch_type(self, node, spec, incoming, written, props, fresh):
+        """A Switch's input_type, written when it is not a new Switch's, as every setting, and also
+        where its values as read back would give it another (typecheck.switch_type): a linked value
+        gives its type, else a literal its own. With a tuple, tuple_type decides."""
+        found = []  # (input, type, linked), as the checker sees the call read back
+        for ident in SWITCH_VALUES:
+            values, linked = written.get(ident, ([], False))
+            links = (incoming.get(ident) or []) if linked else []
+            for v, src in zip(values, links or [None] * len(values)):
+                if isinstance(v, ast.Tuple):
+                    return
+                t = literal_text_type(v)
+                if t is None and src is not None:
+                    found.append((ident, SOCKET_TYPES.get(src[1].type), True))
+                else:
+                    found.append((ident, t, False))
+        t = switch_value_type(found)
+        wanted = type_setting(t, spec.props[SWITCH_PROP].items) if t is not None else None
+        if (wanted or fresh.get(SWITCH_PROP)) != node.input_type:
+            props[SWITCH_PROP] = node.input_type
 
     def template_types(self, node, incoming, written):
         """The types of a call of a template's group, written only when its arguments as read back do

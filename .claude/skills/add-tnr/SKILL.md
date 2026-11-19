@@ -123,6 +123,8 @@ the same kind look alike, and a nested zone may read the outer one's `iteration`
 - Add the library to the table of `tests/libraries/README.md` (version, author, license).
 - The `blender` job of `.github/workflows/ci.yml` runs every manifest and caches `~/.cache/base-node`; a new
   library needs nothing there unless it needs a newer Blender than the job installs.
+- The CI runs only on a version tag or by hand (`make ci`), to save Actions minutes: the PR is checked by
+  running `make test-libraries` on the machine, not by waiting for a CI run.
 - Run the whole Blender suite (`tests/test_extension.py`) too if the test helpers changed.
 - Branch, commit (manifest, baseline, README, any test fix), and ask Marc before pushing or opening the PR. The
   PR text says: the library, version and license, why fetched or committed, the summary line, and the bugs found.

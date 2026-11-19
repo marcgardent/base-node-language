@@ -4,7 +4,7 @@
 each module says the rest in the head of its `.bn`:
 
     // @module keying
-    // @version 0.12.0
+    // @version 0.13.0
     // @target blender-compositor
     // @edition 2026
     // @pack compositing-pro

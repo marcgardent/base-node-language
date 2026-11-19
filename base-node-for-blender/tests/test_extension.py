@@ -634,8 +634,7 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
     # The Node Editor's text view takes shader and compositor groups, and a material's own tree
     assert shown(rust) == rust and shown(bpy.data.node_groups["look"]) is not None
     assert shown(mat.node_tree) == mat.node_tree
-    world = bpy.data.worlds.new("w")
-    world.use_nodes = True
+    world = bpy.data.worlds.new("w")  # with a tree of its own
     assert shown(world.node_tree) is None, "a world's tree is no material"
     bpy.data.worlds.remove(world)
 
@@ -796,7 +795,7 @@ class CompositorBench:
         self.objects = [self.camera]
         self.tree = bpy.data.node_groups.new(f".base_node {name}", "CompositorNodeTree")
         self.tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
-        scene.compositing_node_group = self.tree
+        scene.compositor_effects.new(name=self.tree.name).node_group = self.tree
         self.name = name
         self.images: dict = {}
         self.path = os.path.join(tempfile.mkdtemp(prefix=f"base-node-{name}-"), f"{name}.exr")
@@ -2363,6 +2362,69 @@ def test_tuples_choose_the_type():
     print("   ✓ Tuples choose the type")
 
 
+SWITCH_TYPES = """\
+compositor graph frame_or_zero(animated: Bool) -> Float {
+  return Switch(switch: animated, false_: 0.0, true_: SceneTime().frame)
+}
+
+shader graph value_or_zero(on: Bool, x: Float) -> Float {
+  return Switch(switch: on, false_: 0.0, true_: x * 2.0)
+}
+
+compositor graph colour_switch(on: Bool, image: Color) -> Color {
+  return Switch(switch: on, false_: image, true_: (0.0, 0.0, 0.0, 1.0))
+}
+
+compositor graph written_type(on: Bool, x: Float) -> Color {
+  return Switch(switch: on, false_: x, true_: 1.0, input_type: RGBA)
+}
+
+geometry graph count_or_size(on: Bool, x: Float, i: Int) -> Float {
+  return Switch(on, 1, 2) + Switch(on, 1, x) + Switch(on, 1, x, input_type: INT) + Switch(on, i, 2, input_type: FLOAT)
+}
+"""
+
+
+def test_switch_takes_the_type_of_its_values():
+    """A Switch whose input_type the text does not write takes the type of its values, a linked one
+    first: a Float switch in a compositor or a shader tree, where a new Switch is a Color one. Read
+    back, input_type is written where it is not a new Switch's, and where the values tell another."""
+    print("-> Test: Switch takes the type of its values...")
+    from base_node.host import build_source, export_tree
+
+    trees = build_source(SWITCH_TYPES, filename="switch_types.bn")
+    switches = {t.name: sorted(n.input_type for n in t.nodes if n.bl_idname == "GeometryNodeSwitch")
+                for t in trees}
+    assert switches == {
+        "frame_or_zero": ["FLOAT"],
+        "value_or_zero": ["FLOAT"],
+        "colour_switch": ["RGBA"],
+        "written_type": ["RGBA"],
+        "count_or_size": ["FLOAT", "FLOAT", "INT", "INT"],
+    }, switches
+    frame = next(t for t in trees if t.name == "frame_or_zero")
+    sw = next(n for n in frame.nodes if n.bl_idname == "GeometryNodeSwitch")
+    assert sw.outputs[0].type == "VALUE" and sw.inputs["True"].links[0].from_node.bl_idname == \
+        "CompositorNodeSceneTime", (sw.outputs[0].type, sw.inputs["True"].links)
+    # Tree -> text -> tree: the same graph; a Float switch of a compositor tree says it is one, as a
+    # Float one of a geometry tree whose values are integers
+    for name in list(switches):
+        tree = bpy.data.node_groups[name]
+        text, _ = export_tree(tree)
+        assert text.count("input_type") == {"frame_or_zero": 1, "value_or_zero": 1,
+                                            "count_or_size": 3}.get(name, 0), text
+        first = graph_shape(tree)
+        rebuilt = build_source(text, filename=f"{name}.bn")[-1]
+        assert graph_shape(rebuilt) == first, f"not the same graph:\n{text}"
+        again, _ = export_tree(rebuilt)
+        assert again == text, f"not stable:\n{text}\n---\n{again}"
+        bpy.data.node_groups.remove(rebuilt)
+    for name in switches:
+        if name in bpy.data.node_groups:
+            bpy.data.node_groups.remove(bpy.data.node_groups[name])
+    print("   ✓ Switch takes the type of its values")
+
+
 def test_vector_output_dimensions():
     """A 2D Vector output, as in the compositor Essentials' Transform and Project, stays 2D: an output
     has no default to give its size, so it is written as an option."""
@@ -3022,6 +3084,7 @@ def main():
         test_inputs_of_one_name_rebuilt,
         test_outputs_of_one_name_rebuilt,
         test_tuples_choose_the_type,
+        test_switch_takes_the_type_of_its_values,
         test_vector_output_dimensions,
         test_shader_constants_and_old_names,
         test_states_named_like_the_zone,

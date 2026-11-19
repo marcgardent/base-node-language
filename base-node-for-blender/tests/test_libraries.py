@@ -247,7 +247,11 @@ class Stage:
 
         self.mesh.materials.clear()
         self.mesh.materials.append(material)
-        self.scene.compositing_node_group = compositor
+        effects = self.scene.compositor_effects
+        for effect in list(effects):
+            effects.remove(effect)
+        if compositor is not None:
+            effects.new(name=compositor.name).node_group = compositor
         path = self.dir / "render.exr"
         self.scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True, scene=self.scene.name)

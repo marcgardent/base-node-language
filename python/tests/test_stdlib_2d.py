@@ -25,7 +25,7 @@ def test_2d_modules_manifest_registration():
         entry = modules[mod_name]
         assert entry["name"] == mod_name
         assert "blender-geometry" in entry["targets"]
-        assert entry["version"] == "0.12.0"
+        assert entry["version"] == "0.13.0"
         assert entry["edition"] == "2026"
         assert (STDLIB_DIR / entry["file"]).exists()
 

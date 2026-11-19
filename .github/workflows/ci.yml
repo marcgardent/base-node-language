@@ -1,18 +1,16 @@
 name: CI
 
 on:
+  # Actions minutes cost: the CI runs on a version tag (make release) or by hand (make ci), not on
+  # every push or pull request. Run the tests on the machine first (make test).
   push:
-    branches: [main]
-    paths-ignore: [site/images/**, studio/*.md]
-  pull_request:
-    # Pictures and the studio's own notes: no test reads them
-    paths-ignore: [site/images/**, studio/*.md]
+    tags: ["v*"]
   workflow_dispatch:
 
-# A new push to a pull request stops the run of the one before: only the last commit is checked.
+# A new run on the same ref stops the one before: only the last is checked.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # The jobs only read the repository: the token they get can do nothing else.
 # Actions are pinned by commit, so that a tag moved upstream changes nothing here.
@@ -24,10 +22,13 @@ jobs:
     name: Python Parser & Targets (pytest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
+      - name: Set git's default branch name
+        run: git config --global init.defaultBranch main
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
       - name: Install pytest
@@ -50,7 +51,10 @@ jobs:
     name: Rust Parser, Formatter & WASM32
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
+      - name: Set git's default branch name
+        run: git config --global init.defaultBranch main
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
@@ -85,12 +89,15 @@ jobs:
       # Of blender-5.3.0-linux-x64.tar.xz, from download.blender.org/release/Blender5.3/blender-5.3.0.sha256
       BLENDER_SHA256: dacb8264197a3f7fda6001285a5a506fc97ee943881261c2c3bd63c882f22e05
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
+      - name: Set git's default branch name
+        run: git config --global init.defaultBranch main
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - name: Cache Blender
         id: blender-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/blender
           key: blender-${{ env.BLENDER_VERSION }}-linux-x64
@@ -108,7 +115,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1
       - name: Cache third-party libraries
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/base-node/libraries
           key: libraries-${{ hashFiles('base-node-for-blender/tests/libraries/*.toml') }}
@@ -119,19 +126,20 @@ jobs:
           for f in lang/targets.py lang/_targets/gltf.json stdlib/manifest.json stdlib/math.bn; do
             echo "$files" | grep -qx "$f" || { echo "the .zip lacks $f"; exit 1; }
           done
+      # The runner has no GPU: OpenGL (Mesa's software one) at once, rather than Vulkan tried and failed first
       - name: Run extension tests
         run: >-
-          ~/blender/blender --background --factory-startup --python-exit-code 1
+          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
           --python base-node-for-blender/tests/test_extension.py
       - name: Check the backend the reference reads (nodes, stdlib per kind of tree)
         if: success() || failure()
         run: >-
-          ~/blender/blender --background --factory-startup --python-exit-code 1
+          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
           --python base-node-for-blender/tests/export_backend.py -- --check
       # The third-party libraries take the longest: on main and on demand, not on every pull request
       # (`make test-libraries` runs them at home before a change to the reader or the builder).
       - name: Run third-party libraries non-regression
         if: (success() || failure()) && github.event_name != 'pull_request'
         run: >-
-          ~/blender/blender --background --factory-startup --python-exit-code 1
+          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
           --python base-node-for-blender/tests/test_libraries.py

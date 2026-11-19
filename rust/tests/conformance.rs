@@ -674,9 +674,9 @@ fn blades_translator_reaches_blades_nodes() {
 
 #[test]
 fn test_versioning_and_manifest() {
-    assert_eq!(base_node::VERSION, "0.12.0");
+    assert_eq!(base_node::VERSION, "0.13.0");
     assert_eq!(base_node::EDITION, "2026");
-    assert_eq!(base_node::STDLIB_VERSION, "0.12.0");
+    assert_eq!(base_node::STDLIB_VERSION, "0.13.0");
 
     let manifest_path = Path::new("../stdlib/manifest.json");
     let manifest_content = fs::read_to_string(manifest_path)
@@ -685,7 +685,7 @@ fn test_versioning_and_manifest() {
 
     let v: serde_json::Value =
         serde_json::from_str(&manifest_content).expect("Invalid JSON in manifest.json");
-    assert_eq!(v["stdlib_version"], "0.12.0");
+    assert_eq!(v["stdlib_version"], "0.13.0");
     assert_eq!(v["edition"], "2026");
 
     // The modules say their entries in their heads: the file holds what is the library's

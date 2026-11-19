@@ -1,5 +1,5 @@
 {
-  "about": "Materials checked against the gltf target, and against Blender's glTF exporter by base-node-for-blender/tests/test_gltf_export.py. A case is a `body` of `shader(material: true) graph <name>() -> (<outputs>)`, or a whole `text` where NAME is its name. `issues` are the links the rules refuse. `gltf` is what the exported material shows: `path` is there, `!path` is not, `path=value` equals it; `mesh.` names an attribute of the mesh, `sampler.` a field of its first sampler, `json.` the whole file. An accepted case shows what reached the glTF, a refused one what was lost.",
+  "about": "Materials checked against the gltf target, and against Blender's glTF exporter by base-node-for-blender/tests/test_gltf_export.py. A case is a `body` of `shader(material: true) graph <name>() -> (<outputs>)`, or a whole `text` where NAME is its name. `issues` are the links the rules refuse. `gltf` is what the exported material shows: `path` is there, `!path` is not, `path=value` equals it; `mesh.` names an attribute of the mesh, `sampler.` a field of its first sampler, `json.` the whole file. `gltf_warnings` are what Blender's exporter warns about it, each a part of its message: a warning not listed fails the case. An accepted case shows what reached the glTF, a refused one what was lost.",
   "images": ["Paint", "Dirt", "Normal"],
   "cases": [
     {
@@ -24,7 +24,8 @@
       "name": "base_mix_of_numbers",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: Mix(a: ColorAttribute().color, b: t.color, blend_type: MULTIPLY)))",
       "issues": ["PrincipledBSDF.base_color ← Mix(ColorAttribute, ImageTexture)"],
-      "gltf": ["!mesh.COLOR_0"]
+      "gltf": ["!mesh.COLOR_0"],
+      "gltf_warnings": ["The active Vertex Color will not be exported"]
     },
     {
       "name": "base_vector_math",
@@ -84,31 +85,36 @@
       "name": "alpha_round",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: round(t.alpha)))",
       "issues": [],
-      "gltf": ["alphaMode=MASK", "!alphaCutoff"]
+      "gltf": ["alphaMode=MASK", "!alphaCutoff"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, 0.3, operation: GREATER_THAN)))",
       "issues": [],
-      "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"]
+      "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater_or_equal",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: 1.0 - Math(t.alpha, 0.3, operation: LESS_THAN)))",
       "issues": [],
-      "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"]
+      "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_less",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, 0.3, operation: LESS_THAN)))",
       "issues": ["PrincipledBSDF.alpha ← Math(ImageTexture)"],
-      "gltf": ["alphaMode=BLEND", "!alphaCutoff"]
+      "gltf": ["alphaMode=BLEND", "!alphaCutoff"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_of_a_texture_cutoff",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, t.alpha, operation: GREATER_THAN)))",
       "issues": ["PrincipledBSDF.alpha ← Math(ImageTexture, ImageTexture)"],
-      "gltf": ["!alphaCutoff"]
+      "gltf": ["!alphaCutoff"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "vertex_alpha",
@@ -120,7 +126,8 @@
       "name": "vertex_alpha_alone",
       "body": "return (surface: PrincipledBSDF(alpha: ColorAttribute().alpha))",
       "issues": ["PrincipledBSDF.alpha ← ColorAttribute"],
-      "gltf": ["!mesh.COLOR_0"]
+      "gltf": ["!mesh.COLOR_0"],
+      "gltf_warnings": ["Vertex Color alpha without color"]
     },
     {
       "name": "attribute_of_geometry",
@@ -132,7 +139,8 @@
       "name": "attribute_of_object",
       "body": "return (surface: PrincipledBSDF(base_color: Attribute(attribute_name: \"Col\", attribute_type: OBJECT).color))",
       "issues": ["Attribute.attribute_type ← OBJECT"],
-      "gltf": ["!mesh.COLOR_0"]
+      "gltf": ["!mesh.COLOR_0"],
+      "gltf_warnings": ["The active Vertex Color will not be exported"]
     },
     {
       "name": "mapping_around_z",
@@ -144,13 +152,15 @@
       "name": "mapping_around_x",
       "body": "t = ImageTexture(vector: Mapping(vector: UVMap(), rotation: (0.3, 0.0, 0.0)), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["Mapping.rotation ← constant"],
-      "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"]
+      "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"],
+      "gltf_warnings": ["non-zero rotations in the X/Y direction"]
     },
     {
       "name": "mapping_of_normals",
       "body": "t = ImageTexture(vector: Mapping(vector: UVMap(), scale: (2.0, 2.0, 1.0), vector_type: NORMAL), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["Mapping.vector_type ← NORMAL"],
-      "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"]
+      "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"],
+      "gltf_warnings": ["had type NORMAL"]
     },
     {
       "name": "image_mirror_closest",
@@ -204,7 +214,8 @@
       "name": "anisotropy_gray",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(anisotropic: t.color, anisotropic_rotation: 0.25))",
       "issues": [],
-      "gltf": ["extensions.KHR_materials_anisotropy.anisotropyTexture"]
+      "gltf": ["extensions.KHR_materials_anisotropy.anisotropyTexture"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "anisotropy_pattern",
@@ -216,13 +227,15 @@
       "name": "anisotropy_without_tangent",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\ns = SeparateXYZ(VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD))\nreturn (surface: PrincipledBSDF(anisotropic: s.z * 0.7, anisotropic_rotation: (atan2(s.y, s.x) + 0.1) / 6.283185))",
       "issues": ["PrincipledBSDF.anisotropic ← Math(SeparateXYZ)", "PrincipledBSDF.anisotropic_rotation ← Math(Math)"],
-      "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"]
+      "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "anisotropy_of_two_separates",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nv = VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD)\nreturn (surface: PrincipledBSDF(anisotropic: SeparateXYZ(v).z * 0.7, anisotropic_rotation: (atan2(SeparateXYZ(v).y, SeparateXYZ(v).x) + 0.1) / 6.283185, tangent: Tangent(direction_type: UV_MAP)))",
       "issues": ["PrincipledBSDF.anisotropic ← Math(SeparateXYZ)", "PrincipledBSDF.anisotropic_rotation ← Math(Math)"],
-      "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"]
+      "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "tangent_radial",
@@ -251,7 +264,8 @@
       "name": "emission_attribute",
       "body": "return (surface: Emission(color: ColorAttribute().color))",
       "issues": ["Emission.color ← ColorAttribute"],
-      "gltf": ["!mesh.COLOR_0"]
+      "gltf": ["!mesh.COLOR_0"],
+      "gltf_warnings": ["The active Vertex Color will not be exported"]
     },
     {
       "name": "emission_strength",
@@ -263,13 +277,15 @@
       "name": "unlit_blend",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
       "issues": [],
-      "gltf": ["extensions.KHR_materials_unlit", "alphaMode=BLEND"]
+      "gltf": ["extensions.KHR_materials_unlit", "alphaMode=BLEND"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "unlit_clip",
       "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(round(t.alpha), TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
       "issues": [],
-      "gltf": ["extensions.KHR_materials_unlit", "alphaMode=MASK"]
+      "gltf": ["extensions.KHR_materials_unlit", "alphaMode=MASK"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "transparent_over_principled",
@@ -457,7 +473,8 @@
       "name": "transparent_color",
       "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: MixShader(t.alpha, TransparentBSDF(color: (1.0, 0.0, 0.0, 1.0)), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))\n}\n",
       "issues": ["MixShader(ImageTexture, TransparentBSDF, MixShader)", "TransparentBSDF"],
-      "gltf": ["extensions.KHR_materials_unlit", "!pbrMetallicRoughness.baseColorFactor"]
+      "gltf": ["extensions.KHR_materials_unlit", "!pbrMetallicRoughness.baseColorFactor"],
+      "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "light_path_other_branch",

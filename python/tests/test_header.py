@@ -22,7 +22,7 @@ def errors(source):
 
 def test_the_stdlib_head_is_read():
     h = header((ROOT / "stdlib" / "curves2d.bn").read_text(encoding="utf-8"), "curves2d.bn")
-    assert (h.module, h.version, h.edition) == ("curves2d", "0.12.0", "2026")
+    assert (h.module, h.version, h.edition) == ("curves2d", "0.13.0", "2026")
     assert h.target == ["blender-geometry", "blender-gp"]
     # A module offers itself as a library; its graphs are helpers, and a modifier or two
     assert h.offer[:2] == ["library", "groups"]

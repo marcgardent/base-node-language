@@ -327,7 +327,7 @@ Any `.bn` text shown in a Text Editor is checked as soon as typing pauses (parse
 
 An unchanged text leaves the tree as it is, node layout included; a text with errors stays open with its diagnostics until it builds.
 
-To build a folder of `.bn` files into a .blend from the command line, laid out as a gallery (one object per group, its name above it, frames and comments kept in the trees), see [`examples/push_bn_into_blend.py`](examples/push_bn_into_blend.py) and its three files in [`examples/suite/`](examples/suite/): two node groups, one using the other, and the material the terrain sets, written as text too:
+To build a folder of `.bn` files into a .blend from the command line, laid out as a gallery (one object per group, its name above it, frames and comments kept in the trees), see [`examples/push_bn_into_blend.py`](examples/push_bn_into_blend.py) and its three files in [`examples/suite/`](examples/suite/): two node groups, one using the other, and the material the dunes set, written as text too:
 
 ```bash
 blender -b --python examples/push_bn_into_blend.py -- examples/suite/ gallery.blend
@@ -347,7 +347,7 @@ base-node-for-blender/build.sh dist
 ```
 
 ```bash
-blender --command extension install-file -r user_default -e dist/base_node-0.12.0.zip
+blender --command extension install-file -r user_default -e dist/base_node-0.13.0.zip
 ```
 
 Run headless Blender tests:

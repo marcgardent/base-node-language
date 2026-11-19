@@ -1,7 +1,7 @@
 // A grid lifted by the waves of waves.bn, found next to this file, in the Sand of sand.bn
 use waves (lift)
 
-geometry graph terrain(size: Float = 4.0) -> Geometry {
+geometry graph dunes(size: Float = 4.0) -> Geometry {
   "Ground" #e73 {
     grid = Grid(size_x: size, size_y: size, vertices_x: 64, vertices_y: 64)
   }

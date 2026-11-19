@@ -48,6 +48,31 @@ UI_PROPS = {"active_index", "active_input_index", "active_output_index"}
 # Datablock properties the text writes otherwise: a group node's tree is its call
 ID_SKIP = {"node_tree"}
 
+# Settings Blender keeps in the storage of another (a bug of Blender 5.3): the Line Style Output's
+# target is its blend_type (Eevee is Add), so that setting one changes the other, and reading
+# target once blend_type holds none of target's values makes Blender warn. The text writes blend_type.
+SHARED_STORAGE = {("ShaderNodeOutputLineStyle", "target")}
+
+
+def from_missing_image(node, name):
+    """Whether `name` is an enum whose items come from the node's image, which it has not.
+
+    The layers and views of an Image or a Cryptomatte node, and a Cryptomatte's layer_name when
+    its source is an image (else the scene's view layers give them): without an image they have
+    no item, and reading one makes Blender warn ("current value '0' matches no enum") to give ""."""
+    if getattr(node, "image", False) is not None:
+        return False
+    return name in ("layer", "view") or name == "layer_name" and getattr(node, "source", None) == "IMAGE"
+
+
+def prop_value(node, name):
+    """A setting of a node as the text holds it, a datablock by its name; "" for an enum of an
+    image it has not, without reading it (see from_missing_image)."""
+    if from_missing_image(node, name):
+        return ""
+    return id_name(getattr(node, name))
+
+
 # Node data the text writes in calls of its own: a Color Ramp's stops (Ramp), a curve's points (Curve)
 DATA_KINDS = {"ColorRamp": "RAMP", "CurveMapping": "CURVES"}
 # The channels of a node's curves, by the end of its bl_idname; a single curve has none
@@ -190,7 +215,7 @@ class BlenderSchema:
                     continue
                 if getattr(p, "is_array", False) or getattr(p, "array_length", 0):
                     continue  # a color or a vector property: not in the text yet
-                if p.type == "ENUM" and p.is_enum_flag:
+                if p.type == "ENUM" and p.is_enum_flag or (idname, p.identifier) in SHARED_STORAGE:
                     continue
                 items = tuple(i.identifier for i in p.enum_items) if p.type == "ENUM" else ()
                 props[p.identifier] = Prop(p.identifier, p.type, items)
@@ -299,7 +324,7 @@ class BlenderSchema:
                     except (TypeError, ValueError, AttributeError):
                         pass  # the builder reports it, with Blender's own message
                 values = {s.identifier: snapshot(s) for s in node.inputs}
-                prop_values = {p: id_name(getattr(node, p)) for p in spec.props}
+                prop_values = {p: prop_value(node, p) for p in spec.props}
                 _sockets[key] = (available(node.inputs), available(node.outputs), values, prop_values)
             finally:
                 tree.nodes.remove(node)

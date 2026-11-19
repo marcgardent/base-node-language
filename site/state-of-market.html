@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<!-- Written by studio/state_of_market.py from its market data (make market): edit those, not this file. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State of Market — base-node (.bn)</title>
+<meta name="description" content="Node-based tools for shaders, geometry and compositing across the industry, what vanilla Blender 5.3 offers, and where base-node-library and its paid packs stand.">
+<style>
+:root {
+  color-scheme: dark light;
+  --bg: #0f1115; --panel: #161920; --border: #262b36; --text: #e6e9ef; --muted: #939ab0; --accent: #4f9cf9;
+  --ok: #3fb950; --ok-bg: rgba(63,185,80,.14); --part: #d29922; --part-bg: rgba(210,153,34,.14);
+  --road: #4f9cf9; --road-bg: rgba(79,156,249,.14); --out: #8b93a7; --out-bg: rgba(139,147,167,.14);
+  --no: #f85149; --no-bg: rgba(248,81,73,.12);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff; --panel: #f6f8fa; --border: #d0d7de; --text: #1f2328; --muted: #59636e; --accent: #0969da;
+    --ok: #1a7f37; --ok-bg: rgba(26,127,55,.10); --part: #9a6700; --part-bg: rgba(154,103,0,.10);
+    --road: #0969da; --road-bg: rgba(9,105,218,.10); --out: #59636e; --out-bg: rgba(89,99,110,.10);
+    --no: #cf222e; --no-bg: rgba(207,34,46,.08);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+header h1 { margin: 0; font-family: var(--mono); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+header h1 span { color: var(--muted); font-weight: 400; }
+nav { display: flex; flex-wrap: wrap; gap: 1rem; font-family: var(--mono); font-size: 0.85rem; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.eyebrow { margin: 1.5rem 0 0; font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lead { margin: .5rem 0 0; font-size: 1.05rem; max-width: 72ch; }
+h2 { margin: 0; font-size: 1.1rem; font-family: var(--mono); border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+h3 { margin: .5rem 0 0; font-size: .95rem; font-family: var(--mono); }
+code { font-family: var(--mono); font-size: .84em; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: .05rem .3rem; }
+main { display: grid; gap: 2.75rem; margin-top: 2rem; }
+.block { display: grid; gap: .8rem; min-width: 0; }
+.intro { margin: 0; color: var(--muted); max-width: 75ch; }
+.small { font-size: .85rem; }
+.summary { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.summary .label { font-family: var(--mono); font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-right: .25rem; }
+.count { font: 500 .85rem var(--sans); background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+  padding: .3rem .75rem; display: inline-flex; gap: .45rem; align-items: center; }
+.count b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.dot { width: .6rem; height: .6rem; border-radius: 50%; display: inline-block; }
+.dot.ok { background: var(--ok); } .dot.part { background: var(--part); } .dot.road { background: var(--road); } .dot.out { background: var(--out); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; vertical-align: top; padding: .55rem .7rem; border: 1px solid var(--border); }
+thead th { background: var(--panel); font-family: var(--mono); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+tbody th { font-weight: 600; }
+table.cmp tbody th { width: 30%; } table.cmp td:nth-child(2) { width: 18%; } table.cmp td:nth-child(4) { width: 30%; }
+.scroll { overflow-x: auto; }
+table.wide { min-width: 760px; }
+table.text-tools { min-width: 1100px; }
+.text-tools tr.own, tr.st-roadmap { background: var(--road-bg); }
+.chip { display: inline-block; font-family: var(--mono); font-size: .7rem; font-weight: 700; letter-spacing: .04em; padding: .1rem .45rem; border-radius: 4px; white-space: nowrap; }
+.b-yes, .s-ok { color: var(--ok); background: var(--ok-bg); }
+.b-part, .s-part { color: var(--part); background: var(--part-bg); }
+.b-no { color: var(--no); background: var(--no-bg); }
+.s-road { color: var(--bg); background: var(--road); }
+.s-out { color: var(--out); background: var(--out-bg); }
+.note { display: block; color: var(--muted); font-size: .82rem; margin-top: .25rem; }
+.mods { display: block; margin-top: .35rem; line-height: 1.9; }
+.tier { font-family: var(--mono); font-size: .72rem; white-space: nowrap; }
+.tier.free { color: var(--muted); }
+.dash { color: var(--muted); }
+ol.roadmap { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+ol.roadmap li { padding: .8rem 1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); min-width: 0; }
+ol.roadmap p { margin: .25rem 0 0; max-width: 75ch; }
+.rm-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; justify-content: space-between; }
+.rm-title { font-weight: 600; font-family: var(--mono); }
+.rm-area, .rm-src { font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+.rm-area { text-transform: uppercase; letter-spacing: .06em; }
+.position { border-left: 3px solid var(--accent); padding: .25rem 0 .25rem 1rem; max-width: 75ch; margin: 0; font-size: 1.02rem; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; font-family: var(--mono); }
+@media (max-width: 640px) {
+  table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td { display: block; width: auto !important; }
+  table.stack thead { display: none; }
+  table.stack tr { border: 1px solid var(--border); border-radius: 6px; margin-bottom: .6rem; overflow: hidden; }
+  table.stack th, table.stack td { border: 0; border-top: 1px solid var(--border); }
+  table.stack tbody th { border-top: 0; background: var(--panel); }
+  table.stack td::before { content: attr(data-label); display: block; font-family: var(--mono); font-size: .7rem;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: .2rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>base-node <span>State of Market</span></h1>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="#market">Market</a>
+    <a href="#text-tools">Competitors</a>
+    <a href="#workflow">Comparison</a>
+    <a href="#packs">Pro packs</a>
+    <a href="#roadmap">ROADMAP</a>
+  </nav>
+</header>
+<p class="eyebrow">Market review · version 7 · 19 November 2026</p>
+<p class="lead">Which industry tools use nodes for shaders, geometry and compositing, what vanilla Blender 5.3 LTS offers, and where <code>.bn</code> and its standard library stand. Every gap that Blender nodes can fill is marked <span class="chip s-road">ROADMAP</span> until it ships.</p>
+
+<main>
+<section class="block" aria-label="Status summary">
+  <div class="summary"><span class="label">base-node-library, 42 capabilities</span>
+<span class="count"><span class="dot ok"></span>Covered <b>38</b></span>
+<span class="count"><span class="dot part"></span>Partial <b>1</b></span>
+<span class="count"><span class="dot road"></span>ROADMAP <b>0</b></span>
+<span class="count"><span class="dot out"></span>Out of reach <b>3</b></span>
+  </div>
+  <p class="intro">Out of reach means Blender's node systems cannot express it: fluid and pyro solvers, rigging, optical flow, deep images.</p>
+</section>
+
+<section class="block" id="market">
+<h2>Market map</h2>
+<p class="intro">Node-based tools across the industry, by domain. Substance Painter, Nuke and Houdini were the starting point; the rest fill in the picture.</p>
+<div class="scroll"><table class="wide">
+<thead><tr><th scope="col">Software</th><th scope="col">Vendor</th><th scope="col">Shader</th><th scope="col">Geometry</th><th scope="col">Compositing</th><th scope="col">Note</th></tr></thead>
+<tbody>
+<tr><th scope="row">Houdini</th><td>SideFX</td><td>VOP, MaterialX, Karma</td><td>SOP, APEX, KineFX</td><td>Copernicus (COP)</td><td>The procedural reference; VEX is its code</td></tr>
+<tr><th scope="row">Substance 3D Designer</th><td>Adobe</td><td>2D texture graphs</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Standard for tileable materials</td></tr>
+<tr><th scope="row">Substance 3D Painter</th><td>Adobe</td><td>Layers, generators, filters</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Layer-based, not nodes</td></tr>
+<tr><th scope="row">Nuke</th><td>Foundry</td><td><span class="dash">—</span></td><td>Limited 3D</td><td>Reference</td><td><code>.nk</code> scripts are already text</td></tr>
+<tr><th scope="row">Fusion / DaVinci Resolve</th><td>Blackmagic Design</td><td><span class="dash">—</span></td><td>Basic 3D</td><td>Yes</td><td>Wide reach through free Resolve</td></tr>
+<tr><th scope="row">Flame (Batch)</th><td>Autodesk</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Yes</td><td>High-end finishing</td></tr>
+<tr><th scope="row">Natron</th><td>Open source</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Yes</td><td>Nuke-like, little activity</td></tr>
+<tr><th scope="row">Gaffer</th><td>Open source (Image Engine)</td><td>Look development</td><td>Scene</td><td>Yes</td><td>Pipeline and lookdev</td></tr>
+<tr><th scope="row">Katana</th><td>Foundry</td><td>Look development</td><td>Scene graph</td><td><span class="dash">—</span></td><td>Lighting and lookdev</td></tr>
+<tr><th scope="row">Mari</th><td>Foundry</td><td>Node graph</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Texture painting</td></tr>
+<tr><th scope="row">Maya</th><td>Autodesk</td><td>Hypershade, LookdevX</td><td>Bifrost</td><td><span class="dash">—</span></td><td>Bifrost also simulates</td></tr>
+<tr><th scope="row">3ds Max</th><td>Autodesk</td><td>Slate</td><td>Max Creation Graph</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td></tr>
+<tr><th scope="row">Cinema 4D</th><td>Maxon</td><td>Node Material</td><td>Scene Nodes, MoGraph</td><td><span class="dash">—</span></td><td>Motion design</td></tr>
+<tr><th scope="row">Unreal Engine</th><td>Epic Games</td><td>Material Editor, Substrate</td><td>PCG, Geometry Script</td><td>Composure</td><td>Real time, Niagara for VFX</td></tr>
+<tr><th scope="row">Unity</th><td>Unity</td><td>Shader Graph</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>VFX Graph</td></tr>
+<tr><th scope="row">Godot</th><td>Open source</td><td>Visual Shader</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td><span class="dash">—</span></td></tr>
+<tr><th scope="row">Grasshopper / Dynamo</th><td>McNeel / Autodesk</td><td><span class="dash">—</span></td><td>Parametric</td><td><span class="dash">—</span></td><td>Architecture and industry</td></tr>
+<tr><th scope="row">Gaea / World Machine</th><td>QuadSpinner / World Machine</td><td><span class="dash">—</span></td><td>Terrain, erosion</td><td><span class="dash">—</span></td><td>Terrain niche</td></tr>
+<tr><th scope="row">SpeedTree</th><td>Unity</td><td><span class="dash">—</span></td><td>Vegetation</td><td><span class="dash">—</span></td><td>Vegetation niche</td></tr>
+<tr><th scope="row">InstaMAT / Material Maker</th><td>Abstract / open source</td><td>Texture graphs</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>Alternatives to Designer</td></tr>
+<tr><th scope="row">TouchDesigner / Notch / Tooll3</th><td>Derivative / Notch / open source</td><td>GLSL</td><td>SOP</td><td>TOP</td><td>Real-time generative</td></tr>
+<tr><th scope="row">EmberGen</th><td>JangaFX</td><td><span class="dash">—</span></td><td>Simulation</td><td><span class="dash">—</span></td><td>Smoke and fire</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="block" id="text-tools">
+<h2>Node to Text and Text to Node, in Blender</h2>
+<p class="intro">The direct competitors. Node to Text writes an existing node tree as text; Text to Node builds a node tree from text. Most tools do the first, and read back only their own output: a serialization (JSON, XML, a hash) or Python to run. None is hand-writable: a format made for a person to write a graph from scratch in a text editor, read it and change it. None has syntactic sugar (pipes, expressions written as formulas), generic templates (a graph written once for every type) or a standard library. Only BNDL Pro is sold, at $29.</p>
+<div class="scroll"><table class="wide text-tools">
+<thead><tr><th scope="col">Tool</th><th scope="col">Maker</th><th scope="col">Text form</th><th scope="col">Trees</th><th scope="col">Node to Text</th><th scope="col">Text to Node</th><th scope="col">Hand-writable</th><th scope="col">Syntactic sugar</th><th scope="col">Generic templates</th><th scope="col">Standard library</th><th scope="col">Distribution</th></tr></thead>
+<tbody>
+<tr class="own"><th scope="row">base-node-library</th><td>Marc Gardent</td><td><code>.bn</code>, a language: graphs as functions</td><td>Shader, geometry, compositor, Grease Pencil</td><td>yes, canonical text</td><td>yes, while typing</td><td>yes</td><td>yes: <code>|&gt;</code> pipes, operators, expressions, tuples, ramp and curve literals</td><td>yes: a graph generic over a type, <code>index_mix&lt;T&gt;</code>, built once per type</td><td>yes, 46 modules</td><td>Free add-on, paid packs</td></tr>
+<tr><th scope="row"><a href="https://extensions.blender.org/add-ons/node-runner/">Node Runner</a></th><td>Noah Thiering</td><td>Hash, JSON or XML</td><td>Shader, geometry, compositor</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>extensions.blender.org</td></tr>
+<tr><th scope="row"><a href="https://majorstudio.gumroad.com/l/BNDLite">BNDL Lite</a></th><td>Major Studio</td><td><code>.bndltext</code> key-value lines</td><td>Materials</td><td>yes</td><td><span class="dash">—</span></td><td>partly</td><td>no</td><td>no</td><td>no</td><td>Free, Gumroad</td></tr>
+<tr><th scope="row"><a href="https://majorstudio.gumroad.com/l/BNDLPro">BNDL Pro</a></th><td>Major Studio</td><td><code>.bndl</code></td><td>Shader, geometry, compositor</td><td>yes</td><td><span class="dash">—</span></td><td>partly</td><td>no</td><td>no</td><td>no</td><td>$29, Gumroad</td></tr>
+<tr><th scope="row"><a href="https://extensions.blender.org/add-ons/tree-clipper/">Tree Clipper</a></th><td><span class="dash">—</span></td><td>JSON, plain or compressed</td><td>Node trees</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td><td>extensions.blender.org</td></tr>
+<tr><th scope="row"><a href="https://extensions.blender.org/add-ons/copy-paste-nodes/">Copy Paste Nodes</a></th><td><span class="dash">—</span></td><td>Clipboard text</td><td>Node trees</td><td>yes (copy)</td><td>yes (paste)</td><td>no</td><td>no</td><td>no</td><td>no</td><td>extensions.blender.org</td></tr>
+<tr><th scope="row"><a href="https://github.com/andrewcrom/NodeKit">NodeKit</a></th><td>andrewcrom</td><td>JSON, for version control</td><td>Geometry</td><td>yes</td><td><span class="dash">—</span></td><td>no</td><td>no</td><td>no</td><td>no</td><td>GitHub</td></tr>
+<tr><th scope="row"><a href="https://blendermarket.com/products/nodetree-source">Nodetree Source</a></th><td>Korchy</td><td>Python source</td><td>Node trees</td><td>yes</td><td>by running the Python</td><td>Python API</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>no</td><td>Superhive (Blender Market)</td></tr>
+<tr><th scope="row"><a href="https://superhivemarket.com/products/node-extension/docs/new">Portable Node Format</a></th><td><span class="dash">—</span></td><td>Its own format, v1.0.0</td><td>Node trees</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>no</td><td>Superhive</td></tr>
+<tr><th scope="row"><a href="https://github.com/BrendanParmer/NodeToPython">NodeToPython</a></th><td>Brendan Parmer</td><td>Python that rebuilds the tree</td><td>Shader, geometry, compositor</td><td>yes</td><td>by running the Python</td><td>Python API</td><td>no, a call per node</td><td>no</td><td>no</td><td>GitHub</td></tr>
+<tr><th scope="row"><a href="https://pypi.org/p/nodebpy">nodebpy</a></th><td><span class="dash">—</span></td><td>Python that builds node groups</td><td>Geometry</td><td><span class="dash">—</span></td><td>yes</td><td>Python API</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td>no</td><td>PyPI</td></tr>
+</tbody></table></div>
+<p class="intro small">From public product pages, November 2026. A dash means the page does not say.</p>
+</section>
+
+<section class="block" id="workflow">
+<h2>Format and workflow</h2>
+<p class="intro">What sets .bn apart: nodes you can read, diff, test and generate.</p>
+<table class="cmp stack">
+<thead><tr><th scope="col">Capability</th><th scope="col">Blender 5.3 LTS (vanilla)</th><th scope="col">Elsewhere</th><th scope="col">base-node-library</th></tr></thead>
+<tbody>
+<tr class="st-covered">
+<th scope="row">Node graph ⇄ text, both ways</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span><span class="note">Python API only</span></td>
+<td data-label="Elsewhere">Nuke <code>.nk</code>, Houdini VEX, Substance <code>.sbs</code> XML, MaterialX, NodeToPython (one-way add-on)</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note"><code>.bn</code> for Geometry Nodes, shaders and compositor</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Readable git diffs and code review</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span><span class="note"><code>.blend</code> is binary</span></td>
+<td data-label="Elsewhere">Nuke <code>.nk</code>, MaterialX (partial)</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">Plain text, canonical formatter</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Keyboard editing, diagnostics, completion</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini VEX editor</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">Applied while typing, errors underlined, suggestions</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Versioned standard library</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Essentials assets</span></td>
+<td data-label="Elsewhere">Houdini Labs, Substance Source</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">stdlib 0.13, 46 modules, editions, SemVer</span></td>
+</tr>
+<tr class="st-partial">
+<th scope="row">Portable outside Blender</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">MaterialX, USD</td>
+<td data-label="base-node-library"><span class="chip s-part">Partial</span><span class="mods"><a class="tier pro" href="#feature-materialx">MaterialX export</a></span><span class="note">Shader graphs leave through the MaterialX export; the Rust parser builds to wasm; geometry and compositor graphs have no engine runtime yet</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Regression tests on third-party corpora</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">None found</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">17 corpora (13 Geometry Nodes, 3 shader, 1 compositor), 889 of 889 groups round-trip; Molecular Nodes 403/403</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Automatic node layout</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Node Wrangler</span></td>
+<td data-label="Elsewhere">Houdini layout</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">Arrange Nodes, frames and comments kept</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Readable and writable by an LLM</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">VEX (partial)</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="note">The strongest argument</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Export to MaterialX, then GLSL / HLSL</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">MaterialX through USD export</span></td>
+<td data-label="Elsewhere">Maya LookdevX, Unreal, Godot</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><a class="tier pro" href="#feature-materialx">MaterialX export</a></span><span class="note">Shader graphs first, in Pro; renders compared with Blender's</span></td>
+</tr>
+</tbody></table>
+</section>
+<section class="block" id="geometry">
+<h2>Geometry</h2>
+<p class="intro">Blender Geometry Nodes compared with Houdini SOPs, C4D MoGraph, Unreal PCG, Grasshopper and the terrain and vegetation tools.</p>
+<table class="cmp stack">
+<thead><tr><th scope="col">Capability</th><th scope="col">Blender 5.3 LTS (vanilla)</th><th scope="col">Elsewhere</th><th scope="col">base-node-library</th></tr></thead>
+<tbody>
+<tr class="st-covered">
+<th scope="row">2D signed distance fields and primitives</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini, TouchDesigner</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>sdf2d</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">2D curves: fillets, deformation, planar maps</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Grasshopper, Houdini</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>curves2d</code> <code>fillet2d</code> <code>planar2d</code> <span class="tier free">Free</span></span><span class="mods"><code>deform2d</code> <a class="tier pro" href="#pack-ink-engraving">Ink &amp; Engraving</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Patterns, tilings, hatching, guilloché</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Grasshopper, Substance Designer</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>patterns2d</code> <span class="tier free">Free</span></span><span class="mods"><code>hachures2d</code> <a class="tier pro" href="#pack-ink-engraving">Ink &amp; Engraving</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Living ink, Grease Pencil v3 strokes</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">No direct equivalent</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>ink2d</code> <a class="tier pro" href="#pack-ink-engraving">Ink &amp; Engraving</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Live mesh maps (curvature, AO, thickness)</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Substance Painter (baked)</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>mesh_maps</code> <a class="tier pro" href="#pack-smart-materials">Smart Materials</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Wear in the mesh (chips, rivets, streaks)</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini Labs</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>mesh_effects</code> <a class="tier pro" href="#pack-smart-materials">Smart Materials</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Cloners and effectors, MoGraph style</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Raw instancing</span></td>
+<td data-label="Elsewhere">Cinema 4D MoGraph, Houdini</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>cloners</code> <code>effectors</code> <code>falloffs</code> <a class="tier pro" href="#pack-motion-graphics">Motion Graphics</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Rule-based scattering and biomes</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Unreal PCG, Geo-Scatter (add-on)</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>scatter</code> <code>biomes</code> <a class="tier pro" href="#pack-scatter">Scatter &amp; Biomes</a></span><span class="note">Poisson-disk spacing, layers, LOD and frustum culling</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Terrain and hydraulic erosion</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Gaea, World Machine, Houdini Heightfields</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>terrain</code> <a class="tier pro" href="#pack-procedural">Procedural Toolkit</a></span><span class="note">Thermal and hydraulic erosion, water and sediment maps</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Vegetation, L-systems</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">SpeedTree, Houdini</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>lsystem</code> <a class="tier pro" href="#pack-procedural">Procedural Toolkit</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Voronoi fracture, debris</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini RBD</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>fracture</code> <a class="tier pro" href="#pack-procedural">Procedural Toolkit</a></span><span class="note">One Manifold Boolean per cell</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Advanced modelling (PolyBevel, PolyExtrude)</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Houdini</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>poly_extrude</code> <code>poly_bevel</code> <code>modeling</code> <a class="tier pro" href="#pack-modeling">Modeling Tools</a></span><span class="note">Insets and extrusions by region, bevels on a circular profile, panel lines; every result stored as an attribute</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Game-art tools (trim sheets, flowmaps, roads)</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini Labs</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>flowmaps</code> <code>trim_sheets</code> <code>roads</code> <code>game_export</code> <a class="tier pro" href="#pack-game-art">Game Art Tools</a></span><span class="note">Flowmaps in the frame of the UV map, roads laid on a terrain, lightmap UVs and LOD for engines</span></td>
+</tr>
+<tr class="st-out">
+<th scope="row">FLIP, Pyro, MPM simulation</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini, Maya Bifrost, EmberGen</td>
+<td data-label="base-node-library"><span class="chip s-out">Out of reach</span><span class="note">Only particles, boids and simple PBD fit in nodes</span></td>
+</tr>
+<tr class="st-out">
+<th scope="row">Procedural rigging</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Houdini APEX, KineFX</td>
+<td data-label="base-node-library"><span class="chip s-out">Out of reach</span></td>
+</tr>
+</tbody></table>
+</section>
+<section class="block" id="shader">
+<h2>Shader and textures</h2>
+<p class="intro">Blender shader nodes compared with Substance Painter and Designer, Unreal Substrate and the engine shader graphs.</p>
+<table class="cmp stack">
+<thead><tr><th scope="col">Capability</th><th scope="col">Blender 5.3 LTS (vanilla)</th><th scope="col">Elsewhere</th><th scope="col">base-node-library</th></tr></thead>
+<tbody>
+<tr class="st-covered">
+<th scope="row">Smart-material generators (edge wear, dirt, grunge)</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Substance Painter</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>generators</code> <a class="tier pro" href="#pack-smart-materials">Smart Materials</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Shaping curves and math noise</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Substance Designer, VEX</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>math</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Designer atoms: blur, warp, slope blur, flood fill, height to normal</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span><span class="note">No neighbour sampling in shaders</span></td>
+<td data-label="Elsewhere">Substance Designer, Material Maker, InstaMAT</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>texture_atoms</code> <code>texture_filters</code> <a class="tier pro" href="#pack-texture-lab">Texture Lab</a></span><span class="note">In the compositor, which samples neighbours; textures that tile</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Material layering with masks</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Mix Shader</span></td>
+<td data-label="Elsewhere">Unreal Substrate, Substance Painter</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>material_layers</code> <a class="tier pro" href="#pack-material-layers">Material Layers</a></span><span class="note">By mask, by height, per channel</span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Triplanar and projections</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Box projection only</span></td>
+<td data-label="Elsewhere">All engines</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>projections</code> <a class="tier pro" href="#pack-material-layers">Material Layers</a></span><span class="note">Triplanar, triplanar normals</span></td>
+</tr>
+</tbody></table>
+</section>
+<section class="block" id="compositor">
+<h2>Compositing and motion design</h2>
+<p class="intro">The Blender compositor compared with Nuke, Fusion and After Effects. Nuke is the reference that the ten compositor modules follow; After Effects and Fusion the one of the motion design modules.</p>
+<table class="cmp stack">
+<thead><tr><th scope="col">Capability</th><th scope="col">Blender 5.3 LTS (vanilla)</th><th scope="col">Elsewhere</th><th scope="col">base-node-library</th></tr></thead>
+<tbody>
+<tr class="st-covered">
+<th scope="row">Premultiplied Porter-Duff merges</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Nuke, Fusion</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>merge</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Grade, ColorCorrect, log / lin</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>grade</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">IBK keying, despill</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>keying</code> <a class="tier pro" href="#pack-compositing-pro">Compositing Pro</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Glow, light wrap</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Glare node</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>light</code> <a class="tier pro" href="#pack-compositing-pro">Compositing Pro</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">STMap, Reformat</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>stmap</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">360°: latlong, cubemap, fisheye</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Nuke Cara VR</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>vr360</code> <a class="tier pro" href="#pack-compositing-pro">Compositing Pro</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Grain and regrain</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Film Grain</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>grain</code> <a class="tier pro" href="#pack-compositing-pro">Compositing Pro</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Test patterns and quality control</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>qc</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Beauty rebuilt from render passes, relight</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>passes</code> <a class="tier pro" href="#pack-compositing-pro">Compositing Pro</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">SDF masks</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span></td>
+<td data-label="Elsewhere">Nuke Roto</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>mask2d</code> <span class="tier free">Free</span></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Transitions, wipes, stylize effects</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">After Effects, Fusion</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>transitions</code> <code>stylize</code> <a class="tier pro" href="#pack-motion-compositing">Motion Compositing</a></span></td>
+</tr>
+<tr class="st-covered">
+<th scope="row">Motion design: 2D particles, text, time echoes</th>
+<td data-label="Blender 5.3"><span class="chip b-no">No</span></td>
+<td data-label="Elsewhere">Fusion, After Effects</td>
+<td data-label="base-node-library"><span class="chip s-ok">Covered</span><span class="mods"><code>particles2d</code> <code>text_animate</code> <code>echoes</code> <a class="tier pro" href="#pack-motion-design">Motion Design 2D</a></span><span class="note">In Geometry Nodes, by simulation zones</span></td>
+</tr>
+<tr class="st-out">
+<th scope="row">Optical flow, deep, CopyCat, 3D tracking</th>
+<td data-label="Blender 5.3"><span class="chip b-part">Partial</span><span class="note">Tracking exists outside nodes</span></td>
+<td data-label="Elsewhere">Nuke</td>
+<td data-label="base-node-library"><span class="chip s-out">Out of reach</span></td>
+</tr>
+</tbody></table>
+</section>
+
+<section class="block" id="packs">
+<h2>Base Node Library Pro: the paid packs</h2>
+<p class="intro">What Houdini, Nuke, Substance and Cinema 4D do with nodes, as readable .bn text inside Blender: paid packs of tested node-group modules on top of the free Base Node add-on.</p>
+<p class="intro">Open core: the language, the Blender add-on, the formatter and parsers, and the free modules of the standard library: 11 modules (<code>curves2d</code> <code>fillet2d</code> <code>grade</code> <code>mask2d</code> <code>math</code> <code>merge</code> <code>patterns2d</code> <code>planar2d</code> <code>qc</code> <code>sdf2d</code> <code>stmap</code>). 35 modules are sold in 12 packs, installed through the add-on's module folder, with the MaterialX export.</p>
+<table class="packs stack">
+<thead><tr><th scope="col">Pack</th><th scope="col">What it does</th><th scope="col">Modules</th><th scope="col">Status</th></tr></thead>
+<tbody>
+<tr id="pack-compositing-pro"><th scope="row">Compositing Pro</th>
+<td data-label="What it does">Keying, glows, grain, render passes and 360° for the Blender compositor<span class=note>Reference: Nuke</span></td>
+<td data-label="Modules"><code>grain</code> <code>keying</code> <code>light</code> <code>passes</code> <code>vr360</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">First release</span></td></tr>
+<tr id="pack-ink-engraving"><th scope="row">Ink &amp; Engraving</th>
+<td data-label="What it does">Living ink, hatching and guilloché for Geometry Nodes and Grease Pencil<span class=note>Reference: Engraving and banknote guilloché</span></td>
+<td data-label="Modules"><code>deform2d</code> <code>hachures2d</code> <code>ink2d</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">First release</span></td></tr>
+<tr id="pack-smart-materials"><th scope="row">Smart Materials</th>
+<td data-label="What it does">A texture painter's smart materials, live in Geometry Nodes and shaders<span class=note>Reference: Substance 3D Painter</span></td>
+<td data-label="Modules"><code>generators</code> <code>mesh_effects</code> <code>mesh_maps</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">First release</span></td></tr>
+<tr id="pack-motion-graphics"><th scope="row">Motion Graphics</th>
+<td data-label="What it does">Cloners, effectors and falloffs for motion design in Geometry Nodes<span class=note>Reference: Cinema 4D MoGraph</span></td>
+<td data-label="Modules"><code>cloners</code> <code>effectors</code> <code>falloffs</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-scatter"><th scope="row">Scatter &amp; Biomes</th>
+<td data-label="What it does">Rule-based scattering and layered biomes for Geometry Nodes<span class=note>Reference: Unreal PCG, Geo-Scatter</span></td>
+<td data-label="Modules"><code>biomes</code> <code>scatter</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-texture-lab"><th scope="row">Texture Lab</th>
+<td data-label="What it does">Tileable textures made in node graphs of the Blender compositor<span class=note>Reference: Substance 3D Designer</span></td>
+<td data-label="Modules"><code>texture_atoms</code> <code>texture_filters</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-procedural"><th scope="row">Procedural Toolkit</th>
+<td data-label="What it does">Terrains, Voronoi fracture and L-system trees in Geometry Nodes<span class=note>Reference: Gaea, Houdini Heightfields, Houdini RBD, SpeedTree</span></td>
+<td data-label="Modules"><code>fracture</code> <code>lsystem</code> <code>terrain</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-material-layers"><th scope="row">Material Layers</th>
+<td data-label="What it does">Layered PBR materials in shader nodes, stacked by masks and heights, projected without UVs<span class=note>Reference: Unreal Substrate, Substance Painter layers</span></td>
+<td data-label="Modules"><code>material_layers</code> <code>projections</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-motion-compositing"><th scope="row">Motion Compositing</th>
+<td data-label="What it does">Transitions, wipes and stylize effects for motion design in the Blender compositor<span class=note>Reference: After Effects, Fusion</span></td>
+<td data-label="Modules"><code>stylize</code> <code>transitions</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 18 November 2026</span></td></tr>
+<tr id="pack-motion-design"><th scope="row">Motion Design 2D</th>
+<td data-label="What it does">2D particles, text animators and time echoes for motion design in Geometry Nodes<span class=note>Reference: After Effects, Fusion</span></td>
+<td data-label="Modules"><code>echoes</code> <code>particles2d</code> <code>text_animate</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 19 November 2026</span></td></tr>
+<tr id="pack-modeling"><th scope="row">Modeling Tools</th>
+<td data-label="What it does">Bevels, extrusions, insets and panel lines for Geometry Nodes, every result grouped<span class=note>Reference: Houdini PolyExtrude and PolyBevel</span></td>
+<td data-label="Modules"><code>modeling</code> <code>poly_bevel</code> <code>poly_extrude</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 19 November 2026</span></td></tr>
+<tr id="pack-game-art"><th scope="row">Game Art Tools</th>
+<td data-label="What it does">Flowmaps, trim sheets, roads and engine-ready meshes in Geometry Nodes<span class=note>Reference: Houdini Labs</span></td>
+<td data-label="Modules"><code>flowmaps</code> <code>game_export</code> <code>roads</code> <code>trim_sheets</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">From the ROADMAP, 19 November 2026</span></td></tr>
+<tr id="feature-materialx"><th scope="row">MaterialX export</th>
+<td data-label="What it does">Shader graphs written as a MaterialX 1.39 document, read by Unreal, Unity, Godot, USD and Maya LookdevX, and turned into GLSL, HLSL, MSL, OSL or MDL by MaterialX's code generators.</td>
+<td data-label="Modules"><code>make materialx IN=in.bn OUT=out.mtlx</code></td>
+<td data-label="Status"><span class="chip s-ok">Shipped</span><span class="note">73 of the 76 shader graphs of the standard library and examples fit the export (2026-11-19). Twelve materials rendered by Blender and by MaterialX's GLSL renderer, side by side with their colour difference.</span></td></tr>
+</tbody></table>
+</section>
+
+<section class="block" id="roadmap">
+<h2>ROADMAP</h2>
+<p class="intro">Ordered by audience times feasibility. Each item can be built with Blender's own nodes and shipped as <code>.bn</code> modules.</p>
+<p class="intro">Every item that earlier versions of this review planned has shipped. Out of reach stays out of reach; the next items are not decided yet.</p>
+<h3>Shipped from the ROADMAP</h3>
+<ol class="roadmap done"><li><div class="rm-head"><span class="rm-title">Cloners and effectors</span><span class="rm-area">Geometry</span></div>
+<p class="rm-src">Reference: Cinema 4D MoGraph</p><p>The largest audience: motion designers moving from C4D.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-motion-graphics">Motion Graphics</a></p></li><li><div class="rm-head"><span class="rm-title">Scattering and biomes</span><span class="rm-area">Geometry</span></div>
+<p class="rm-src">Reference: Unreal PCG, Geo-Scatter</p><p>Much in demand and already sold in the Blender ecosystem; masks come from <code>mesh_maps</code>.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-scatter">Scatter &amp; Biomes</a></p></li><li><div class="rm-head"><span class="rm-title">Substance Designer atoms in the compositor</span><span class="rm-area">Compositor</span></div>
+<p class="rm-src">Reference: Substance Designer</p><p>Blur, warp, slope blur and height to normal need neighbour pixels, which the compositor has and shaders do not.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-texture-lab">Texture Lab</a></p></li><li><div class="rm-head"><span class="rm-title">Houdini toolkit: terrain, fracture, L-systems</span><span class="rm-area">Geometry</span></div>
+<p class="rm-src">Reference: Houdini, Gaea, SpeedTree</p><p>Terrain with erosion, Voronoi fracture, L-system trees.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-procedural">Procedural Toolkit</a></p></li><li><div class="rm-head"><span class="rm-title">Material layering and projections</span><span class="rm-area">Shader</span></div>
+<p class="rm-src">Reference: Unreal Substrate, Substance Painter</p><p>Layer stacks with masks, triplanar projection.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-material-layers">Material Layers</a></p></li><li><div class="rm-head"><span class="rm-title">Motion design in the compositor: transitions and stylize</span><span class="rm-area">Compositor</span></div>
+<p class="rm-src">Reference: After Effects, Fusion</p><p>Wipes, dissolves and the stylize effects of motion design.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 18 November 2026: <a href="#pack-motion-compositing">Motion Compositing</a></p></li><li><div class="rm-head"><span class="rm-title">MaterialX export, then GLSL / HLSL</span><span class="rm-area">Interop</span></div>
+<p class="rm-src">Reference: MaterialX, Maya LookdevX, Unreal, Godot</p><p>Takes <code>.bn</code> out of Blender towards Unreal, Unity, Godot and USD; shader graphs first, the Material Layers pack as the test case.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 19 November 2026: <a href="#feature-materialx">MaterialX export</a></p></li><li><div class="rm-head"><span class="rm-title">Motion design, second part: 2D particles, text, time echoes</span><span class="rm-area">Motion design</span></div>
+<p class="rm-src">Reference: After Effects, Fusion</p><p>After the transitions and stylize effects.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 19 November 2026: <a href="#pack-motion-design">Motion Design 2D</a></p></li><li><div class="rm-head"><span class="rm-title">Advanced modelling</span><span class="rm-area">Geometry</span></div>
+<p class="rm-src">Reference: Houdini PolyBevel, PolyExtrude</p><p>Bevels and extrusions Geometry Nodes has no node for.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 19 November 2026: <a href="#pack-modeling">Modeling Tools</a></p></li><li><div class="rm-head"><span class="rm-title">Game-art tools</span><span class="rm-area">Geometry</span></div>
+<p class="rm-src">Reference: Houdini Labs</p><p>Flowmaps, trim sheets, roads, meshes ready for engines.</p><p class="rm-done"><span class="chip s-ok">Shipped</span> 19 November 2026: <a href="#pack-game-art">Game Art Tools</a></p></li></ol>
+</section>
+
+<section class="block" id="position">
+<h2>Positioning</h2>
+<p class="position">No other tool offers readable text that round-trips with nodes across all three domains, backed by a standard library tested against third-party corpora. The closest are VEX (tied to Houdini), Nuke's <code>.nk</code> (compositing only) and, in Blender, serializers such as Node Runner and BNDL or Python generators such as NodeToPython, none of them meant to be written by hand. In short: what Houdini, Nuke and Substance do, as versionable text inside Blender, and out of it through MaterialX.</p>
+</section>
+</main>
+
+<footer>Sources: base-node-library main branch (stdlib 0.13, 46 modules, 17 third-party corpora) and the public product pages of the vendors listed. The Blender column is vanilla Blender 5.3 LTS without add-ons, except where an add-on is named.</footer>
+</div>
+</body>
+</html>

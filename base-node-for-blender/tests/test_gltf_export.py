@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 import struct
 import sys
 import tempfile
@@ -47,19 +48,41 @@ def read_glb(path):
     return json.loads(data[20:20 + size])
 
 
-def export(name, folder):
-    """The glTF of a plane with a color attribute and the material `name`: (file, material, attributes)."""
+class Heard(logging.Filter):
+    """The warnings of Blender's glTF exporter, kept for the case to check instead of printed."""
+
+    def __init__(self):
+        super().__init__()
+        self.warnings = []
+
+    def filter(self, record):
+        if record.levelno < logging.WARNING:
+            return True
+        self.warnings.append(record.getMessage())
+        return False
+
+
+def export(name, folder, colored):
+    """The glTF of a plane with the material `name`, and a color attribute when `colored`:
+    (file, material, attributes, the exporter's warnings)."""
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj)
     bpy.ops.mesh.primitive_plane_add()
     plane = bpy.context.active_object
     plane.data.materials.append(bpy.data.materials[name])
-    plane.data.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
+    if colored:
+        plane.data.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
     path = Path(folder) / f"{name}.glb"
-    bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True,
-                              export_all_vertex_colors=False)
+    heard = Heard()
+    logger = logging.getLogger("glTFImporter")  # the exporter's too
+    logger.addFilter(heard)
+    try:
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True,
+                                  export_all_vertex_colors=False)
+    finally:
+        logger.removeFilter(heard)
     gltf = read_glb(path)
-    return gltf, gltf["materials"][0], gltf["meshes"][0]["primitives"][0]["attributes"]
+    return gltf, gltf["materials"][0], gltf["meshes"][0]["primitives"][0]["attributes"], heard.warnings
 
 
 def close(a, b):
@@ -124,8 +147,18 @@ def test_gltf_export():
             if not case.get("gltf"):
                 continue
             build_source(text, f"{case['name']}.bn")
-            gltf, material, attributes = export(case["name"], folder)
+            # The mesh has a color attribute for the cases that look at its attributes alone: on the
+            # others, the exporter would warn that it drops a color the material does not read
+            colored = any(c.lstrip("!").startswith("mesh.") for c in case["gltf"])
+            gltf, material, attributes, warnings = export(case["name"], folder, colored)
             verdict = "accepted" if not case["issues"] else "refused"
+            # What the exporter says it loses is part of the case: a warning it does not list fails
+            want = case.get("gltf_warnings", [])
+            unlisted = [w for w in warnings if not any(part in w for part in want)]
+            unheard = [part for part in want if not any(part in w for w in warnings)]
+            if unlisted or unheard:
+                wrong.append(f"{case['name']} ({verdict}): the exporter warns {unlisted} the case does not "
+                             f"list, and not {unheard} it lists")
             for check in case["gltf"]:
                 if not holds(check, gltf, material, attributes):
                     wrong.append(f"{case['name']} ({verdict}): the glTF does not show {check}: "

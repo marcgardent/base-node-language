@@ -1,5 +1,7 @@
 """Modules: `use maths (fbm) from "//lib/maths.bn"`, and the groups already in the file."""
 
+from pathlib import Path
+
 import pytest
 
 from base_node import BnError, compile_source, parse
@@ -216,3 +218,13 @@ def test_a_use_brings_no_material(schema):
     assert "clay" not in [g.name for g in graphs]
     src = MAIN.replace("use maths", "use maths (clay)")
     assert errors(src, schema, loader({("maths", None): lib}))[0] == "'clay' is a material: a use brings node groups only"
+
+
+def test_no_example_takes_the_name_of_a_module():
+    """`use name` finds the text name.bn of the .blend, then name.bn next to the imported file, before
+    the stdlib: an example named like a module would stand for it, in its folder and once opened in
+    the Text Editor, and `use name (…)` would find the example's graphs instead of the module's."""
+    root = Path(__file__).resolve().parents[2]
+    modules = {p.stem for p in (root / "stdlib").glob("*.bn")}
+    clash = sorted(str(p.relative_to(root)) for p in (root / "examples").rglob("*.bn") if p.stem in modules)
+    assert not clash, f"examples named like a stdlib module: {clash}"

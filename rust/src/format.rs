@@ -115,13 +115,50 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
         }
     }
 
-    // Sorted uses
-    let sorted = sorted_uses(&file.uses);
-    for u in &sorted {
-        let lines = format_use(u);
-        for (k, (o, t)) in lines.into_iter().enumerate() {
+    let blank_fn = |line: usize| -> bool {
+        1 <= line && line <= rows.len() && rows[line - 1].trim().is_empty()
+    };
+
+    // Sorted, each use keeps its own line, and so its trailing comment. The comments on their own
+    // lines between two uses go with the use under them; the ones above the first use stay at the
+    // head of the file. The blank lines between uses stay where they were: the n-th use printed
+    // follows a blank line when the n-th use of the source did, but comments brought up first
+    // keep a blank line from the head comments of the file.
+    let mut gap: HashMap<usize, bool> = HashMap::new();
+    let mut moved: HashSet<usize> = HashSet::new();
+    let mut last_printed: HashMap<usize, usize> = HashMap::new();
+    let mut in_order: Vec<&Use> = file.uses.iter().collect();
+    in_order.sort_by_key(|u| u.line);
+    let mut above: HashMap<usize, Vec<(usize, String)>> = HashMap::new();
+    for (i, u) in in_order.iter().enumerate() {
+        let group: Vec<(usize, String)> = match i.checked_sub(1) {
+            Some(p) => comments
+                .iter()
+                .filter(|c| alone.contains(&c.line) && in_order[p].line < c.line && c.line < u.line)
+                .map(|c| (c.line, c.text.trim_end().to_string()))
+                .collect(),
+            None => Vec::new(),
+        };
+        moved.extend(group.iter().map(|(l, _)| *l));
+        above.insert(u.line, group);
+    }
+    for (n, u) in sorted_uses(&file.uses).iter().enumerate() {
+        let source_nth = in_order[n];
+        let first_line = above[&source_nth.line]
+            .first()
+            .map_or(source_nth.line, |(l, _)| *l);
+        let group = &above[&u.line];
+        gap.insert(
+            printed.len(),
+            (n == 0 && !group.is_empty()) || blank_fn(first_line - 1),
+        );
+        for (l, t) in group {
+            printed.push((*l, t.clone(), true));
+        }
+        for (k, (o, t)) in format_use(u).into_iter().enumerate() {
             printed.push((o, t, k == 0));
         }
+        last_printed.insert(u.line, printed.len() - 1);
     }
     if !file.uses.is_empty() {
         let max_line = file.uses.iter().map(|u| u.line).max().unwrap_or(1);
@@ -150,17 +187,32 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
     let mut own = Vec::new();
     let mut trailing: HashMap<usize, Vec<String>> = HashMap::new();
 
+    let uses_end = file.graphs.first().map_or(rows.len() + 1, |g| g.line);
     for c in &comments {
         let text = c.text.trim_end().to_string();
+        if moved.contains(&c.line) {
+            continue;
+        }
         if !alone.contains(&c.line) {
+            // After code: at the end of the printed line that code went to
+            // (its own line first: sorted uses are printed out of order)
             let on: Vec<usize> = printed
                 .iter()
                 .enumerate()
                 .filter(|(_, (o, t, _))| *o == c.line && !t.is_empty())
                 .map(|(k, _)| k)
                 .collect();
+            let within = file
+                .uses
+                .iter()
+                .map(|u| u.line)
+                .filter(|&l| l <= c.line && c.line < uses_end)
+                .max();
             let at = if !on.is_empty() {
                 *on.last().unwrap()
+            } else if let Some(l) = within {
+                // On a later line of a use split over several: at the end of that use
+                last_printed[&l]
             } else {
                 let candidates: Vec<usize> = printed
                     .iter()
@@ -182,16 +234,12 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
 
     let mut out: Vec<String> = Vec::new();
 
-    let blank_fn = |line: usize| -> bool {
-        1 <= line && line <= rows.len() && rows[line - 1].trim().is_empty()
-    };
-
-    let mut emit = |origin: usize, text: String, starts: bool| {
+    let mut emit = |origin: usize, text: String, starts: bool, after_blank: Option<bool>| {
         if starts
             && !out.is_empty()
             && !out.last().unwrap().is_empty()
             && !out.last().unwrap().ends_with('{')
-            && blank_fn(origin - 1)
+            && after_blank.unwrap_or_else(|| blank_fn(origin - 1))
         {
             out.push(String::new());
         }
@@ -202,7 +250,7 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
     for (k, (origin, text, starts)) in printed.into_iter().enumerate() {
         while j < own.len() && own[j].0 < origin {
             let (line, comment) = &own[j];
-            emit(*line, format!("{}{}", indent(&text), comment), true);
+            emit(*line, format!("{}{}", indent(&text), comment), true, None);
             j += 1;
         }
         let line_text = if let Some(tr) = trailing.get(&k) {
@@ -212,12 +260,12 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
         } else {
             text
         };
-        emit(origin, line_text, starts);
+        emit(origin, line_text, starts, gap.get(&k).copied());
     }
 
     while j < own.len() {
         let (line, comment) = &own[j];
-        emit(*line, comment.clone(), true);
+        emit(*line, comment.clone(), true, None);
         j += 1;
     }
 

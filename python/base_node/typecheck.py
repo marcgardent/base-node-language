@@ -153,6 +153,24 @@ def infer_type(found):
     return deciding[0][1], None
 
 
+# A Switch takes its input_type from its False and True values when the text writes none
+SWITCH, SWITCH_PROP, SWITCH_VALUES = "GeometryNodeSwitch", "input_type", ("False", "True")
+
+
+def switch_value_type(found):
+    """The type a Switch takes from its values, `found` being [(input, type or None, linked)]:
+    the first linked value's, else the first literal's; None when nothing tells it (the node keeps
+    the type a new one has). Tree → Text reads by it too, to write input_type only where needed."""
+    found = [(t, linked) for _k, t, linked in found if t is not None]
+    deciding = [t for t, linked in found if linked] or [t for t, _l in found]
+    return deciding[0] if deciding else None
+
+
+def type_setting(t, items):
+    """The value of a node's type setting, among `items`, that gives it the type t; None if none does."""
+    return next((v for v in TYPE_SETTINGS.get(t, ()) if v in items), None)
+
+
 def specialize(g, types):
     """A copy of a template's ast.Graph with its type parameters replaced: `types` is {name: type}."""
     g = copy.deepcopy(g)
@@ -1681,6 +1699,7 @@ class GraphChecker:
                     return None
             else:
                 self.tuple_type(spec, node, positional, named)
+                self.switch_type(spec, node, positional, named)
                 inputs, outputs = self.schema.sockets(self.g.kind, spec, node.props)
 
         node.n_inputs, node.n_outputs = len(inputs), len(outputs)
@@ -1749,6 +1768,28 @@ class GraphChecker:
                 if value in prop.items and fit({**node.props, prop.name: value}):
                     node.props[prop.name] = value
                     return
+
+    def switch_type(self, spec, node, positional, named):
+        """A Switch whose input_type the call does not write takes the type of its values, like the
+        switches of items: a new Switch is a Float one in a geometry tree, a Color one in a shader
+        or a compositor tree, and `Switch(b, 0.0, SceneTime().frame)` is a Float switch in all of them.
+        Tuples choose by tuple_type."""
+        prop = spec.props.get(SWITCH_PROP)
+        if spec.bl_idname != SWITCH or prop is None or prop.name in node.props:
+            return
+        if any(is_tuple(v) for v, _a in positional) or any(is_tuple(v) for _n, v, _a in named):
+            return
+        inputs = self.schema.sockets(self.g.kind, spec, node.props)[0]
+        values = [(input_at(inputs, i), v) for i, (v, _a) in enumerate(positional)]
+        values += [(find_socket(inputs, n), v) for n, v, _a in named]
+        found = [(sock.identifier, value_type(v), isinstance(v, Out)) for sock, v in values
+                 if isinstance(sock, Socket) and sock.identifier in SWITCH_VALUES]
+        t = switch_value_type(found)
+        if t is None or any(s.type == t for s in inputs if s.identifier in SWITCH_VALUES):
+            return  # a new Switch is of that type already
+        value = type_setting(t, prop.items)
+        if value is not None:
+            node.props[prop.name] = value
 
     def takes_items(self, name):
         spec = None if name in self.graphs else self.schema.node(self.g.kind, name)

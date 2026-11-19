@@ -22945,26 +22945,6 @@
       "default": true
      },
      {
-      "name": "target",
-      "kind": "ENUM",
-      "description": "Which renderer and viewport shading types to use the shaders for",
-      "items": [
-       {
-        "value": "ALL",
-        "label": "All"
-       },
-       {
-        "value": "EEVEE",
-        "label": "EEVEE"
-       },
-       {
-        "value": "CYCLES",
-        "label": "Cycles"
-       }
-      ],
-      "default": "ALL"
-     },
-     {
       "name": "blend_type",
       "kind": "ENUM",
       "items": [

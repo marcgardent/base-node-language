@@ -1,4 +1,4 @@
-// The material the terrain sets, written as text like the node groups
+// The material the dunes set, written as text like the node groups
 shader(material: true) graph Sand() -> (surface: Shader) {
   "Grain" #e73 {
     // Fine noise for a rough, slightly uneven surface

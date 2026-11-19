@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module sdf2d
 // @module sdf2d
-// @version 0.12.0
+// @version 0.13.0
 // @target blender-compositor, blender-geometry, blender-gp
 // @edition 2026
 // @description 2D signed distance fields, boolean operations, and 2D primitive SDF shapes
