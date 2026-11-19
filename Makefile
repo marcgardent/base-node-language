@@ -5,12 +5,19 @@ PYTEST ?= pytest
 BLENDER_RUN = $(BLENDER) --background --factory-startup --python-exit-code 1 --python
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-python test-rust test-web test-blender test-libraries extension backend docs
+.PHONY: help test python-min test-python test-rust test-web test-blender test-libraries extension backend docs
 
 help: ## List the targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
 
-test: test-python test-rust test-web test-blender ## Every test but the third-party libraries
+test: python-min test-python test-rust test-web test-blender ## Every test but the third-party libraries
+
+# The oldest Python pyproject.toml accepts: a newer one reads syntax it refuses (a backslash in an
+# f-string expression before 3.12), and the CI runs an older one
+PYTHON_MIN ?= 3.10
+
+python-min: ## Every tracked .py parses with the oldest Python pyproject.toml accepts (uv fetches it)
+	uv run -q --no-project --python $(PYTHON_MIN) python -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" $$(git ls-files '*.py')
 
 test-python: ## Python parser, formatter, targets (pytest)
 	PYTHONPATH=python $(PYTEST) -q python/tests

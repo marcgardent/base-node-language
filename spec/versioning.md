@@ -21,15 +21,15 @@ The `.bn` ecosystem separates concerns across four distinct tiers:
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Tier 3: Standard Library Modules (stdlib/)             │
-│         e.g., math@0.13.0, curves2d@0.13.0                  │
+│         e.g., math@0.13.1, curves2d@0.13.1                  │
 │         Manifest: stdlib/manifest.json                 │
 └──────────────────────────┬─────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Tier 4: Toolchain & Reference Packages                 │
-│         Python: base-node 0.13.0                        │
-│         Rust:   base-node 0.13.0                        │
-│         Blender Extension: 0.13.0                       │
+│         Python: base-node 0.13.1                        │
+│         Rust:   base-node 0.13.1                        │
+│         Blender Extension: 0.13.1                       │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -78,7 +78,7 @@ The standard library modules provide reusable computational geometry, math, and 
 
 ```json
 {
-  "stdlib_version": "0.13.0",
+  "stdlib_version": "0.13.1",
   "edition": "2026",
   "description": "Standard Library for the Base Node (.bn) language"
 }
@@ -91,7 +91,7 @@ modules by name:
 ```json
 "curves2d": {
   "name": "curves2d",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "edition": "2026",
   "tier": "free",
   "targets": ["blender-geometry", "blender-gp"],
@@ -113,7 +113,7 @@ Every official `.bn` standard library file must include standardized metadata co
 ```bn
 // Base Node Standard Library — Module curves2d
 // @module curves2d
-// @version 0.13.0
+// @version 0.13.1
 // @target blender-geometry, blender-gp
 // @edition 2026
 // @description 2D curves, resampling, curvature analysis, and path operations
@@ -134,7 +134,7 @@ use math (bump, fbm)
 ## 5. Lifecycle & Stability Policy (Pre-LTS vs LTS)
 
 ### Phase 1: Pre-LTS (`0.x.y`) — Active Rapid Iteration
-- **Current status**: Version `0.13.0`.
+- **Current status**: Version `0.13.1`.
 - **Policy**: **No backwards compatibility guarantee prior to LTS 1.0**.
   - Breaking changes to node names, signatures, or module structure may occur between minor versions (`0.7` $\to$ `0.8`).
   - No deprecated alias shims or legacy wrappers are retained in the repository (`stdlib/gp_tools2d.bn` was purged).
@@ -156,14 +156,14 @@ All tools and packages maintained within the repository share a synchronized ver
 
 | Component | Path | Version Scheme |
 |---|---|---|
-| Python reference package | [`python/pyproject.toml`](file:///home/marcgardent/base-node-library/python/pyproject.toml) | SemVer (`0.13.0`) |
-| Rust WASM crate | [`rust/Cargo.toml`](file:///home/marcgardent/base-node-library/rust/Cargo.toml) | SemVer (`0.13.0`) |
-| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](file:///home/marcgardent/base-node-library/base-node-for-blender/blender_manifest.toml) | SemVer (`0.13.0`) |
-| Extension Repository Index | [`site/extensions/index.json`](file:///home/marcgardent/base-node-library/site/extensions/index.json) | SemVer (`0.13.0`) |
+| Python reference package | [`python/pyproject.toml`](file:///home/marcgardent/base-node-library/python/pyproject.toml) | SemVer (`0.13.1`) |
+| Rust WASM crate | [`rust/Cargo.toml`](file:///home/marcgardent/base-node-library/rust/Cargo.toml) | SemVer (`0.13.1`) |
+| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](file:///home/marcgardent/base-node-library/base-node-for-blender/blender_manifest.toml) | SemVer (`0.13.1`) |
+| Extension Repository Index | [`site/extensions/index.json`](file:///home/marcgardent/base-node-library/site/extensions/index.json) | SemVer (`0.13.1`) |
 
 ### CLI Version Reporting
 
 Running `base-node --version` reports:
 ```text
-base-node 0.13.0 (Language Edition 2026, Stdlib 0.13.0)
+base-node 0.13.1 (Language Edition 2026, Stdlib 0.13.1)
 ```

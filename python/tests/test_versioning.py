@@ -23,9 +23,9 @@ MANIFEST_PATH = STDLIB_DIR / "manifest.json"
 
 def test_package_version_constants():
     """Verify package version constants are defined and follow expected formats."""
-    assert __version__ == "0.13.0"
+    assert __version__ == "0.13.1"
     assert EDITION == "2026"
-    assert STDLIB_VERSION == "0.13.0"
+    assert STDLIB_VERSION == "0.13.1"
 
 
 def test_cli_version_flag(capsys):

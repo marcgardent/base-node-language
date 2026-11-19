@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module stmap
 // @module stmap
-// @version 0.13.0
+// @version 0.13.1
 // @target blender-compositor
 // @edition 2026
 // @description Compositor image remapping by STMaps after Nuke's STMap: the identity UV ramp, an STMap applied with its alpha as coverage, Tile with mirror, Mirror, Reformat to a size by fit, fill or distort, each as its STMap and its image

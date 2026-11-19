@@ -347,7 +347,7 @@ base-node-for-blender/build.sh dist
 ```
 
 ```bash
-blender --command extension install-file -r user_default -e dist/base_node-0.13.0.zip
+blender --command extension install-file -r user_default -e dist/base_node-0.13.1.zip
 ```
 
 Run headless Blender tests:
