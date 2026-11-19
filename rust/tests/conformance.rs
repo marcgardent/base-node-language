@@ -34,33 +34,57 @@ fn read_stdlib_file(candidates: &[&str]) -> (String, String) {
     );
 }
 
+/// The `.bn` files of `stdlib/`, by name: every module, pro ones included where they are (the
+/// public mirror has the free ones alone).
+fn stdlib_names() -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir("../stdlib")
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "bn"))
+        .map(|p| p.file_stem().unwrap().to_str().unwrap().to_owned())
+        .collect();
+    names.sort();
+    names
+}
+
+/// The graphs of `module` Blender built, as export_backend.py wrote them into
+/// targets/backends/blender-<x.y>/<module>.json (the newest Blender).
+fn graphs_blender_built(module: &str) -> Vec<String> {
+    let mut dirs: Vec<_> = fs::read_dir("../targets/backends")
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    dirs.sort_by_key(|p| {
+        p.file_name().unwrap().to_str().unwrap()["blender-".len()..]
+            .split('.')
+            .map(|n| n.parse::<u32>().unwrap())
+            .collect::<Vec<_>>()
+    });
+    let path = dirs.last().unwrap().join(format!("{module}.json"));
+    let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let built: serde_json::Value = serde_json::from_str(&text).unwrap();
+    built.as_object().unwrap().keys().cloned().collect()
+}
+
 #[test]
 fn test_stdlib_conformance() {
-    let files: &[(&[&str], usize)] = &[
-        (&["math.bn"], 47),
-        (&["sdf2d.bn"], 17),
-        (&["curves2d.bn"], 7),
-        (&["patterns2d.bn"], 5),
-        (&["planar2d.bn"], 4),
-        (&["fillet2d.bn"], 4),
-        (&["mask2d.bn"], 9),
-        (&["merge.bn"], 32),
-        (&["grade.bn"], 20),
-        (&["stmap.bn"], 12),
-        (&["qc.bn"], 24),
-    ];
-
-    for (candidates, expected_graphs) in files {
-        let (filename, src) = read_stdlib_file(candidates);
+    // Every module parses into the graphs Blender built from it, and is in canonical form
+    let names = stdlib_names();
+    assert!(names.len() >= 11, "{names:?}");
+    for name in names {
+        let filename = format!("{name}.bn");
+        let (_, src) = read_stdlib_file(&[&filename]);
 
         let file =
             parse(&src, &filename).unwrap_or_else(|e| panic!("Parse error on {}: {}", filename, e));
-        assert_eq!(
-            file.graphs.len(),
-            *expected_graphs,
-            "Unexpected graph count for {}",
-            filename
-        );
+        let mut graphs: Vec<String> = file.graphs.iter().map(|g| g.name.clone()).collect();
+        let mut built = graphs_blender_built(&name);
+        graphs.sort();
+        built.sort();
+        assert_eq!(graphs, built, "Unexpected graphs for {}", filename);
 
         let formatted = format_source(&src, &filename)
             .unwrap_or_else(|e| panic!("Formatting error on {}: {}", filename, e));
@@ -134,25 +158,21 @@ fn test_examples_and_fixtures() {
 
 #[test]
 fn the_stdlib_keeps_the_targets_it_promises() {
-    let manifest: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string("../stdlib/manifest.json").unwrap()).unwrap();
-    for (module, entry) in manifest["modules"].as_object().unwrap() {
-        let promised: Vec<&str> = entry["targets"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|t| t.as_str().unwrap())
-            .collect();
+    // A module promises its targets in its head (`// @target`); python/base_node/manifest.py reads
+    // the manifest from these heads
+    for module in stdlib_names() {
+        let filename = format!("{module}.bn");
+        let (_, src) = read_stdlib_file(&[&filename]);
+        let head = base_node::header(&src, &filename).unwrap();
+        let promised: Vec<&str> = head.target.iter().map(String::as_str).collect();
         assert!(!promised.is_empty(), "{module} promises no target");
-        let (filename, src) = read_stdlib_file(&[entry["file"].as_str().unwrap()]);
+        assert_eq!(head.module.as_deref(), Some(module.as_str()));
         let file = parse(&src, &filename).unwrap();
         let issues = check_targets(&file, &promised).unwrap();
         assert!(
             issues.is_empty(),
             "{module} is outside {promised:?}: {issues:?}"
         );
-        let head = base_node::header(&src, &filename).unwrap();
-        assert_eq!(head.target, promised, "{module}: its head and the manifest");
     }
 }
 
@@ -653,12 +673,12 @@ fn test_versioning_and_manifest() {
     assert_eq!(v["stdlib_version"], "0.12.0");
     assert_eq!(v["edition"], "2026");
 
-    let modules = v["modules"].as_object().expect("Expected modules object");
-    assert!(modules.contains_key("math"));
-    assert!(modules.contains_key("sdf2d"));
-    assert!(modules.contains_key("curves2d"));
-    assert!(modules.contains_key("patterns2d"));
-    assert!(modules.contains_key("mask2d"));
+    // The modules say their entries in their heads: the file holds what is the library's
+    assert!(v.get("modules").is_none());
+    let names = stdlib_names();
+    for module in ["math", "sdf2d", "curves2d", "patterns2d", "mask2d"] {
+        assert!(names.iter().any(|n| n == module), "{module}");
+    }
 }
 
 #[test]

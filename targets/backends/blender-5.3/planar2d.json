@@ -1,0 +1,22 @@
+{
+ "planar faces": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "planar split intersections": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "shape builder pick": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "contour outer boundary": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ }
+}

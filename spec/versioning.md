@@ -72,38 +72,39 @@ target defined from another. Its fields and the way a text is checked against it
 
 The standard library modules provide reusable computational geometry, math, and stylization functions.
 
-### Central Manifest: `stdlib/manifest.json`
+### The manifest: `stdlib/manifest.json` and the heads of the modules
 
-The standard library is cataloged in [`stdlib/manifest.json`](file:///home/marcgardent/base-node-library/stdlib/manifest.json), which serves as the single source of truth for standard modules:
+[`stdlib/manifest.json`](../stdlib/manifest.json) holds what is the library's:
 
 ```json
 {
-  "$schema": "./manifest.schema.json",
   "stdlib_version": "0.12.0",
   "edition": "2026",
-  "modules": {
-    "math": {
-      "version": "0.12.0",
-      "tier": "free",
-      "targets": ["blender-compositor", "blender-geometry", "blender-gp"],
-      "file": "math.bn",
-      "description": "Scalar, vector math, shaping curves, wave functions, and noise"
-    },
-    "curves2d": {
-      "version": "0.12.0",
-      "tier": "free",
-      "targets": ["blender-geometry", "blender-gp"],
-      "file": "curves2d.bn",
-      "dependencies": ["math"],
-      "description": "2D curves, resampling, curvature analysis, and path operations"
-    }
-  }
+  "description": "Standard Library for the Base Node (.bn) language"
+}
+```
+
+Each module says the rest in the head of its `.bn` (below), so that adding a module adds its file
+and edits no shared list. `base_node.manifest.manifest("stdlib")` reads them into one manifest, the
+modules by name:
+
+```json
+"curves2d": {
+  "name": "curves2d",
+  "version": "0.12.0",
+  "edition": "2026",
+  "tier": "free",
+  "targets": ["blender-geometry", "blender-gp"],
+  "file": "curves2d.bn",
+  "dependencies": ["math"],
+  "description": "2D curves, resampling, curvature analysis, and path operations"
 }
 ```
 
 `tier` is `free` or `pro`. A free module is in this repository under MIT OR Apache-2.0 and uses free
-modules only. A pro module belongs to a paid pack (`"pack": "smart-materials"`), installed in the
-*Module Folder* of the add-on preferences; it may use free modules.
+modules only. A pro module belongs to a paid pack (`// @pack smart-materials`, `"pack"` in its
+entry), installed in the *Module Folder* of the add-on preferences; it may use free modules. Its
+`dependencies` are the modules its `use` lines name.
 
 ### Module Header Metadata
 
@@ -115,6 +116,7 @@ Every official `.bn` standard library file must include standardized metadata co
 // @version 0.12.0
 // @target blender-geometry, blender-gp
 // @edition 2026
+// @description 2D curves, resampling, curvature analysis, and path operations
 
 use math (bump, fbm)
 ...
@@ -124,6 +126,8 @@ use math (bump, fbm)
 - `@version`: Module SemVer version string.
 - `@target`: The targets the module promises to fit, the ones it fits as a whole (or, for a module whose graphs go to different trees, one per graph). The CI holds it to them.
 - `@edition`: Target language edition.
+- `@description`: One line on what the module does, the `description` of its manifest entry.
+- `@pack`: The paid pack of a pro module; a free module has none.
 
 ---
 

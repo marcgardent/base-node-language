@@ -1,3 +1,4 @@
+// @showcase camera=0.0,-4.15,4.35 rotation=43.0,0.0,0.0 lens=45
 use curves2d (arrow_2d, ribbon_2d, ring_2d, wave_curve_2d)
 use math (sine01, steps)
 use patterns2d (hexagonal_grid_2d)

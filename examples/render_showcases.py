@@ -211,6 +211,82 @@ def set_phase(mod, value):
     mod.id_data.update_tag()
 
 
+# What a simulation is grown on, added to its file: its graph is the last one
+SIMULATIONS = {
+    "reaction_diffusion.bn": """
+geometry graph "growing tile"() -> Geometry {
+  return Grid(4.0, 4.0, 256, 256)
+    |> growing_reaction_diffusion(steps_per_frame: 100)
+    |> SetShadeSmooth()
+    |> SetMaterial(material: "ReactionPattern")
+}
+""",
+    "differential_growth.bn": """
+geometry graph "growing coral"() -> Geometry {
+  grown = growth_seed(0.4, 0.02, 0.3, 0) |> growing_differential_growth(steps_per_frame: 8)
+  return CurveToMesh(grown, profile_curve: CurveCircle(resolution: 8, radius: 0.006))
+    |> SetShadeSmooth()
+    |> SetMaterial(material: "GrowthCoral")
+}
+""",
+}
+
+
+def find_showcases():
+    """Every examples/*.bn whose head has a line `// @showcase camera=x,y,z rotation=x,y,z lens=mm
+    [frames]`, by file name: found by that line, so that adding a showcase edits nothing here.
+
+    Its slug, the name of its pictures, is <module with - for _> for examples/<module>_showcase.bn
+    and showcase-<name with - for _> for another; it is rendered through its last geometry graph
+    (SIMULATIONS adds one to a simulation); `frames` animates it by the frames of the scene.
+    """
+    from base_node_ext.lang import parse
+    from base_node_ext.lang.header import directives
+
+    found = []
+    for name in sorted(os.listdir(os.path.join(ROOT, "examples"))):
+        if not name.endswith(".bn"):
+            continue
+        with open(os.path.join(ROOT, "examples", name), encoding="utf-8") as f:
+            source = f.read()
+        said = [value for key, value, _line, _col in directives(source) if key == "showcase"]
+        if not said or "camera=" not in said[0]:
+            continue
+        words = said[0].split()
+        say = dict(w.split("=", 1) for w in words if "=" in w)
+        stem = name[: -len(".bn")]
+        slug = stem[: -len("_showcase")] if stem.endswith("_showcase") else f"showcase-{stem}"
+        extra = SIMULATIONS.get(name, "")
+        graphs = parse(source + extra, name).graphs
+        found.append({
+            "slug": slug.replace("_", "-"),
+            "file": name,
+            "group": [g.name for g in graphs if g.kind == "geometry"][-1],
+            "extra": extra,
+            "frames": "frames" in words,
+            "cam_loc": tuple(float(v) for v in say["camera"].split(",")),
+            "cam_rot": tuple(float(v) for v in say["rotation"].split(",")),
+            "lens": float(say["lens"]),
+        })
+    return found
+
+
+def stdlib_used(paths):
+    """The stdlib modules the files at `paths` use, and the ones these use, by name."""
+    seen, todo = set(), list(paths)
+    while todo:
+        with open(todo.pop(), encoding="utf-8") as f:
+            for line in f:
+                words = line.split()
+                if len(words) >= 2 and words[0] == "use" and words[1] not in seen:
+                    module = words[1]
+                    path = os.path.join(ROOT, "stdlib", f"{module}.bn")
+                    if os.path.exists(path):
+                        seen.add(module)
+                        todo.append(path)
+    return sorted(seen)
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else ["--still"]
     mode = "anim" if "--anim" in args else "still"
@@ -220,74 +296,12 @@ def main():
     setup_materials()
     setup_world_and_lights()
 
-    # Load stdlib modules into bpy.data.texts so `use ...` resolves them
-    stdlib = ["math.bn", "sdf2d.bn", "curves2d.bn", "patterns2d.bn"]
-    for std in stdlib:
-        with open(os.path.join(ROOT, "stdlib", std), encoding="utf-8") as f:
-            bpy.data.texts.new(std).write(f.read())
+    showcases = find_showcases()
+    # The stdlib modules they use, into bpy.data.texts so that `use ...` resolves them
+    for module in stdlib_used([os.path.join(ROOT, "examples", cfg["file"]) for cfg in showcases]):
+        with open(os.path.join(ROOT, "stdlib", f"{module}.bn"), encoding="utf-8") as f:
+            bpy.data.texts.new(f"{module}.bn").write(f.read())
 
-    showcases = [
-        {
-            "slug": "showcase-chrono-hud",
-            "file": "chrono_hud.bn",
-            "group": "chrono hud",
-            "cam_loc": (0.0, -4.15, 4.35),
-            "cam_rot": (43.0, 0.0, 0.0),
-            "lens": 45,
-        },
-        {
-            "slug": "showcase-metaball-symphony",
-            "file": "metaball_symphony.bn",
-            "group": "metaball symphony",
-            "cam_loc": (0.0, -4.05, 3.25),
-            "cam_rot": (50.5, 0.0, 0.0),
-            "lens": 46,
-        },
-        {
-            "slug": "showcase-tuple-tiles",
-            "file": "tuple_tiles.bn",
-            "group": "tuple tiles",
-            "cam_loc": (0.0, -4.9, 5.3),
-            "cam_rot": (43.0, 0.0, 0.0),
-            "lens": 40,
-        },
-        {
-            "slug": "showcase-reaction-diffusion",
-            "file": "reaction_diffusion.bn",
-            "group": "growing tile",
-            # The simulation grows on a Grid of its own, with the material it is shown in
-            "extra": """
-geometry graph "growing tile"() -> Geometry {
-  return Grid(4.0, 4.0, 256, 256)
-    |> growing_reaction_diffusion(steps_per_frame: 100)
-    |> SetShadeSmooth()
-    |> SetMaterial(material: "ReactionPattern")
-}
-""",
-            "frames": True,
-            "cam_loc": (0.0, -5.0, 3.6),
-            "cam_rot": (55.0, 0.0, 0.0),
-            "lens": 40,
-        },
-        {
-            "slug": "showcase-differential-growth",
-            "file": "differential_growth.bn",
-            "group": "growing coral",
-            # The simulation grows from a circle of its own, drawn as a tube
-            "extra": """
-geometry graph "growing coral"() -> Geometry {
-  grown = growth_seed(0.4, 0.02, 0.3, 0) |> growing_differential_growth(steps_per_frame: 8)
-  return CurveToMesh(grown, profile_curve: CurveCircle(resolution: 8, radius: 0.006))
-    |> SetShadeSmooth()
-    |> SetMaterial(material: "GrowthCoral")
-}
-""",
-            "frames": True,
-            "cam_loc": (0.0, 0.0, 5.0),
-            "cam_rot": (0.0, 0.0, 0.0),
-            "lens": 62,
-        },
-    ]
     if "--only" in args:
         only = args[args.index("--only") + 1]
         showcases = [cfg for cfg in showcases if cfg["slug"] == only]

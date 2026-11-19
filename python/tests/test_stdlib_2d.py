@@ -2,24 +2,23 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from base_node import check_target, format_source, infer, parse
+from base_node.manifest import manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STDLIB_DIR = REPO_ROOT / "stdlib"
-MANIFEST_PATH = STDLIB_DIR / "manifest.json"
+
 
 MODULES_2D = ["planar2d", "fillet2d"]
 
 
 def test_2d_modules_manifest_registration():
-    """Verify the 2D modules are declared in manifest.json."""
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    modules = manifest["modules"]
+    """Verify the 2D modules are in the stdlib manifest."""
+    modules = manifest(STDLIB_DIR)["modules"]
 
     for mod_name in MODULES_2D:
         assert mod_name in modules, f"Module {mod_name} must be in stdlib manifest"

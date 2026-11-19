@@ -1,3 +1,4 @@
+// @showcase camera=0.0,-4.05,3.25 rotation=50.5,0.0,0.0 lens=46
 use curves2d (morph_curves_2d, parallel_contour_2d, ribbon_2d, wave_curve_2d)
 use math (ease_in_out, sdf_sphere, sdf_torus, sine01, smooth_subtraction, triangle, twist)
 use patterns2d (triangular_grid_2d)

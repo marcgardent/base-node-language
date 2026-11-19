@@ -1,3 +1,4 @@
+// @showcase scene=passes
 use grade (exposure_stops)
 use merge (over, with_alpha)
 use qc

@@ -1,0 +1,47 @@
+{
+ "pixel size": {
+  "geometry": "ImageInfo.image expects Image, receives Color (image)",
+  "shader": "unknown node 'ImageInfo' in a shader tree; did you mean VolumeInfo, LightInfo?",
+  "compositor": "ok"
+ },
+ "shape space": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "sdf mask": {
+  "geometry": "'pixel_size' is a compositor graph that cannot be built in a geometry tree: ImageInfo.image expects Image, receives Color (image)",
+  "shader": "'pixel_size' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageInfo' in a shader tree; did you mean VolumeInfo, LightInfo?",
+  "compositor": "ok"
+ },
+ "outline mask": {
+  "geometry": "'sdf_mask' is a compositor graph that cannot be built in a geometry tree: 'pixel_size' is a compositor graph that cannot be built in a geometry tree: ImageInfo.image expects Image, receives Color (image)",
+  "shader": "'sdf_mask' is a compositor graph that cannot be built in a shader tree: 'pixel_size' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageInfo' in a shader tree; did you mean VolumeInfo, LightInfo?",
+  "compositor": "ok"
+ },
+ "circle mask": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "box mask": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "polygon mask": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "star mask": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "letterbox": {
+  "geometry": "ImageInfo.image expects Image, receives Color (image)",
+  "shader": "unknown node 'ImageInfo' in a shader tree; did you mean VolumeInfo, LightInfo?",
+  "compositor": "ok"
+ }
+}

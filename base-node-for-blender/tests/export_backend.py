@@ -2,14 +2,17 @@
 
 Run in Blender:
     blender --background --factory-startup --python-exit-code 1 \
-      --python base-node-for-blender/tests/export_backend.py            # write targets/backends/blender-<x.y>.json
+      --python base-node-for-blender/tests/export_backend.py            # write targets/backends/blender-<x.y>*
     ... --python base-node-for-blender/tests/export_backend.py -- --check   # fail when it is not what Blender says
 
 For each kind of tree (geometry, shader, compositor), every node the text can write: its text name,
 bl_idname, Blender's label and tooltip, its settings with their values, and the sockets of a new
 node (the ones a setting shows or hides aside). For each graph of the stdlib, the kinds of tree it
 builds in, called from a graph of that kind, or the reason it is refused there.
-`python/base_node/refdoc.py` reads it to write the reference pages, without Blender.
+The nodes go to targets/backends/blender-<x.y>.json, the graphs of each module to
+targets/backends/blender-<x.y>/<module>.json: a new module adds its own file, and two branches that
+each add one merge without a conflict. `python/base_node/refdoc.py` reads them to write the
+reference pages, without Blender.
 """
 
 from __future__ import annotations
@@ -133,10 +136,10 @@ def builds(schema, module, graph, kind):
 
 
 def stdlib_entries(schema):
-    manifest = json.loads((STDLIB_DIR / "manifest.json").read_text(encoding="utf-8"))
     out = {}
-    for module, info in manifest["modules"].items():
-        tree = parse((STDLIB_DIR / info["file"]).read_text(encoding="utf-8"), info["file"])
+    for path in sorted(STDLIB_DIR.glob("*.bn")):
+        module = path.stem
+        tree = parse(path.read_text(encoding="utf-8"), path.name)
         out[module] = {g.name: {kind: builds(schema, module, g, kind) for kind in TREE_TYPES}
                        for g in tree.graphs}
     return out
@@ -152,25 +155,42 @@ def export():
             "blender": bpy.app.version_string,
             "generated_by": "base-node-for-blender/tests/export_backend.py",
             "kinds": kinds,
-            "stdlib": stdlib_entries(schema),
         }
+        stdlib = stdlib_entries(schema)
     version = ".".join(str(v) for v in bpy.app.version[:2])
-    return OUT_DIR / f"blender-{version}.json", json.dumps(data, indent=1, ensure_ascii=False, sort_keys=False) + "\n"
+    files = {OUT_DIR / f"blender-{version}.json": data}
+    files.update({OUT_DIR / f"blender-{version}" / f"{m}.json": graphs for m, graphs in stdlib.items()})
+    return files
+
+
+def text(data):
+    return json.dumps(data, indent=1, ensure_ascii=False, sort_keys=False) + "\n"
 
 
 def main():
     check = "--check" in sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else False
-    path, text = export()
+    files = export()
+    main_file = next(iter(files))
+    modules_dir = main_file.with_suffix("")
+    stale = sorted(set(modules_dir.glob("*.json")) - set(files))
     if check:
-        if not path.exists() or path.read_text(encoding="utf-8") != text:
-            print(f"{path.relative_to(LIB_ROOT)} is not what Blender {bpy.app.version_string} says: "
-                  "run base-node-for-blender/tests/export_backend.py in Blender and commit it")
+        wrong = [p for p, data in files.items() if not p.exists() or p.read_text(encoding="utf-8") != text(data)]
+        if wrong or stale:
+            for p in wrong:
+                print(f"{p.relative_to(LIB_ROOT)} is not what Blender {bpy.app.version_string} says")
+            for p in stale:
+                print(f"{p.relative_to(LIB_ROOT)} is of no module of stdlib/")
+            print("run `make backend` and commit what it writes")
             sys.exit(1)
-        print(f"{path.relative_to(LIB_ROOT)} is up to date")
+        print(f"{main_file.relative_to(LIB_ROOT)} and {len(files) - 1} modules in "
+              f"{modules_dir.relative_to(LIB_ROOT)}/ are up to date")
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-    print(f"wrote {path.relative_to(LIB_ROOT)}")
+    modules_dir.mkdir(parents=True, exist_ok=True)
+    for p in stale:
+        p.unlink()
+    for p, data in files.items():
+        p.write_text(text(data), encoding="utf-8")
+    print(f"wrote {main_file.relative_to(LIB_ROOT)} and {len(files) - 1} modules in {modules_dir.relative_to(LIB_ROOT)}/")
 
 
 main()

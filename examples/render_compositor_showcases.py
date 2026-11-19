@@ -1,11 +1,14 @@
 """Render the compositor showcases of the standard library into site/images.
 
-Each showcase is a `.bn` file of examples/ whose last graph becomes the scene's compositor; the
-scene is rendered by Cycles at 640×360 and saved as site/images/<module>.png.
+Each showcase is an examples/<module>_showcase.bn whose last graph is a compositor graph: it
+becomes the scene's compositor, the scene is rendered by Cycles at 640×360 and saved as
+site/images/<module>.png. The showcases are found by that pattern, none listed here.
 
     blender --background --factory-startup --python examples/render_compositor_showcases.py [-- name ...]
 
-With names (mask2d, merge, passes, grade, keying, light, stmap, vr360, grain, qc), only those are rendered.
+With names (mask2d, merge, grade, …: the <module> of the file), only those are rendered.
+A name's underscores are hyphens in its picture's name; `// @showcase scene=… size=WxH` in the head
+of a showcase gives it another scene or size.
 """
 
 from __future__ import annotations
@@ -23,6 +26,8 @@ sys.modules["base_node"] = base_node
 _spec.loader.exec_module(base_node)
 
 import bpy  # noqa: E402
+from base_node.lang import parse  # noqa: E402
+from base_node.lang.header import directives  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 W, H = 640, 360
@@ -133,17 +138,29 @@ def panorama_scene(scene):
     scene.world = world
 
 
-SHOWCASES = {
-    "mask2d": ("mask2d_showcase.bn", empty_scene),
-    "merge": ("merge_showcase.bn", empty_scene),
-    "grade": ("grade_showcase.bn", passes_scene),
-    "stmap": ("stmap_showcase.bn", empty_scene),
-    "qc": ("qc_showcase.bn", passes_scene),
-}
+SCENES = {"empty": empty_scene, "passes": passes_scene, "light": light_scene, "panorama": panorama_scene}
 
 
-def render(name):
-    filename, setup = SHOWCASES[name]
+def showcases():
+    """{name: (file, scene, (width, height))} of every examples/<name>_showcase.bn whose last graph
+    is a compositor graph, by name. A line `// @showcase scene=passes size=1024x512` of its head
+    chooses its scene (SCENES, default empty) and its size (default W × H): adding a showcase edits
+    nothing here."""
+    found = {}
+    for path in sorted((ROOT / "examples").glob("*_showcase.bn")):
+        source = path.read_text(encoding="utf-8")
+        graphs = parse(source, path.name).graphs
+        if not graphs or graphs[-1].kind != "compositor":
+            continue
+        say = dict(word.split("=", 1) for _name, value, _line, _col in directives(source)
+                   if _name == "showcase" for word in value.split())
+        size = tuple(int(n) for n in say.get("size", f"{W}x{H}").split("x"))
+        found[path.stem.removesuffix("_showcase")] = (path.name, SCENES[say.get("scene", "empty")], size)
+    return found
+
+
+def render(name, showcase):
+    filename, setup, (width, height) = showcase
     bpy.ops.wm.read_factory_settings(use_empty=True)
     base_node.register()
     from base_node.host import build_source
@@ -152,7 +169,7 @@ def render(name):
     scene.name = "Scene"
     scene.render.engine = "CYCLES"
     scene.cycles.samples, scene.cycles.device = 1, "CPU"
-    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = W, H, 100
+    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = width, height, 100
     scene.render.image_settings.file_format = "PNG"
     scene.view_settings.view_transform = "Standard"
     setup(scene)
@@ -164,16 +181,18 @@ def render(name):
     path = ROOT / "examples" / filename
     trees = build_source(path.read_text(encoding="utf-8"), str(path))
     scene.compositing_node_group = trees[-1]
-    scene.render.filepath = str(ROOT / "site" / "images" / f"{name}.png")
+    image = name.replace("_", "-")
+    scene.render.filepath = str(ROOT / "site" / "images" / f"{image}.png")
     bpy.ops.render.render(write_still=True)
     base_node.unregister()
-    print(f"rendered {filename} -> site/images/{name}.png")
+    print(f"rendered {filename} -> site/images/{image}.png")
 
 
 def main():
-    names = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else list(SHOWCASES)
+    found = showcases()
+    names = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else list(found)
     for name in names:
-        render(name)
+        render(name, found[name])
 
 
 if __name__ == "__main__":

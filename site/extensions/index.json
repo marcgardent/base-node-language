@@ -31,8 +31,8 @@
         "Import-Export"
       ],
       "archive_url": "./base_node-0.12.0.zip",
-      "archive_size": 233967,
-      "archive_hash": "sha256:11a85b72f38ece4a4c6be0e9f08fa15f18a62fdd40f4145640badab7e0d5264a"
+      "archive_size": 233483,
+      "archive_hash": "sha256:580ecb77f769a8e6eb7ef55475c200a43a421857ae7de2b06f21039827db34de"
     }
   ]
 }

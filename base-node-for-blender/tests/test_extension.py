@@ -201,7 +201,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
 }
 // below the graph
 """
-    tree = build_source(src, filename="terrain.bn")[-1]
+    tree = build_source(src, filename="relief.bn")[-1]
     notes = {n.name: n[KEY].to_dict() for n in tree.nodes if KEY in n}
     assert tree[KEY].to_dict() == {
         "head": "// Above the target line", "target": "// @target blender-geometry", "file": "// Before the uses",
@@ -229,13 +229,13 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
         exported
     assert "}  // after its brace" in lines and "return g2  // its end" in lines, exported
     assert format_source(exported) == exported, "not in the canonical layout"
-    again, _ = export_tree(build_source(exported, filename="terrain2.bn")[-1])
+    again, _ = export_tree(build_source(exported, filename="relief2.bn")[-1])
     assert again == exported, f"not stable:\n{again}"
 
     # Written from the nodes: the text gives it back before the node's statement, a statement of its own
     from base_node.host.comments import set_comment, room
     from base_node.host.arrange import _box
-    tree = build_source(src, filename="terrain.bn")[-1]
+    tree = build_source(src, filename="relief.bn")[-1]
     length = next(n for n in tree.nodes if n.bl_idname == "ShaderNodeVectorMath")
     set_comment(length, "before", ["written in the graph", "", "after a blank"])
     exported, _ = export_tree(tree)
@@ -265,7 +265,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
     tree = build_source("""geometry graph relief(geometry: Geometry) -> Geometry {
   return geometry
 }
-""", filename="terrain.bn")[-1]
+""", filename="relief.bn")[-1]
     assert KEY not in tree and not any(KEY in n for n in tree.nodes), "comments left behind"
     print("   ✓ Comments kept on their nodes")
 
@@ -977,8 +977,6 @@ def test_merge_render():
     print(f"   ✓ merge rendered by the compositor: {len(want)} operations, as their formulas say")
 
 
-
-
 def test_grade_render():
     """grade's colour tools, rendered by the compositor on a premultiplied image, give their formulas on the
     unpremultiplied colours, multiplied by the alpha again, the alpha left alone."""
@@ -1103,14 +1101,6 @@ def test_grade_render():
     print(f"   ✓ grade rendered by the compositor: {len(want)} renders, as their formulas say")
 
 
-
-
-
-
-
-
-
-
 def test_stmap_render():
     """stmap's STMaps, rendered by the compositor, are the coordinates numpy computes for them, at the centres
     of the pixels; the images remapped by them take their colours there."""
@@ -1189,10 +1179,6 @@ def test_stmap_render():
         bench.close()
         bpy.data.batch_remove([g for g in bpy.data.node_groups if g not in before])
     print("   ✓ stmap rendered by the compositor: its STMaps are numpy's, its images taken where they say")
-
-
-
-
 
 
 def test_qc_render():
@@ -2625,6 +2611,19 @@ def fingerprint(obj):
     return found
 
 
+EVALUATIONS = ("mesh", "curves", "mesh caller", "mesh caller fed")
+
+
+def evaluations(group, kinds=EVALUATIONS):
+    """The kinds of `evaluate` that fit `group`: as a modifier only when its first output is a
+    geometry and it has a Group Output (else Blender warns on every frame and evaluates nothing);
+    through a caller always."""
+    outputs = [i for i in group.interface.items_tree if i.item_type == "SOCKET" and i.in_out == "OUTPUT"]
+    modifier = (bool(outputs) and outputs[0].socket_type == "NodeSocketGeometry"
+                and any(n.bl_idname == "NodeGroupOutput" for n in group.nodes))
+    return tuple(k for k in kinds if modifier or "caller" in k)
+
+
 def evaluate(group, kind):
     """Fingerprints of `group` as a modifier on a fresh mesh or curves object, over a few frames."""
     # The objects of the scene go; those a group uses, appended with it, out of any scene, stay
@@ -2773,7 +2772,7 @@ def test_real_world_assets():
         again, _ = export_tree(tree)
         assert again == files[name], f"{name}: Tree -> Text is not stable"
     for name in texts:
-        for kind in ("mesh", "curves", "mesh caller", "mesh caller fed"):
+        for kind in evaluations(originals[name]):
             want = evaluate(originals[name], kind)
             got = evaluate(bpy.data.node_groups[name], kind)
             assert got == want, f"{name}: evaluates otherwise once rebuilt ({kind})"
@@ -2971,6 +2970,23 @@ def test_gltf_export():
     module.test_gltf_export()
 
 
+def pack_tests():
+    """The test_* functions of tests/packs/test_*.py, file by file, in the order they are written.
+
+    A pack's tests are a file of their own, so that adding a pack edits no list here; they import
+    this file's helpers (`from test_extension import *`). The public mirror has no tests/packs/.
+    """
+    sys.modules.setdefault("test_extension", sys.modules[__name__])
+    found = []
+    for path in sorted((Path(__file__).resolve().parent / "packs").glob("test_*.py")):
+        spec = importlib.util.spec_from_file_location(f"packs.{path.stem}", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        found += [fn for name, fn in vars(module).items()
+                  if name.startswith("test_") and callable(fn) and fn.__module__ == module.__name__]
+    return found
+
+
 def main():
     print("=== Starting Base Node Blender extension tests ===")
     tests = [
@@ -3016,6 +3032,7 @@ def main():
         test_real_world_assets,
         test_gltf_export,
     ]
+    tests += pack_tests()
     failed = 0
     for fn in tests:
         try:

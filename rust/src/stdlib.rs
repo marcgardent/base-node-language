@@ -6,27 +6,10 @@
 use crate::ast::File;
 use std::sync::OnceLock;
 
-macro_rules! modules {
-    ($($name:literal),* $(,)?) => {
-        [$(($name, include_str!(concat!("../../stdlib/", $name, ".bn")))),*]
-    };
-}
-
-/// (name, text) of each module of `stdlib/`: the free ones, then the pro ones, which
-/// studio/export_public.py cuts out of the public mirror.
-pub const MODULES: &[(&str, &str)] = &modules!(
-    "curves2d",
-    "fillet2d",
-    "grade",
-    "mask2d",
-    "math",
-    "merge",
-    "patterns2d",
-    "planar2d",
-    "qc",
-    "sdf2d",
-    "stmap",
-);
+/// (name, text) of each module of `stdlib/`, by name: build.rs lists the `.bn` files there, so
+/// adding a module edits nothing here, and the public mirror, which has no pro module, builds
+/// with the free ones alone.
+pub const MODULES: &[(&str, &str)] = &include!(concat!(env!("OUT_DIR"), "/stdlib_modules.rs"));
 
 static PARSED: [OnceLock<Option<File>>; MODULES.len()] = [const { OnceLock::new() }; MODULES.len()];
 

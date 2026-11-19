@@ -3,6 +3,7 @@
 // @version 0.12.0
 // @target blender-compositor, blender-geometry, blender-gp
 // @edition 2026
+// @description Mathematical toolkit for Geometry Nodes: shaping curves, waves, vectors, SDFs, and noise distributions
 
 // Mathematical toolkit for Geometry Nodes: shaping curves, waves, angles,
 // vectors, signed distance fields (SDF), and random distributions.

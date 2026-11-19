@@ -1,3 +1,4 @@
+// @showcase camera=0.0,-4.9,5.3 rotation=43.0,0.0,0.0 lens=40
 // Tuples choose the type: no input_type and no data_type is written for the switches below.
 // A 3-tuple makes a Vector Switch, a 4-tuple a Color IndexSwitch and a Color Mix.
 geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..1.0) -> Geometry {

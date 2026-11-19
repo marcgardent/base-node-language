@@ -1320,12 +1320,16 @@ def infer(file, targets=None):
 # ---- The blender-* targets, from what Blender reports ----
 
 def catalog(root):
-    """The newest targets/backends/blender-<x.y>.json under `root`."""
+    """The newest targets/backends/blender-<x.y>.json under `root`, its `stdlib` read from the file
+    of each module next to it (blender-<x.y>/<module>.json)."""
     files = sorted((root / "targets" / "backends").glob("blender-*.json"),
                    key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.stem)))
     if not files:
         raise FileNotFoundError(f"no {root}/targets/backends/blender-*.json")
-    return json.loads(files[-1].read_text(encoding="utf-8"))
+    backend = json.loads(files[-1].read_text(encoding="utf-8"))
+    backend["stdlib"] = {p.stem: json.loads(p.read_text(encoding="utf-8"))
+                         for p in sorted(files[-1].with_suffix("").glob("*.json"))}
+    return backend
 
 
 def blender_target(name, backend):

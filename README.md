@@ -110,7 +110,7 @@ geometry graph "differential growth coral"(
 | **`stdlib/qc.bn`** (compositor, [`examples/qc_showcase.bn`](examples/qc_showcase.bn)) | |
 | ![qc](site/images/qc.png) | |
 
-More modules come in paid packs for the Base Node add-on: **Smart Materials** (live mesh maps, smart-material generators, wear made in the mesh), **Compositing Pro** (keying, glows and light wrap, film grain, render passes, 360° projections) and **Ink & Engraving** (living ink, hatching and guilloché, deformation along curves).
+More modules come in paid packs for the Base Node add-on: **Smart Materials** (live mesh maps, smart-material generators, wear made in the mesh), **Compositing Pro** (keying, glows and light wrap, film grain, render passes, 360° projections), **Ink & Engraving** (living ink, hatching and guilloché, deformation along curves), **Motion Graphics** (cloners, effectors and falloffs for motion design) and **Scatter & Biomes** (rule-based scattering with masks, spacing and avoidance, layered biomes with level of detail and camera culling).
 
 The compositor images are rendered by [`examples/render_compositor_showcases.py`](examples/render_compositor_showcases.py):
 `merge` shows A (orange disk) and B (blue square) by over, under, in, out / atop, exclusive or, stencil, mask /
@@ -127,6 +127,19 @@ the passes render in six strips: as it is, the Kodak 5248, 5279, GT5274 and 5218
 times their intensity), large red, fine green and strong blue grain of its own;
 `qc`, its test patterns: SMPTE colour bars at 75 %, the colour wheel, a soft radial over the alpha check's checker /
 its checks on the render of the passes scene: as it is, its false colour by stops, its clip check half a stop over.
+
+## Make
+
+`make help` lists the targets. The common ones:
+
+| Target | Does |
+|---|---|
+| `make test` | Python, Rust, the web component and Blender tests |
+| `make test-libraries` | Third-party node group libraries, round-tripped |
+| `make extension` | The add-on `.zip` in `dist/` |
+| `make docs` | The reference pages in `site/reference/` |
+
+`BLENDER=/path/to/blender make test-blender` runs another Blender.
 
 ## Layout
 
@@ -167,8 +180,9 @@ promise the editor and `base-node check` hold it to.
 The site's reference (language, targets, the nodes of Blender, stdlib, idioms) is written from the repository by
 `base-node docs` when the site is deployed; `site/reference/` is not committed. The nodes of each kind of tree,
 and the kinds of tree each stdlib graph builds in, are read from Blender into
-`targets/backends/blender-<x.y>.json`. The CI checks that file against Blender: after a change of the stdlib,
-of the checker or of Blender, write it again and commit it.
+`targets/backends/blender-<x.y>.json` and `targets/backends/blender-<x.y>/<module>.json`, a file per module.
+The CI checks them against Blender: after a change of the stdlib, of the checker or of Blender, write them
+again (`make backend`) and commit them.
 
 ```bash
 blender --background --factory-startup --python-exit-code 1 \

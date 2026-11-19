@@ -13,6 +13,7 @@ import pytest
 import base_node
 from base_node import EDITION, STDLIB_VERSION, __version__, check_targets, load_target, parse
 from base_node.cli import main as cli_main
+from base_node.manifest import manifest as stdlib_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STDLIB_DIR = REPO_ROOT / "stdlib"
@@ -51,20 +52,26 @@ def test_targets_have_their_fields():
 
 
 def test_stdlib_manifest_structure():
-    """Verify stdlib/manifest.json conforms to the manifest contract."""
-    assert MANIFEST_PATH.exists(), f"Missing {MANIFEST_PATH}"
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    """Verify stdlib/manifest.json conforms to the manifest contract.
 
+    The file holds what is the library's; its modules are read from their heads (base_node.manifest),
+    so that adding a module edits no shared list.
+    """
+    assert MANIFEST_PATH.exists(), f"Missing {MANIFEST_PATH}"
+    written = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert "modules" not in written, "a module says its entry in its own head, not in stdlib/manifest.json"
+
+    manifest = stdlib_manifest(STDLIB_DIR)
     assert manifest.get("stdlib_version") == STDLIB_VERSION
     assert manifest.get("edition") == EDITION
-    assert "modules" in manifest
     assert len(manifest["modules"]) >= 5
+    for name, entry in manifest["modules"].items():
+        assert entry["description"], f"{name}: its head has no @description"
 
 
 def test_stdlib_modules_match_manifest_and_headers():
     """Verify that every stdlib file has matching manifest entries and header annotations."""
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    modules = manifest["modules"]
+    modules = stdlib_manifest(STDLIB_DIR)["modules"]
 
     bn_files = {p.stem: p for p in STDLIB_DIR.glob("*.bn")}
 
@@ -132,7 +139,7 @@ def test_stdlib_tiers():
     The public mirror (studio/export_public.py) keeps the free modules alone, so a free module that
     used a pro one would not build there.
     """
-    modules = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["modules"]
+    modules = stdlib_manifest(STDLIB_DIR)["modules"]
     for name, entry in modules.items():
         assert entry.get("tier") in ("free", "pro"), f"{name}: tier"
         if entry["tier"] == "pro":

@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from base_node.cli import main
+from base_node.manifest import manifest
 from base_node.refdoc import cells, highlight, markdown, slug
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,8 +33,7 @@ def test_every_page_is_written_and_every_link_lands(tmp_path):
     expected = {"index.html", "language.html", "versioning.html", "idioms.html", "targets.html", "stdlib.html",
                 "nodes-geometry.html", "nodes-shader.html", "nodes-compositor.html"}
     assert expected <= set(pages)
-    import json
-    modules = json.loads((ROOT / "stdlib" / "manifest.json").read_text())["modules"]
+    modules = manifest(ROOT / "stdlib")["modules"]
     assert {f"stdlib-{m}.html" for m in modules} <= set(pages)
 
     parsed = {}

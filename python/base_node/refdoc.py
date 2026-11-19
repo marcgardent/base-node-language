@@ -3,9 +3,9 @@
     base-node docs [--root .] [--out site/reference]
 
 Everything is read from the repository: `spec/*.md` for the language and the idioms, `targets/*.json`
-for the targets, `targets/backends/blender-<x.y>.json` for the nodes of each kind of tree and where
-each stdlib graph builds (written in Blender by `base-node-for-blender/tests/export_backend.py`), and
-`stdlib/*.bn` with its manifest for the modules. No dependency, no Blender: the Pages workflow runs it.
+for the targets, `targets/backends/blender-<x.y>.json` for the nodes of each kind of tree and
+`targets/backends/blender-<x.y>/<module>.json` where each stdlib graph builds (written in Blender by
+`base-node-for-blender/tests/export_backend.py`), and `stdlib/*.bn` with their heads for the modules. No dependency, no Blender: the Pages workflow runs it.
 """
 
 from __future__ import annotations
@@ -17,8 +17,10 @@ from pathlib import Path
 
 from .ast import flatten
 from .lexer import tokenize, width
+from .manifest import manifest as stdlib_manifest
 from .parser import parse
 from .schema import key
+from .targets import catalog
 
 REPO = "https://github.com/marcgardent/base-node-library"
 KINDS = ("geometry", "shader", "compositor")
@@ -686,19 +688,11 @@ def index_page(manifest, backend, targets):
             + "</div>")
 
 
-def backend_file(root):
-    files = sorted((root / "targets" / "backends").glob("blender-*.json"),
-                   key=lambda p: [int(x) for x in re.findall(r"\d+", p.stem)])
-    if not files:
-        raise FileNotFoundError("no targets/backends/blender-*.json: run base-node-for-blender/tests/export_backend.py in Blender")
-    return files[-1]
-
-
 def build(root, out):
     """Write the reference pages of the repository at `root` into `out`. Returns the paths written."""
     root, out = Path(root), Path(out)
-    manifest = json.loads((root / "stdlib" / "manifest.json").read_text(encoding="utf-8"))
-    backend = json.loads(backend_file(root).read_text(encoding="utf-8"))
+    manifest = stdlib_manifest(root / "stdlib")
+    backend = catalog(root)
     targets = read_targets(root)
     version = manifest.get("stdlib_version", "")
     pages = {"index.html": ("Reference", index_page(manifest, backend, targets)),

@@ -1,3 +1,4 @@
+// @showcase camera=0.0,0.0,5.0 rotation=0.0,0.0,0.0 lens=62 frames
 // Differential growth of a closed curve in the XY plane, after the public write-ups of
 // Anders Hoff (inconvergent.net, "differential-line") and of Nervous System ("Floraform").
 // Each step moves every point of the curve by three forces:

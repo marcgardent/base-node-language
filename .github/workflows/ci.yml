@@ -3,7 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: [site/images/**, studio/*.md]
   pull_request:
+    # Pictures and the studio's own notes: no test reads them
+    paths-ignore: [site/images/**, studio/*.md]
+  workflow_dispatch:
+
+# A new push to a pull request stops the run of the one before: only the last commit is checked.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # The jobs only read the repository: the token they get can do nothing else.
 # Actions are pinned by commit, so that a tag moved upstream changes nothing here.
@@ -119,8 +128,10 @@ jobs:
         run: >-
           ~/blender/blender --background --factory-startup --python-exit-code 1
           --python base-node-for-blender/tests/export_backend.py -- --check
+      # The third-party libraries take the longest: on main and on demand, not on every pull request
+      # (`make test-libraries` runs them at home before a change to the reader or the builder).
       - name: Run third-party libraries non-regression
-        if: success() || failure()
+        if: (success() || failure()) && github.event_name != 'pull_request'
         run: >-
           ~/blender/blender --background --factory-startup --python-exit-code 1
           --python base-node-for-blender/tests/test_libraries.py

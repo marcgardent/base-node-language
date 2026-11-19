@@ -1,3 +1,4 @@
+// @showcase camera=0.0,-5.0,3.6 rotation=55.0,0.0,0.0 lens=40 frames
 // Gray-Scott reaction-diffusion on a square Grid, after Pearson, "Complex Patterns in a Simple
 // System" (Science, 1993), and Turk, "Generating Textures on Arbitrary Surfaces Using
 // Reaction-Diffusion" (SIGGRAPH 1991). Two chemicals U and V, in cell units:

@@ -422,7 +422,8 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
         if again != text:
             r["status"] = "unstable"
             continue
-        compared = {"geometry": KINDS, "shader": RENDERS, "compositor": COMPOSITES}.get(kind, RENDERS[:1])
+        compared = {"geometry": T.evaluations(originals[name], KINDS) if kind == "geometry" else KINDS,
+                    "shader": RENDERS, "compositor": COMPOSITES}.get(kind, RENDERS[:1])
         if kind != "geometry" and stage is None:
             stage = Stage()
         differs = []
