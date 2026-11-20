@@ -44,5 +44,5 @@ Base Node writes and reads Geometry Nodes, Shader and Compositor node groups as 
 
 ## Links
 
-- Language reference, examples and the Python/Rust parsers: https://marcgardent.github.io/base-node-language/
+- Language reference, examples and the Python/Rust parsers: https://basenode.ludopant.com/
 - Source and issues: https://github.com/marcgardent/base-node-language

@@ -6,6 +6,8 @@
 
 Text format (`.bn`) for node graphs. Reads and writes node trees as functions.
 
+Site: https://basenode.ludopant.com/
+
 ```bn
 use math (bump)
 
@@ -362,3 +364,5 @@ blender --background --factory-startup --python-exit-code 1 \
 - `spec/`, `targets/`, `stdlib/`, `conformance/`, `python/`, `rust/`: [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
 - `base-node-for-blender/`: GPL-3.0-or-later.
 - `base-node-for-blender/tests/fixtures/everyday_geometry_nodes.blend`: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), node groups by Cartesian Caramel, from [blender-remote-asset-library-test-v1](https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1) and its `.bn` text in `everyday_geometry_nodes/` (see [their README](base-node-for-blender/tests/fixtures/README.md)).
+
+Hosted and sponsored by [Ludopant Creative Studio](https://ludopant.com/). The licences above stay as they are.

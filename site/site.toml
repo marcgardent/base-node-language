@@ -2,7 +2,7 @@
 # The generator of the pages below reads it: the canonical links, Open Graph tags and JSON-LD of
 # site/state-of-the-art-autumn-2026.html, site/sitemap.xml and site/robots.txt.
 
-url = "https://marcgardent.github.io/base-node-language/"
+url = "https://basenode.ludopant.com/"
 repo = "https://github.com/marcgardent/base-node-language"
 
 # Paths under the site, as served. The tutorials listed are those that use the free modules alone.
