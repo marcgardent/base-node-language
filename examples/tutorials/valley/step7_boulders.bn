@@ -1,0 +1,90 @@
+// @module valley_step7
+// @title The valley, step 7: boulders at the foot of the cliffs
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example valley
+
+use fracture
+use terrain
+
+shader graph valley_ground(
+    grass: Color = (0.11, 0.2, 0.05),
+    rock: Color = (0.2, 0.16, 0.12),
+    sand: Color = (0.45, 0.37, 0.25),
+    mud: Color = (0.05, 0.06, 0.04)
+) -> Shader {
+  "Grass, sand where the water laid its sediment, dark where it stayed, rock on the cliffs"
+  laid = MapRange(value: Attribute(attribute_name: "terrain_change").factor, from_max: 0.04)
+  wet = MapRange(value: Attribute(attribute_name: "terrain_wetness").factor, from_max: 0.02)
+  cliff = Attribute(attribute_name: "valley_cliff").factor
+  grain = NoiseTexture(vector: TextureCoordinate().object, scale: 8.0, detail: 6.0).factor
+  sandy = Mix(factor: laid, a: grass, b: sand, data_type: RGBA)
+  damp = Mix(factor: wet * 0.7, a: sandy, b: mud, data_type: RGBA)
+  stone = Mix(factor: grain, a: rock * 0.6, b: rock, data_type: RGBA)
+  color = Mix(factor: cliff, a: damp, b: stone, data_type: RGBA)
+  return PrincipledBSDF(base_color: color, roughness: 0.9 - wet * 0.4)
+}
+
+shader(material: true) graph Ground() -> (surface: Shader) {
+  return (surface: valley_ground())
+}
+
+shader(material: true) graph Stone() -> (surface: Shader) {
+  "Weathered outside, lighter where the stone broke"
+  inside = Attribute(attribute_name: "fracture_inside").factor
+  color = Mix(factor: inside, a: (0.16, 0.14, 0.12), b: (0.62, 0.55, 0.45), data_type: RGBA)
+  return (surface: PrincipledBSDF(base_color: color, roughness: 0.8))
+}
+
+geometry graph valley(seed: Int = 3) -> Geometry {
+  "A valley: layered noise, terraces, thermal then hydraulic erosion, rock on the cliffs, boulders at their foot"
+  // 6 m by 4 m, a point every 3.3 cm: 181 by 121 points, square cells
+  grid = Grid(size_x: 6.0, size_y: 4.0, vertices_x: 181, vertices_y: 121).mesh
+  // The valley winds: its middle swings 40 cm either side of y = 0 along x
+  middle = sin(Position().x * 1.1) * 0.4
+  // 0 along the middle of the valley, 1 two metres away
+  across = (Position().y - middle) / 2.0
+  sides = across * across
+  // Hills and ridges, from about -0.5 to 0.5; a little on the floor, a lot on the sides
+  relief = layered_noise(scale: 0.6, ridges: 0.5, warp: 0.5, seed: seed) - 0.5
+  height = sides + relief * (0.2 + sides * 1.2)
+  land = grid
+    |> SetPosition(offset: CombineXYZ(z: height))
+    // A level every 14 cm, above the second one: the floor stays as it is
+    |> terrace(step: 0.14, softness: 0.3, selection: Position().z > 0.28)
+    // What stands steeper than 50° slides down to the foot of its cliff
+    |> thermal_erosion(iterations: 20, talus: 0.8726646)
+    // Rain for 1.17 s: it digs where it runs, lays down where it slows, and stores its maps
+    |> hydraulic_erosion(duration: 1.17)
+    // 1 on the ground steeper than 43°, fading out over 11° below
+    |> StoreNamedAttribute(
+      name: "valley_cliff",
+      value: terrain_slope_mask(min_angle: 0.75, softness: 0.2))
+    |> SetShadeSmooth()
+    |> SetMaterial(material: Ground)
+  "Boulders" #slategray {
+    // One boulder, lumpy, sunk 3 cm in the ground, broken into 8 pieces 1 cm apart, pushed 1.5 cm out
+    lumpy = NoiseTexture(scale: 6.0, detail: 3.0).factor - 0.5
+    stone = IcoSphere(radius: 0.1, subdivisions: 3).mesh
+      |> SetPosition(offset: Normal() * lumpy * 0.06)
+      |> TransformGeometry(translation: (0.0, 0.0, 0.04), scale: (1.3, 1.0, 0.7))
+    broken = voronoi_fracture(stone, count: 8, seed: seed, gap: 0.01).pieces
+      |> explode(distance: 0.015)
+      |> SetMaterial(material: Stone)
+    // Near a cliff, on flat ground: where a falling rock stops
+    near_cliff = BlurAttribute(value: NamedAttribute(name: "valley_cliff").attribute, iterations: 6)
+    foot = land
+      |> DistributePointsOnFaces(
+        selection: near_cliff.value > 0.2
+          and terrain_slope_mask(min_angle: 0.0, max_angle: 0.4) > 0.5,
+        density: 12.0,
+        seed: seed)
+    boulders = foot.points
+      |> InstanceOnPoints(
+        instance: broken,
+        rotation: CombineXYZ(z: RandomValue(max: 6.2831855, seed: seed + 1)),
+        scale: RandomValue(min: 0.5, max: 1.5, seed: seed + 2))
+  }
+  return land + boulders
+}

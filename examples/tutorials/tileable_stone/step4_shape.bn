@@ -1,0 +1,60 @@
+// @module tileable_stone_step4
+// @title Tileable stone, step 4: edges, cracks and levels
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+use texture_atoms
+use texture_filters
+
+compositor graph tileable_stone(image: Color) -> (edges: Float, cracks: Float, height: Float) {
+  "The eroded stones of step 3 chipped on their edges, cracked along Voronoi cells, grained, and levelled to flat tops"
+  t = texture_canvas(image, size: 1024)
+  stones = tile_sampler(
+    t,
+    columns: 5,
+    rows: 5,
+    shape: Square,
+    roundness: 0.5,
+    profile: Dome,
+    size: 1.1,
+    size_random: 0.2,
+    offset_random: 0.25,
+    rotation_random: 0.1,
+    luminance_random: 0.3,
+    seed: 3.0)
+  pebbles = tile_sampler(
+    t,
+    columns: 11,
+    rows: 11,
+    profile: Dome,
+    size: 0.7,
+    size_random: 0.5,
+    offset_random: 0.9,
+    luminance_random: 0.5,
+    seed: 4.0)
+  // The stones over the pebbles, as in step 2
+  low = pebbles.height * 0.45
+  laid = max(stones.height, low)
+  // Warp: each pixel read away along the slope of a broad noise, so that the straight sides bend
+  wobble = tileable_noise(t, scale: 4.0, detail: 1.0, seed: 5.0)
+  warped = warp(laid, warp: wobble, intensity: 0.008)
+    |> SeparateColor().red
+  // Slope blur: the height smeared down the slopes of a finer noise, as water and frost wear it
+  grit = tileable_noise(t, scale: 10.0, detail: 2.0, seed: 6.0)
+  eroded = slope_blur(warped, slope: grit, intensity: 0.006)
+    |> SeparateColor().red
+  // Chips: the borders of the stones, found by edge detection, knocked off where the grit is high
+  edges = edge_detect(warped, strength: 0.025)
+  chips = edges * histogram_scan(grit, position: 0.54, contrast: 0.6)
+  // Cracks: the edges of Voronoi cells, scanned to thin lines, cut into the stones only
+  cells = tileable_cells(t, scale: 3, seed: 2.0)
+  cracks = 1.0 - histogram_scan(cells.edge, position: 0.03, contrast: 0.97)
+  on_stone = histogram_scan(eroded, position: 0.33, contrast: 0.8)
+  grain = tileable_noise(t, scale: 48.0, detail: 4.0, roughness: 0.6, seed: 7.0)
+  carved = eroded - chips * 0.08 - cracks * on_stone * 0.06 + (grain - 0.5) * 0.03
+  // Levels: the gaps down to 0, the tops up to flat, the mid-tones raised by the gamma
+  height = levels(carved, in_low: 0.08, in_high: 1.0, gamma: 1.6)
+  return (edges: edges, cracks: cracks * on_stone, height: height)
+}

@@ -1,0 +1,16 @@
+// @module tileable_stone_step1
+// @title Tileable stone, step 1: atoms that tile
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+use texture_atoms
+
+compositor graph tileable_stone(image: Color) -> (noise: Float, cells: Float) {
+  "Two atoms of the stone on a square texture of 1024 pixels: a fractal noise and Voronoi cells, both periodic"
+  t = texture_canvas(image, size: 1024)
+  noise = tileable_noise(t, scale: 5.0, detail: 6.0, roughness: 0.55, seed: 1.0)
+  cells = tileable_cells(t, scale: 9, seed: 2.0)
+  return (noise: noise, cells: cells.edge * 3.0)
+}

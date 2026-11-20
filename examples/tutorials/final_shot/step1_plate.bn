@@ -1,0 +1,11 @@
+// @module final_shot_step1
+// @title The final shot, step 1: the render as it is
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+compositor graph final_shot() -> Color {
+  "The render of the scene, as Cycles gives it"
+  return RenderLayers().image
+}

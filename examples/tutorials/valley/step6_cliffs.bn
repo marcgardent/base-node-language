@@ -1,0 +1,58 @@
+// @module valley_step6
+// @title The valley, step 6: rock on the cliffs
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example valley
+
+use terrain
+
+shader graph valley_ground(
+    grass: Color = (0.11, 0.2, 0.05),
+    rock: Color = (0.2, 0.16, 0.12),
+    sand: Color = (0.45, 0.37, 0.25),
+    mud: Color = (0.05, 0.06, 0.04)
+) -> Shader {
+  "Grass, sand where the water laid its sediment, dark where it stayed, rock on the cliffs"
+  laid = MapRange(value: Attribute(attribute_name: "terrain_change").factor, from_max: 0.04)
+  wet = MapRange(value: Attribute(attribute_name: "terrain_wetness").factor, from_max: 0.02)
+  cliff = Attribute(attribute_name: "valley_cliff").factor
+  grain = NoiseTexture(vector: TextureCoordinate().object, scale: 8.0, detail: 6.0).factor
+  sandy = Mix(factor: laid, a: grass, b: sand, data_type: RGBA)
+  damp = Mix(factor: wet * 0.7, a: sandy, b: mud, data_type: RGBA)
+  stone = Mix(factor: grain, a: rock * 0.6, b: rock, data_type: RGBA)
+  color = Mix(factor: cliff, a: damp, b: stone, data_type: RGBA)
+  return PrincipledBSDF(base_color: color, roughness: 0.9 - wet * 0.4)
+}
+
+shader(material: true) graph Ground() -> (surface: Shader) {
+  return (surface: valley_ground())
+}
+
+geometry graph valley(seed: Int = 3) -> Geometry {
+  "A valley: layered noise, terraces, thermal then hydraulic erosion, rock on the cliffs"
+  // 6 m by 4 m, a point every 3.3 cm: 181 by 121 points, square cells
+  grid = Grid(size_x: 6.0, size_y: 4.0, vertices_x: 181, vertices_y: 121).mesh
+  // The valley winds: its middle swings 40 cm either side of y = 0 along x
+  middle = sin(Position().x * 1.1) * 0.4
+  // 0 along the middle of the valley, 1 two metres away
+  across = (Position().y - middle) / 2.0
+  sides = across * across
+  // Hills and ridges, from about -0.5 to 0.5; a little on the floor, a lot on the sides
+  relief = layered_noise(scale: 0.6, ridges: 0.5, warp: 0.5, seed: seed) - 0.5
+  height = sides + relief * (0.2 + sides * 1.2)
+  return grid
+    |> SetPosition(offset: CombineXYZ(z: height))
+    // A level every 14 cm, above the second one: the floor stays as it is
+    |> terrace(step: 0.14, softness: 0.3, selection: Position().z > 0.28)
+    // What stands steeper than 50° slides down to the foot of its cliff
+    |> thermal_erosion(iterations: 20, talus: 0.8726646)
+    // Rain for 1.17 s: it digs where it runs, lays down where it slows, and stores its maps
+    |> hydraulic_erosion(duration: 1.17)
+    // 1 on the ground steeper than 43°, fading out over 11° below
+    |> StoreNamedAttribute(
+      name: "valley_cliff",
+      value: terrain_slope_mask(min_angle: 0.75, softness: 0.2))
+    |> SetShadeSmooth()
+    |> SetMaterial(material: Ground)
+}

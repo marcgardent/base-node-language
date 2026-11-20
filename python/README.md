@@ -12,7 +12,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4 in 0.0..2.0) -> Ge
 ## Install
 
 ```bash
-pip install "base-node @ git+https://github.com/marcgardent/base-node-library.git#subdirectory=python"
+pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"
 ```
 
 ## CLI
@@ -37,6 +37,6 @@ issues = bn.check_target(ast, "gltf")  # [] when it fits
 fits = bn.infer(ast).fits             # target -> None, or the target it translates from
 ```
 
-The language, the targets, the standard library and the Blender extension are described in the repository: <https://github.com/marcgardent/base-node-library>.
+The language, the targets, the standard library and the Blender extension are described in the repository: <https://github.com/marcgardent/base-node-language>.
 
 License: MIT OR Apache-2.0.

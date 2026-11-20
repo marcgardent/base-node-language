@@ -1,0 +1,133 @@
+// @module rover_hull_step7
+// @title Rover hull, step 7: a detail layer at another scale
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example rover_hull
+
+use material_layers
+use projections
+
+shader graph seam(t: Float) -> Float {
+  "A groove at every whole t, as a normal map stores its slope: 0.5 flat, 0.05 and 0.95 on its walls"
+  u = fract(t)
+  return 0.5
+    + (MapRange(value: u, from_min: 0.94) - MapRange(value: u, from_min: 0.06, from_max: 0.0))
+      * 0.45
+}
+
+shader graph hull_paint(
+    paint: Color = (0.55, 0.12, 0.012),
+    metal: Color = (0.95, 0.94, 0.92),
+    wear: Float = 0.65 in 0.0..1.0,
+    dust_color: Color = (0.62, 0.5, 0.36),
+    dust: Float = 0.57 in 0.0..1.0,
+    grime: Color = (0.04, 0.032, 0.025),
+    splash: Float = 1.0 in 0.0..1.0,
+    detail: Float = 0.6 in 0.0..1.0
+) -> Shader {
+  "Painted metal, worn to bare metal on its edges, panelled, dusty on top, grimy below, scratched"
+  frame = projection_frame(space: Object)
+  // Bevel rounds the normal within 3 cm of an edge; in object space, as every normal here
+  rounded = Bevel(radius: 0.03).normal
+  surface = normalize(VectorTransform(vector: rounded, vector_type: NORMAL))
+  "Paint" #orange {
+    // A 2D texture, as an image would be: it reads x and y of the coordinates it is given
+    smears = closure(vector: Vector) -> (color: Color) {
+      return (color: NoiseTexture(vector: vector * (1.0, 2.5, 0.0), scale: 3.0, detail: 8.0).color)
+    }
+    tone = triplanar(texture: smears, sharpness: 8.0).color.x
+    // Seams every 40 cm both ways, as a normal map stores the slopes of a groove
+    seams = closure(vector: Vector) -> (color: Color) {
+      return (
+        color: CombineColor(
+          red: seam(t: vector.x * 2.5),
+          green: seam(t: vector.y * 2.5),
+          blue: 1.0))
+    }
+    panels = triplanar_normal(texture: seams, sharpness: 8.0)
+    painted = layer(
+      base_color: paint * (tone * 0.4 + 0.8),
+      roughness: tone * 0.4 + 0.2,
+      normal: panels.normal,
+      height: tone * 0.4 + 0.3,
+      coat: 0.25)
+  }
+  "Bare metal" #grey {
+    // Where Bevel's normal leans away from the face's, an edge; a noise breaks it into chips
+    edge = Clamp(value: (1.0 - rounded ⋅ Geometry().normal) * 20.0)
+    knocks = NoiseTexture(vector: TextureCoordinate().object, scale: 12.0, detail: 8.0).factor
+    chips = MapRange(value: knocks, from_min: 0.4, from_max: 0.6)
+    worn = Clamp(value: (edge * (wear + 0.5) - chips) * 4.0)
+    bare = layer(base_color: metal, metallic: 1.0, roughness: 0.18, normal: surface, height: 0.3)
+    chipped = layer_mix(bottom: painted, top: bare, mask: worn, normals: Replace)
+  }
+  "Dust" #yellow {
+    // A 3D noise needs no projection: drifts that stand higher than the hull win, on what faces up
+    drifts = NoiseTexture(vector: frame.position, scale: 5.0, detail: 6.0).factor
+    settled = layer(base_color: dust_color, roughness: 0.95, normal: surface, height: drifts)
+    dusty = layer_height_blend(
+      bottom: chipped,
+      top: settled,
+      mask: Clamp(value: surface.z * 1.4 - 0.4) * dust,
+      contrast: 0.8,
+      normals: Replace)
+  }
+  "Grime" #violet {
+    // Splashed up by the wheels: darker by Multiply, glossier by Subtract, as oil would
+    low = MapRange(value: frame.position.z + tone * 0.3, from_min: 1.0, from_max: 0.6) * splash
+    oily = layer(base_color: grime, roughness: 0.4, normal: surface)
+    grimy = layer_blend(
+      bottom: dusty.layer,
+      top: oily,
+      mask: low,
+      base_color_mode: Multiply,
+      metallic_mode: Multiply,
+      roughness_mode: Subtract,
+      normals: Replace)
+  }
+  "Detail" #green {
+    // Fine scratches, eight times finer than the paint's texture and turned: no tile lines up
+    scratches = closure(vector: Vector) -> (color: Color) {
+      fine = detail_coords(vector: vector, scale: 8.0, rotation: 0.5)
+      return (color: NoiseTexture(vector: fine * (1.0, 30.0, 0.0), scale: 2.0, detail: 4.0).color)
+    }
+    s = triplanar(texture: scratches, sharpness: 8.0).color
+    grain = detail_layer(
+      base_color: s.x * 0.5 + 0.25,
+      roughness: s.y,
+      normal: normal_from_map(
+        color: CombineColor(red: s.x, green: s.y, blue: 1.0),
+        strength: 0.3).normal)
+    // Its normal is relative to the surface: reoriented normal mapping turns it with the hull's
+    detailed = layer_detail(layer: grimy, detail: grain, amount: detail)
+  }
+  return layer_bsdf(layer: detailed, normal_space: Object).bsdf
+}
+
+shader(material: true) graph HullPaint() -> (surface: Shader) {
+  "The hull's material: hull_paint, whose inputs on its node in the material tune it"
+  return (surface: hull_paint())
+}
+
+geometry graph rover_hull() -> Geometry {
+  "A rover's hull, without UVs: a body with a sloped nose, fenders, a deck, a mast and its head"
+  // 1.8 m long, 1.1 m wide; the top of its front slides back 35 cm, a sloped nose
+  p = Position()
+  body = Cube(size: (1.8, 1.1, 0.4)).mesh
+    |> SetPosition(selection: p.x > 0.0 and p.z > 0.0, offset: (-0.35, 0.0, 0.0))
+    |> TransformGeometry(translation: (0.0, 0.0, 0.55))
+  fender = Cube(size: (1.9, 0.24, 0.04)).mesh
+  fenders = TransformGeometry(fender, translation: (0.0, 0.66, 0.6))
+    + TransformGeometry(fender, translation: (0.0, -0.66, 0.6))
+  deck = Cube(size: (0.75, 0.85, 0.2)).mesh
+    |> TransformGeometry(translation: (-0.4, 0.0, 0.85))
+  pole = Cylinder(vertices: 24, radius: 0.035, depth: 0.55)
+  mast = pole.mesh
+    |> SetShadeSmooth(selection: pole.side)
+    |> TransformGeometry(translation: (0.2, 0.32, 1.02))
+  head = Cube(size: (0.16, 0.36, 0.14)).mesh
+    |> TransformGeometry(translation: (0.2, 0.32, 1.36))
+  return body + fenders + deck + mast + head
+    |> SetMaterial(material: HullPaint)
+}

@@ -529,6 +529,61 @@ def test_multi_input_order():
     print("   ✓ Multi-input order verified")
 
 
+def test_planar2d_shape_builder_pick():
+    """planar2d's shape builder pick keeps, whole and in place, the regions the seed points pick, every seed's:
+    the one a seed is in, or the nearest within pick_radius, and deletes the others (T-136)."""
+    print("-> Test: planar2d shape builder pick...")
+    import numpy as np
+    from base_node.host import build_source
+
+    # Three discs: A of radius 1 at x = 0, B of radius 1 at x = 3, C of radius 2 at x = 8. One seed is in A,
+    # the other at the centre of C, 2 from its edge, further than pick_radius: both are in their region
+    src = """use planar2d
+
+geometry graph pick_probe_{n}() -> Geometry {{
+  discs = JoinGeometry(
+    CurveCircle(radius: 1.0).curve,
+    TransformGeometry(CurveCircle(radius: 1.0).curve, translation: (3.0, 0.0, 0.0)),
+    TransformGeometry(CurveCircle(radius: 2.0).curve, translation: (8.0, 0.0, 0.0)))
+  seeds = JoinGeometry(
+    Points(count: 1, position: (0.2, 0.0, 0.0)),
+    Points(count: 1, position: ({x}, 0.0, 0.0)))
+  return shape_builder_pick(discs, seeds, pick_radius: 0.5)
+}}
+"""
+    before = set(bpy.data.node_groups)
+    ob = bpy.data.objects.new("pick_probe", bpy.data.meshes.new("pick_probe"))
+    bpy.context.scene.collection.objects.link(ob)
+    modifier = ob.modifiers.new("pick", "NODES")
+
+    def picked(offset):
+        """The points of the regions kept, the second seed offset from C's centre towards B."""
+        n = len(bpy.data.node_groups)
+        build_source(src.format(n=n, x=8.0 - offset), f"pick_probe_{n}.bn")
+        modifier.node_group = bpy.data.node_groups[f"pick_probe_{n}"]
+        geometry = ob.evaluated_get(bpy.context.evaluated_depsgraph_get()).evaluated_geometry()
+        mesh = geometry.mesh   # lives as long as geometry
+        p = np.zeros(len(mesh.vertices) * 3)
+        mesh.vertices.foreach_get("co", p)
+        return p.reshape(-1, 3)
+
+    try:
+        p = picked(0.0)
+        assert np.abs(p[:, 2]).max(initial=0.0) < 1e-6, f"regions moved off the plane, z {p[:, 2].min()}"
+        a, b, c = p[:, 0] < 1.5, (p[:, 0] > 1.5) & (p[:, 0] < 4.5), p[:, 0] > 5.5
+        # Whole: the fill of a circle of 32 points keeps its 32 points
+        assert (a.sum(), b.sum(), c.sum()) == (32, 0, 32), f"A, B, C keep {a.sum()}, {b.sum()}, {c.sum()} points"
+        assert np.allclose(np.hypot(p[c, 0] - 8.0, p[c, 1]), 2.0, atol=1e-5), "C is not whole or not in place"
+        # A seed outside C, 0.3 from its edge, picks it; at 0.7, further than pick_radius, nothing
+        assert (picked(2.3)[:, 0] > 5.5).sum() == 32, "a seed 0.3 from C does not pick it"
+        p = picked(2.7)
+        assert ((p[:, 0] < 1.5).sum(), (p[:, 0] > 5.5).sum()) == (32, 0), "a seed 0.7 from C picks it"
+    finally:
+        bpy.data.objects.remove(ob)
+        bpy.data.batch_remove([g for g in bpy.data.node_groups if g not in before])
+    print("   ✓ planar2d shape builder pick: every seed's region kept whole and in place, the others deleted")
+
+
 RUST = """shader graph rust(uv: Vector) -> Shader {
   n = NoiseTexture(vector: uv, scale: 8.0)
   return PrincipledBSDF(
@@ -1178,6 +1233,50 @@ def test_stmap_render():
         bench.close()
         bpy.data.batch_remove([g for g in bpy.data.node_groups if g not in before])
     print("   ✓ stmap rendered by the compositor: its STMaps are numpy's, its images taken where they say")
+
+
+def test_stmap_canvas_render():
+    """stmap's canvas has the size asked, odd or even, to the pixel: its coordinates are at the centres of
+    its pixels, (i + 0.5) / width, and an image already of that size stays as it is (T-135)."""
+    print("-> Test: stmap canvas of odd and even sizes...")
+    import numpy as np
+    from base_node.host import build_source
+
+    before = set(bpy.data.node_groups)
+    build_source("use stmap\n\n"
+                 "compositor graph canvas_size(image: Color, width: Int = 1, height: Int = 1) -> Color {\n"
+                 "  d = ImageInfo(canvas(image, width, height)).dimensions\n"
+                 "  return CombineColor(d.x, d.y, 0.0, 1.0)\n}\n\n"
+                 "compositor graph canvas_uv(image: Color, width: Int = 1, height: Int = 1) -> Color {\n"
+                 "  p = ImageCoordinates(canvas(image, width, height)).normalized\n"
+                 "  return CombineColor(p.x, p.y, 0.0, 1.0)\n}\n", "canvas_probe.bn")
+    rng = np.random.default_rng(13)
+    bench = CompositorBench("canvas", 8, 8)
+    bench.image("source", np.concatenate([rng.uniform(0.0, 1.0, (48, 96, 3)), np.ones((48, 96, 1))], axis=2))
+    def render(group, feed, w, h):
+        """The canvas rendered, cut out of the render where it is opaque: Blender renders 4 pixels a side at
+        least, and draws a smaller canvas inside, transparent around it."""
+        got = bench.render(group, {"image": feed}, {"width": w, "height": h})
+        rows, cols = np.nonzero(got[..., 3].any(axis=1))[0], np.nonzero(got[..., 3].any(axis=0))[0]
+        assert (len(rows), len(cols)) == (h, w), f"{group} {w} × {h} covers {len(cols)} × {len(rows)} pixels"
+        return got[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
+
+    try:
+        for w, h in ((65, 33), (1, 1), (3, 5), (64, 32)):
+            bench.scene.render.resolution_x, bench.scene.render.resolution_y = max(w, 4), max(h, 4)
+            size = bench.render("canvas_size", {"image": "source"}, {"width": w, "height": h})
+            assert tuple(size[0, 0, :2]) == (w, h), f"canvas {w} × {h} is {size[0, 0, 0]:g} × {size[0, 0, 1]:g}"
+            i, j = np.meshgrid(np.arange(w), np.arange(h))
+            want = np.stack(np.broadcast_arrays((i + 0.5) / w, (j + 0.5) / h, 0.0, 1.0), axis=-1)
+            assert_close(f"canvas {w} × {h} coordinates", render("canvas_uv", "source", w, h), want)
+            # An image of the canvas' own size is its canvas
+            image = np.concatenate([rng.uniform(0.0, 1.0, (h, w, 3)), np.ones((h, w, 1))], axis=2)
+            bench.image(f"{w}x{h}", image)
+            assert_close(f"canvas {w} × {h} of its size", render("canvas", f"{w}x{h}", w, h), image)
+    finally:
+        bench.close()
+        bpy.data.batch_remove([g for g in bpy.data.node_groups if g not in before])
+    print("   ✓ stmap canvas: 65 × 33, 1 × 1, 3 × 5 and 64 × 32 to the pixel, at the centres of their pixels")
 
 
 def test_qc_render():
@@ -3063,6 +3162,7 @@ def main():
         test_live_diagnostics,
         test_tree_without_output,
         test_multi_input_order,
+        test_planar2d_shape_builder_pick,
         test_shader_and_compositor,
         test_module_graphs_in_other_trees,
         test_templates,
@@ -3070,6 +3170,7 @@ def main():
         test_merge_render,
         test_grade_render,
         test_stmap_render,
+        test_stmap_canvas_render,
         test_qc_render,
         test_formula_operands_render,
         test_pipe_through_chosen_output,

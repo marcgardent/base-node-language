@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>base-node (.bn) — Text format for node graphs</title>
-  <meta name="description" content="Base Node (.bn): text format, standard library, targets, and parsers (Python, Rust/WASM, Blender) for node graphs.">
+  <title>Base Node — Blender node trees as text</title>
+  <meta name="description" content="Base Node: write Blender node trees as text. Geometry Nodes, shaders, the compositor and Grease Pencil as readable, diffable .bn files, with a free add-on, a standard library and tutorials.">
   <style>
     :root {
       color-scheme: dark light;
@@ -262,406 +262,90 @@
       flex-wrap: wrap;
       gap: 0.5rem;
     }
+    .hero { margin: 2rem 0 1.5rem; }
+    .hero p.pitch { font-size: 1.3rem; line-height: 1.4; margin: 0 0 0.75rem; max-width: 40ch; }
+    .hero p.sub { color: var(--muted); max-width: 62ch; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
+    .btn { display: inline-block; font-family: var(--mono); font-size: 0.88rem; padding: 0.55rem 1rem; border-radius: 6px; border: 1px solid var(--accent); }
+    .btn.primary { background: var(--accent); color: var(--bg); }
+    .btn:hover { text-decoration: none; filter: brightness(1.1); }
+    .reel { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; margin: 1rem 0; }
+    .reel figure { margin: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--panel); }
+    .reel video, .reel img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+    .reel figcaption { padding: 0.35rem 0.6rem; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+    .tuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin: 1rem 0; }
+    .tuts a { display: block; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--panel); color: var(--text); }
+    .tuts a:hover { border-color: var(--accent); text-decoration: none; }
+    .tuts img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+    .tuts span { display: block; padding: 0.4rem 0.6rem; font-size: 0.88rem; }
+    .tuts small { display: block; color: var(--muted); font-size: 0.75rem; }
   </style>
   <script type="module" src="view/bn-view.js"></script>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>base-node <span>(.bn) v0.13.1</span></h1>
+      <h1><a href="index.html" style="color:inherit">base-node</a> <span>(.bn) v0.13.1</span></h1>
       <nav>
-        <a href="#examples">Examples</a>
-        <a href="#targets">Targets</a>
-        <a href="#packages">Packages</a>
-        <a href="#view">Web component</a>
-        <a href="#blender">Blender</a>
-        <a href="#stdlib">Stdlib</a>
         <a href="tutorials/index.html">Tutorials</a>
-        <a href="state-of-market.html">Market</a>
+        <a href="#blender">Install</a>
         <a href="reference/index.html">Reference</a>
-        <a href="https://github.com/marcgardent/base-node-library">GitHub</a>
+        <a href="developers.html">Developers</a>
+        <a href="state-of-the-art-autumn-2026.html">State of the Art</a>
+        <a href="https://github.com/marcgardent/base-node-language">GitHub</a>
       </nav>
     </header>
 
-    <p class="lead">
-      Declarative text format for procedural node graphs. Writes and reads back node trees as typed functions across Python, Rust (<code>wasm32</code>), and Blender.
-    </p>
-
-    <section id="examples">
-      <div class="tabs" role="tablist" aria-label=".bn code examples">
-        <button class="tab-btn" role="tab" aria-selected="true" data-tab="ex-hud">chrono_hud.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-symphony">metaball_symphony.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-erosion">erosion.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-reaction">reaction_diffusion.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-growth">differential_growth.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-tuples">tuple_tiles.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-sdf">sdf2d.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-curves">curves2d.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-grid">patterns2d.bn</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-repeat">math.bn (repeat)</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="ex-mask">mask2d.bn</button>
-      </div>
-
-      <div id="ex-hud" class="tab-panel active">
-        <bn-view height="460"><script type="text/bn">
-use curves2d (arrow_2d, ribbon_2d, ring_2d, wave_curve_2d)
-use math (sine01, steps)
-use patterns2d (hexagonal_grid_2d)
-use sdf2d (sdf_chamfer_subtraction, sdf_chamfer_union, sdf_polar_repeat_2d, sdf_ring_2d, sdf_rounded_box_2d, sdf_star_2d)
-
-geometry graph "chrono hud"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
-  tau = phase * 6.283185
-  hex = hexagonal_grid_2d(columns: 11, rows: 11, radius: 0.26, margin: 0.14).mesh
-  base = hex |> SetPosition(offset: CombineXYZ(z: sine01(phase * 2.0 - length(Position()) * 0.55) * 0.08 - 0.28))
-    |> ExtrudeMesh(offset_scale: 0.05) |> SetMaterial(material: "DarkSlate")
-  rotor = hud_rotor(phase) // 6-tooth chamfered SDF escapement stepped by math.steps()
-  osc = wave_curve_2d(CurveCircle(160, 1.72), amplitude: 0.09, periods: 12.0, phase: phase * 3.0)
-  wave_rib = ribbon_2d(osc, width: 0.055) |> TransformGeometry(translation: (0.0, 0.0, 0.12), rotation: CombineXYZ(z: -tau / 6.0))
-  pointer = arrow_2d(CurveCircle(96, 1.25) |> TrimCurve(start: 0.08, end: 0.42), 0.06, 0.18, 0.22)
-    |> TransformGeometry(translation: (0.0, 0.0, 0.19), rotation: CombineXYZ(z: tau))
-  return base + rotor + ring_2d(1.52, 1.38, 96) + wave_rib + pointer
-}
-</script></bn-view>
-        <video class="preview-img" autoplay loop muted playsinline poster="images/showcase-chrono-hud.png" width="960" height="640">
-          <source src="images/showcase-chrono-hud.mp4" type="video/mp4">
-        </video>
-      </div>
-
-
-      <div id="ex-symphony" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-use curves2d (morph_curves_2d, parallel_contour_2d, ribbon_2d, wave_curve_2d)
-use math (ease_in_out, sdf_sphere, sdf_torus, sine01, smooth_subtraction, triangle, twist)
-use patterns2d (triangular_grid_2d)
-use sdf2d (sdf_chamfer_union, sdf_hexagon_2d, sdf_isolines, sdf_polar_repeat_2d, sdf_ring_2d, sdf_star_2d)
-
-geometry graph "metaball symphony"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
-  t = ease_in_out(triangle(phase), 2.5)
-  core = metaball_core(phase) |> TransformGeometry(translation: (0.0, 0.0, 0.28))
-  tri = triangular_grid_2d(columns: 32, rows: 32, side: 0.12)
-  d_ped = Mix(t, length(Position()) - 0.85, sdf_star_2d(Position(), radius: 0.95, points: 6, indent: 0.5))
-  iso_z = sdf_isolines(d_ped - phase * 0.4, step: 0.22, width: 0.045)
-  pedestal = tri |> SetPosition(offset: CombineXYZ(z: Clamp(-iso_z * 1.8, -0.04, 0.06) - 0.28))
-  base_c = CurveCircle(resolution: 160, radius: 1.32)
-  morphed = morph_curves_2d(wave_curve_2d(base_c, 0.14, 3.0, phase), wave_curve_2d(base_c, 0.18, 6.0, -phase), factor: t)
-  outer = parallel_contour_2d(morphed, offset: 0.11 + sine01(phase * 2.0) * 0.04)
-  return core + pedestal + ribbon_2d(morphed, 0.055) + ribbon_2d(outer, 0.032)
-}
-</script></bn-view>
-        <video class="preview-img" autoplay loop muted playsinline poster="images/showcase-metaball-symphony.png" width="960" height="640">
-          <source src="images/showcase-metaball-symphony.mp4" type="video/mp4">
-        </video>
-      </div>
-
-      <div id="ex-erosion" class="tab-panel">
-        <pre><code>// Hydraulic erosion after the virtual pipe model of Mei, Decaudin &amp; Hu (2007):
-// rain, flow through 8 pipes per cell, sediment carried with the water, thermal slide.
-geometry graph erode(terrain: Geometry, iterations: Int = 50 in 0.., rain: Float = 0.01 in 0.0.., ...) -&gt; Geometry {
-  "Erodes a square Grid: rain, flow through pipes, sediment"
-  ...  // the whole simulation in one Repeat zone
-}
-
-geometry graph "eroded hills"(
-    size: Float = 4.0 in 0.1..,
-    resolution: Int = 128 in 2..,
-    height: Float = 1.2 in 0.0..,
-    iterations: Int = 50 in 0..
-) -&gt; Geometry {
-  "A noise terrain on a Grid, eroded"
-  hills = NoiseTexture(vector: Position(), scale: 0.6, detail: 6.0, roughness: 0.55).factor
-  return Grid(size, size, resolution, resolution)
-    |&gt; SetPosition(offset: CombineXYZ(z: (hills - 0.5) * height * 2.0))
-    |&gt; erode(iterations: iterations)
-    |&gt; SetShadeSmooth()
-}</code></pre>
-        <img class="preview-img" src="images/showcase-erosion.png" alt="A noise terrain eroded by examples/erosion.bn: branching channels and sediment fans, 256 x 256 vertices after 200 iterations" width="960" height="640">
-      </div>
-
-      <div id="ex-reaction" class="tab-panel">
-        <pre><code>// Gray-Scott reaction-diffusion after Pearson (1993), on a Grid with wrapped borders:
-// a 9-point Laplacian read with Sample Index, one explicit step per iteration.
-geometry graph "reaction diffusion"(grid: Geometry, preset: Menu = Coral, iterations: Int = 3000 in 0.., ...) -&gt; Geometry {
-  "Grows a Gray-Scott pattern on a square Grid, `iterations` steps at once"
-  ...  // presets in a Menu Switch, the steps in a Repeat zone (a Simulation zone in "growing reaction diffusion")
-}
-
-geometry graph "reaction diffusion tile"(
-    resolution: Int = 256 in 3..,
-    preset: Menu = Coral,
-    iterations: Int = 3000 in 0..
-) -&gt; Geometry {
-  "A 4 x 4 Grid grown with a Gray-Scott pattern"
-  return Grid(4.0, 4.0, resolution, resolution)
-    |&gt; reaction_diffusion(preset: preset, iterations: iterations)
-    |&gt; SetShadeSmooth()
-}</code></pre>
-        <video class="preview-img" autoplay loop muted playsinline poster="images/showcase-reaction-diffusion.png" width="960" height="640">
-          <source src="images/showcase-reaction-diffusion.mp4" type="video/mp4">
-        </video>
-      </div>
-
-      <div id="ex-growth" class="tab-panel">
-        <pre><code>// Differential growth of a closed curve, after Anders Hoff's differential-line and Nervous System:
-// a spring to the neighbours along the curve, repulsion from the points near it, alignment,
-// then the edges longer than `max length` cut with Subdivide Curve.
-geometry graph "differential growth"(curve: Geometry, iterations: Int = 400 in 0.., ...) -&gt; Geometry {
-  "Grows a closed curve in the XY plane, `iterations` steps at once"
-  ...  // the steps in a Repeat zone (a Simulation zone in "growing differential growth")
-}
-
-geometry graph "differential growth coral"(
-    size: Float = 0.4 in 0.01..,
-    iterations: Int = 400 in 0..,
-    "max length": Float = 0.02 in 0.0001..,
-    seed: Int = 0,
-    thickness: Float = 0.006 in 0.0..
-) -&gt; Geometry {
-  "A circle grown into a coral outline, drawn as a tube of `thickness`"
-  grown = growth_seed(size, max_length, 0.3, seed)
-    |&gt; differential_growth(iterations: iterations, max_length: max_length, radius: max_length * 2.5)
-  return CurveToMesh(grown, profile_curve: CurveCircle(resolution: 8, radius: thickness))
-    |&gt; SetShadeSmooth()
-}</code></pre>
-        <video class="preview-img" autoplay loop muted playsinline poster="images/showcase-differential-growth.png" width="960" height="640">
-          <source src="images/showcase-differential-growth.mp4" type="video/mp4">
-        </video>
-      </div>
-
-      <div id="ex-tuples" class="tab-panel">
-        <pre><code>// Tuples choose the type: no input_type and no data_type is written for the switches below.
-// A 3-tuple makes a Vector Switch, a 4-tuple a Color IndexSwitch and a Color Mix.
-geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..1.0) -&gt; Geometry {
-  "A board of tiles: their colours and sizes are tuples"
-  p = Position()
-  // A checker of cells, by the index of each point of the Grid
-  cell = mod(Index(), count) + floor(Index() / count)
-  r = length(CombineXYZ(p.x, p.y))
-  // Four colours, a 4-tuple each: a Color IndexSwitch
-  tint = IndexSwitch(
-    mod(cell, 4.0),
-    (1.0, 0.3, 0.04, 1.0),
-    (0.02, 0.5, 0.75, 1.0),
-    (1.0, 0.72, 0.06, 1.0),
-    (0.75, 0.06, 0.24, 1.0))
-  // Darker towards the rim: a Color Mix
-  shade = Mix(Clamp(r * 0.42 - 0.1), tint, (0.04, 0.05, 0.08, 1.0))
-  // Tall in the middle, flat around: a Vector Switch
-  size = Switch(r &lt; 1.15, (0.24, 0.24, 0.08), (0.2, 0.2, 0.5))
-  lift = sin(phase * 6.283185 - r * 2.6) * 0.12
-  return Grid(3.9, 3.9, count, count)
-    |&gt; StoreNamedAttribute(name: "tint", value: shade, data_type: FLOAT_COLOR)
-    |&gt; SetPosition(offset: CombineXYZ(z: lift))
-    |&gt; InstanceOnPoints(instance: Cube(size: (1.0, 1.0, 1.0)), scale: size)
-    |&gt; RealizeInstances()
-    |&gt; SetMaterial(material: TupleTiles)
-}</code></pre>
-        <img class="preview-img" src="images/showcase-tuple-tiles.png" alt="A board of tiles built by examples/tuple_tiles.bn: four colours from a Color IndexSwitch, darker towards the rim through a Color Mix, tall in the middle through a Vector Switch" width="960" height="640">
-        <img class="preview-img" src="images/tuple-tiles-nodes.png" alt="The tuple tiles group in Blender's Node Editor: the Index Switch and the Mix set to Color, the Switch set to Vector, with no input_type or data_type in the text" width="1601" height="1001" loading="lazy">
-      </div>
-
-      <div id="ex-sdf" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-// 2D rounded box signed distance field
-geometry graph "sdf rounded box 2d"(
-    p: Vector = Position(),
-    "half size": Vector = (0.6, 0.4, 0.0),
-    radius: Float = 0.15 in 0.0..
-) -> Float {
-  "XY-plane rectangle with rounded corners of given half-size (2D: z ignored)"
-  d = CombineXYZ(abs(p.x) - half_size.x + radius, abs(p.y) - half_size.y + radius)
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius
-}
-</script></bn-view>
-        <img class="preview-img" src="images/sdf2d.png" alt="2D SDF shapes rendered from stdlib/sdf2d.bn" width="1200" height="800">
-      </div>
-
-      <div id="ex-mask" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-// Vignette from a rounded box mask
-use mask2d (box_mask)
-
-compositor graph vignette(image: Color, strength: Float = 0.6 in 0.0..1.0) -> Color {
-  edge = 1.0 - box_mask(image, (0.9, 0.5), 0.4, feather: 0.6).mask
-  return Mix(factor: edge * strength, a: image, b: (0.0, 0.0, 0.0, 1.0), data_type: RGBA)
-}
-</script></bn-view>
-        <img class="preview-img" src="images/mask2d.png" alt="Compositor masks of stdlib/mask2d.bn, drawn by examples/mask2d_showcase.bn" width="640" height="360">
-      </div>
-
-      <div id="ex-curves" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-use math (bump)
-
-// Parallel 2D offset along XY curve normal
-geometry graph "parallel contour 2d"(curve: Geometry, offset: Float = 0.1) -> Geometry {
-  "Offsets each point along the 2D normal in the XY plane"
-  t = CurveTangent()
-  normal = CombineXYZ(-t.y, t.x)
-  return SetPosition(curve, offset: normal * offset)
-}
-
-// Flat 2D ribbon with end tapering
-geometry graph "ribbon 2d"(
-    curve: Geometry,
-    width: Float = 0.15 in 0.0..,
-    taper: Float in 0.0..1.0
-) -> Geometry {
-  "Generates a flat 2D ribbon along the curve with optional end tapering"
-  half = width * 0.5
-  profile = CurveLine(CombineXYZ(-half), CombineXYZ(half))
-  radius = Mix(taper, 1.0, bump(SplineParameter().factor, half_width: 0.5))
-  c = SetCurveRadius(curve, radius: radius)
-  return CurveToMesh(c, profile, Radius())
-}
-</script></bn-view>
-        <img class="preview-img" src="images/curves2d.png" alt="2D curve operators rendered from stdlib/curves2d.bn" width="1200" height="800" loading="lazy">
-      </div>
-
-      <div id="ex-grid" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-// Vogel golden-angle phyllotaxis spiral
-geometry graph "phyllotaxis spiral 2d"(
-    count: Int = 200 in 1..100000,
-    radius: Float = 1.0 in 0.001..
-) -> (Points: Geometry, Factor: Float) {
-  "Sunflower disk distribution using golden angle and radial factor"
-  i = Index()
-  f = sqrt(i / (count * 1.0))
-  a = i * 2.399963
-  r = f * radius
-  x = r * cos(a)
-  y = r * sin(a)
-  pts = Points(count, CombineXYZ(x, y))
-  return (Points: pts, Factor: f)
-}
-</script></bn-view>
-        <img class="preview-img" src="images/patterns2d.png" alt="2D grids and patterns rendered from stdlib/patterns2d.bn" width="1200" height="800" loading="lazy">
-      </div>
-
-      <div id="ex-repeat" class="tab-panel">
-        <bn-view height="460"><script type="text/bn">
-// Fractal Brownian Motion using a repeat zone
-geometry graph fbm(
-    p: Vector = Position(),
-    octaves: Int = 5 in 1..16,
-    lacunarity: Float = 2.0,
-    persistence: Float = 0.5 in 0.0..1.0
-) -> Float {
-  "Fractal noise: octave layers of increasing frequency and decreasing amplitude"
-  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) {
-    noise = NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0
-    return (
-      sum: sum + noise * amplitude,
-      amplitude: amplitude * persistence,
-      frequency: frequency * lacunarity)
-  }
-  return r.sum
-}
-</script></bn-view>
-        <img class="preview-img" src="images/math-noise.png" alt="Fractal terrain displaced with fbm from stdlib/math.bn" width="1200" height="600" loading="lazy">
+    <section class="hero">
+      <p class="pitch">Blender node trees, written as text.</p>
+      <p class="sub">
+        Geometry Nodes, shaders, the compositor and Grease Pencil as <code>.bn</code> files you can read, diff, review in git, paste into Blender and generate.
+        The add-on turns the text into nodes while you type, and the nodes back into text. Open source (MIT or Apache-2.0), with a standard library, parsers in Python and Rust, and a web viewer.
+      </p>
+      <div class="actions">
+        <a class="btn primary" href="#blender">Install the free add-on</a>
+        <a class="btn" href="tutorials/index.html">Tutorials</a>
+        <a class="btn" href="https://github.com/marcgardent/base-node-language">GitHub</a>
       </div>
     </section>
 
-    <h2 id="targets">Targets</h2>
-    <p>
-      A target is what one destination accepts: one file per target in <a href="https://github.com/marcgardent/base-node-library/tree/main/targets"><code>targets/*.json</code></a>,
-      none defined from another. The language speaks Blender; a destination that is not Blender declares translators from a Blender target.
-      A text needs no target: the tool tells which ones accept it, and <code>// @target gltf</code> at its head is a promise the editor holds it to.
-      <a href="reference/targets.html">Specification</a>.
-    </p>
-    <table>
-      <thead>
-        <tr>
-          <th>Target</th>
-          <th>Accepts</th>
-          <th>For</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>blender-geometry</code></td>
-          <td>Every Geometry Nodes node</td>
-          <td>Blender 5.2+, <code>curves2d.bn</code>, <code>patterns2d.bn</code>, <code>planar2d.bn</code>…</td>
-        </tr>
-        <tr>
-          <td><code>blender-gp</code></td>
-          <td>Every Geometry Nodes node, on a Grease Pencil object</td>
-          <td><code>math.bn</code>, <code>curves2d.bn</code>, <code>fillet2d.bn</code>…</td>
-        </tr>
-        <tr>
-          <td><code>blender-shader</code></td>
-          <td>Every shader node</td>
-          <td>Materials, and the shader groups of the Smart Materials pack</td>
-        </tr>
-        <tr>
-          <td><code>blender-compositor</code></td>
-          <td>Every compositor node</td>
-          <td><code>mask2d.bn</code>, <code>merge.bn</code>, <code>grade.bn</code>, <code>stmap.bn</code>, <code>qc.bn</code></td>
-        </tr>
-        <tr>
-          <td><code>gltf</code></td>
-          <td>The shader nodes Blender's glTF exporter turns into a material</td>
-          <td>Unity, Godot, Unreal, anything that reads glTF</td>
-        </tr>
-        <tr>
-          <td><code>blade</code></td>
-          <td>Blade's Pixel Nodes, with a translator from <code>blender-compositor</code></td>
-          <td>Blade</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2 id="view">Web component (<code>&lt;bn-view&gt;</code>)</h2>
-    <p>
-      The examples above are drawn by <code>&lt;bn-view&gt;</code>: base-node compiled to wasm
-      (<code>web/</code>) shows a <code>.bn</code> text read-only, its code beside its node graph, with
-      a copy button, an enlarge button, and a tag per backend that runs it (Blender Geometry Nodes, Shader,
-      Compositor; Blade Pixel Nodes) and the targets it fits. <a href="view/">Demo</a>.
-    </p>
-    <pre><code>&lt;script type="module" src="view/bn-view.js"&gt;&lt;/script&gt;
-
-&lt;bn-view src="relief.bn"&gt;&lt;/bn-view&gt;
-&lt;bn-view view="nodes" height="480"&gt;&lt;script type="text/bn"&gt;
-  geometry graph g() -&gt; Geometry { return MeshCube() }
-&lt;/script&gt;&lt;/bn-view&gt;</code></pre>
-
-    <h2 id="packages">Subprojects (Python &amp; Rust)</h2>
-    <div class="grid">
-      <div class="box">
-        <h3>1. Python (<code>python/base_node</code>)</h3>
-        <p>Zero-dependency lexer, parser, canonical formatter, typechecker, target checker, and CLI.</p>
-        <pre><code># Install from GitHub
-pip install "base-node @ git+https://github.com/marcgardent/base-node-library.git#subdirectory=python"
-
-# CLI
-base-node fmt file.bn
-base-node check file.bn</code></pre>
-        <pre><code>import base_node as bn
-
-ast = bn.parse(source)
-code = bn.format_source(source)
-issues = bn.check_target(ast, "gltf")</code></pre>
-        <p>License: <code>MIT OR Apache-2.0</code></p>
-      </div>
-      <div class="box">
-        <h3>2. Rust / WASM (<code>rust/</code>)</h3>
-        <p><code>wasm32-unknown-unknown</code> compatible crate with byte-for-byte identical canonical formatting and embedded JSON targets.</p>
-        <pre><code># Cargo.toml
-[dependencies]
-base-node = { git = "https://github.com/marcgardent/base-node-library.git" }</code></pre>
-        <pre><code>use base_node::{
-  parse, format_source,
-  check_target, infer
-};
-let f = parse(src, "a.bn")?;
-let code = format_source(src, "a.bn")?;
-let issues = check_target(&amp;f, "gltf");
-let fits = infer(&amp;f).fits;</code></pre>
-        <p>License: <code>MIT OR Apache-2.0</code></p>
-      </div>
+    <div class="reel">
+      <figure>
+        <video autoplay loop muted playsinline poster="images/showcase-chrono-hud.png" width="960" height="640"><source src="images/showcase-chrono-hud.mp4" type="video/mp4"></video>
+        <figcaption>chrono_hud.bn — free modules</figcaption>
+      </figure>
+      <figure>
+        <video autoplay loop muted playsinline poster="images/showcase-metaball-symphony.png" width="960" height="640"><source src="images/showcase-metaball-symphony.mp4" type="video/mp4"></video>
+        <figcaption>metaball_symphony.bn</figcaption>
+      </figure>
+      <figure>
+        <video autoplay loop muted playsinline poster="images/showcase-differential-growth.png" width="960" height="640"><source src="images/showcase-differential-growth.mp4" type="video/mp4"></video>
+        <figcaption>differential_growth.bn</figcaption>
+      </figure>
+      <figure>
+        <video autoplay loop muted playsinline poster="images/showcase-reaction-diffusion.png" width="960" height="640"><source src="images/showcase-reaction-diffusion.mp4" type="video/mp4"></video>
+        <figcaption>reaction_diffusion.bn</figcaption>
+      </figure>
     </div>
 
-    <h2 id="blender">3. Base Node for Blender (<code>base-node-for-blender/</code>)</h2>
+    <h2 id="tutorials">Tutorials</h2>
+    <p>One subject per tutorial, step by step: every step is a complete <code>.bn</code> file and the picture it renders. They need nothing but the add-on.</p>
+    <div class="tuts">
+      <a href="tutorials/lunar-ground.html"><img src="images/tutorials/lunar-ground-step8.png" alt="Lunar ground" loading="lazy"><span>Lunar ground<small>8 steps</small></span></a>
+      <a href="tutorials/mini-moon.html"><img src="images/tutorials/mini-moon-crescent.png" alt="Mini moon" loading="lazy"><span>Mini moon<small>5 steps</small></span></a>
+    </div>
+    <p><a href="tutorials/index.html">All tutorials →</a></p>
+
+    <h2 id="blender">Install and use it in Blender</h2>
+    <p><strong>One-click install via Blender Remote Extension Repository:</strong></p>
+    <div class="endpoint-bar">
+      <span id="repo-url">https://marcgardent.github.io/base-node-language/extensions/index.json</span>
+      <button class="copy-btn" type="button" id="copy-btn">Copy URL</button>
+    </div>
+    <p>
+      In Blender: <em>Edit &gt; Preferences &gt; Get Extensions &gt; Repositories &gt; <code>+</code> &gt; Add Remote Repository</em>, paste the URL above, and install <strong>Base Node</strong>.
+    </p>
+
     <p>
       Blender 5.2+ extension (<code>id = "base_node"</code>). The node tree is the only data: its <code>.bn</code> text is a temporary view of it.
     </p>
@@ -679,7 +363,7 @@ let fits = infer(&amp;f).fits;</code></pre>
       <li><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> still copy and paste nodes; on macOS the keys are <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> / <kbd>V</kbd>.</li>
     </ul>
     <p>
-      Copy this, press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> in a Geometry Node editor, then <em>Add as Modifier</em>: columns on a grid rise with a ripple from the centre (<a href="https://github.com/marcgardent/base-node-library/blob/main/examples/ripples.bn"><code>examples/ripples.bn</code></a>).
+      Copy this, press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> in a Geometry Node editor, then <em>Add as Modifier</em>: columns on a grid rise with a ripple from the centre (<a href="https://github.com/marcgardent/base-node-language/blob/main/examples/ripples.bn"><code>examples/ripples.bn</code></a>).
     </p>
     <pre id="paste-me"><code>use math (palette, sine01)
 
@@ -694,137 +378,16 @@ geometry graph ripples(count: Int = 40 in 2.., waves: Float = 2.5, height: Float
     |&gt; RealizeInstances()
     |&gt; StoreNamedAttribute(name: "color", value: palette(Position().z / height), data_type: FLOAT_COLOR)
 }</code></pre>
-    <p><strong>One-click install via Blender Remote Extension Repository:</strong></p>
-    <div class="endpoint-bar">
-      <span id="repo-url">https://marcgardent.github.io/base-node-library/extensions/index.json</span>
-      <button class="copy-btn" type="button" id="copy-btn">Copy URL</button>
-    </div>
-    <p>
-      In Blender: <em>Edit &gt; Preferences &gt; Get Extensions &gt; Repositories &gt; <code>+</code> &gt; Add Remote Repository</em>, paste the URL above, and install <strong>Base Node</strong>.
-    </p>
 
-    <h2 id="stdlib">Standard Library (<code>stdlib/</code>)</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Module</th>
-          <th>Targets</th>
-          <th>Graphs</th>
-          <th>Contents</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/math.bn"><code>math.bn</code></a></td>
-          <td><code>blender-compositor</code>, <code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>47</td>
-          <td>Inigo Quilez curves, easing, bounce, elastic, fbm, Fibonacci, R2 low-discrepancy sequence, analytic SDFs</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/sdf2d.bn"><code>sdf2d.bn</code></a></td>
-          <td><code>blender-compositor</code>, <code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>17</td>
-          <td>2D segment, rounded box, rhombus, equilateral triangle, hexagon, regular polygon, star, arc, sector, cross, chamfer booleans, polar/grid repetition, isolines</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/curves2d.bn"><code>curves2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>7</td>
-          <td>2D curve morphing, parallel offset contour, fractal contour noise, sine wave contour, tapered ribbon, 2D arrow, 2D ring</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/patterns2d.bn"><code>patterns2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>5</td>
-          <td>Hexagonal honeycomb grid, equilateral triangular grid, Vogel phyllotaxis spiral, R2 stratified jitter points, 2D hatching</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/planar2d.bn"><code>planar2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>4</td>
-          <td>Planar map of overlapping curves: faces, split at intersections, shape builder pick, outer boundary contour</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/fillet2d.bn"><code>fillet2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
-          <td>4</td>
-          <td>Fillet of a corner and of a polygon, chamfer of a polygon, fillet as Bezier handles</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/mask2d.bn"><code>mask2d.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
-          <td>9</td>
-          <td>Compositor masks drawn by the SDFs of <code>math</code> and <code>sdf2d</code>: circle, box, polygon, star, outline, letterbox</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/merge.bn"><code>merge.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
-          <td>32</td>
-          <td>The Merge operations of compositing on premultiplied images: over, under, in, out, atop, xor, stencil, mask, plus, screen, multiply, difference…; premult, unpremult, keymix</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/grade.bn"><code>grade.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
-          <td>20</td>
-          <td>The colour tools of compositing: grade, color correct by shadows / midtones / highlights, saturation, hue shift, exposure, soft clip, log2lin / lin2log</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/stmap.bn"><code>stmap.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
-          <td>12</td>
-          <td>Image remapping by STMaps, as Nuke's STMap: UV ramp, STMap apply, tile, mirror, reformat by fit / fill / distort, each as its STMap and its image</td>
-        </tr>
-        <tr>
-          <td><a href="https://github.com/marcgardent/base-node-library/blob/main/stdlib/qc.bn"><code>qc.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
-          <td>24</td>
-          <td>Quality control after Nuke: test patterns (SMPTE colour bars, colour wheel, ramp, radial, rectangle, grid, checkerboard, constant) and checks (false colour by stops, clip check, NaN and infinity check, zebra, alpha check, difference as heat)</td>
-        </tr>
-      </tbody>
-    </table>
+    <h2 id="free">The free standard library</h2>
+    <p>Eleven modules ship with the add-on: 2D SDFs and curves, fillets, planar maps, patterns, math and noise, compositor masks, Nuke-style merges and grades, STMaps and QC charts. Their graphs, targets and pictures are on the <a href="developers.html#stdlib">Developers</a> page, every graph in the <a href="reference/index.html">Reference</a>.</p>
 
-    <div class="gallery">
-      <figure>
-        <img src="images/sdf2d.png" alt="stdlib/sdf2d.bn preview" loading="lazy">
-        <figcaption>stdlib/sdf2d.bn — 2D SDF primitives &amp; chamfer booleans</figcaption>
-      </figure>
-      <figure>
-        <img src="images/curves2d.png" alt="stdlib/curves2d.bn preview" loading="lazy">
-        <figcaption>stdlib/curves2d.bn — 2D curve morphing, offset &amp; ribbons</figcaption>
-      </figure>
-      <figure>
-        <img src="images/patterns2d.png" alt="stdlib/patterns2d.bn preview" loading="lazy">
-        <figcaption>stdlib/patterns2d.bn — Hexagonal, triangular &amp; phyllotaxis grids</figcaption>
-      </figure>
-      <figure>
-        <img src="images/math-sdf.png" alt="stdlib/math.bn 3D SDF preview" loading="lazy">
-        <figcaption>stdlib/math.bn — Analytic SDFs &amp; smooth booleans</figcaption>
-      </figure>
-      <figure>
-        <img src="images/mask2d.png" alt="stdlib/mask2d.bn preview" loading="lazy">
-        <figcaption>stdlib/mask2d.bn — Compositor masks &amp; letterbox</figcaption>
-      </figure>
-      <figure>
-        <img src="images/merge.png" alt="stdlib/merge.bn preview: twelve Merge operations of an orange disk over a blue square" loading="lazy">
-        <figcaption>stdlib/merge.bn — over, under, in, out / atop, xor, stencil, mask / plus, screen, multiply, difference</figcaption>
-      </figure>
-      <figure>
-        <img src="images/grade.png" alt="stdlib/grade.bn preview: a render in six strips, each graded by another tool" loading="lazy">
-        <figcaption>stdlib/grade.bn — As it is, grade, color correct, saturation, hue shift, exposure</figcaption>
-      </figure>
-      <figure>
-        <img src="images/stmap.png" alt="stdlib/stmap.bn preview: a picture remapped by six STMaps" loading="lazy">
-        <figcaption>stdlib/stmap.bn — Picture, UV ramp, tile / mirror, reformat, wavy STMap</figcaption>
-      </figure>
-      <figure>
-        <img src="images/qc.png" alt="stdlib/qc.bn preview: colour bars, colour wheel and alpha check above, a render, its false colour and its clip check below" loading="lazy">
-        <figcaption>stdlib/qc.bn — Colour bars, wheel, alpha check / render, false colour, clip check</figcaption>
-      </figure>
-    </div>
+    <h2 id="compare">Other tools that write nodes as text</h2>
+    <p>Nuke, Houdini, Substance Designer, MaterialX, ComfyUI, Unity, Godot, Unreal and TouchDesigner each store or script their node graphs in their own way. <a href="state-of-the-art-autumn-2026.html">State of the Art — Autumn 2026</a> compares which ones read their text back, with sources.</p>
 
     <footer>
-      <span>base-node-library — MIT OR Apache-2.0 (Blender host binding: GPL-3.0-or-later)</span>
-      <span><a href="https://github.com/marcgardent/base-node-library/blob/main/spec/reference.md">Language Spec</a> · <a href="https://github.com/marcgardent/base-node-library">Source</a></span>
+      <span>Base Node Language — MIT OR Apache-2.0 (Blender host binding: GPL-3.0-or-later)</span>
+      <span><a href="https://ludopant.com/basenode-packs/">Packs by the author</a> · <a href="https://github.com/marcgardent/base-node-language/blob/main/spec/reference.md">Language Spec</a> · <a href="https://github.com/marcgardent/base-node-language">Source</a></span>
     </footer>
   </div>
 

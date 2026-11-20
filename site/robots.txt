@@ -1,0 +1,5 @@
+# Generated from site/site.toml.
+User-agent: *
+Allow: /
+
+Sitemap: https://marcgardent.github.io/base-node-language/sitemap.xml

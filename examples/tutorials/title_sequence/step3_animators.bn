@@ -1,0 +1,44 @@
+// @module title_sequence_step3
+// @title A title sequence, step 3: letters that fall into place, in a random order
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @offer groups, example
+// @example title_sequence
+
+use text_animate (animate_characters, text_characters, text_mesh, text_reveal)
+
+shader(material: true) graph Title() -> (surface: Shader) {
+  "Warm white letters that give their own light, as opaque as their opacity"
+  shown = Attribute(attribute_name: "opacity").factor
+  return (
+    surface: MixShader(shown, TransparentBSDF(), Emission(color: (1.0, 0.86, 0.62), strength: 2.5)))
+}
+
+geometry graph centred(geometry: Geometry) -> Geometry {
+  "The geometry moved so that the middle of its bounding box is at the origin"
+  box = BoundingBox(RealizeInstances(geometry), use_radius: false)
+  return TransformGeometry(geometry, translation: (box.min + box.max) * -0.5)
+}
+
+geometry graph title_sequence() -> Geometry {
+  "A title whose letters fall into place in a random order: from above, turned, three times their size and transparent"
+  progress = Clamp(value: (SceneTime().frame - 6.0) / 30.0)
+  chars = text_characters(text: "NEON NIGHTS", size: 1.0, character_spacing: 1.15)
+    |> centred()
+  shown = text_reveal(
+    chars,
+    progress: progress,
+    softness: 4.0,
+    by: Character,
+    order: Random,
+    seed: 3)
+  return chars
+    |> animate_characters(
+      amount: 1.0 - shown,
+      offset: (0.0, 0.9, 0.0),
+      rotation: -0.7,
+      scale: 3.0,
+      opacity: 0.0)
+    |> text_mesh()
+    |> SetMaterial(material: Title)
+}

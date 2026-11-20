@@ -1,0 +1,27 @@
+// @module promo_cut_step3
+// @title The promo cut, step 3: clock, iris and radial wipes
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+use mask2d (circle_mask)
+use merge (keymix, over)
+use transitions
+
+compositor graph title_card() -> Color {
+  "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
+  title = Image(image: "promo-cut-plate-c.png").image
+  heart = circle_mask(title, 0.1, 1.1).mask
+  return over(title, keymix((0.35, 0.02, 0.25, 1.0), (0.01, 0.01, 0.06, 1.0), heart))
+}
+
+compositor graph promo_cut() -> Color {
+  "The podium to the hills by a clock wipe, to the title by an iris, back to the podium by a radial wipe both ways: a cut every 24 frames"
+  a = Image(image: "promo-cut-plate-a.png").image
+  b = Image(image: "promo-cut-plate-b.png").image
+  c = title_card()
+  ab = clock_wipe(a, b, frame_progress(7.0, 16.0, true), softness: 0.02).image
+  bc = iris_wipe(ab, c, frame_progress(31.0, 16.0, true), softness: 0.03).image
+  return radial_wipe(bc, a, frame_progress(55.0, 16.0, true), direction: Both, softness: 0.02).image
+}

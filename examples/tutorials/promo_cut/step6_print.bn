@@ -1,0 +1,28 @@
+// @module promo_cut_step6
+// @title The promo cut, step 6: posterize and halftone
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+use grade (exposure_stops, grade)
+use merge (keymix)
+use stylize (halftone, posterize)
+use transitions (frame_progress, linear_wipe)
+
+compositor graph comic(image: Color) -> Color {
+  "The image printed as a comic: its colours in four levels as the eye sees them, dots of ink in its shadows"
+  ink = (0.03, 0.01, 0.06, 1.0)
+  seen = grade(image, gamma: (2.2, 2.2, 2.2))
+  flat = seen
+    |> posterize(4)
+    |> grade(gamma: (0.4545, 0.4545, 0.4545))
+  dots = halftone(exposure_stops(seen, 1.0), cell: 7.0, ink: ink).mask
+  return keymix(ink, flat, dots * 0.85)
+}
+
+compositor graph promo_cut() -> Color {
+  "The hills printed as a comic, developed by a wipe from the left from frame 13 to frame 37"
+  b = Image(image: "promo-cut-plate-b.png").image
+  return linear_wipe(comic(b), b, frame_progress(13.0, 24.0, true), softness: 0.05).image
+}

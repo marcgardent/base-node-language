@@ -4,15 +4,21 @@ Usage:
   blender -b --factory-startup --python examples/render_showcases.py -- --still
   blender -b --factory-startup --python examples/render_showcases.py -- --anim
   blender -b --factory-startup --python examples/render_showcases.py -- --anim --only showcase-reaction-diffusion
+  blender -b --factory-startup --python examples/render_showcases.py -- --webp cloners [--frames 72] [--start 1]
 
 A showcase is animated by its `phase` input, from 0 to 1, or, when it is a simulation (`frames`), by the
 frames of the scene, one after the other. The still of a simulation is not made here: its poster is the
 still of its check script (reaction_diffusion_check.py for showcase-reaction-diffusion,
 differential_growth_check.py for showcase-differential-growth).
+
+`--webp <slug>` renders that showcase alone as a looping animated WebP, site/images/<slug>.webp, at
+640×427 (3:2, the cards of site/packs.html): `--frames` frames (72) of its phase from 0 to 1, or, for
+a simulation, the frames from `--start` on (1), the frames before it simulated but not rendered.
 """
 
 import math
 import os
+import shutil
 import subprocess
 import sys
 
@@ -186,6 +192,44 @@ def setup_world_and_lights():
     scene.collection.objects.link(rim)
 
 
+def setup_day():
+    """A soft daylight sky and a warm sun from the south-west, 32 degrees high: for the showcases
+    that say sky=day"""
+    from mathutils import Vector
+
+    world = bpy.data.worlds.new("DayWorld")
+    world.use_nodes = True
+    nt = world.node_tree
+    bg = nt.nodes["Background"]
+    bg.inputs["Strength"].default_value = 0.12
+    sky = nt.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = "MULTIPLE_SCATTERING"
+    sky.sun_disc = False
+    sky.sun_elevation = math.radians(32)
+    sky.sun_rotation = math.radians(235)
+    sky.air_density = 1.4
+    sky.aerosol_density = 2.0
+    richer = nt.nodes.new("ShaderNodeHueSaturation")
+    richer.inputs["Saturation"].default_value = 1.6
+    nt.links.new(sky.outputs["Color"], richer.inputs["Color"])
+    nt.links.new(richer.outputs["Color"], bg.inputs["Color"])
+
+    sun_data = bpy.data.lights.new("DaySun", "SUN")
+    sun_data.energy = 3.2
+    sun_data.angle = math.radians(4.0)
+    sun_data.color = (1.0, 0.88, 0.72)
+    sun = bpy.data.objects.new("DaySun", sun_data)
+    elevation, azimuth = math.radians(32), math.radians(235)
+    towards = -Vector((
+        math.cos(elevation) * math.cos(azimuth),
+        math.cos(elevation) * math.sin(azimuth),
+        math.sin(elevation),
+    ))
+    sun.rotation_euler = towards.to_track_quat("-Z", "Y").to_euler()
+    bpy.context.scene.collection.objects.link(sun)
+    return world, [sun]
+
+
 def make_camera(name, location, rotation_deg, lens=48, ortho_scale=None):
     cam_data = bpy.data.cameras.new(name)
     if ortho_scale:
@@ -234,11 +278,13 @@ geometry graph "growing coral"() -> Geometry {
 
 def find_showcases():
     """Every examples/*.bn whose head has a line `// @showcase camera=x,y,z rotation=x,y,z lens=mm
-    [frames]`, by file name: found by that line, so that adding a showcase edits nothing here.
+    [sky=day] [frames]`, by file name: found by that line, so that adding a showcase edits nothing
+    here.
 
     Its slug, the name of its pictures, is <module with - for _> for examples/<module>_showcase.bn
     and showcase-<name with - for _> for another; it is rendered through its last geometry graph
-    (SIMULATIONS adds one to a simulation); `frames` animates it by the frames of the scene.
+    (SIMULATIONS adds one to a simulation); `frames` animates it by the frames of the scene;
+    `sky=day` lights it by a daylight sky and sun instead of the dark studio.
     """
     from base_node_ext.lang import parse
     from base_node_ext.lang.header import directives
@@ -267,8 +313,18 @@ def find_showcases():
             "cam_loc": tuple(float(v) for v in say["camera"].split(",")),
             "cam_rot": tuple(float(v) for v in say["rotation"].split(",")),
             "lens": float(say["lens"]),
+            "sky": say.get("sky", ""),
         })
     return found
+
+
+def encode_webp(frames_dir, out_path, fps=24, quality=80):
+    """The frames_dir/frame_%04d.png as an animated WebP that loops for ever (encode_webp.py)."""
+    subprocess.run(
+        ["python3", "-I", os.path.join(ROOT, "examples", "encode_webp.py"), frames_dir, out_path,
+         str(fps), str(quality)],
+        check=True,
+    )
 
 
 def stdlib_used(paths):
@@ -289,12 +345,29 @@ def stdlib_used(paths):
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else ["--still"]
-    mode = "anim" if "--anim" in args else "still"
+    mode = "webp" if "--webp" in args else "anim" if "--anim" in args else "still"
+
+    def option(name, default):
+        return args[args.index(name) + 1] if name in args else default
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     ext_mod.register()
     setup_materials()
     setup_world_and_lights()
+    night = bpy.context.scene.world
+    studio_lights = [o for o in bpy.context.scene.objects if o.type == "LIGHT"]
+    day, day_lights = setup_day()
+
+    def light_for(cfg, cam):
+        """The day sky and sun for a showcase that says sky=day, the studio's otherwise"""
+        daytime = cfg["sky"] == "day"
+        bpy.context.scene.world = day if daytime else night
+        if daytime:
+            cam.data.clip_end = 30000.0
+        for light in studio_lights:
+            light.hide_render = daytime
+        for light in day_lights:
+            light.hide_render = not daytime
 
     showcases = find_showcases()
     # The stdlib modules they use, into bpy.data.texts so that `use ...` resolves them
@@ -302,9 +375,11 @@ def main():
         with open(os.path.join(ROOT, "stdlib", f"{module}.bn"), encoding="utf-8") as f:
             bpy.data.texts.new(f"{module}.bn").write(f.read())
 
-    if "--only" in args:
-        only = args[args.index("--only") + 1]
+    only = option("--webp", option("--only", None))
+    if only:
         showcases = [cfg for cfg in showcases if cfg["slug"] == only]
+        if not showcases:
+            sys.exit(f"no showcase {only}")
 
     scene = bpy.context.scene
     scene.render.engine = "BLENDER_EEVEE"
@@ -341,13 +416,34 @@ def main():
         )
         built_items.append((cfg, coll, obj, mod, cam))
 
-    if mode == "still":
+    if mode == "webp":
+        scene.render.resolution_x, scene.render.resolution_y = 640, 427
+        num_frames, start = int(option("--frames", 72)), int(option("--start", 1))
+        cfg, coll, obj, mod, cam = built_items[0]
+        scene.camera = cam
+        tmp_dir = os.path.join("/tmp", f"bn_webp_{cfg['slug']}")
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        os.makedirs(tmp_dir)
+        if cfg.get("frames"):
+            for frame in range(1, start):
+                scene.frame_set(frame)
+        for frame_idx in range(num_frames):
+            if cfg.get("frames"):
+                scene.frame_set(start + frame_idx)
+            else:
+                set_phase(mod, frame_idx / float(num_frames))
+            bpy.context.view_layer.update()
+            scene.render.filepath = os.path.join(tmp_dir, f"frame_{frame_idx:04d}.png")
+            bpy.ops.render.render(write_still=True)
+        encode_webp(tmp_dir, os.path.join(OUT_DIR, f"{cfg['slug']}.webp"))
+    elif mode == "still":
         for cfg, coll, obj, mod, cam in built_items:
             if cfg.get("frames"):
                 continue
             for _, c, _, _, _ in built_items:
                 c.hide_render = c is not coll
             scene.camera = cam
+            light_for(cfg, cam)
             set_phase(mod, 0.22)
             bpy.context.view_layer.update()
             out_png = os.path.join(OUT_DIR, f"{cfg['slug']}.png")
@@ -361,6 +457,7 @@ def main():
             for _, c, _, _, _ in built_items:
                 c.hide_render = c is not coll
             scene.camera = cam
+            light_for(cfg, cam)
             tmp_dir = os.path.join("/tmp", f"bn_{cfg['slug']}")
             os.makedirs(tmp_dir, exist_ok=True)
             for frame_idx in range(num_frames):

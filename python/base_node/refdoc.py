@@ -22,7 +22,7 @@ from .parser import parse
 from .schema import key
 from .targets import catalog
 
-REPO = "https://github.com/marcgardent/base-node-library"
+REPO = "https://github.com/marcgardent/base-node-language"
 KINDS = ("geometry", "shader", "compositor")
 
 # The spec's pages, by the name of their source

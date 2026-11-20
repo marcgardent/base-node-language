@@ -369,11 +369,12 @@ pub fn layout(tree: &Tree) -> Layout {
         out
     };
     // Nothing covers a frame, its title above all, but what it holds: what
-    // overlaps it moves down, or the frame does when it is lower.
+    // overlaps it moves down, or the frame does when it is lower. Each pass moves one thing:
+    // a graph of many frames, as the game art showcase, needs a couple of hundred.
     let chain = &chain;
     let members =
         |f: usize| -> Vec<usize> { (0..count).filter(|&n| chain[n].contains(&f)).collect() };
-    for _ in 0..64 {
+    for _ in 0..1024 {
         let frames = frames_of(&rects);
         let mut push: Option<(Vec<usize>, f64)> = None;
         'search: for f in 0..frame_count {

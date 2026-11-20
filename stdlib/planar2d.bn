@@ -34,12 +34,19 @@ geometry graph "shape builder pick"(
     pick_radius: Float = 0.5 in 0.01..10.0
 ) -> Geometry {
   "Selects and generates planar face regions containing or nearest to the provided seed points"
+  // Each seed picks the region it is in, else the nearest one within pick_radius; the others go
   faces = FillCurve(curves)
-  seed_pos = SampleIndex(seed_points, Position(), 0, data_type: FLOAT_VECTOR)
-  d = distance(Position(), seed_pos)
-  in_region = d < pick_radius
-  offset = Switch(in_region, (0.0, 0.0, 0.0), (0.0, 0.0, -10000.0))
-  return SetPosition(faces, offset: offset)
+  region = MeshIsland().island_index
+  near = GeometryProximity(faces, sample_position: Position()).distance < pick_radius
+  seeds = DeleteGeometry(seed_points, selection: not near)
+  picked = SampleNearestSurface(faces, value: region, sample_position: Position(), data_type: INT)
+  kept = GeometryProximity(
+    seeds,
+    group_id: picked,
+    sample_position: Position(),
+    sample_group_id: region,
+    target_element: POINTS).is_valid
+  return DeleteGeometry(faces, selection: not kept)
 }
 
 geometry graph "contour outer boundary"(

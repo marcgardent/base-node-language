@@ -1,4 +1,4 @@
-# base-node-library
+# Base Node Language
 
 [![Geometry Nodes regression](site/badges/regression-geometry.svg)](base-node-for-blender/tests/libraries/README.md)
 [![Shader regression](site/badges/regression-shader.svg)](base-node-for-blender/tests/libraries/README.md#shader-groups-and-materials)
@@ -196,7 +196,7 @@ Install from GitHub or a local checkout:
 
 ```bash
 # From GitHub (pip / uv)
-pip install "base-node @ git+https://github.com/marcgardent/base-node-library.git#subdirectory=python"
+pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"
 
 # From a local clone
 pip install -e ./python
@@ -206,7 +206,7 @@ Or in `pyproject.toml`:
 
 ```toml
 dependencies = [
-  "base-node @ git+https://github.com/marcgardent/base-node-library.git#subdirectory=python",
+  "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python",
 ]
 ```
 
@@ -246,16 +246,16 @@ Add to `Cargo.toml` (Cargo discovers `rust/Cargo.toml` in the repository automat
 ```toml
 [dependencies]
 # From GitHub
-base-node = { git = "https://github.com/marcgardent/base-node-library.git", branch = "main" }
+base-node = { git = "https://github.com/marcgardent/base-node-language.git", branch = "main" }
 
 # Or from a local checkout
-# base-node = { path = "../base-node-library/rust" }
+# base-node = { path = "../base-node-language/rust" }
 ```
 
 Or via `cargo add`:
 
 ```bash
-cargo add --git https://github.com/marcgardent/base-node-library.git base-node
+cargo add --git https://github.com/marcgardent/base-node-language.git base-node
 ```
 
 Library API:

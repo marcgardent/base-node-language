@@ -1,0 +1,27 @@
+// @module promo_cut_step5
+// @title The promo cut, step 5: push
+// @author Base Node tutorials
+// @license MIT OR Apache-2.0
+// @target blender-compositor
+// @offer groups
+
+use mask2d (circle_mask)
+use merge (keymix, over)
+use transitions
+
+compositor graph title_card() -> Color {
+  "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
+  title = Image(image: "promo-cut-plate-c.png").image
+  heart = circle_mask(title, 0.1, 1.1).mask
+  return over(title, keymix((0.35, 0.02, 0.25, 1.0), (0.01, 0.01, 0.06, 1.0), heart))
+}
+
+compositor graph promo_cut() -> Color {
+  "The hills push the podium out to the left, the title pushes the hills up, the podium pushes the title out to the right: 12 frames each"
+  a = Image(image: "promo-cut-plate-a.png").image
+  b = Image(image: "promo-cut-plate-b.png").image
+  c = title_card()
+  ab = push(a, b, frame_progress(11.0, 12.0, true), direction: Left).image
+  bc = push(ab, c, frame_progress(35.0, 12.0, true), direction: Up).image
+  return push(bc, a, frame_progress(59.0, 12.0, true), direction: Right).image
+}

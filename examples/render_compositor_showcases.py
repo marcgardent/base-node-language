@@ -9,12 +9,20 @@ site/images/<module>.png. The showcases are found by that pattern, none listed h
 With names (mask2d, merge, grade, …: the <module> of the file), only those are rendered.
 A name's underscores are hyphens in its picture's name; `// @showcase scene=… size=WxH` in the head
 of a showcase gives it another scene or size.
+
+    blender --background --factory-startup --python examples/render_compositor_showcases.py -- --webp transitions [--frames 96]
+
+renders the last compositor graph of that showcase with a `phase` input as a looping animated WebP,
+site/images/<name>.webp, at 640×427 (3:2, the cards of site/packs.html): its phase from 0 to 1 over
+the frames.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import math
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -159,8 +167,11 @@ def showcases():
     return found
 
 
-def render(name, showcase):
+def render(name, showcase, frames=0):
+    """Its picture, or with frames its animated WebP by the phase of its reel."""
     filename, setup, (width, height) = showcase
+    if frames:
+        width, height = 640, 427
     bpy.ops.wm.read_factory_settings(use_empty=True)
     base_node.register()
     from base_node.host import build_source
@@ -180,18 +191,79 @@ def render(name, showcase):
 
     path = ROOT / "examples" / filename
     trees = build_source(path.read_text(encoding="utf-8"), str(path))
-    scene.compositing_node_group = trees[-1]
     image = name.replace("_", "-")
-    scene.render.filepath = str(ROOT / "site" / "images" / f"{image}.png")
-    bpy.ops.render.render(write_still=True)
+    if frames:
+        animate(scene, trees, image, frames)
+    else:
+        scene.compositing_node_group = trees[-1]
+        scene.render.filepath = str(ROOT / "site" / "images" / f"{image}.png")
+        bpy.ops.render.render(write_still=True)
+        print(f"rendered {filename} -> site/images/{image}.png")
     base_node.unregister()
-    print(f"rendered {filename} -> site/images/{image}.png")
+
+
+def phase_input(tree):
+    return next((item for item in tree.interface.items_tree if item.item_type == "SOCKET"
+                 and item.in_out == "INPUT" and item.name == "phase"), None)
+
+
+def use_gpu(scene):
+    """Cycles on the GPU when there is one: many frames to render."""
+    cycles = bpy.context.preferences.addons["cycles"].preferences
+    for kind in ("OPTIX", "CUDA", "HIP", "METAL", "ONEAPI"):
+        try:
+            cycles.compute_device_type = kind
+        except TypeError:
+            continue
+        cycles.get_devices()
+        gpus = [d for d in cycles.devices if d.type == kind]
+        if gpus:
+            for d in cycles.devices:
+                d.use = d.type == kind
+            scene.cycles.device = "GPU"
+            return
+
+
+def animate(scene, trees, image, frames):
+    """The last tree with a phase input, its phase from 0 to 1 over the frames, as site/images/<image>.webp."""
+    reel = [t for t in trees if t.bl_idname == "CompositorNodeTree" and phase_input(t)]
+    if not reel:
+        sys.exit(f"no compositor graph with a phase input in {image}")
+    # The scene's compositor feeds a group its image alone: the phase comes from a Value node
+    wrapper = bpy.data.node_groups.new("reel at phase", "CompositorNodeTree")
+    wrapper.interface.new_socket("Image", in_out="INPUT", socket_type="NodeSocketColor")
+    wrapper.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    group = wrapper.nodes.new("CompositorNodeGroup")
+    group.node_tree = reel[-1]
+    value = wrapper.nodes.new("ShaderNodeValue")
+    wrapper.links.new(wrapper.nodes.new("NodeGroupInput").outputs[0], group.inputs[0])
+    wrapper.links.new(value.outputs[0], group.inputs["phase"])
+    wrapper.links.new(group.outputs[0], wrapper.nodes.new("NodeGroupOutput").inputs[0])
+    scene.compositing_node_group = wrapper
+    # 3:2 shows more above and below than 16:9: back the camera a little and look down a little more
+    scene.camera.location.y -= 1.2
+    scene.camera.rotation_euler.x -= math.radians(4)
+    use_gpu(scene)
+    tmp = Path("/tmp") / f"bn_webp_{image}"
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    for i in range(frames):
+        value.outputs[0].default_value = i / frames
+        scene.render.filepath = str(tmp / f"frame_{i:04d}.png")
+        bpy.ops.render.render(write_still=True)
+    out = ROOT / "site" / "images" / f"{image}.webp"
+    subprocess.run(["python3", "-I", str(ROOT / "examples" / "encode_webp.py"), str(tmp), str(out)], check=True)
+    print(f"encoded site/images/{image}.webp, {frames} frames, {out.stat().st_size} bytes")
 
 
 def main():
     found = showcases()
-    names = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else list(found)
-    for name in names:
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if "--webp" in args:
+        frames = int(args[args.index("--frames") + 1]) if "--frames" in args else 96
+        render(args[args.index("--webp") + 1], found[args[args.index("--webp") + 1]], frames)
+        return
+    for name in args or list(found):
         render(name, found[name])
 
 

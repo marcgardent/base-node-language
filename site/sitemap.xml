@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated from site/site.toml. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://marcgardent.github.io/base-node-language/</loc></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/developers.html</loc></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/state-of-the-art-autumn-2026.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/reference/index.html</loc></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/tutorials/index.html</loc></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/tutorials/lunar-ground.html</loc></url>
+  <url><loc>https://marcgardent.github.io/base-node-language/tutorials/mini-moon.html</loc></url>
+</urlset>

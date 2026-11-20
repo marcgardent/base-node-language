@@ -156,10 +156,10 @@ All tools and packages maintained within the repository share a synchronized ver
 
 | Component | Path | Version Scheme |
 |---|---|---|
-| Python reference package | [`python/pyproject.toml`](file:///home/marcgardent/base-node-library/python/pyproject.toml) | SemVer (`0.13.1`) |
-| Rust WASM crate | [`rust/Cargo.toml`](file:///home/marcgardent/base-node-library/rust/Cargo.toml) | SemVer (`0.13.1`) |
-| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](file:///home/marcgardent/base-node-library/base-node-for-blender/blender_manifest.toml) | SemVer (`0.13.1`) |
-| Extension Repository Index | [`site/extensions/index.json`](file:///home/marcgardent/base-node-library/site/extensions/index.json) | SemVer (`0.13.1`) |
+| Python reference package | [`python/pyproject.toml`](file:///home/marcgardent/base-node-language/python/pyproject.toml) | SemVer (`0.13.1`) |
+| Rust WASM crate | [`rust/Cargo.toml`](file:///home/marcgardent/base-node-language/rust/Cargo.toml) | SemVer (`0.13.1`) |
+| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](file:///home/marcgardent/base-node-language/base-node-for-blender/blender_manifest.toml) | SemVer (`0.13.1`) |
+| Extension Repository Index | [`site/extensions/index.json`](file:///home/marcgardent/base-node-language/site/extensions/index.json) | SemVer (`0.13.1`) |
 
 ### CLI Version Reporting
 

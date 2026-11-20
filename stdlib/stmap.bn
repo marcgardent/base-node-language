@@ -39,8 +39,13 @@ compositor graph "stmap apply"(
 }
 
 compositor graph canvas(image: Color, width: Int = 1920, height: Int = 1080) -> Color {
-  "A canvas of this size, in pixels: the image stretched to it, its pixels made by Pixelate, as Scale alone only sets how the image is drawn"
-  return Pixelate(Scale(image, type: Absolute, x: width, y: height), size: 1)
+  "A canvas of this size, in pixels: the image stretched to it, its pixels made by Pixelate, as Scale alone only sets how the image is drawn, then cropped to the size, as Pixelate rounds an odd one up to even"
+  return Crop(
+    Pixelate(Scale(image, type: Absolute, x: width, y: height), size: 1),
+    x: 0,
+    y: 0,
+    width: width,
+    height: height)
 }
 
 compositor graph "aspect of"(image: Color) -> Float {

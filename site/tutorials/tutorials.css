@@ -161,6 +161,7 @@ th { background: var(--panel); font-family: var(--mono); font-weight: 600; font-
 .card:hover { border-color: var(--accent); text-decoration: none; }
 .card img { width: 100%; height: auto; border-radius: 4px; display: block; }
 .card h3 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.card .pack { margin-left: 0.4rem; padding: 0.05rem 0.4rem; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font-size: 0.75rem; font-weight: 500; vertical-align: middle; }
 .card p { margin: 0.3rem 0; color: var(--muted); font-size: 0.9rem; }
 @media (max-width: 560px) {
   .card { grid-template-columns: 1fr; }
