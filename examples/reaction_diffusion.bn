@@ -53,8 +53,7 @@ geometry graph "gray scott step"(
 geometry graph "gray scott seed"(grid: Geometry, seed: Int) -> Geometry {
   blob = NoiseTexture(vector: Position(), w: seed, scale: 2.5, noise_dimensions: "4D").factor > 0.68
   noise = RandomValue(0.0, 0.01, seed: seed)
-  start = Switch(blob, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0), input_type: VECTOR)
-    + CombineXYZ(-noise, noise)
+  start = (blob ? (0.5, 0.5, 0.0) : (1.0, 0.0, 0.0)) + CombineXYZ(-noise, noise)
   return StoreNamedAttribute(grid, name: "gray scott", value: start, data_type: FLOAT_VECTOR)
 }
 

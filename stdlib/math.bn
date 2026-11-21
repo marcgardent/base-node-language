@@ -22,7 +22,7 @@ geometry graph gain(x: Float, contrast: Float = 0.25 in 0.001..0.999) -> Float {
   "S-curve around 0.5 (contrast < 0.5) or its inverse (> 0.5); 0.5 has no effect"
   low = bias(x * 2.0, contrast) * 0.5
   high = 1.0 - bias(2.0 - x * 2.0, contrast) * 0.5
-  return Switch(x < 0.5, high, low)
+  return x < 0.5 ? low : high
 }
 
 geometry graph "ease in"(t: Float, power: Float = 2.0 in 0.0..) -> Float {
@@ -37,7 +37,7 @@ geometry graph "ease out"(t: Float, power: Float = 2.0 in 0.0..) -> Float {
 
 geometry graph "ease in out"(t: Float, power: Float = 2.0 in 0.0..) -> Float {
   "Starts and ends slowly, passes through 0.5 at midpoint"
-  return Switch(t < 0.5, 1.0 - pow(2.0 - t * 2.0, power) * 0.5, pow(t * 2.0, power) * 0.5)
+  return t < 0.5 ? pow(t * 2.0, power) * 0.5 : 1.0 - pow(2.0 - t * 2.0, power) * 0.5
 }
 
 geometry graph impulse(x: Float, stiffness: Float = 4.0) -> Float {
@@ -71,13 +71,11 @@ geometry graph bounce(t: Float) -> Float {
   u = t - 0.5454545
   v = t - 0.8181818
   w = t - 0.9545454
-  return Switch(
-    t < 0.3636364,
-    Switch(
-      t < 0.7272727,
-      Switch(t < 0.9090909, w * w * 7.5625 + 0.984375, v * v * 7.5625 + 0.9375),
-      u * u * 7.5625 + 0.75),
-    t * t * 7.5625)
+  return t < 0.3636364
+    ? t * t * 7.5625
+    : t < 0.7272727
+      ? u * u * 7.5625 + 0.75
+      : t < 0.9090909 ? v * v * 7.5625 + 0.9375 : w * w * 7.5625 + 0.984375
 }
 
 geometry graph elastic(t: Float) -> Float {
@@ -117,12 +115,7 @@ geometry graph "project on plane"(v: Vector, normal: Vector = (0.0, 0.0, 1.0)) -
 
 geometry graph perpendicular(v: Vector) -> Vector {
   "Unit vector perpendicular to v"
-  return normalize(
-    Switch(
-      abs(v.x) > abs(v.z),
-      CombineXYZ(y: -v.z, z: v.y),
-      CombineXYZ(-v.y, v.x),
-      input_type: VECTOR))
+  return normalize(abs(v.x) > abs(v.z) ? CombineXYZ(-v.y, v.x) : CombineXYZ(y: -v.z, z: v.y))
 }
 
 geometry graph "max component"(v: Vector) -> Float {
@@ -235,13 +228,11 @@ geometry graph "sdf cone"(
   "Cone frustum along Z of height 2 × half height; top radius 0 gives a sharp cone"
   q = CombineXYZ(length(p * (1.0, 1.0, 0.0)), p.z)
   // Closest cap disc, top or bottom, then lateral flank
-  disc = CombineXYZ(
-    q.x - min(q.x, Switch(q.y < 0.0, top_radius, bottom_radius)),
-    abs(q.y) - half_height)
+  disc = CombineXYZ(q.x - min(q.x, q.y < 0.0 ? bottom_radius : top_radius), abs(q.y) - half_height)
   k1 = CombineXYZ(top_radius, half_height)
   k2 = CombineXYZ(top_radius - bottom_radius, half_height * 2.0)
   flank = q - k1 + k2 * Clamp(((k1 - q) ⋅ k2) / (k2 ⋅ k2))
-  sgn = Switch(flank.x < 0.0 and disc.y < 0.0, 1.0, -1.0)
+  sgn = flank.x < 0.0 and disc.y < 0.0 ? -1.0 : 1.0
   return sgn * sqrt(min(disc ⋅ disc, flank ⋅ flank))
 }
 
@@ -269,7 +260,7 @@ geometry graph "sdf rectangle"(p: Vector = Position(), "half size": Vector = (1.
 
 geometry graph "smooth subtraction"(a: Float, b: Float, smoothness: Float = 0.1 in 0.0..) -> Float {
   "Carves b out of a with rounded blend of given smoothness"
-  return Math(a, -b, smoothness, operation: SMOOTH_MAX)
+  return smooth_max(a, -b, smoothness)
 }
 
 geometry graph shell(distance: Float, thickness: Float = 0.1 in 0.0..) -> Float {

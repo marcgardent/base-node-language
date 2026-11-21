@@ -62,8 +62,8 @@ geometry graph "sdf equilateral triangle 2d"(
   cond = px0 + 1.732051 * py0 > 0.0
   ppx = (px0 - 1.732051 * py0) * 0.5
   ppy = (-1.732051 * px0 - py0) * 0.5
-  px1 = Switch(cond, px0, ppx)
-  py1 = Switch(cond, py0, ppy)
+  px1 = cond ? ppx : px0
+  py1 = cond ? ppy : py0
   px2 = px1 - Clamp(px1, -2.0 * radius, 0.0)
   return -length(CombineXYZ(px2, py1)) * sign(py1)
 }
@@ -130,7 +130,7 @@ geometry graph "sdf arc 2d"(
   p0 = CombineXYZ(abs(p.x), p.y)
   cap = length(p0 - sc * radius)
   arc = abs(length(p0) - radius)
-  d = Switch(sc.y * p0.x > sc.x * p0.y, arc, cap)
+  d = sc.y * p0.x > sc.x * p0.y ? cap : arc
   return d - thickness * 0.5
 }
 
@@ -157,13 +157,13 @@ geometry graph "sdf cross 2d"(
   "XY-plane cross with arms of given length and thickness (2D: z ignored)"
   p0 = CombineXYZ(abs(p.x), abs(p.y))
   cond = p0.y > p0.x
-  p1 = CombineXYZ(Switch(cond, p0.x, p0.y), Switch(cond, p0.y, p0.x))
+  p1 = CombineXYZ(cond ? p0.y : p0.x, cond ? p0.x : p0.y)
   b = CombineXYZ(length, thickness)
   q = p1 - b
   k = max(q.y, q.x)
   cond_k = k > 0.0
-  wx = Switch(cond_k, b.y - p1.x, q.x)
-  wy = Switch(cond_k, -k, q.y)
+  wx = cond_k ? q.x : b.y - p1.x
+  wy = cond_k ? q.y : -k
   w = max(CombineXYZ(wx, wy), 0.0)
   return sign(k) * length(w) + radius
 }

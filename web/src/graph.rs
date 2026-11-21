@@ -165,6 +165,10 @@ struct Builder<'a> {
     places: Vec<(usize, bool, Pending)>,
     /// The node of the assignment of each line.
     assigned: HashMap<usize, usize>,
+    /// A shader tree has no Compare node: a comparison is Math there.
+    shader: bool,
+    /// A geometry tree's Switch chooses for each element: a ternary is one there, a Mix elsewhere.
+    geometry: bool,
 }
 
 pub fn trees(file: &File) -> Vec<Tree> {
@@ -187,6 +191,8 @@ fn tree<'a>(graph: &'a Graph, graphs: &HashMap<String, &'a Graph>) -> Tree {
         separate: HashMap::new(),
         places: vec![(graph.line, false, Pending::Done(Holder::Tree))],
         assigned: HashMap::new(),
+        shader: graph.kind == "shader",
+        geometry: graph.kind == "geometry",
     };
     let params = flatten(&graph.tree("INPUT"));
     if !params.is_empty() {
@@ -652,7 +658,36 @@ impl<'a> Builder<'a> {
                 let v = self.expr(&n.value);
                 self.formula("not", n.line, vec![v])
             }
+            Expr::Cond(c) => self.ternary(c),
         }
+    }
+
+    /// The node `cond ? then : orelse` writes, drawn as its call is: a Switch in a geometry tree;
+    /// elsewhere a Mix by the condition, a Mix Shader when a branch is a shader.
+    fn ternary(&mut self, c: &'a base_node::ast::Cond) -> Val {
+        // Before its values, as a call
+        let n = self.push(Node::new(String::new(), Category::Converter, c.line));
+        let cond = self.expr(&c.cond);
+        let then = self.expr(&c.then);
+        let orelse = self.expr(&c.orelse);
+        // A node of shaders gives one, when its outputs are not known
+        let shader = [&orelse, &then].iter().any(|v| {
+            self.type_of(v).as_deref() == Some("Shader")
+                || matches!(v, Val::Node(m) if self.nodes[*m].category == Category::Shader)
+        });
+        let (name, keys) = if self.geometry {
+            ("Switch", ["switch", "false_", "true_"])
+        } else if shader {
+            ("MixShader", ["factor", "Shader", "Shader"])
+        } else {
+            ("Mix", ["factor", "a", "b"])
+        };
+        self.nodes[n].title = humanize(name);
+        self.nodes[n].category = category(name);
+        for (key, v) in keys.iter().zip([cond, orelse, then]) {
+            self.add_input(n, socket_label(key), v);
+        }
+        Val::Node(n)
     }
 
     /// The type of what `v` gives, when known.
@@ -671,6 +706,20 @@ impl<'a> Builder<'a> {
     fn formula(&mut self, op: &str, line: usize, mut args: Vec<Val>) -> Val {
         let types: Vec<Option<String>> = args.iter().map(|a| self.type_of(a)).collect();
         let types: Vec<Option<&str>> = types.iter().map(Option::as_deref).collect();
+        if let Some((operation, negated)) = sugar::math_compare(op).filter(|_| self.shader) {
+            // A Float 0 or 1; `>=`, `<=` and `!=` are the opposite one taken from 1.
+            let mut args: Vec<(Option<String>, Val)> =
+                args.into_iter().map(|v| (None, v)).collect();
+            if operation == "COMPARE" {
+                args.push((None, Val::Lit(sugar::EPSILON.to_owned(), Some("Float"))));
+            }
+            let v = self.math_node("Math", operation, None, line, args);
+            if !negated {
+                return v;
+            }
+            let one = Val::Lit("1.0".to_owned(), Some("Float"));
+            return self.math_node("Math", "SUBTRACT", None, line, vec![(None, one), (None, v)]);
+        }
         let Some(f) = sugar::choose(op, &types) else {
             let n = self.push(Node::new(op, Category::Converter, line));
             for v in args {
@@ -826,6 +875,11 @@ impl<'a> Builder<'a> {
                 Some(name) => {
                     if local.is_some() {
                         name.clone()
+                    } else if matches!(c.name.as_str(), "MixShader" | "AddShader")
+                        && matches!(name.as_str(), "a" | "b")
+                    {
+                        // The keys text gives the two Shader inputs
+                        "Shader".to_owned()
                     } else {
                         socket_label(name)
                     }
@@ -1271,6 +1325,75 @@ mod tests {
         let names: Vec<&str> = math.inputs.iter().map(|i| i.name.as_str()).collect();
         assert_eq!(names, ["Value", "Value"]);
         assert_eq!(math.outputs[0].name, "Value");
+    }
+
+    #[test]
+    fn smooth_min_and_the_keys_of_mix_shader() {
+        let t = &build(
+            "geometry graph g(a: Float, b: Float) -> Float {\n  return smooth_min(a, b, 0.25)\n}\n",
+        )[0];
+        let math = &t.nodes[1];
+        assert_eq!(math.title, "Smooth Minimum");
+        let names: Vec<&str> = math.inputs.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["Value", "Value", "Distance"]);
+        let t = &build(
+            "shader graph g(f: Float) -> Shader {\n  return MixShader(factor: f, a: DiffuseBSDF(), b: Emission())\n}\n",
+        )[0];
+        let mix = t.nodes.iter().find(|n| n.title == "Mix Shader").unwrap();
+        let names: Vec<&str> = mix.inputs.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["Factor", "Shader", "Shader"]);
+    }
+
+    #[test]
+    fn a_comparison_is_math_in_a_shader_tree() {
+        let t = &build("shader graph g(a: Float, b: Float) -> Float {\n  return a > b\n}\n")[0];
+        let titles: Vec<&str> = t.nodes[1..].iter().map(|n| n.title.as_str()).collect();
+        assert_eq!(titles, ["Greater Than", "Group Output"]);
+        assert_eq!(t.nodes[1].outputs[0].ty.as_deref(), Some("Float"));
+        let t = &build("shader graph g(a: Float, b: Float) -> Float {\n  return a != b\n}\n")[0];
+        let titles: Vec<&str> = t.nodes[1..].iter().map(|n| n.title.as_str()).collect();
+        assert_eq!(titles, ["Compare", "Subtract", "Group Output"]);
+        let names: Vec<&str> = t.nodes[1].inputs.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["Value", "Value", "Epsilon"]);
+        assert_eq!(t.nodes[1].inputs[2].value.as_deref(), Some("0.001"));
+        assert_eq!(t.nodes[2].inputs[0].value.as_deref(), Some("1.0"));
+        assert!(t.nodes[2].inputs[1].link.is_some());
+    }
+
+    #[test]
+    fn a_ternary_draws_the_node_it_writes() {
+        let t =
+            &build("geometry graph g(on: Bool, a: Float) -> Float {\n  return on ? a : 0.0\n}\n")
+                [0];
+        let explicit = &build(
+            "geometry graph g(on: Bool, a: Float) -> Float {\n  return Switch(switch: on, false_: 0.0, true_: a)\n}\n",
+        )[0];
+        assert_eq!(t.nodes[1].title, "Switch");
+        assert_eq!(drawn(t), drawn(explicit));
+        assert_eq!(t.nodes[1].inputs[1].value.as_deref(), Some("0.0"));
+        // Where a Switch takes one value for a whole image, a Mix by the condition
+        for kind in ["shader", "compositor"] {
+            let t = &build(&format!(
+                "{kind} graph g(a: Float, b: Float) -> Float {{\n  return a > b ? a : b\n}}\n"
+            ))[0];
+            let explicit = &build(&format!(
+                "{kind} graph g(a: Float, b: Float) -> Float {{\n  return Mix(factor: a > b, a: b, b: a)\n}}\n"
+            ))[0];
+            assert_eq!(t.nodes[1].title, "Mix");
+            assert_eq!(drawn(t), drawn(explicit));
+        }
+        let t = &build(
+            "shader graph g(a: Float) -> Shader {\n  return a > 0.5 ? DiffuseBSDF() : Emission()\n}\n",
+        )[0];
+        let explicit = &build(
+            "shader graph g(a: Float) -> Shader {\n  return MixShader(factor: a > 0.5, a: Emission(), b: DiffuseBSDF())\n}\n",
+        )[0];
+        let mut titles: Vec<String> = drawn(t).into_iter().map(|d| d.0).collect();
+        let mut wanted: Vec<String> = drawn(explicit).into_iter().map(|d| d.0).collect();
+        titles.sort();
+        wanted.sort();
+        assert_eq!(titles, wanted);
+        assert!(titles.contains(&"Mix Shader".to_owned()));
     }
 
     #[test]

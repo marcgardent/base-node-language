@@ -28,7 +28,7 @@ geometry graph repulsion(fill: Geometry, radius: Float) -> Vector {
   e = EdgeVertices()
   d = distance(e.position_1, e.position_2)
   across = EdgeNeighbors().face_count > 1
-  w = Switch(across, 0.0, max(radius - d, 0.0) / (radius * max(d, 1e-09)))
+  w = across ? max(radius - d, 0.0) / (radius * max(d, 1e-09)) : 0.0
   // On the points, a field of the edges is the mean of their edges: the mean of w, and of
   // w * (p + q), from which the sum of w * (p - q) is drawn at each end
   weight = EvaluateOnDomain(value: w, domain: EDGE)
@@ -82,7 +82,7 @@ geometry graph "growth step"(
     // The cuts of a point are those of the edge to the next one: one at most in a step, so
     // that a curve never has more than twice `max points`
     room = DomainSize(moved, component: CURVE).point_count < max_points
-    cuts = Switch(room and distance(p, after) > max_length, 0, 1, input_type: INT)
+    cuts = room and distance(p, after) > max_length ? 1 : 0
   }
   return SubdivideCurve(moved, cuts: cuts)
 }

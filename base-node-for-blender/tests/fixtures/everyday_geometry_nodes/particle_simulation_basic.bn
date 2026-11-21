@@ -51,11 +51,7 @@ geometry graph ".Particle Rotation"(
     vector_math_11 = vector_math_10 * Angle @ hide
     vector_math_8 = NamedAttribute(name: "rotation_velocity", data_type: FLOAT_VECTOR).attribute
       + vector_math_11 @ hide
-    switch_2 = Switch(
-      switch: set_velocity,
-      false_: vector_math_8,
-      true_: vector_math_11,
-      input_type: VECTOR) @ hide
+    switch_2 = set_velocity ? vector_math_11 : vector_math_8 @ hide
   }
   "rotation" {
     "apply velocity offset" {
@@ -71,11 +67,7 @@ geometry graph ".Particle Rotation"(
           rotate_by: Rotation),
         rotate_by: axis_angle_to_rotation) @ hide
     }
-    switch_3 = Switch(
-      switch: set_rotation,
-      false_: rotate_rotation,
-      true_: Rotation,
-      input_type: ROTATION) @ hide
+    switch_3 = set_rotation ? Rotation : rotate_rotation @ hide
   }
   "Damp" {
     math_4 = pow(1.0 - Damp, delta_time) @ hide
@@ -87,11 +79,7 @@ geometry graph ".Particle Rotation"(
       a: vector_math_9,
       b: vector_math_6,
       data_type: VECTOR) @ hide
-    switch = Switch(
-      switch: boolean_math,
-      false_: vector_math_9,
-      true_: mix,
-      input_type: VECTOR) @ hide
+    switch = boolean_math ? mix : vector_math_9 @ hide
   }
   "rotation velocity" {
     store_named_attribute_2 = StoreNamedAttribute(
@@ -221,11 +209,7 @@ geometry graph "Velocity Step"(
   vector_math_3 = Forces * delta_time @ hide
   vector_math_2 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
     + vector_math_3 @ hide
-  switch = Switch(
-    switch: set_velocity,
-    false_: vector_math_2,
-    true_: Forces,
-    input_type: VECTOR) @ hide
+  switch = set_velocity ? Forces : vector_math_2 @ hide
   vector_math = switch * math @ hide
   vector_math_4 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
     * delta_time @ hide
@@ -380,10 +364,8 @@ geometry graph "Particle Simulation Basic"(
           normal: group_3.normal,
           bounce: Bounce,
           friction: Friction)
-        switch_2 = Switch(
-          switch: DomainSize(realize_instances).face_count,
-          false_: group,
-          true_: group_2._
+        switch_2 = DomainSize(realize_instances).face_count
+          ? group_2._
             |> StoreNamedAttribute(name: "is_hit", value: group_2.is_hit, data_type: BOOLEAN)
             |> StoreNamedAttribute(
               selection: named_attribute.attribute,
@@ -394,8 +376,8 @@ geometry graph "Particle Simulation Basic"(
               selection: boolean_math,
               name: "delete_next_step",
               value: true,
-              data_type: BOOLEAN),
-          input_type: GEOMETRY) @ hide
+              data_type: BOOLEAN)
+          : group @ hide
       }
       "rotation" {
         group_4 = particle_rotation(
@@ -440,23 +422,19 @@ geometry graph "Particle Simulation Basic"(
       + extra_instances
     geometry_to_instance = GeometryToInstance(
       UVSphere(segments: 6, rings: 4).mesh |> DeleteGeometry(mode: ONLY_FACE, domain: FACE)) @ hide
-    switch_3 = Switch(
-      switch: DomainSize(join_geometry_2, component: INSTANCES),
-      false_: geometry_to_instance,
-      true_: join_geometry_2,
-      input_type: GEOMETRY) @ hide
-    switch = Switch(
-      switch: Instance,
-      false_: store_named_attribute_3,
-      true_: InstanceOnPoints(
+    switch_3 = DomainSize(join_geometry_2, component: INSTANCES)
+      ? join_geometry_2
+      : geometry_to_instance @ hide
+    switch = Instance
+      ? InstanceOnPoints(
         store_named_attribute_3,
         selection: Selection,
         instance: switch_3,
         pick_instance: true,
         instance_index: instance_index,
         rotation: NamedAttribute(name: "rotation", data_type: QUATERNION).attribute,
-        scale: radius_2),
-      input_type: GEOMETRY) @ hide
+        scale: radius_2)
+      : store_named_attribute_3 @ hide
   }
   return switch
 }

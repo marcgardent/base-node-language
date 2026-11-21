@@ -35,24 +35,19 @@ geometry graph "Solid Extrude"(
       offset_scale: 0.0,
       individual: false)
     boolean_math = not extrude_mesh.top @ hide
-    switch = Switch(
-      switch: keep_bottom,
-      false_: extrude_mesh.mesh,
-      true_: MergePoints(
+    switch = keep_bottom
+      ? MergePoints(
         flip_faces + extrude_mesh.mesh,
         selection: boolean_math,
-        merge_id: capture_attribute.index),
-      input_type: GEOMETRY) @ hide
+        merge_id: capture_attribute.index)
+      : extrude_mesh.mesh @ hide
   }
   vector_math = capture_attribute_2.value ⋅ capture_attribute.value @ hide
   {
     math = extrude_mesh.top - Midlevel @ hide
     math_3 = capture_attribute.value_001
       / pow(EvaluateOnDomain(value: vector_math, domain: CORNER), 2.0) @ hide
-    switch_2 = Switch(
-      switch: even_thickness,
-      false_: capture_attribute.value_001,
-      true_: math_3) @ hide
+    switch_2 = even_thickness ? math_3 : capture_attribute.value_001 @ hide
     math_2 = math * switch_2 @ hide
     vector_math_2 = capture_attribute_2.value * math_2 @ hide
     set_position = SetPosition(switch, offset: vector_math_2)

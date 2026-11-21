@@ -275,14 +275,12 @@ geometry graph "Surface Deform Basic"(
     geometry_to_instance = GeometryToInstance(switch) @ hide
     join_geometry = Geometry + geometry_to_instance
   }
-  switch_2 = Switch(
-    switch: show_surface_rest_position,
-    false_: MenuSwitch(
+  switch_2 = show_surface_rest_position
+    ? join_geometry
+    : MenuSwitch(
       menu: Mode,
       "Mesh/Points": deform_points(Geometry, deform_surface: store_named_attribute_2),
       Curves: deform_curves(Geometry, deform_surface: store_named_attribute_2),
-      Instances: deform_instances(Geometry, deform_surface: store_named_attribute_2)).output,
-    true_: join_geometry,
-    input_type: GEOMETRY) @ hide
+      Instances: deform_instances(Geometry, deform_surface: store_named_attribute_2)).output @ hide
   return switch_2
 }

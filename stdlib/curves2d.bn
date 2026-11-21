@@ -83,7 +83,7 @@ geometry graph "arrow 2d"(
   f = SplineParameter()
   threshold = 1.0 - head_length
   head = (1.0 - f.factor) / head_length * head_width
-  radius = Switch(f.factor < threshold, head, body_width)
+  radius = f.factor < threshold ? body_width : head
   c = SetCurveRadius(curve, radius: radius)
   profile = CurveLine((-0.5, 0.0, 0.0), (0.5, 0.0, 0.0))
   return CurveToMesh(c, profile, Radius())

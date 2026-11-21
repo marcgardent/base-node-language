@@ -179,10 +179,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -258,10 +258,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -354,10 +354,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -458,10 +458,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -509,8 +509,8 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
   cell = VoronoiTexture(vector: p, scale: scale, randomness: 0.8)
   radius = 0.15 + cell.color.x * 0.2
   x = cell.distance / radius
-  // No Compare in a shader tree: Math's Less Than gives 1 or 0
-  here = Math(cell.color.y, 0.5, operation: LESS_THAN)
+  // In a shader tree a comparison is Math's Less Than: 1 or 0
+  here = cell.color.y < 0.5
   return (height: min(x * x - 1.0, 0.0) * radius / scale * 0.5 * here)
 }
 
@@ -576,10 +576,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -627,8 +627,8 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
   cell = VoronoiTexture(vector: p, scale: scale, randomness: 0.8)
   radius = 0.15 + cell.color.x * 0.2
   x = cell.distance / radius
-  // No Compare in a shader tree: Math's Less Than gives 1 or 0
-  here = Math(cell.color.y, 0.5, operation: LESS_THAN)
+  // In a shader tree a comparison is Math's Less Than: 1 or 0
+  here = cell.color.y < 0.5
   return (height: min(x * x - 1.0, 0.0) * radius / scale * 0.5 * here)
 }
 
@@ -695,10 +695,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -746,8 +746,8 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
   cell = VoronoiTexture(vector: p, scale: scale, randomness: 0.8)
   radius = 0.15 + cell.color.x * 0.2
   x = cell.distance / radius
-  // No Compare in a shader tree: Math's Less Than gives 1 or 0
-  here = Math(cell.color.y, 0.5, operation: LESS_THAN)
+  // In a shader tree a comparison is Math's Less Than: 1 or 0
+  here = cell.color.y < 0.5
   return (height: min(x * x - 1.0, 0.0) * radius / scale * 0.5 * here)
 }
 
@@ -790,7 +790,7 @@ geometry graph mini_moon(
 </script></bn-view>
     <p>
       <code>pits</code> is a crater for the shader: a Voronoi texture gives each point its distance to the centre of its cell, and the bowl alone, <code>min(x * x - 1.0, 0.0)</code>, is dug in half of the cells. At 40 and 110 cells per metre, the pits are 4 to 9 mm, then 1.4 to 3.2 mm, in radius: smaller than the vertices, which are 7 mm apart.
-      A shader tree has no Compare node, so <code>Math</code> with <code>operation: LESS_THAN</code> gives the 1 or 0 that picks the cells. On the sphere, the 3D cells are cut by the surface at every depth, which makes the pits more varied still.
+      A shader tree has no Compare node, so the comparison <code>cell.color.y &lt; 0.5</code> is a <code>Math</code> node there, Less Than, which gives the 1 or 0 that picks the cells. On the sphere, the 3D cells are cut by the surface at every depth, which makes the pits more varied still.
     </p>
     <figure class="square">
       <img src="../images/tutorials/mini-moon-step5.png" width="800" height="800" loading="lazy" alt="The finished moon, grey and grainy, half lit">
@@ -840,10 +840,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -891,8 +891,8 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
   cell = VoronoiTexture(vector: p, scale: scale, randomness: 0.8)
   radius = 0.15 + cell.color.x * 0.2
   x = cell.distance / radius
-  // No Compare in a shader tree: Math's Less Than gives 1 or 0
-  here = Math(cell.color.y, 0.5, operation: LESS_THAN)
+  // In a shader tree a comparison is Math's Less Than: 1 or 0
+  here = cell.color.y < 0.5
   return (height: min(x * x - 1.0, 0.0) * radius / scale * 0.5 * here)
 }
 
@@ -1013,10 +1013,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {
@@ -1089,10 +1089,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed: Int) -> Geometry {

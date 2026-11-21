@@ -7,7 +7,7 @@
  "groups": {
   ".Halation 3.021": {
    "status": "ok",
-   "text": "0567a7e56785c55e"
+   "text": "a0bae42c5d6307b1"
   },
   ".Multisample Displace Group 2.010": {
    "status": "ok",
@@ -19,14 +19,14 @@
   },
   ".Noisegroup Internal 3.022": {
    "status": "ok",
-   "text": "e8084487b890235a",
+   "text": "40bd8eb2958eb6e9",
    "blender_quirk": [
     "composite Result"
    ]
   },
   ".log space >1.001": {
    "status": "ok",
-   "text": "cb80b14342402d85"
+   "text": "aeabfc0361982d66"
   },
   "3D to Screen Space": {
    "status": "ok",
@@ -54,7 +54,7 @@
   },
   "Film Grain": {
    "status": "ok",
-   "text": "e050d549a72c281f",
+   "text": "44ffa1af3a0e132a",
    "blender_quirk": [
     "composite Result"
    ]

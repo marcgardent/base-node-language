@@ -8,7 +8,7 @@ are read on demand with the properties set, and memoized.
 import bpy
 
 from ..lang.schema import (ITEM_NODES, ITEM_TYPES, MAPPING_OPTIONS, RAMP_OPTIONS, TYPES, GroupSpec, NodeSpec, Prop,
-                           Socket, interface_keys, key, node_name)
+                           Socket, input_key, interface_keys, key, node_name)
 
 TREE_TYPES = {
     "geometry": "GeometryNodeTree",
@@ -154,8 +154,9 @@ def ui_name(bl_idname):
 def socket_info(sock):
     value = getattr(sock, "default_value", None)
     size = len(value) if hasattr(value, "__len__") and not isinstance(value, str) else 0
+    alias = "" if sock.is_output else input_key(sock.node.bl_idname, sock.identifier)
     return Socket(sock.name, sock.identifier, SOCKET_TYPES.get(sock.type, sock.type.title()),
-                  sock.is_multi_input, size)
+                  sock.is_multi_input, size, alias)
 
 
 def available(sockets):

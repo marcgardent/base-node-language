@@ -1,0 +1,12 @@
+1
+00:00:00,500 --> 00:00:03,000
+Subtitles read by Geometry Nodes.
+
+2
+00:00:03,200 --> 00:00:06,000
+<i>From an .srt file,</i>
+one cue at a time.
+
+3
+00:00:06,200 --> 00:00:08,000
+The end.

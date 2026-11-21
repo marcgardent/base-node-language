@@ -7,27 +7,27 @@
  "groups": {
   "Car3Layer.002": {
    "status": "ok",
-   "text": "c561fcbb2da6ef93"
+   "text": "4cdbb90966abc420"
   },
   "Ceramic.001": {
    "status": "ok",
-   "text": "cb4da1d192c17330"
+   "text": "d761d62cc805dc0d"
   },
   "Chrome(brushed).002": {
    "status": "ok",
-   "text": "aebfa2aa1006bb07"
+   "text": "1d399cbedd153d20"
   },
   "Coat II.000": {
    "status": "ok",
-   "text": "ba514307cdafd3c2"
+   "text": "f1fe9cfa6503bc61"
   },
   "Coat II.002": {
    "status": "ok",
-   "text": "eb81ffb5cd6b0f73"
+   "text": "7ceede924226d052"
   },
   "Coat II.003": {
    "status": "ok",
-   "text": "3f7b7d07649e6ba5"
+   "text": "21ca858f20196a63"
   },
   "CondFresnel.002": {
    "status": "ok",
@@ -35,7 +35,7 @@
   },
   "FlakesHomogeneous.001": {
    "status": "ok",
-   "text": "e441a581e6b688c9"
+   "text": "f0a6e04ec575ea01"
   },
   "FresnelRoughness.001": {
    "status": "ok",
@@ -51,11 +51,11 @@
   },
   "ME_Contrast_Gloss.001": {
    "status": "ok",
-   "text": "2fd135c73d6084a1"
+   "text": "1b704bb8d942ca40"
   },
   "ME_Spec_Reflection.001": {
    "status": "ok",
-   "text": "a23945d36ba1fc4a"
+   "text": "93a665e354ece082"
   },
   "Math.Root": {
    "status": "ok",
@@ -63,11 +63,11 @@
   },
   "MetalJewelry.002": {
    "status": "ok",
-   "text": "aef126f68db37c84"
+   "text": "5b0327319f0408cb"
   },
   "MetallicPaint..000": {
    "status": "ok",
-   "text": "d8e80471995ca6e0"
+   "text": "afff778f0bc5e4d4"
   },
   "NanometerColor.000": {
    "status": "ok",
@@ -75,11 +75,11 @@
   },
   "Output 1 if input is equal Value.002": {
    "status": "ok",
-   "text": "faf9bd631a113543"
+   "text": "189787f69221d308"
   },
   "PBR (Specular Setup)": {
    "status": "ok",
-   "text": "49ee5a1ae038c4f8"
+   "text": "10b07c260e19bc74"
   },
   "PBR.Fresnel": {
    "status": "ok",
@@ -87,31 +87,31 @@
   },
   "Paper.002": {
    "status": "ok",
-   "text": "ccc2244f46513f48"
+   "text": "5f0dd843ea28e1a2"
   },
   "Plastic III.002": {
    "status": "ok",
-   "text": "ceb67f84ea5bb633"
+   "text": "4a3a34438b17c43c"
   },
   "SY_CoatedGlossy.000": {
    "status": "ok",
-   "text": "32d748c885e74416"
+   "text": "d8dabb016d182353"
   },
   "Selector.002": {
    "status": "ok",
-   "text": "6ad30076d7e907d0"
+   "text": "67bc811e47367350"
   },
   "Selector0-1.002": {
    "status": "ok",
-   "text": "bd96240b35682707"
+   "text": "785c853e8a57d387"
   },
   "SpecularLayer": {
    "status": "ok",
-   "text": "23ae3d41df2e9d0e"
+   "text": "8f118c0024642946"
   },
   "SpecularReflection.001": {
    "status": "ok",
-   "text": "df727abf11548d72"
+   "text": "83edc84034ea26be"
   },
   "TE_Crusehd_Velvet_pattern5.002": {
    "status": "ok",
@@ -123,7 +123,7 @@
   },
   "WoodP.002": {
    "status": "ok",
-   "text": "fe656f689e4d0f43"
+   "text": "ccd21201a4a3e3d3"
   },
   "fres rough": {
    "status": "ok",
@@ -135,23 +135,23 @@
   },
   "material:Anodized": {
    "status": "ok",
-   "text": "6a6e7854f05bb0c5"
+   "text": "5da6e3915aff0858"
   },
   "material:Basic Glass": {
    "status": "ok",
-   "text": "38710ed7fd534bca"
+   "text": "838736b73250ff88"
   },
   "material:Blaster Bolt (Blue)": {
    "status": "ok",
-   "text": "0688456c75106477"
+   "text": "d942c79357e6c953"
   },
   "material:Brushed Metal": {
    "status": "ok",
-   "text": "738deececed48f2d"
+   "text": "81cf0871b46cac49"
   },
   "material:Building": {
    "status": "ok",
-   "text": "e0ed89e9c55afb59"
+   "text": "dd6c4ceb95c57b80"
   },
   "material:Car Paint": {
    "status": "ok",
@@ -159,27 +159,27 @@
   },
   "material:Ceramic": {
    "status": "ok",
-   "text": "de23a518541a8c3a"
+   "text": "83271b783eb7cbc0"
   },
   "material:Ceramic Polished": {
    "status": "ok",
-   "text": "a44018a2f92ea43e"
+   "text": "1d90a1925572c454"
   },
   "material:Chocolate Swirl": {
    "status": "ok",
-   "text": "da887747363a789f"
+   "text": "c62b2da6b8da31d1"
   },
   "material:Coated Glossy": {
    "status": "ok",
-   "text": "7e0d3fc0aee317e5"
+   "text": "5c25e48011f058f4"
   },
   "material:Composite Rubber": {
    "status": "ok",
-   "text": "7ea8b9c26951fba9"
+   "text": "fa8f65d0bb990fbb"
   },
   "material:Cranberry Juice": {
    "status": "ok",
-   "text": "1fe494ec9eac12e6"
+   "text": "0982f915820d6ba9"
   },
   "material:Crushed Velvet Eevee": {
    "status": "ok",
@@ -187,15 +187,15 @@
   },
   "material:Double  Sided": {
    "status": "ok",
-   "text": "d0f8c5e858f569be"
+   "text": "a8a750467002c61f"
   },
   "material:Facade_Glass": {
    "status": "ok",
-   "text": "0af9a58e5cae5fab"
+   "text": "e83b8f3eb833a676"
   },
   "material:Fake Glass": {
    "status": "ok",
-   "text": "fdb969e45563e9ed"
+   "text": "e194def0ab551fb7"
   },
   "material:Fake Shading": {
    "status": "ok",
@@ -203,7 +203,7 @@
   },
   "material:Flaky Tangelo": {
    "status": "ok",
-   "text": "8fe1d8e921020099"
+   "text": "631800f352bd9129"
   },
   "material:Fresnel": {
    "status": "ok",
@@ -211,59 +211,59 @@
   },
   "material:Galvanized Steel": {
    "status": "ok",
-   "text": "7c11e79beb2e1be1"
+   "text": "6065039388731717"
   },
   "material:Glow Glass": {
    "status": "ok",
-   "text": "f0705f1b11f66571"
+   "text": "2640c508934be043"
   },
   "material:High Gloss Plastic": {
    "status": "ok",
-   "text": "774544c06f6492c5"
+   "text": "9224735278e0d6ff"
   },
   "material:Jewelry": {
    "status": "ok",
-   "text": "41ede946b3a576db"
+   "text": "0c2d1a3f5806aa85"
   },
   "material:Lemon": {
    "status": "ok",
-   "text": "9cb9470f0c8631d7"
+   "text": "ff9d89ba15330877"
   },
   "material:Metalic Paint": {
    "status": "ok",
-   "text": "3e5d2422b73fc21e"
+   "text": "a01f799b9f3893a8"
   },
   "material:Metallic Paint Clean": {
    "status": "ok",
-   "text": "e5727b9a4d363d95"
+   "text": "e394e895ad303a74"
   },
   "material:Molten": {
    "status": "ok",
-   "text": "7fb0ceff775675f8"
+   "text": "fefb5b2c8a787daf"
   },
   "material:Polished Walnut": {
    "status": "ok",
-   "text": "0abd0571fbfba150"
+   "text": "3b55c7122059601d"
   },
   "material:Soap Bubble": {
    "status": "ok",
-   "text": "21a0e25260888e06"
+   "text": "6170846119b2209a"
   },
   "material:Stars": {
    "status": "ok",
-   "text": "5c3327d5dfbd5985"
+   "text": "de5cd57d6cceee98"
   },
   "material:Wire Musgrave": {
    "status": "ok",
-   "text": "3b4bc840515638fb"
+   "text": "8c3c7c5df912afb8"
   },
   "material:WoodP": {
    "status": "ok",
-   "text": "705ff967bd85d86c"
+   "text": "08fd6008bef412f1"
   },
   "material:wood": {
    "status": "ok",
-   "text": "5d48fad849fce3db"
+   "text": "f7e72ba981e1137b"
   },
   "material:wood boards": {
    "status": "ok",

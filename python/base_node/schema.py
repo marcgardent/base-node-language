@@ -256,6 +256,20 @@ def interface_keys(sockets, given=()):
     return out
 
 
+# Inputs of one name that text tells apart by a key of their own, as Mix names its A and B, where
+# any other node falls back on Blender's identifiers (`Value_001`): {node: {identifier: key}}.
+# The identifiers stay accepted
+INPUT_KEYS = {
+    "ShaderNodeMixShader": {"Shader": "a", "Shader_001": "b"},
+    "ShaderNodeAddShader": {"Shader": "a", "Shader_001": "b"},
+}
+
+
+def input_key(bl_idname, identifier):
+    """The key INPUT_KEYS gives an input of a node, else ""."""
+    return INPUT_KEYS.get(bl_idname, {}).get(identifier, "")
+
+
 @dataclass(frozen=True)
 class Socket:
     name: str        # UI name, e.g. "Base Color"
@@ -264,10 +278,12 @@ class Socket:
     multi_input: bool = False
     # How many numbers its value holds (3 for a 3D Vector, 4 for a Color), 0 when unknown or a scalar
     size: int = 0
+    # A key of its own, for an input of INPUT_KEYS
+    alias: str = ""
 
     @property
     def key(self):
-        return snake(self.name)
+        return self.alias or snake(self.name)
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ PYTEST ?= pytest
 BLENDER_RUN = $(BLENDER) --background --factory-startup --python-exit-code 1 --python
 
 .DEFAULT_GOAL := help
-.PHONY: help test python-min test-python test-rust test-web test-blender test-libraries extension backend docs
+.PHONY: help test python-min test-python test-rust test-web test-blender test-libraries extension backend docs srt-check
 
 help: ## List the targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -34,6 +34,9 @@ test-blender: ## Blender add-on tests, and the backend the reference reads check
 
 test-libraries: ## Third-party node group libraries, round-tripped (non-regression)
 	$(BLENDER_RUN) base-node-for-blender/tests/test_libraries.py
+
+srt-check: ## Build examples/tutorials/srt_subtitles/srt_subtitles.bn in Blender and check it reads .srt files
+	$(BLENDER_RUN) examples/srt_subtitles_check.py
 
 extension: ## Build the add-on .zip into dist/
 	BLENDER=$(BLENDER) base-node-for-blender/build.sh dist

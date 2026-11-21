@@ -21,14 +21,12 @@ geometry graph "Geometry Velocity"(
   "points mode" {
     "instance warning " {
       realize_instances = RealizeInstances(Geometry) @ hide
-      switch_2 = Switch(
-        switch: Warning(
+      switch_2 = Warning(
           show: DomainSize(Geometry, component: INSTANCES),
           message: "Instances Realized for Point Velocity",
-          warning_type: INFO),
-        false_: Geometry,
-        true_: realize_instances,
-        input_type: GEOMETRY) @ hide
+          warning_type: INFO)
+        ? realize_instances
+        : Geometry @ hide
     }
     "velocity" {
       position = Position() @ hide
@@ -64,11 +62,7 @@ geometry graph "Geometry Velocity"(
         transform_direction = TransformDirection(
           direction: vector_math,
           transform: ObjectInfo(object: SelfObject()).transform) @ hide
-        switch = Switch(
-          switch: global_space,
-          false_: vector_math,
-          true_: transform_direction,
-          input_type: VECTOR) @ hide
+        switch = global_space ? transform_direction : vector_math @ hide
       }
       remove_named_attribute = transfer_attributes.target
         |> StoreNamedAttribute(name: velocity_attribute, value: switch, data_type: FLOAT_VECTOR)
@@ -134,11 +128,7 @@ geometry graph "Geometry Velocity"(
         transform_direction_2 = TransformDirection(
           direction: vector_math_4,
           transform: ObjectInfo(object: SelfObject()).transform) @ hide
-        switch_4 = Switch(
-          switch: global_space,
-          false_: vector_math_4,
-          true_: transform_direction_2,
-          input_type: VECTOR) @ hide
+        switch_4 = global_space ? transform_direction_2 : vector_math_4 @ hide
       }
       store_named_attribute_3 = StoreNamedAttribute(
         store_named_attribute_2,
@@ -164,11 +154,7 @@ geometry graph "Geometry Velocity"(
           transform_direction_3 = TransformDirection(
             direction: vector_math_6,
             transform: ObjectInfo(object: SelfObject()).transform) @ hide
-          switch_5 = Switch(
-            switch: global_space,
-            false_: vector_math_6,
-            true_: transform_direction_3,
-            input_type: VECTOR) @ hide
+          switch_5 = global_space ? transform_direction_3 : vector_math_6 @ hide
         }
         return (
           Geometry: StoreNamedAttribute(
@@ -177,11 +163,9 @@ geometry graph "Geometry Velocity"(
             value: switch_5,
             data_type: FLOAT_VECTOR))
       }
-      switch_3 = Switch(
-        switch: point_velocity_non_deform,
-        false_: store_named_attribute_3,
-        true_: foreach_output.Geometry,
-        input_type: GEOMETRY) @ hide
+      switch_3 = point_velocity_non_deform
+        ? foreach_output.Geometry
+        : store_named_attribute_3 @ hide
     }
   }
   return (

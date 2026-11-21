@@ -73,10 +73,35 @@ const PRODUCTS: [&str; 5] = ["⋅", "×", "dot", "cross", "·"];
 const COMPARISONS: [&str; 6] = ["<", "<=", ">", ">=", "==", "!="];
 const LOGIC: [&str; 4] = ["and", "or", "xor", "not"];
 // The formulas written as functions (python/base_node/sugar.py)
-const MATH_FUNCS: [&str; 26] = [
-    "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "sinh", "cosh", "tanh", "sqrt", "abs",
-    "exp", "log", "pow", "min", "max", "floor", "ceil", "fract", "round", "trunc", "sign", "mod",
-    "radians", "degrees",
+const MATH_FUNCS: [&str; 28] = [
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "atan2",
+    "sinh",
+    "cosh",
+    "tanh",
+    "sqrt",
+    "abs",
+    "exp",
+    "log",
+    "pow",
+    "min",
+    "max",
+    "floor",
+    "ceil",
+    "fract",
+    "round",
+    "trunc",
+    "sign",
+    "mod",
+    "radians",
+    "degrees",
+    "smooth_min",
+    "smooth_max",
 ];
 const VECTOR_FUNCS: [&str; 16] = [
     "sin",
@@ -419,6 +444,12 @@ impl Walk {
                 self.push(Found::Op, "not", n.line, n.col);
                 self.expr(&n.value);
             }
+            Expr::Cond(c) => {
+                self.push(Found::Op, "?", c.line, c.col);
+                self.expr(&c.cond);
+                self.expr(&c.then);
+                self.expr(&c.orelse);
+            }
             Expr::Pipe(p) => {
                 self.expr(&p.left);
                 self.expr(&p.call);
@@ -531,9 +562,17 @@ fn uses_of(graph: &Graph, local: &Local) -> Vec<Use> {
                 } else if PRODUCTS.contains(&n) {
                     &["VectorMath"]
                 } else if COMPARISONS.contains(&n) {
-                    &["Compare"]
+                    // Compare where the tree has one, else Math (a shader tree)
+                    &["Compare", "Math"]
                 } else if LOGIC.contains(&n) {
                     &["BooleanMath"]
+                } else if n == "?" {
+                    // A Switch where it chooses for each element, else a Mix by the condition
+                    if graph.kind == "geometry" {
+                        &["Switch"]
+                    } else {
+                        &["Mix", "MixShader"]
+                    }
                 } else {
                     &[]
                 };
@@ -794,6 +833,16 @@ fn check_targets_in(
 const TIMES: &str = "×";
 /// The inputs of a Material Output, which a material's return feeds.
 const MATERIAL_SOCKETS: [&str; 4] = ["surface", "volume", "displacement", "thickness"];
+/// The inputs text names by a key of their own (python/base_node/schema.py, INPUT_KEYS): Blender's
+/// identifier, which a call may still write, is read as that key.
+fn identifier_key<'a>(node: &str, name: &'a str) -> &'a str {
+    match (node, name) {
+        ("MixShader" | "AddShader", "Shader") => "a",
+        ("MixShader" | "AddShader", "Shader_001") => "b",
+        _ => name,
+    }
+}
+
 /// The operation a formula writes (python/base_node/sugar.py).
 const BINOPS: [(&str, &str); 4] = [
     ("+", "ADD"),
@@ -801,7 +850,7 @@ const BINOPS: [(&str, &str); 4] = [
     ("*", "MULTIPLY"),
     ("/", "DIVIDE"),
 ];
-const MATH_OPS: [(&str, &str); 26] = [
+const MATH_OPS: [(&str, &str); 28] = [
     ("sin", "SINE"),
     ("cos", "COSINE"),
     ("tan", "TANGENT"),
@@ -819,6 +868,8 @@ const MATH_OPS: [(&str, &str); 26] = [
     ("pow", "POWER"),
     ("min", "MINIMUM"),
     ("max", "MAXIMUM"),
+    ("smooth_min", "SMOOTH_MIN"),
+    ("smooth_max", "SMOOTH_MAX"),
     ("floor", "FLOOR"),
     ("ceil", "CEIL"),
     ("fract", "FRACT"),
@@ -1021,6 +1072,11 @@ impl<'a> Calls<'a> {
             }
             Expr::Neg(n) => self.expr(&n.value),
             Expr::Not(n) => self.expr(&n.value),
+            Expr::Cond(c) => {
+                self.expr(&c.cond);
+                self.expr(&c.then);
+                self.expr(&c.orelse);
+            }
             Expr::Member(m) => self.expr(&m.target),
             Expr::Tuple(t) => {
                 for i in &t.items {
@@ -1051,6 +1107,11 @@ fn refs<'a>(e: &'a Expr, out: &mut Vec<&'a Expr>) {
         }
         Expr::Neg(n) => refs(&n.value, out),
         Expr::Not(n) => refs(&n.value, out),
+        Expr::Cond(c) => {
+            refs(&c.cond, out);
+            refs(&c.then, out);
+            refs(&c.orelse, out);
+        }
         Expr::Member(m) => refs(&m.target, out),
         Expr::Tuple(t) => {
             for i in &t.items {
@@ -1247,7 +1308,7 @@ impl<'a> Links<'a> {
         let mut out = Vec::new();
         for (i, (n, v)) in args.iter().enumerate() {
             match n {
-                Some(n) => out.push((*n, *v)),
+                Some(n) => out.push((identifier_key(node, n), *v)),
                 None => {
                     if let Some(o) = order.get(i) {
                         out.push((o.as_str(), *v));
@@ -1762,6 +1823,11 @@ impl<'a> Links<'a> {
             }
             Expr::Neg(n) => self.reach(&n.value, out, seen),
             Expr::Not(n) => self.reach(&n.value, out, seen),
+            Expr::Cond(c) => {
+                self.reach(&c.cond, out, seen);
+                self.reach(&c.then, out, seen);
+                self.reach(&c.orelse, out, seen);
+            }
             Expr::Member(m) => self.reach(&m.target, out, seen),
             Expr::Tuple(t) => {
                 for i in &t.items {
@@ -2048,6 +2114,11 @@ impl Inline<'_, '_> {
             }
             Expr::Neg(n) => self.expr(&mut n.value, f, depth),
             Expr::Not(n) => self.expr(&mut n.value, f, depth),
+            Expr::Cond(c) => {
+                self.expr(&mut c.cond, f, depth);
+                self.expr(&mut c.then, f, depth);
+                self.expr(&mut c.orelse, f, depth);
+            }
             Expr::Member(m) => self.expr(&mut m.target, f, depth),
             Expr::Tuple(t) => {
                 for i in &mut t.items {
@@ -2200,6 +2271,11 @@ fn relocate(e: &mut Expr, line: usize, col: usize) {
         }
         Expr::Neg(n) => relocate(&mut n.value, line, col),
         Expr::Not(n) => relocate(&mut n.value, line, col),
+        Expr::Cond(c) => {
+            relocate(&mut c.cond, line, col);
+            relocate(&mut c.then, line, col);
+            relocate(&mut c.orelse, line, col);
+        }
         Expr::Member(m) => relocate(&mut m.target, line, col),
         Expr::Tuple(t) => {
             for i in &mut t.items {
@@ -2266,6 +2342,11 @@ fn substitute(e: &mut Expr, names: &HashMap<String, String>, values: &HashMap<St
         }
         Expr::Neg(n) => substitute(&mut n.value, names, values),
         Expr::Not(n) => substitute(&mut n.value, names, values),
+        Expr::Cond(c) => {
+            substitute(&mut c.cond, names, values);
+            substitute(&mut c.then, names, values);
+            substitute(&mut c.orelse, names, values);
+        }
         Expr::Member(m) => substitute(&mut m.target, names, values),
         Expr::Tuple(t) => {
             for i in &mut t.items {
@@ -2373,6 +2454,110 @@ fn split(rules: &BTreeMap<String, Vec<String>>) -> Split<'_> {
     (one, many, whole)
 }
 
+/// What `==` and `!=` give Math's Compare as its Epsilon: the Epsilon of a new Compare node.
+const EPSILON: f64 = 0.001;
+
+/// A comparison of numbers in a tree with no Compare node: Math's operation, and whether the
+/// result is taken from 1 (`a >= b` is `1 - (a < b)`).
+const MATH_COMPARE: [(&str, &str, bool); 6] = [
+    (">", "GREATER_THAN", false),
+    ("<", "LESS_THAN", false),
+    (">=", "LESS_THAN", true),
+    ("<=", "GREATER_THAN", true),
+    ("==", "COMPARE", false),
+    ("!=", "COMPARE", true),
+];
+
+/// Every comparison of `e` as the Math nodes it writes in a tree with no Compare node:
+/// `a >= b` is `1.0 - Math(a, b, operation: LESS_THAN)`.
+fn math_comparisons(e: &mut Expr) {
+    match e {
+        Expr::Call(c) => {
+            for a in &mut c.args {
+                math_comparisons(&mut a.value);
+            }
+        }
+        Expr::Pipe(p) => {
+            math_comparisons(&mut p.left);
+            math_comparisons(&mut p.call);
+        }
+        Expr::BinOp(b) => {
+            math_comparisons(&mut b.left);
+            math_comparisons(&mut b.right);
+        }
+        Expr::Neg(n) => math_comparisons(&mut n.value),
+        Expr::Not(n) => math_comparisons(&mut n.value),
+        Expr::Cond(c) => {
+            math_comparisons(&mut c.cond);
+            math_comparisons(&mut c.then);
+            math_comparisons(&mut c.orelse);
+        }
+        Expr::Member(m) => math_comparisons(&mut m.target),
+        Expr::Tuple(t) => {
+            for i in &mut t.items {
+                math_comparisons(i);
+            }
+        }
+        Expr::Number(_) | Expr::String(_) | Expr::Bool(_) | Expr::Ref(_) => {}
+    }
+    let Expr::BinOp(b) = e else {
+        return;
+    };
+    let Some(&(_, operation, negated)) = MATH_COMPARE.iter().find(|(op, ..)| *op == b.op) else {
+        return;
+    };
+    let (line, col) = (b.line, b.col);
+    let number = |value: f64| {
+        Expr::Number(crate::ast::Number {
+            value,
+            is_int: false,
+            line,
+            col,
+        })
+    };
+    let arg = |name: Option<&str>, value: Expr| Arg {
+        name: name.map(str::to_owned),
+        value,
+        line,
+        col,
+        options: Vec::new(),
+        type_decl: None,
+        alias: None,
+    };
+    let mut args = vec![arg(None, (*b.left).clone()), arg(None, (*b.right).clone())];
+    if operation == "COMPARE" {
+        args.push(arg(None, number(EPSILON)));
+    }
+    let setting = Expr::Ref(crate::ast::Ref {
+        name: operation.to_owned(),
+        line,
+        col,
+    });
+    args.push(arg(Some("operation"), setting));
+    let call = Expr::Call(Call {
+        name: "Math".to_owned(),
+        args,
+        line,
+        col,
+        outputs: None,
+        single_output: false,
+        type_args: None,
+    });
+    *e = if negated {
+        Expr::BinOp(crate::ast::BinOp {
+            op: "-".to_owned(),
+            left: Box::new(number(1.0)),
+            right: Box::new(call),
+            line,
+            col,
+        })
+    } else {
+        call
+    };
+}
+
+/// The link issues of a graph. In a target with no Compare node, its comparisons are read as
+/// the Math nodes they write there.
 fn link_issues_of(
     graph: &Graph,
     file: Option<&File>,
@@ -2382,6 +2567,87 @@ fn link_issues_of(
     if target.rules.is_empty() {
         return Vec::new();
     }
+    let mut graph = graph.clone();
+    let geometry = graph.kind == "geometry";
+    for_exprs(&mut graph.body, &mut |e| ternaries(e, geometry));
+    if !target.nodes.iter().any(|n| n == "Compare") {
+        for_exprs(&mut graph.body, &mut |e| math_comparisons(e));
+    }
+    link_issues_in(&graph, file, target, local)
+}
+
+/// Every ternary of `e` as the node it writes: a Switch where it chooses for each element, in a
+/// geometry tree, else a Mix by the condition (a Mix Shader's branches are not told from a Mix's here).
+fn ternaries(e: &mut Expr, geometry: bool) {
+    match e {
+        Expr::Call(c) => {
+            for a in &mut c.args {
+                ternaries(&mut a.value, geometry);
+            }
+        }
+        Expr::Pipe(p) => {
+            ternaries(&mut p.left, geometry);
+            ternaries(&mut p.call, geometry);
+        }
+        Expr::BinOp(b) => {
+            ternaries(&mut b.left, geometry);
+            ternaries(&mut b.right, geometry);
+        }
+        Expr::Neg(n) => ternaries(&mut n.value, geometry),
+        Expr::Not(n) => ternaries(&mut n.value, geometry),
+        Expr::Cond(c) => {
+            ternaries(&mut c.cond, geometry);
+            ternaries(&mut c.then, geometry);
+            ternaries(&mut c.orelse, geometry);
+        }
+        Expr::Member(m) => ternaries(&mut m.target, geometry),
+        Expr::Tuple(t) => {
+            for i in &mut t.items {
+                ternaries(i, geometry);
+            }
+        }
+        Expr::Number(_) | Expr::String(_) | Expr::Bool(_) | Expr::Ref(_) => {}
+    }
+    let Expr::Cond(c) = e else {
+        return;
+    };
+    let (line, col) = (c.line, c.col);
+    let (name, keys) = if geometry {
+        ("Switch", ["switch", "false_", "true_"])
+    } else {
+        ("Mix", ["factor", "a", "b"])
+    };
+    let values = [(*c.cond).clone(), (*c.orelse).clone(), (*c.then).clone()];
+    let args = keys
+        .iter()
+        .zip(values)
+        .map(|(k, value)| Arg {
+            name: Some((*k).to_owned()),
+            value,
+            line,
+            col,
+            options: Vec::new(),
+            type_decl: None,
+            alias: None,
+        })
+        .collect();
+    *e = Expr::Call(Call {
+        name: name.to_owned(),
+        args,
+        line,
+        col,
+        outputs: None,
+        single_output: false,
+        type_args: None,
+    });
+}
+
+fn link_issues_in(
+    graph: &Graph,
+    file: Option<&File>,
+    target: &Target,
+    local: &HashSet<String>,
+) -> Vec<Issue> {
     let (one, many, whole) = split(&target.rules);
     let patterns: HashMap<String, Vec<Expr>> = target
         .patterns
@@ -2737,6 +3003,11 @@ fn rename_expr(e: &mut Expr, tr: &Translator, bridged: &mut Bridged) {
         }
         Expr::Neg(n) => rename_expr(&mut n.value, tr, bridged),
         Expr::Not(n) => rename_expr(&mut n.value, tr, bridged),
+        Expr::Cond(c) => {
+            rename_expr(&mut c.cond, tr, bridged);
+            rename_expr(&mut c.then, tr, bridged);
+            rename_expr(&mut c.orelse, tr, bridged);
+        }
         Expr::Pipe(p) => {
             rename_expr(&mut p.left, tr, bridged);
             rename_expr(&mut p.call, tr, bridged);

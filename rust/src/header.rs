@@ -258,6 +258,11 @@ fn calls_of(e: &Expr, out: &mut HashSet<String>) {
         }
         Expr::Neg(n) => calls_of(&n.value, out),
         Expr::Not(n) => calls_of(&n.value, out),
+        Expr::Cond(c) => {
+            calls_of(&c.cond, out);
+            calls_of(&c.then, out);
+            calls_of(&c.orelse, out);
+        }
         Expr::Number(_) | Expr::String(_) | Expr::Bool(_) | Expr::Ref(_) => {}
     }
 }

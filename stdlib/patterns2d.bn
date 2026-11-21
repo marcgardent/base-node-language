@@ -109,5 +109,5 @@ geometry graph "hatching 2d"(
     |> TransformGeometry(rotation: CombineXYZ(z: angle))
   l2 = TransformGeometry(l1, rotation: (0.0, 0.0, 1.570796))
   both = l1 + l2
-  return Switch(crossed, l1, both, input_type: GEOMETRY)
+  return crossed ? both : l1
 }

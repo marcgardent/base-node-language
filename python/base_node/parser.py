@@ -1,6 +1,6 @@
 """Recursive descent parser.
 
-Precedence, loosest first: `|>`, `or xor`, `and`, `not`, comparisons, `+ -`,
+Precedence, loosest first: `? :`, `|>`, `or xor`, `and`, `not`, comparisons, `+ -`,
 `* / ⋅ ×`, unary `-`, then `.socket`. Statements need no separator: an
 expression ends where the next token cannot continue it.
 """
@@ -426,6 +426,23 @@ class Parser:
         return [ast.Param(t.text, t.text, t.line, t.col)], True
 
     def expr(self):
+        """A pipe, or `cond ? then : orelse`, which binds loosest: its branches are whole
+        expressions, the last one a ternary again without parentheses (`a ? x : b ? y : z`)."""
+        cond = self.piped()
+        if not self.at("?"):
+            return cond
+        height = self.height
+        op = self.advance()
+        self.enter()
+        then = self.expr()
+        height = max(height, self.height)
+        self.expect(":", what="':' and the value when the condition is false, cond ? a : b")
+        orelse = self.expr()
+        self.leave()
+        self.tall(max(height, self.height) + 1, op)
+        return ast.Cond(cond, then, orelse, op.line, op.col)
+
+    def piped(self):
         left = self.disjunction()
         height = self.height
         while self.at("|>"):

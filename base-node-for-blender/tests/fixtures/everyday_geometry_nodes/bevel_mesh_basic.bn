@@ -222,14 +222,11 @@ geometry graph ".Bevel Edge Width Clamped v1"(
     math_5 = min(vector_math_24, evaluate_at_index_10) @ hide
   }
   {
-    switch = Switch(switch: evaluate_at_index_7, false_: math_4, true_: vector_math_12) @ hide
-    switch_2 = Switch(switch: evaluate_at_index_8, false_: math_5, true_: vector_math_19) @ hide
+    switch = evaluate_at_index_7 ? vector_math_12 : math_4 @ hide
+    switch_2 = evaluate_at_index_8 ? vector_math_19 : math_5 @ hide
     math_3 = min(switch, switch_2) @ hide
-    switch_4 = Switch(switch: evaluate_at_index_3, false_: math_5, true_: math_4) @ hide
-    switch_3 = Switch(
-      switch: boolean_math,
-      false_: Switch(switch: boolean_math_2, false_: 999.0, true_: switch_4),
-      true_: math_3) @ hide
+    switch_4 = evaluate_at_index_3 ? math_4 : math_5 @ hide
+    switch_3 = boolean_math ? math_3 : boolean_math_2 ? switch_4 : 999.0 @ hide
   }
   {
     evaluate_at_index_11 = EvaluateAtIndex(
@@ -283,11 +280,11 @@ geometry graph ".Bevel Edge Width Clamped v1"(
       data_type: FLOAT_VECTOR) @ hide
     vector_math_34 = vector_math_33 ⋅ evaluate_at_index_22 @ hide
     math_7 = min(
-      Switch(switch: evaluate_at_index_11, false_: 999.0, true_: vector_math_28),
-      Switch(switch: evaluate_at_index_14, false_: 999.0, true_: vector_math_32)) @ hide
+      evaluate_at_index_11 ? vector_math_28 : 999.0,
+      evaluate_at_index_14 ? vector_math_32 : 999.0) @ hide
     math_8 = min(
-      Switch(switch: evaluate_at_index_13, false_: 999.0, true_: vector_math_30),
-      Switch(switch: evaluate_at_index_12, false_: 999.0, true_: vector_math_34)) @ hide
+      evaluate_at_index_13 ? vector_math_30 : 999.0,
+      evaluate_at_index_12 ? vector_math_34 : 999.0) @ hide
     math_9 = min(math_7, math_8) @ hide
   }
   capture_attribute_3 = CaptureAttribute(
@@ -307,7 +304,7 @@ geometry graph ".Bevel Edge Width Clamped v1"(
   }
   "edge min width " {
     math_6 = min(math_2, math_9) @ hide
-    switch_5 = Switch(switch: boolean_math_4, false_: math_2, true_: math_6) @ hide
+    switch_5 = boolean_math_4 ? math_6 : math_2 @ hide
     evaluate_on_domain = EvaluateOnDomain(value: switch_5, domain: EDGE)
     math = min(Width, FieldMinAndMax(value: evaluate_on_domain, domain: EDGE).min) @ hide
     math_10 = min(
@@ -399,23 +396,18 @@ geometry graph "Bevel Mesh Basic"(
           domain: EDGE,
           data_type: INT)
         compare_2 = index_2 == evaluate_at_index @ hide
-        switch_2 = Switch(
-          switch: compare_2,
-          false_: evaluate_at_index,
-          true_: EvaluateAtIndex(
+        switch_2 = compare_2
+          ? EvaluateAtIndex(
             value: edge_vertices.vertex_index_2,
             index: edges_of_vertex.edge_index,
             domain: EDGE,
-            data_type: INT),
-          input_type: INT) @ hide
+            data_type: INT)
+          : evaluate_at_index @ hide
         vector_math_4 = distance(
           EvaluateAtIndex(value: position, index: switch_2, data_type: FLOAT_VECTOR),
           position) @ hide
         return vector_math_4
-          / Switch(
-            switch: EvaluateAtIndex(value: Selection, index: switch_2, data_type: BOOLEAN),
-            false_: 1.0,
-            true_: 2.0)
+          / (EvaluateAtIndex(value: Selection, index: switch_2, data_type: BOOLEAN) ? 2.0 : 1.0)
       }
     }
     math = min(closure_output(), closure_output("Sort Index": 1)) @ hide
@@ -512,18 +504,14 @@ geometry graph "Bevel Mesh Basic"(
         group_id: evaluate_on_domain_2,
         domain: CORNER).total @ hide
     vector_math_3 = normalize(vector_math) @ hide
-    switch = Switch(
-      switch: harden_normals,
-      false_: separate_bundle.mesh,
-      true_: SetMeshNormal(
+    switch = harden_normals
+      ? SetMeshNormal(
         separate_bundle.mesh,
-        custom_normal: Switch(
-          switch: EvaluateOnDomain(value: separate_bundle.outer_edge, data_type: BOOLEAN),
-          false_: Normal().normal,
-          true_: vector_math_3,
-          input_type: VECTOR),
-        mode: TANGENT_SPACE),
-      input_type: GEOMETRY) @ hide
+        custom_normal: EvaluateOnDomain(value: separate_bundle.outer_edge, data_type: BOOLEAN)
+          ? vector_math_3
+          : Normal().normal,
+        mode: TANGENT_SPACE)
+      : separate_bundle.mesh @ hide
   }
   "material index" {
     boolean_math_5 = boolean_math_4 and material_index != -1 @ hide

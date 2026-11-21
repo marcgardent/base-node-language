@@ -66,7 +66,7 @@ geometry graph contours(
     thick = mod(iteration + 1, 5) == 0
     line = above
       |> SetPosition(position: onto)
-      |> SetCurveRadius(radius: Switch(thick, radius, radius * 2.0))
+      |> SetCurveRadius(radius: thick ? radius * 2.0 : radius)
     return (lines: lines + line)
   }
   return r.lines

@@ -7,7 +7,7 @@
  "groups": {
   "RBD Bullet Solver": {
    "status": "ok",
-   "text": "9cc49b3bb374448f"
+   "text": "decf0b4ac0d2db5a"
   },
   "RBD Cluster": {
    "status": "ok",
@@ -15,27 +15,27 @@
   },
   "RBD Configure": {
    "status": "ok",
-   "text": "54f2e2e499240967"
+   "text": "9265a03fa3e97d25"
   },
   "RBD Fracture": {
    "status": "ok",
-   "text": "76224915fe4696b7"
+   "text": "07985bcd50c532fe"
   },
   "RBD Material Fracture": {
    "status": "ok",
-   "text": "fc9ae8b320bbb775"
+   "text": "954eca2c1a97ec93"
   },
   "RBD Playback": {
    "status": "ok",
-   "text": "79f4663a3fb3d782"
+   "text": "b268aa7aa20c96e7"
   },
   "RBD Select": {
    "status": "ok",
-   "text": "6b8418e31f5efac9"
+   "text": "7b361605a63b33f8"
   },
   "RBD Wall": {
    "status": "ok",
-   "text": "612cd7b2a67f1c11"
+   "text": "747ea474b5a4cd9e"
   }
  }
 }

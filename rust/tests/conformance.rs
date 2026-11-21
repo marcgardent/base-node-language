@@ -378,12 +378,19 @@ fn a_formula_an_implicit_input_and_a_zone_count() {
         "c.bn",
     )
     .unwrap();
-    let names: Vec<String> = check_target(&cmp, "blender-shader")
+    // A comparison is Compare where the tree has one, else Math: a shader tree has no Compare
+    assert!(check_target(&cmp, "blender-shader").is_empty());
+    assert!(check_target(&cmp, "blender-geometry").is_empty());
+    let node = parse(
+        "shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a, b)\n}\n",
+        "c.bn",
+    )
+    .unwrap();
+    let names: Vec<String> = check_target(&node, "blender-shader")
         .into_iter()
         .map(|i| i.name)
         .collect();
     assert_eq!(names, ["Compare"]);
-    assert!(check_target(&cmp, "blender-geometry").is_empty());
 
     let implicit = parse(
         "geometry graph g(p: Vector = Position()) -> Vector {\n  return p\n}\n",

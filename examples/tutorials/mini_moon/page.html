@@ -166,7 +166,7 @@
     {{code step5_dust.bn pits}}
     <p>
       <code>pits</code> is a crater for the shader: a Voronoi texture gives each point its distance to the centre of its cell, and the bowl alone, <code>min(x * x - 1.0, 0.0)</code>, is dug in half of the cells. At 40 and 110 cells per metre, the pits are 4 to 9 mm, then 1.4 to 3.2 mm, in radius: smaller than the vertices, which are 7 mm apart.
-      A shader tree has no Compare node, so <code>Math</code> with <code>operation: LESS_THAN</code> gives the 1 or 0 that picks the cells. On the sphere, the 3D cells are cut by the surface at every depth, which makes the pits more varied still.
+      A shader tree has no Compare node, so the comparison <code>cell.color.y &lt; 0.5</code> is a <code>Math</code> node there, Less Than, which gives the 1 or 0 that picks the cells. On the sphere, the 3D cells are cut by the surface at every depth, which makes the pits more varied still.
     </p>
     <figure class="square">
       <img src="../images/tutorials/mini-moon-step5.png" width="800" height="800" loading="lazy" alt="The finished moon, grey and grainy, half lit">

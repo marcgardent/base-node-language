@@ -34,11 +34,8 @@ shader graph curve_material(
   }
   "Stripes" #orange {
     // Stripes per metre, not per curve: a long curve has more of them; twist turns them into a spiral
-    // No Compare in a shader tree: Math's Less Than gives 1 inside a stripe
-    band = Math(
-      Value: fract(c.distance * stripes + c.angle * twist),
-      Value_001: stripe_width,
-      operation: LESS_THAN)
+    // In a shader tree a comparison is Math's Less Than: 1 inside a stripe, 0 outside
+    band = fract(c.distance * stripes + c.angle * twist) < stripe_width
     striped = Mix(factor: band * 0.6, a: base, b: (0.02, 0.02, 0.02, 1.0), data_type: RGBA)
   }
   "One hue per curve" #violet {

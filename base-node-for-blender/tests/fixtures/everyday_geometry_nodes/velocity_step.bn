@@ -18,11 +18,7 @@ geometry graph "Velocity Step"(
   vector_math_3 = Forces * delta_time @ hide
   vector_math_2 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
     + vector_math_3 @ hide
-  switch = Switch(
-    switch: set_velocity,
-    false_: vector_math_2,
-    true_: Forces,
-    input_type: VECTOR) @ hide
+  switch = set_velocity ? Forces : vector_math_2 @ hide
   vector_math = switch * math @ hide
   vector_math_4 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
     * delta_time @ hide

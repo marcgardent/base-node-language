@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SRT subtitles — base-node tutorials</title>
+  <meta name="description" content="Read a SubRip subtitle file (.srt) in Blender's Geometry Nodes and draw the cue of the scene time, in .bn: Import Text, string nodes and a Repeat zone that walks the file block by block.">
+  <link rel="stylesheet" href="tutorials.css">
+  <script type="module" src="../view/bn-view.js"></script>
+  <script type="module" src="../view/bn-file.js"></script>
+</head>
+<body>
+  <!-- Written by examples/tutorials/page.py from examples/tutorials/srt_subtitles/page.html: edit those, not this file. -->
+  <div class="wrap">
+    <header>
+      <a class="home" href="../index.html">base-node (.bn)</a>
+      <nav>
+        <a href="index.html">Tutorials</a>
+        <a href="../reference/index.html">Reference</a>
+        <a href="https://github.com/marcgardent/base-node-language">GitHub</a>
+      </nav>
+    </header>
+
+    <h1>SRT subtitles</h1>
+    <p class="lead">
+      A subtitle file read by Geometry Nodes: give the group the path of an <code>.srt</code>, play the scene, and the cue of the moment is drawn as text.
+      One file, three small graphs. This page shows how to use it and the few ideas it rests on, not every node.
+    </p>
+    <figure>
+      <img src="../images/tutorials/srt-subtitles.png" width="960" height="360" alt="On a dark background, two lines of light text: From an .srt file, one cue at a time.">
+      <figcaption>The second cue of <code>sample.srt</code> at 4 s. Its <code>&lt;i&gt;</code> tags are gone.</figcaption>
+    </figure>
+
+    <h2 id="use">Use it</h2>
+    <ol class="steps">
+      <li><strong>Get it into Blender.</strong> Drag the card below onto empty space in the 3D Viewport and keep <em>Instantiate the Example</em>, or paste the code in a Geometry Node editor with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>. You need Blender 5 and the <a href="../index.html#blender">Base Node add-on</a>.</li>
+      <li><strong>Give it a file.</strong> On the modifier, <code>file</code> takes the path of an <code>.srt</code>. <a href="https://github.com/marcgardent/base-node-language/blob/main/examples/tutorials/srt_subtitles/sample.srt"><code>sample.srt</code></a> holds three cues to start with.</li>
+      <li><strong>Play.</strong> The text changes with the scene time. <code>offset</code> moves every subtitle later, in seconds, <code>size</code> scales the text, and <code>fill</code> gives a mesh, or curves when it is off.</li>
+    </ol>
+    <bn-file><script type="text/bn">
+// SubRip subtitles (.srt): the cue of the scene time, read from the file and drawn as text
+//
+//   1
+//   00:00:01,000 --> 00:00:04,200
+//   First cue, one line or more.
+//
+//   2
+//   …
+//
+// Blocks are parted by a blank line; a block holds an index, a timing line and its text.
+// Windows line ends (\r\n), a byte order mark and extra blank lines are read too.
+
+geometry graph srt_seconds(stamp: String) -> Float {
+  "Seconds of an SRT time stamp, HH:MM:SS,mmm"
+  h = StringToValue(string: SliceString(string: stamp, length: 2))
+  m = StringToValue(string: SliceString(string: stamp, position: 3, length: 2))
+  s = StringToValue(string: SliceString(string: stamp, position: 6, length: 2))
+  ms = StringToValue(string: SliceString(string: stamp, position: 9, length: 3))
+  return h.value * 3600.0 + m.value * 60.0 + s.value + ms.value / 1000.0
+}
+
+geometry graph srt_cue(srt: String, time: Float) -> (text: String, start: Float, end: Float) {
+  "The cue of an SRT text shown at a time in seconds: its text, its start and its end"
+  line_break = SpecialCharacters()
+  "Line ends" #slategray {
+    // A file written on Windows ends its lines with \r\n: the \r goes, whatever is before a break
+    first = FindInString(string: srt, search: line_break.line_break)
+    before = SliceString(string: srt, position: first.first_found - 1.0, length: 1)
+    cr = StringLength(string: TrimString(string: before)) == 0 ? before : ""
+    pair = JoinStrings(strings: cr, strings: line_break.line_break)
+    text = ReplaceString(string: srt, find: pair, replace: line_break.line_break)
+    // Two links from one output to a multi-input are one: the blank line is made by a replace
+    blank = ReplaceString(string: "||", find: "|", replace: line_break.line_break)
+  }
+  "Blocks" #teal {
+    blocks = FindInString(string: text, search: blank).count + 1.0
+    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) {
+      gap = FindInString(string: rest, search: blank)
+      size = gap.count > 0 ? gap.first_found : StringLength(string: rest)
+      block = SliceString(string: rest, length: size)
+      // The timing line: HH:MM:SS,mmm --> HH:MM:SS,mmm, its text on the lines after it
+      arrow = FindInString(string: block, search: "-->")
+      begin = srt_seconds(
+        stamp: SliceString(string: block, position: arrow.first_found - 13.0, length: 12))
+      finish = srt_seconds(
+        stamp: SliceString(string: block, position: arrow.first_found + 4.0, length: 12))
+      timing = SliceString(string: block, position: arrow.first_found, length: size)
+      lines = SliceString(
+        string: timing,
+        position: FindInString(string: timing, search: line_break.line_break).first_found + 1.0,
+        length: size)
+      now = arrow.count > 0 and time >= begin and time < finish
+      return (
+        rest: SliceString(string: rest, position: size + 2.0, length: StringLength(string: rest)),
+        shown: now ? lines : shown,
+        start: now ? begin : start,
+        end: now ? finish : end)
+    }
+  }
+  return (text: cues.shown, start: cues.start, end: cues.end)
+}
+
+geometry graph "srt subtitles"(
+    file: String(subtype: FILE_PATH),
+    offset: Float,
+    size: Float = 0.5 in 0.0..,
+    fill: Bool = true
+) -> (geometry: Geometry, text: String) {
+  "The subtitle of the scene time, from an .srt file; offset shifts the subtitles, in seconds"
+  cue = srt_cue(srt: ImportText(path: file), time: SceneTime().seconds - offset)
+  // The tags SRT allows in a text are dropped: italic, bold, underline
+  shown = ReplaceString(
+    string: ReplaceString(
+      string: ReplaceString(
+        string: ReplaceString(
+          string: ReplaceString(string: ReplaceString(string: cue.text, find: "<i>"), find: "</i>"),
+          find: "<b>"),
+        find: "</b>"),
+      find: "<u>"),
+    find: "</u>")
+  curves = StringToCurves(
+      string: shown,
+      size: size,
+      align_x: Center,
+      align_y: "Bottom Baseline").curve_instances
+    |> RealizeInstances()
+  return (geometry: fill ? FillCurve(curves) : curves, text: shown)
+}
+</script></bn-file>
+    <p>
+      The group also outputs the cue's <code>text</code> as a string. Plug it into your own <em>String to Curves</em>, or into anything else that takes a string.
+    </p>
+
+    <h2 id="format">What an .srt is</h2>
+    <p>
+      Blocks parted by a blank line. Each block holds a number, a timing line and one or more lines of text:
+    </p>
+    <pre><code>1
+00:00:00,500 --> 00:00:03,000
+Subtitles read by Geometry Nodes.
+
+2
+00:00:03,200 --> 00:00:06,000
+&lt;i&gt;From an .srt file,&lt;/i&gt;
+one cue at a time.</code></pre>
+    <p>
+      The format has no nesting, so string nodes can read it. A <em>Repeat</em> zone stands in for a loop.
+    </p>
+
+    <p class="file">srt_subtitles.bn: <code>srt_cue</code>, <code>srt_seconds</code></p>
+    <bn-view graph="srt_cue" height="480"><script type="text/bn">
+// SubRip subtitles (.srt): the cue of the scene time, read from the file and drawn as text
+//
+//   1
+//   00:00:01,000 --> 00:00:04,200
+//   First cue, one line or more.
+//
+//   2
+//   …
+//
+// Blocks are parted by a blank line; a block holds an index, a timing line and its text.
+// Windows line ends (\r\n), a byte order mark and extra blank lines are read too.
+
+geometry graph srt_seconds(stamp: String) -> Float {
+  "Seconds of an SRT time stamp, HH:MM:SS,mmm"
+  h = StringToValue(string: SliceString(string: stamp, length: 2))
+  m = StringToValue(string: SliceString(string: stamp, position: 3, length: 2))
+  s = StringToValue(string: SliceString(string: stamp, position: 6, length: 2))
+  ms = StringToValue(string: SliceString(string: stamp, position: 9, length: 3))
+  return h.value * 3600.0 + m.value * 60.0 + s.value + ms.value / 1000.0
+}
+
+geometry graph srt_cue(srt: String, time: Float) -> (text: String, start: Float, end: Float) {
+  "The cue of an SRT text shown at a time in seconds: its text, its start and its end"
+  line_break = SpecialCharacters()
+  "Line ends" #slategray {
+    // A file written on Windows ends its lines with \r\n: the \r goes, whatever is before a break
+    first = FindInString(string: srt, search: line_break.line_break)
+    before = SliceString(string: srt, position: first.first_found - 1.0, length: 1)
+    cr = StringLength(string: TrimString(string: before)) == 0 ? before : ""
+    pair = JoinStrings(strings: cr, strings: line_break.line_break)
+    text = ReplaceString(string: srt, find: pair, replace: line_break.line_break)
+    // Two links from one output to a multi-input are one: the blank line is made by a replace
+    blank = ReplaceString(string: "||", find: "|", replace: line_break.line_break)
+  }
+  "Blocks" #teal {
+    blocks = FindInString(string: text, search: blank).count + 1.0
+    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) {
+      gap = FindInString(string: rest, search: blank)
+      size = gap.count > 0 ? gap.first_found : StringLength(string: rest)
+      block = SliceString(string: rest, length: size)
+      // The timing line: HH:MM:SS,mmm --> HH:MM:SS,mmm, its text on the lines after it
+      arrow = FindInString(string: block, search: "-->")
+      begin = srt_seconds(
+        stamp: SliceString(string: block, position: arrow.first_found - 13.0, length: 12))
+      finish = srt_seconds(
+        stamp: SliceString(string: block, position: arrow.first_found + 4.0, length: 12))
+      timing = SliceString(string: block, position: arrow.first_found, length: size)
+      lines = SliceString(
+        string: timing,
+        position: FindInString(string: timing, search: line_break.line_break).first_found + 1.0,
+        length: size)
+      now = arrow.count > 0 and time >= begin and time < finish
+      return (
+        rest: SliceString(string: rest, position: size + 2.0, length: StringLength(string: rest)),
+        shown: now ? lines : shown,
+        start: now ? begin : start,
+        end: now ? finish : end)
+    }
+  }
+  return (text: cues.shown, start: cues.start, end: cues.end)
+}
+
+geometry graph "srt subtitles"(
+    file: String(subtype: FILE_PATH),
+    offset: Float,
+    size: Float = 0.5 in 0.0..,
+    fill: Bool = true
+) -> (geometry: Geometry, text: String) {
+  "The subtitle of the scene time, from an .srt file; offset shifts the subtitles, in seconds"
+  cue = srt_cue(srt: ImportText(path: file), time: SceneTime().seconds - offset)
+  // The tags SRT allows in a text are dropped: italic, bold, underline
+  shown = ReplaceString(
+    string: ReplaceString(
+      string: ReplaceString(
+        string: ReplaceString(
+          string: ReplaceString(string: ReplaceString(string: cue.text, find: "<i>"), find: "</i>"),
+          find: "<b>"),
+        find: "</b>"),
+      find: "<u>"),
+    find: "</u>")
+  curves = StringToCurves(
+      string: shown,
+      size: size,
+      align_x: Center,
+      align_y: "Bottom Baseline").curve_instances
+    |> RealizeInstances()
+  return (geometry: fill ? FillCurve(curves) : curves, text: shown)
+}
+</script></bn-view>
+
+    <h2 id="points">The key points</h2>
+    <ul>
+      <li><strong>The file comes in as one string.</strong> <code>ImportText(path: file)</code> reads the whole file. A text field on a modifier could not hold the line breaks.</li>
+      <li><strong>A Repeat zone eats the text.</strong> <code>repeat(blocks, rest: text, …)</code> runs once per block. Each iteration cuts the first block off <code>rest</code> and passes the remainder on. The number of blocks is known before the loop: it is the number of blank lines plus one, from <code>FindInString(…).count</code>.</li>
+      <li><strong>The arrow anchors the times.</strong> The timing line is found by its <code>--&gt;</code>. The start is the 12 characters before it, the end the 12 after it, and <code>srt_seconds</code> reads <code>HH:MM:SS,mmm</code> at fixed positions with <code>StringToValue</code>. Because only the arrow is needed, the index line, a byte order mark or extra blank lines change nothing.</li>
+      <li><strong>The cue is kept, not returned early.</strong> A zone cannot stop part-way. Each iteration checks whether the scene time falls in its block's interval and keeps that block's text, start and end. The other blocks pass the last kept ones on unchanged.</li>
+      <li><strong>Line breaks come from a node.</strong> A <code>.bn</code> string cannot hold a line break. <code>SpecialCharacters().line_break</code> supplies one.</li>
+    </ul>
+
+    <h2 id="traps">Three traps of the string nodes</h2>
+    <table>
+      <tr><th>Trap</th><th>What the file does</th></tr>
+      <tr><td><code>FindInString</code> answers 0 when it finds nothing, the same as a match at the first character.</td><td>It tests <code>count &gt; 0</code> before it trusts <code>first_found</code>.</td></tr>
+      <tr><td><em>Import Text</em> keeps the <code>\r</code> of Windows line ends, so blocks are parted by <code>\r\n\r\n</code>.</td><td>It looks at the character before the first line break. When that character is blank, every break preceded by it becomes a plain line break.</td></tr>
+      <tr><td>One output linked twice into <em>Join Strings</em> counts once, so <code>JoinStrings(…, line_break, line_break)</code> gives a single break.</td><td>It makes the blank line with <code>ReplaceString(string: "||", find: "|", replace: line_break)</code>.</td></tr>
+    </table>
+
+    <h2 id="limits">Limits</h2>
+    <ul>
+      <li>Times must be written <code>HH:MM:SS,mmm --&gt; HH:MM:SS,mmm</code>, one space on each side of the arrow, as the format asks.</li>
+      <li>Only <code>&lt;i&gt;</code>, <code>&lt;b&gt;</code> and <code>&lt;u&gt;</code> are removed. A <code>&lt;font&gt;</code> tag stays in the text.</li>
+      <li>Every frame walks the file from the first block, so the work grows with the number of cues.</li>
+    </ul>
+    <p class="muted">
+      The file, <code>sample.srt</code> and the script that renders this page's picture are in <a href="https://github.com/marcgardent/base-node-language/tree/main/examples/tutorials/srt_subtitles"><code>examples/tutorials/srt_subtitles/</code></a>. <code>make srt-check</code> builds the file in Blender and checks its cues against an <code>.srt</code> written with Unix line ends and one written with Windows line ends.
+    </p>
+    <footer>
+      Base Node Language — MIT OR Apache-2.0 (Blender host binding: GPL-3.0-or-later) · Hosted and sponsored by <a href="https://ludopant.com/">Ludopant Creative Studio</a>
+    </footer>
+  </div>
+</body>
+</html>

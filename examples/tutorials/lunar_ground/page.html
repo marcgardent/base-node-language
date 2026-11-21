@@ -248,7 +248,7 @@
     </p>
     {{code step8_details.bn pits}}
     <p>
-      It is <code>crater_field</code> again, with two differences forced by the shader tree. There is no Compare node: <code>Math</code> with <code>operation: LESS_THAN</code> gives 1 or 0, which serves the same purpose.
+      It is <code>crater_field</code> again, with two differences forced by the shader tree. There is no Compare node: the comparison <code>cell.color.y &lt; 0.5</code> is a <code>Math</code> node there, Less Than, which gives 1 or 0 and serves the same purpose.
       And it has no seed: the two layers already differ by their scale, and the second one is called on a shifted position so that the two do not share their cells around the origin.
     </p>
     {{code step8_details.bn Regolith}}

@@ -49,7 +49,7 @@
     "MaterialOutput": ["surface", "volume", "displacement", "thickness"],
     "Math": ["Value", "Value_001", "Value_002"],
     "Mix": ["factor", "a", "b"],
-    "MixShader": ["factor", "Shader", "Shader_001"],
+    "MixShader": ["factor", "a", "b"],
     "NormalMap": ["strength", "color"],
     "PrincipledBSDF": ["base_color", "metallic", "roughness", "ior", "alpha", "thin_wall", "normal", "diffuse_roughness", "subsurface_weight", "subsurface_radius", "subsurface_scale", "subsurface_anisotropy", "specular_ior_level", "specular_tint", "anisotropic", "anisotropic_rotation", "tangent", "transmission_weight", "transmission_dispersion_scale", "transmission_dispersion_abbe_number", "coat_weight", "coat_roughness", "coat_ior", "coat_tint", "coat_normal", "sheen_weight", "sheen_roughness", "sheen_tint", "emission_color", "emission_strength", "thin_film_thickness", "thin_film_ior"],
     "SeparateColor": ["color"],

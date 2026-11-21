@@ -40,7 +40,7 @@ geometry graph "Seams from UV"(
   compare = corners_of_edge.total < 2
   "Are Edge Corners in the Same Place?" .. {
     evaluate_on_domain = EvaluateOnDomain(
-      value: Switch(switch: compare, false_: boolean_math, true_: true, input_type: BOOLEAN),
+      value: compare ? true : boolean_math,
       domain: EDGE,
       data_type: BOOLEAN)
   }

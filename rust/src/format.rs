@@ -844,6 +844,27 @@ fn layout(
             precedence("not"),
             origin,
         ),
+        Expr::Cond(c) => {
+            // The condition after `lead`, then `? a` and `: b` each on a line of its own, like operators
+            let mut lines = layout(&c.cond, lead, &inner, "", 1, origin);
+            lines.extend(layout(
+                &c.then,
+                &format!("{}? ", inner),
+                &inner,
+                "",
+                1,
+                c.line,
+            ));
+            lines.extend(layout(
+                &c.orelse,
+                &format!("{}: ", inner),
+                &inner,
+                tail,
+                0,
+                c.orelse.line(),
+            ));
+            lines
+        }
         _ => vec![(origin, flat)],
     }
 }
@@ -856,6 +877,7 @@ fn parenthesized(e: &Expr, outer: usize) -> bool {
         Expr::Not(_) => outer > precedence("not"),
         Expr::BinOp(b) => precedence(&b.op) < outer,
         Expr::Pipe(_) => precedence("|>") < outer,
+        Expr::Cond(_) => outer > 0,
         _ => false,
     }
 }
@@ -1125,6 +1147,20 @@ pub fn format_expr(e: &Expr, outer: usize) -> String {
             let right_str = format_expr(&b.right, p + 1);
             let text = format!("{} {} {}", left_str, b.op, right_str);
             if p < outer {
+                format!("({})", text)
+            } else {
+                text
+            }
+        }
+        Expr::Cond(c) => {
+            // A ternary as condition or as the first branch takes parentheses; as the last one it chains
+            let text = format!(
+                "{} ? {} : {}",
+                format_expr(&c.cond, 1),
+                format_expr(&c.then, 1),
+                format_expr(&c.orelse, 0)
+            );
+            if outer > 0 {
                 format!("({})", text)
             } else {
                 text

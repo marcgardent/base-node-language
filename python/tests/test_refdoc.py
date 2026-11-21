@@ -62,7 +62,9 @@ def test_a_stdlib_page_says_where_each_graph_builds(tmp_path):
     main(["docs", "--root", str(ROOT), "--out", str(tmp_path)])
     math = (tmp_path / "stdlib-math.html").read_text(encoding="utf-8")
     assert 'id="gain"' in math
-    assert "not in a shader tree: no Compare in a shader tree" in math
+    # A comparison builds in every tree; a node a tree lacks does not
+    assert "no Compare in a shader tree" not in math
+    assert "not in a shader tree: unknown node &#x27;RandomValue&#x27; in a shader tree" in math
 
 
 def test_the_idioms_show_their_nodes(tmp_path):

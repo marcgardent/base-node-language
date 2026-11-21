@@ -71,12 +71,12 @@
  },
  "is nan": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "is infinite": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "luma gray": {
@@ -91,12 +91,12 @@
  },
  "clip check": {
   "geometry": "'keymix' is a compositor graph that cannot be built in a geometry tree: 'weighted_sum' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
-  "shader": "no Compare in a shader tree",
+  "shader": "'luma_gray' is a compositor graph that cannot be built in a shader tree: 'gray_of' is a compositor graph that cannot be built in a shader tree: CombineColor has no input 'alpha'; inputs: red, green, blue",
   "compositor": "ok"
  },
  "nan inf check": {
   "geometry": "'keymix' is a compositor graph that cannot be built in a geometry tree: 'weighted_sum' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
-  "shader": "'is_nan' is a compositor graph that cannot be built in a shader tree: no Compare in a shader tree",
+  "shader": "SeparateColor has no output 'alpha'; outputs: red, green, blue",
   "compositor": "ok"
  },
  "zebra": {

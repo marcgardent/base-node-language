@@ -166,6 +166,27 @@ def switch_value_type(found):
     return deciding[0] if deciding else None
 
 
+# The data_type of the Mix a ternary is in a shader or a compositor tree, by the type of its branches;
+# a whole number and a Bool go in as Float
+MIX_TYPES = {"Float": "FLOAT", "Int": "FLOAT", "Bool": "FLOAT", "Vector": "VECTOR", "Color": "RGBA",
+             "Rotation": "ROTATION"}
+
+
+def branches_type(found):
+    """The type the branches of a ternary give it, `found` being [(input, type or None, linked,
+    how many numbers when a tuple else 0)]: with a tuple, Color when one has 4 numbers, else Vector
+    (tuple_type); else the first linked value's, else the first literal's (switch_value_type).
+    Tree → Text reads by it too, to tell the nodes that are a ternary."""
+    sizes = [n for _k, _t, _linked, n in found if n]
+    if sizes:
+        return "Color" if 4 in sizes else "Vector"
+    return switch_value_type([f[:3] for f in found])
+
+
+def takes_list(names):
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
+
+
 def type_setting(t, items):
     """The value of a node's type setting, among `items`, that gives it the type t; None if none does."""
     return next((v for v in TYPE_SETTINGS.get(t, ()) if v in items), None)
@@ -484,6 +505,7 @@ class GraphChecker:
         self.env = {}
         self.calls = set()
         self.separated = {}  # (node id, output identifier) -> SeparateXYZ node id, for p.x
+        self.conditions = set()  # ids of the Math nodes a comparison wrote, where the tree has no Compare
         self.frames = []
         self.last_frame = {}  # (parent frame id, title) -> id of the last frame opened so
         self.returned = None
@@ -1442,6 +1464,8 @@ class GraphChecker:
             return self.formula(e, e.op, [(self.eval(e.left), e.left), (self.eval(e.right), e.right)])
         if isinstance(e, ast.Not):
             return self.formula(e, "not", [(self.eval(e.value), e.value)])
+        if isinstance(e, ast.Cond):
+            return self.ternary(e)
         if isinstance(e, ast.Neg):
             v = self.eval(e.value)
             if isinstance(v, Lit) and v.type in ("Int", "Float"):
@@ -1568,6 +1592,8 @@ class GraphChecker:
             if isinstance(v, Sym):
                 self.unknown(a, v.name)
                 return None
+        if op in sugar.COMPARE and self.schema.node(self.g.kind, "Compare") is None:
+            return self.math_comparison(at, op, operands)
         try:
             name, props, order = sugar.choose(op, [value_type(v) for v, _a in operands])
         except ValueError as err:
@@ -1591,6 +1617,111 @@ class GraphChecker:
             v, a = operands[i]
             self.connect(node, sock, operand_tuple(v, sock), a, op)
         return Out(node.id, outputs, None, op)
+
+    def math_comparison(self, at, op, operands):
+        """A comparison in a tree with no Compare node (a shader tree): Math on numbers, a Float 0 or 1.
+        `>` and `<` are Math's own, `==` its Compare with Compare's Epsilon; `>=`, `<=` and `!=` are
+        the opposite one taken from 1."""
+        try:
+            operation, negated = sugar.math_compare(op, [value_type(v) for v, _a in operands])
+        except ValueError as err:
+            self.error(at, f"{err}: a {self.g.kind} tree has no Compare node")
+            return None
+        values = list(operands)
+        if operation == "COMPARE":
+            values.append((Lit(sugar.EPSILON, "Float"), at))
+        out = self.math_node(at, operation, values, op)
+        if out is not None and negated:
+            out = self.math_node(at, "SUBTRACT", [(Lit(1.0, "Float"), at), (out, at)], op)
+        return out
+
+    def math_node(self, at, operation, values, label):
+        """One Math node of a comparison, its inputs taken in order."""
+        spec = self.schema.node(self.g.kind, "Math")
+        if spec is None:
+            self.error(at, f"no Compare nor Math in a {self.g.kind} tree")
+            return None
+        props = {"operation": operation}
+        inputs, outputs = self.schema.sockets(self.g.kind, spec, props)
+        node = ir.Node(f"n{len(self.nodes)}", spec.bl_idname, props=props, n_inputs=len(inputs),
+                       n_outputs=len(outputs), line=at.line, col=at.col)
+        self.nodes.append(node)
+        self.conditions.add(node.id)
+        for sock, (v, a) in zip(inputs, values):
+            self.connect(node, sock, v, a, label)
+        return Out(node.id, outputs, None, label)
+
+    def is_condition(self, v):
+        """Whether a value says yes or no: a Bool, or what a comparison gives in a tree with no Compare
+        node, a Math node that is Greater Than, Less Than or Compare, or such a one taken from 1.
+        A name keeps it: the node it is bound to is looked at."""
+        if value_type(v) == "Bool":
+            return True
+        if not isinstance(v, Out):
+            return False
+        if v.node in self.conditions:
+            return True
+        return math_condition(next((n for n in self.nodes if n.id == v.node), None), self.nodes)
+
+    def ternary(self, e):
+        """`cond ? then : orelse`. Where a Switch chooses for each element, in a geometry tree, a Switch
+        of the type of its branches. In a shader or a compositor tree a Switch takes one value for a
+        whole image, so it is a Mix by a condition (0 or 1), a Mix Shader for shaders: both branches
+        are computed, and the condition must be one, as a Mix by any Float blends."""
+        cond, then, orelse = [(self.eval(x), x) for x in (e.cond, e.then, e.orelse)]
+        values = [cond, orelse, then]  # as the inputs of the nodes go: the value when false first
+        for v, a in values:
+            if v is None:
+                return None
+            if isinstance(v, Sym):
+                self.unknown(a, v.name)
+                return None
+        (cond, _), (orelse, _), (then, _) = values
+        positional = []
+        if self.switches():
+            name = "Switch"
+            spec = self.schema.node(self.g.kind, name)
+            keys = ("switch", "False", "True")
+        else:
+            found = [(k, value_type(v), isinstance(v, Out), len(v.value) if is_tuple(v) else 0)
+                     for k, v in (("False", orelse), ("True", then))]
+            t = branches_type(found)
+            name = "MixShader" if t == "Shader" else "Mix"
+            spec = self.schema.node(self.g.kind, name)
+            setting = MIX_TYPES.get(t)
+            if spec is None or name == "Mix" and setting not in spec.props["data_type"].items:
+                takes = [x for x in dict.fromkeys(MIX_TYPES) if x not in ("Int", "Bool")]
+                takes += ["Shader"] if self.schema.node(self.g.kind, "MixShader") is not None else []
+                self.error(e, f"'? :' chooses between {takes_list(takes)} in a {self.g.kind} tree, not {t}")
+                return None
+            if not self.is_condition(cond):
+                self.error(e.cond, f"the condition of '? :' is a {value_type(cond)}: in a {self.g.kind} tree it "
+                                   f"is built with {name}, which blends by any number and does not choose. "
+                                   f"Write a comparison (f > 0.5 ? a : b), or call {name}(factor: f, …) to blend")
+                return None
+            keys = ("factor", "a", "b") if name == "Mix" else ("factor", "Shader", "Shader_001")
+        if spec is None:
+            self.error(e, f"no {name} in a {self.g.kind} tree")
+            return None
+        node = ir.Node(f"n{len(self.nodes)}", spec.bl_idname, line=e.line, col=e.col)
+        named = [(k, v, a) for k, (v, a) in zip(keys, values)]
+        if name == "Mix":
+            node.props["data_type"] = setting
+        else:
+            self.tuple_type(spec, node, positional, named)
+            self.switch_type(spec, node, positional, named)
+        inputs, outputs = self.schema.sockets(self.g.kind, spec, node.props)
+        node.n_inputs, node.n_outputs = len(inputs), len(outputs)
+        self.nodes.append(node)
+        places = ("the condition of '? :'", "the value of '? :' when false", "the value of '? :' when true")
+        for (k, v, a), where in zip(named, places):
+            self.connect(node, find_socket(inputs, k), v, a, "? :", where)
+        return Out(node.id, outputs, None, "? :")
+
+    def switches(self):
+        """Whether a Switch of this tree chooses for each element: a geometry tree's. A shader's or a
+        compositor's takes one value for the whole image, and gives its False input when given more."""
+        return self.g.kind == "geometry" and self.schema.node(self.g.kind, "Switch") is not None
 
     def call(self, c, piped=None):
         spec = None if c.name in self.graphs or self.is_function(c.name) else self.schema.node(self.g.kind, c.name)
@@ -2150,14 +2281,15 @@ class GraphChecker:
         options[a.name] = value
         return True
 
-    def connect(self, node, sock, v, at, label):
-        """Link or set one input of `node` from a value."""
+    def connect(self, node, sock, v, at, label, where=None):
+        """Link or set one input of `node` from a value. `where` names the input in an error, when
+        the text does not write its key."""
         if isinstance(v, Typed):
             v = v.value
         if isinstance(v, Empty):
             self.error(at, f"{label}: a bare type ({v.type}) only applies to an item")
             return
-        where = f"{label}.{sock.key}" if label != "return" else f"output '{sock.name}'"
+        where = where or (f"{label}.{sock.key}" if label != "return" else f"output '{sock.name}'")
         if isinstance(v, Const) and not can_link(v.socket.type, sock.type):
             v = v.lit
         if isinstance(v, Out):
@@ -2255,6 +2387,24 @@ def twice_hint(p):
 def item_sockets(items):
     """Sockets of declared items, numbered by position: `#0`, `#1`… The builder finds them so."""
     return [Socket(name, f"#{i}", t) for i, (name, t) in enumerate(items)]
+
+
+MATH = "ShaderNodeMath"
+
+
+def math_condition(node, nodes):
+    """Whether a node is a comparison written with Math: Greater Than, Less Than, Compare, or 1 minus one."""
+    if node is None or node.bl_idname != MATH:
+        return False
+    operation = node.props.get("operation")
+    if operation in {m for m, _negated in sugar.MATH_COMPARE.values()}:
+        return True
+    # Math's inputs are Value, Value_001 and Value_002
+    if operation != "SUBTRACT" or node.values.get("Value") != 1.0 or len(node.links) != 1 \
+            or node.links[0][0] != "Value_001":
+        return False
+    link = node.links[0][1]
+    return math_condition(next((n for n in nodes if n.id == link.node), None), nodes)
 
 
 def is_no_value(e):

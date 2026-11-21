@@ -111,6 +111,16 @@ class Not:
 
 
 @dataclass
+class Cond:
+    """`cond ? then : orelse`: one value or the other. `line` and `col` are those of the `?`."""
+    cond: object
+    then: object
+    orelse: object
+    line: int
+    col: int
+
+
+@dataclass
 class Look:
     """`@ "Label" #color hide mute` after a statement: how the node it makes is shown in the editor."""
     flags: list  # of words: hide, mute

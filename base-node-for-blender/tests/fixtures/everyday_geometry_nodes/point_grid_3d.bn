@@ -14,8 +14,7 @@ geometry graph "Point Grid 3D"(
     "Center Cell": Bool
 ) -> (Points: Geometry, UVW: Vector, "XYZ Index": Vector) {
   position = Position() @ hide
-  vector_math = position
-    + Switch(switch: center_cell, true_: (0.5, 0.5, 0.5), input_type: VECTOR) @ hide
+  vector_math = position + (center_cell ? (0.5, 0.5, 0.5) : (0.0, 0.0, 0.0)) @ hide
   vector_math_2 = Increment * vector_math @ hide
   index = Index() @ hide
   combine_xyz_3 = CombineXYZ(z: index) @ hide

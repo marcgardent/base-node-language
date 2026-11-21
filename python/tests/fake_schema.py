@@ -3,8 +3,10 @@
 from base_node.schema import NodeSpec, Prop, Socket
 
 MATH_OPS = ("ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "POWER", "MINIMUM", "MAXIMUM", "ARCTAN2",
+            "SMOOTH_MIN", "SMOOTH_MAX", "GREATER_THAN", "LESS_THAN", "COMPARE",
             "SINE", "COSINE", "SQRT", "ABSOLUTE")
 UNARY = {"SINE", "COSINE", "SQRT", "ABSOLUTE"}
+TERNARY = {"SMOOTH_MIN", "SMOOTH_MAX", "COMPARE"}
 VECTOR_OPS = ("ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "SCALE", "MINIMUM", "MAXIMUM", "DOT_PRODUCT",
               "DISTANCE", "CROSS_PRODUCT", "LENGTH", "NORMALIZE", "SINE", "ABSOLUTE")
 VECTOR_UNARY = {"LENGTH", "NORMALIZE", "SINE", "ABSOLUTE"}
@@ -160,7 +162,7 @@ class FakeSchema:
         if spec.name == "Math":
             # Like Blender: a unary operation leaves one Value available
             op = props.get("operation", "ADD")
-            inputs = VALUES[:1] if op in UNARY else VALUES[:2]
+            inputs = VALUES[:1] if op in UNARY else VALUES if op in TERNARY else VALUES[:2]
         if spec.name == "VectorMath":
             op = props.get("operation", "ADD")
             if op == "SCALE":

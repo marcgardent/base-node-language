@@ -20,7 +20,7 @@ own: it declares **translators** from a Blender target to itself.
   ```text
   Compatible: blender-compositor
               blade (translated from blender-compositor)
-  Outside:    gltf — Compare (line 12)
+  Outside:    gltf — Glare (line 12)
   ```
 
   An inference holds the targets the text fits (by name, with the target each translated one comes
@@ -29,7 +29,8 @@ own: it declares **translators** from a Blender target to itself.
 
 A text fits a target when every graph it holds fits it: its kind is one of the target's kinds, the
 types of its sockets, its zones and every node it calls are the target's. A formula counts as the
-node it writes (`+` is Math or Vector Math, `<` is Compare, `and` is Boolean Math). A call to a
+node it writes (`+` is Math or Vector Math, `<` is Compare, or Math in a target that has no Compare,
+`and` is Boolean Math). A call to a
 graph of the text or of a module it uses is not a node: the graph it calls must fit the target too,
 and its first issue is one of the text, of kind `graph` (`with_alpha (node SetAlpha)`). The module
 of a `use` is found among the target's [bridges](#the-file-of-a-target), then in the standard
@@ -146,7 +147,7 @@ cannot say that. The `rules` of a target can: for an input of a node, the feeds 
 }
 ```
 
-The key is `Node.input`, the input by its key (`base_color`, `Shader_001`); `Node.*` is every other
+The key is `Node.input`, the input by its key (`base_color`, `Value_001`); `Node.*` is every other
 input of the node. A feed is one of:
 
 | Feed | What it takes |
@@ -249,8 +250,9 @@ rules on the same cases.
 | `PrincipledBSDF`, once | The exporter reads the last Principled BSDF the surface reaches, its inputs walked in order (in `MixShader(0.5, a, b)`, `b`); a Principled BSDF no link reaches is not in the material |
 | `Attribute.attribute_type`, `Tangent.direction_type`, `NormalMap.space`, `NormalMap.convention` | Geometry; UV Map; Tangent; OpenGL |
 
-An **alpha clip** is `round(a)`, `Math(a, cutoff, operation: GREATER_THAN)`, `Math(cutoff, a,
-operation: LESS_THAN)`, or `1.0 - ` the other two, which is `a >= cutoff` (`>` and `<` are Compare
-nodes, which a shader tree does not have): alpha mode `MASK`, the cutoff a constant. `folded` is
+An **alpha clip** is `round(a)`, `a > cutoff` (`Math(a, cutoff, operation: GREATER_THAN)`), `cutoff < a`
+(`Math(cutoff, a, operation: LESS_THAN)`), or `1.0 - ` the other two, which is `a >= cutoff` and
+`cutoff <= a` (a shader tree has no Compare node: a comparison is these Math nodes there, and a rule
+reads it as them): alpha mode `MASK`, the cutoff a constant. `folded` is
 Math, Vector Math and Mix: Blender computes them on constants before the exporter reads the
 material, a Separate Color it does not.

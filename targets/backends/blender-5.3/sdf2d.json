@@ -16,7 +16,7 @@
  },
  "sdf equilateral triangle 2d": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "sdf hexagon 2d": {
@@ -36,7 +36,7 @@
  },
  "sdf arc 2d": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "sdf sector 2d": {
@@ -46,7 +46,7 @@
  },
  "sdf cross 2d": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "sdf ring 2d": {

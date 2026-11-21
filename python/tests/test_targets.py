@@ -254,8 +254,11 @@ def test_the_rules_of_gltf_name_its_nodes_and_their_inputs():
 
 def test_a_formula_counts_as_its_node():
     f = parse("shader graph g(a: Float, b: Float) -> Bool {\n  return a < b\n}\n")
-    assert [i.name for i in check_target(f, "blender-shader")] == ["Compare"]  # no Compare in a shader tree
+    # A comparison is Compare where the tree has one, else Math: a shader tree has no Compare
+    assert check_target(f, "blender-shader") == []
     assert check_target(f, "blender-geometry") == []
+    g = parse("shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a, b)\n}\n")
+    assert [i.name for i in check_target(g, "blender-shader")] == ["Compare"]
 
 
 def test_an_implicit_input_is_the_target_s_to_allow():

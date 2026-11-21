@@ -1,7 +1,8 @@
 //! Formulas as the nodes they write, after the add-on's `lang/sugar.py`:
 //! `a * 2`, `sin(t)` are Math nodes, Vector Math when an operand is a
 //! vector (`v * 2.0` scales it), `<` `==` are Compare (its data type from
-//! its operands), `and` `not` are Boolean Math. So `a * b` and
+//! its operands; Math in a shader tree, which has no Compare), `and` `not`
+//! are Boolean Math. So `a * b` and
 //! `Math(value: a, value_001: b, operation: MULTIPLY)` draw the same node:
 //! its operation as its title and in its menu, its sockets as Blender
 //! names them.
@@ -148,6 +149,8 @@ pub fn choose(op: &str, types: &[Option<&str>]) -> Option<Formula> {
         "pow" => "POWER",
         "min" => "MINIMUM",
         "max" => "MAXIMUM",
+        "smooth_min" => "SMOOTH_MIN",
+        "smooth_max" => "SMOOTH_MAX",
         "floor" => "FLOOR",
         "ceil" => "CEIL",
         "fract" => "FRACT",
@@ -178,6 +181,24 @@ fn compare(op: &str) -> Option<&'static str> {
     })
 }
 
+/// What `==` and `!=` give Math's Compare as its Epsilon: the Epsilon of a new Compare node.
+pub const EPSILON: &str = "0.001";
+
+/// A comparison where the tree has no Compare node (a shader tree): Math's
+/// operation, and whether its result is taken from 1 (`a >= b` is
+/// `1 - (a < b)`).
+pub fn math_compare(op: &str) -> Option<(&'static str, bool)> {
+    Some(match op {
+        ">" => ("GREATER_THAN", false),
+        "<" => ("LESS_THAN", false),
+        ">=" => ("LESS_THAN", true),
+        "<=" => ("GREATER_THAN", true),
+        "==" => ("COMPARE", false),
+        "!=" => ("COMPARE", true),
+        _ => return None,
+    })
+}
+
 /// The operation a node has when its call writes none.
 pub fn default_operation(node: &str) -> &'static str {
     match node {
@@ -201,6 +222,8 @@ pub fn operation_label(node: &str, operation: &str) -> String {
         (_, "COSH") => "Hyperbolic Cosine",
         (_, "TANH") => "Hyperbolic Tangent",
         (_, "ARCTAN2") => "Arctan2",
+        (_, "SMOOTH_MIN") => "Smooth Minimum",
+        (_, "SMOOTH_MAX") => "Smooth Maximum",
         (_, "RADIANS") => "To Radians",
         (_, "DEGREES") => "To Degrees",
         ("Math", "MODULO") => "Truncated Modulo",

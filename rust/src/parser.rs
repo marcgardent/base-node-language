@@ -841,7 +841,35 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// A pipe, or `cond ? then : orelse`, which binds loosest: its branches are whole
+    /// expressions, the last one a ternary again without parentheses (`a ? x : b ? y : z`).
     pub fn expr(&mut self) -> Result<Expr, BnError> {
+        let cond = self.piped()?;
+        if !self.at("?") {
+            return Ok(cond);
+        }
+        let mut height = self.height;
+        let op = self.advance();
+        self.enter()?;
+        let then = self.expr()?;
+        height = height.max(self.height);
+        self.expect(
+            ":",
+            Some("':' and the value when the condition is false, cond ? a : b"),
+        )?;
+        let orelse = self.expr()?;
+        self.leave();
+        self.tall(height.max(self.height) + 1, &op)?;
+        Ok(Expr::Cond(Cond {
+            cond: Box::new(cond),
+            then: Box::new(then),
+            orelse: Box::new(orelse),
+            line: op.line,
+            col: op.col,
+        }))
+    }
+
+    fn piped(&mut self) -> Result<Expr, BnError> {
         let mut left = self.disjunction()?;
         let mut height = self.height;
         while self.at("|>") {

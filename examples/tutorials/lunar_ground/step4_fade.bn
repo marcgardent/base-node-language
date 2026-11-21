@@ -14,10 +14,10 @@ geometry graph crater_profile(
 ) -> (height: Float) {
   "Height of a crater at x radii from its centre: -1 at the bottom of the bowl, 0 far away"
   bowl = x * x - 1.0
-  floored = Math(bowl, floor_depth, smoothness, operation: SMOOTH_MAX)
+  floored = smooth_max(bowl, floor_depth, smoothness)
   outside = min(x - 1.0 - rim_width, 0.0)
   rim = rim_steepness * outside * outside
-  return (height: Math(floored, rim, smoothness, operation: SMOOTH_MIN))
+  return (height: smooth_min(floored, rim, smoothness))
 }
 
 geometry graph crater_field(

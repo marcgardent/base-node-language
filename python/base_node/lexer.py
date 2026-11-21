@@ -6,7 +6,7 @@ KEYWORDS = {"graph", "return", "true", "false", "and", "or", "xor", "not", "repe
 
 # Longest first, so "->" wins over "-", "==" over "=" and ".." over "."
 PUNCT = ("::", "|>", "|", "->", "<=", ">=", "==", "!=", "<", ">", "(", ")", "{", "}", ",", ":", "..", ".", "=", "+", "-", "*", "/",
-         "⋅", "·", "×", "@")
+         "⋅", "·", "×", "@", "?")
 STARTING = {c: tuple(p for p in PUNCT if p[0] == c) for c in {p[0] for p in PUNCT}}  # in PUNCT's order
 
 

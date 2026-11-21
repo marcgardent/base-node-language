@@ -17,7 +17,7 @@ geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..
   // Darker towards the rim: a Color Mix
   shade = Mix(Clamp(r * 0.42 - 0.1), tint, (0.04, 0.05, 0.08, 1.0))
   // Tall in the middle, flat around: a Vector Switch
-  size = Switch(r < 1.15, (0.24, 0.24, 0.08), (0.2, 0.2, 0.5))
+  size = r < 1.15 ? (0.2, 0.2, 0.5) : (0.24, 0.24, 0.08)
   lift = sin(phase * 6.283185 - r * 2.6) * 0.12
   return Grid(3.9, 3.9, count, count)
     |> StoreNamedAttribute(name: "tint", value: shade, data_type: FLOAT_COLOR)

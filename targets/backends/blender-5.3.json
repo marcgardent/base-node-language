@@ -20002,12 +20002,12 @@
     "inputs": [
      {
       "name": "Shader",
-      "key": "Shader",
+      "key": "a",
       "type": "Shader"
      },
      {
       "name": "Shader",
-      "key": "Shader_001",
+      "key": "b",
       "type": "Shader"
      }
     ],
@@ -24226,12 +24226,12 @@
      },
      {
       "name": "Shader",
-      "key": "Shader",
+      "key": "a",
       "type": "Shader"
      },
      {
       "name": "Shader",
-      "key": "Shader_001",
+      "key": "b",
       "type": "Shader"
      }
     ],

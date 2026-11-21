@@ -107,3 +107,30 @@ def test_a_graph_of_the_text_itself_keeps_to_its_kind():
            "compositor graph g(x: Float) -> Float {\n  return double(x)\n}\n")
     assert errors(src) == ["'double' is a geometry graph, not compositor; "
                            "a graph of a module (use) is built for every kind of tree"]
+
+
+class ShaderToo(TwoTrees):
+    """…and a shader tree, which has the math nodes but Compare."""
+
+    def node(self, kind, name):
+        if kind == "shader":
+            return FakeSchema.node(self, "geometry", name) if name in SHARED - {"Compare"} else None
+        return super().node(kind, name)
+
+
+STEPS = """\
+geometry graph above(x: Float, edge: Float = 0.5) -> Float {
+  return (x >= edge) * 2.0
+}
+"""
+
+
+def test_a_comparison_is_built_as_each_tree_can():
+    graphs = compile_source("use maths (above)\n\nshader graph s(x: Float) -> Float {\n  return above(x)\n}\n",
+                            ShaderToo(), "t.bn", loader(STEPS))
+    by_name = {g.name: g for g in graphs}
+    # Compare in the geometry tree it was written for, Math in the shader tree, which has no Compare
+    assert [(n.bl_idname, n.props.get("operation")) for n in by_name["above"].nodes if n.props] == [
+        ("FunctionNodeCompare", "GREATER_EQUAL"), ("ShaderNodeMath", "MULTIPLY")]
+    assert [(n.bl_idname, n.props.get("operation")) for n in by_name["above (Shader)"].nodes if n.props] == [
+        ("ShaderNodeMath", "LESS_THAN"), ("ShaderNodeMath", "SUBTRACT"), ("ShaderNodeMath", "MULTIPLY")]

@@ -7,7 +7,7 @@
  "groups": {
   "ov_calculate-position-vs": {
    "status": "ok",
-   "text": "fc52a1e7a2794a16"
+   "text": "9260e800824ddc37"
   },
   "ov_generated-pos": {
    "status": "ok",
@@ -23,7 +23,7 @@
   },
   "ov_sdf": {
    "status": "ok",
-   "text": "7a6af4d8a4b4534a"
+   "text": "50a65d42bf1c46eb"
   },
   "ov_vat-decoder-vs": {
    "status": "ok",

@@ -18,7 +18,7 @@ OPENERS = ("(", ",", ".", ":", "#")
 
 # Keywords that a value follows
 KEYWORDS = ("return", "and", "or", "xor", "not")
-OPERATORS = ("=", "+", "-", "*", "/", "<", "<=", ">", ">=", "==", "!=", "⋅", "·", "×")
+OPERATORS = ("=", "+", "-", "*", "/", "<", "<=", ">", ">=", "==", "!=", "⋅", "·", "×", "?")
 
 
 @dataclass(frozen=True)

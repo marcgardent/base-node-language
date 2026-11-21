@@ -18,12 +18,13 @@ import bpy
 from ..lang import ast, sugar
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..lang.typecheck import SWITCH, SWITCH_PROP, SWITCH_VALUES, infer_type, switch_value_type, type_setting
+from ..lang.typecheck import (MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type, switch_value_type,
+                              type_setting)
 from ..lang.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
 from ..lang.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
                            CURVE, CURVES, MATERIAL, MATERIAL_OUTPUTS, RAMP, RESERVED, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
-                           SIGNATURE_NODES, TYPES, key, snake)
+                           SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
 from .schema import (PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema, data_value, fresh_item,
@@ -48,6 +49,7 @@ ZONE_VALUES = (ast.Repeat, ast.Simulate, ast.Foreach, ast.Closure)
 ALWAYS = {"operation"}
 
 JOIN = "GeometryNodeJoinGeometry"
+MATH, MIX, MIX_SHADER = "ShaderNodeMath", "ShaderNodeMix", "ShaderNodeMixShader"
 # What a node works on, written first and unnamed, passed from call to call as a pipe:
 # the geometry of a geometry tree, the image of a compositor's filter
 SUBJECTS = {"geometry": "GEOMETRY", "compositor": "RGBA"}
@@ -1084,6 +1086,10 @@ class GraphReader:
             formula = self.formula(node, spec, props)
             if formula is not None:
                 return formula
+        if spec is not None and spec.bl_idname in (SWITCH, MIX, MIX_SHADER):
+            ternary = self.ternary(node, spec, props)
+            if ternary is not None:
+                return ternary
         if group:
             defaults = {i.identifier: snapshot(i) for i in node.node_tree.interface.items_tree
                         if i.item_type == "SOCKET" and i.in_out == "INPUT"}
@@ -1191,6 +1197,49 @@ class GraphReader:
             return ast.Pipe(first, rest, 0, 0)
         self.chain_heads.add(id(call))
         return call
+
+    def ternary(self, node, spec, props):
+        """`cond ? a : b` for the node the checker builds from one (typecheck.ternary), None for any other.
+
+        In a geometry tree, a Switch whose condition is linked, whose branches can both be written (a
+        link, or a literal: a ternary always writes both) and give it its type. In a shader or a
+        compositor tree, a Mix whose settings but its type are a new one's, or a Mix Shader, whose
+        factor comes from a condition: a Bool or a comparison. A Switch there, and a Mix in a geometry
+        tree, stay calls."""
+        switch = spec.bl_idname == SWITCH
+        if switch != (self.kind == "geometry"):
+            return None
+        inputs = [s for s in node.inputs if not s.is_unavailable and s.type != "CUSTOM"]
+        if len(inputs) != 3 or set(props) - {SWITCH_PROP, "data_type"}:
+            return None
+        incoming = self.incoming.get(node.name, {})
+        cond = incoming.get(inputs[0].identifier)
+        if not cond or not (switch or condition(*cond[0], self.incoming)):
+            return None
+        found, branches = [], []
+        for sock in inputs[1:]:
+            links = incoming.get(sock.identifier)
+            if not links and (not hasattr(sock, "default_value") or SOCKET_TYPES.get(sock.type) not in LITERALS):
+                return None
+            e = self.use(*links[0]) if links else self.literal(node, sock, {})
+            if e is None:
+                return None
+            if links:
+                found.append((sock.identifier, SOCKET_TYPES.get(links[0][1].type), True, 0))
+            else:
+                found.append((sock.identifier, literal_text_type(e), False,
+                              len(e.items) if isinstance(e, ast.Tuple) else 0))
+            branches.append(e)
+        t = branches_type(found)
+        if switch:
+            fits = t is not None and type_setting(t, spec.props[SWITCH_PROP].items) == node.input_type
+        elif spec.bl_idname == MIX:
+            fits = MIX_TYPES.get(t) == node.data_type
+        else:
+            fits = t == "Shader"
+        if not fits:
+            return None
+        return ast.Cond(self.use(*cond[0]), branches[1], branches[0], 0, 0)
 
     def switch_type(self, node, spec, incoming, written, props, fresh):
         """A Switch's input_type, written when it is not a new Switch's, as every setting, and also
@@ -1364,6 +1413,11 @@ class GraphReader:
             else:
                 return None
 
+        if name == "Math" and self.schema.node(self.kind, "Compare") is None:
+            compared = self.math_comparison(node, props, operands)
+            if compared is not None:
+                return compared
+
         def means(op, types):
             try:
                 node_name, chosen, order = sugar.choose(op, types)
@@ -1392,6 +1446,34 @@ class GraphReader:
                         return ast.BinOp(op, exprs[0], exprs[1], 0, 0)
                     continue
                 return ast.Call(op, [ast.Arg(None, e, 0, 0) for e in exprs], 0, 0)
+        return None
+
+    def math_comparison(self, node, props, operands):
+        """`a > b`, `a == b`, `a >= b` for a Math node of a tree with no Compare node (a shader tree),
+        as the checker writes them (sugar.MATH_COMPARE): Greater Than and Less Than; Compare whose
+        Epsilon is the one `==` gives it; and Subtract of such a node, written inline, from 1."""
+        if set(props) - {"operation"}:
+            return None
+        exprs = [choices[0][0] for choices in operands]
+        types = [choices[0][1] for choices in operands]
+        linked = [bool(self.incoming.get(node.name, {}).get(s.identifier))
+                  for s in node.inputs if not s.is_unavailable]
+        if any(sugar.kind(t) != "scalar" for t in types):
+            return None
+        operation = node.operation
+        if operation in ("GREATER_THAN", "LESS_THAN") and len(exprs) == 2:
+            return ast.BinOp(sugar.math_comparison(operation), exprs[0], exprs[1], 0, 0)
+        if operation == "COMPARE" and len(exprs) == 3 and not linked[2] \
+                and same(snapshot(node.inputs[2]), float32(sugar.EPSILON)):
+            return ast.BinOp(sugar.math_comparison(operation), exprs[0], exprs[1], 0, 0)
+        if operation == "SUBTRACT" and len(exprs) == 2 and not linked[0] and linked[1] \
+                and snapshot(node.inputs[0]) == 1.0:
+            # A comparison bound to a name is a node of its own: `1.0 - name` stays
+            inner = exprs[1]
+            src = self.incoming[node.name][node.inputs[1].identifier][0][0]
+            if isinstance(inner, ast.BinOp) and src.bl_idname == node.bl_idname \
+                    and sugar.math_comparison(src.operation) == inner.op:
+                return ast.BinOp(sugar.math_comparison(src.operation, True), inner.left, inner.right, 0, 0)
         return None
 
     def literal(self, node, sock, defaults):
@@ -1652,7 +1734,11 @@ def unique(name, taken):
 
 def socket_name(sock, sockets, group, keys=None):
     """How text names this socket: its key when unique, else what tells it apart:
-    for a group's socket, the key its graph gives it (see interface_keys)."""
+    for a group's socket, the key its graph gives it (see interface_keys); an input of INPUT_KEYS
+    has a key of its own (MixShader's `a` and `b`)."""
+    alias = "" if sock.is_output else input_key(sock.node.bl_idname, sock.identifier)
+    if alias:
+        return alias
     snakes = [snake(s.name) for s in sockets]
     if snakes.count(snake(sock.name)) == 1:
         return snake(sock.name)
@@ -1787,6 +1873,9 @@ def refs(e):
         yield from refs(e.right)
     elif isinstance(e, (ast.Neg, ast.Not)):
         yield from refs(e.value)
+    elif isinstance(e, ast.Cond):
+        for x in (e.cond, e.then, e.orelse):
+            yield from refs(x)
     elif isinstance(e, ast.ZONES):
         if isinstance(e, ast.Repeat):
             yield from refs(e.count)
@@ -1808,6 +1897,27 @@ def statement_refs(s):
             yield from refs(f.value)
     else:
         yield from refs(s.value)
+
+
+# The types whose value a ternary can write when a branch is not linked
+LITERALS = ("Float", "Int", "Bool", "Vector", "Color", "Rotation", "String")
+
+
+def condition(node, sock, incoming):
+    """Whether an output says yes or no, as the checker sees it (typecheck.is_condition): a Bool, or
+    a Math node that is Greater Than, Less Than or Compare, or 1 minus such a one."""
+    if sock.type == "BOOLEAN":
+        return True
+    if node.bl_idname != MATH:
+        return False
+    if node.operation in {m for m, _negated in sugar.MATH_COMPARE.values()}:
+        return True
+    first, second = node.inputs[0], node.inputs[1]
+    links = incoming.get(node.name, {})
+    if node.operation != "SUBTRACT" or links.get(first.identifier) or snapshot(first) != 1.0 \
+            or not links.get(second.identifier):
+        return False
+    return condition(*links[second.identifier][0], incoming)
 
 
 def literal_text_type(e):

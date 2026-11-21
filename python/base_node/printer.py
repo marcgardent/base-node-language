@@ -10,7 +10,8 @@ from .schema import RESERVED, key
 INDENT = "  "
 WIDTH = 100
 
-# Binding strength, for parentheses: unary minus is 4, `.socket` is 9
+# Binding strength, for parentheses: unary minus is 4, `.socket` is 9. `cond ? a : b` binds loosest:
+# it takes parentheses wherever the strength around it is 1 or more
 PRECEDENCE = {"|>": 1, "or": 2, "xor": 2, "and": 3, "not": 4, "<": 5, "<=": 5, ">": 5, ">=": 5, "==": 5, "!=": 5,
               "+": 6, "-": 6, "*": 7, "/": 7, "⋅": 7, "×": 7}
 
@@ -279,6 +280,11 @@ def layout(e, lead, pad, tail="", outer=0, origin=0):
         return layout(e.value, lead + "-", pad, tail, 9, origin)
     if isinstance(e, ast.Not):
         return layout(e.value, lead + "not ", pad, tail, PRECEDENCE["not"], origin)
+    if isinstance(e, ast.Cond):
+        # The condition after `lead`, then `? a` and `: b` each on a line of its own, like operators
+        lines = layout(e.cond, lead, inner, "", 1, origin)
+        lines += layout(e.then, f"{inner}? ", inner, "", 1, e.line)
+        return lines + layout(e.orelse, f"{inner}: ", inner, tail, 0, e.orelse.line)
     return [(origin, flat)]
 
 
@@ -294,6 +300,8 @@ def parenthesized(e, outer):
         return PRECEDENCE[e.op] < outer
     if isinstance(e, ast.Pipe):
         return PRECEDENCE["|>"] < outer
+    if isinstance(e, ast.Cond):
+        return outer > 0
     return False
 
 
@@ -401,6 +409,10 @@ def expr(e, outer=0):
     if isinstance(e, ast.Not):
         text = "not " + expr(e.value, PRECEDENCE["not"])
         return f"({text})" if outer > PRECEDENCE["not"] else text
+    if isinstance(e, ast.Cond):
+        # A ternary as condition or as the first branch takes parentheses; as the last one it chains
+        text = f"{expr(e.cond, 1)} ? {expr(e.then, 1)} : {expr(e.orelse)}"
+        return f"({text})" if outer > 0 else text
     if isinstance(e, (ast.BinOp, ast.Pipe)):
         op = e.op if isinstance(e, ast.BinOp) else "|>"
         p = PRECEDENCE[op]

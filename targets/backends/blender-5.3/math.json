@@ -6,7 +6,7 @@
  },
  "gain": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "ease in": {
@@ -21,7 +21,7 @@
  },
  "ease in out": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "impulse": {
@@ -46,7 +46,7 @@
  },
  "bounce": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "elastic": {
@@ -66,7 +66,7 @@
  },
  "square": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "sine01": {
@@ -81,7 +81,7 @@
  },
  "perpendicular": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "max component": {
@@ -151,7 +151,7 @@
  },
  "sdf cone": {
   "geometry": "ok",
-  "shader": "no Compare in a shader tree",
+  "shader": "ok",
   "compositor": "ok"
  },
  "sdf ellipsoid": {

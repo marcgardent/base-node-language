@@ -10,7 +10,7 @@ geometry graph neighbour(grid: Geometry, v: Float, di: Int, dj: Int, n: Int, edg
   i = floor(Index() / n) + di
   j = mod(Index(), n) + dj
   inside = i >= 0 and i < n and j >= 0 and j < n
-  return Switch(inside, edge, SampleIndex(grid, v, i * n + j))
+  return inside ? SampleIndex(grid, v, i * n + j) : edge
 }
 
 // What the eight pipes of each cell bring in and take out, each times `scale` where it starts,
@@ -121,7 +121,7 @@ geometry graph erode(
       // What the water can carry grows with its depth, its speed and the slope under it
       tilt = max(sqrt(1.0 - Normal().z * Normal().z), 0.05)
       carry = capacity * tilt * NamedAttribute(name: "speed").attribute * water
-      taken = Switch(carry > sediment, deposition, erosion) * (carry - sediment)
+      taken = (carry > sediment ? erosion : deposition) * (carry - sediment)
       e = CaptureAttribute(moving, taken: taken)
       settled = e.geometry
         |> SetPosition(offset: CombineXYZ(z: -e.taken))

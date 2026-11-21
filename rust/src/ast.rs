@@ -158,6 +158,16 @@ pub struct Not {
     pub col: usize,
 }
 
+/// `cond ? then : orelse`: one value or the other. `line` and `col` are those of the `?`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Cond {
+    pub cond: Box<Expr>,
+    pub then: Box<Expr>,
+    pub orelse: Box<Expr>,
+    pub line: usize,
+    pub col: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Expr {
     Number(Number),
@@ -171,6 +181,7 @@ pub enum Expr {
     BinOp(BinOp),
     Neg(Neg),
     Not(Not),
+    Cond(Cond),
 }
 
 impl Expr {
@@ -187,6 +198,7 @@ impl Expr {
             Expr::BinOp(e) => e.line,
             Expr::Neg(e) => e.line,
             Expr::Not(e) => e.line,
+            Expr::Cond(e) => e.line,
         }
     }
 
@@ -203,6 +215,7 @@ impl Expr {
             Expr::BinOp(e) => e.col,
             Expr::Neg(e) => e.col,
             Expr::Not(e) => e.col,
+            Expr::Cond(e) => e.col,
         }
     }
 }

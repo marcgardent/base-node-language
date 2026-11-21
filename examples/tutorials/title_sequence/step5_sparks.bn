@@ -62,7 +62,7 @@ geometry graph tagline(progress: Float(subtype: FACTOR), blink: Bool) -> Geometr
   line = BoundingBox(RealizeInstances(chars), use_radius: false)
   end = BoundingBox(RealizeInstances(typed), use_radius: false).max.x
   some = DomainSize(typed, component: INSTANCES).instance_count > 0
-  x = Switch(switch: some, false_: line.min.x, true_: end + 0.08)
+  x = some ? end + 0.08 : line.min.x
   shown = progress > 0.0 and (progress < 1.0 or blink)
   cursor = Grid(size_x: 0.035, size_y: 0.34, vertices_x: 2, vertices_y: 2)
     |> TransformGeometry(translation: CombineXYZ(x: x, y: (line.min.y + line.max.y) * 0.5))

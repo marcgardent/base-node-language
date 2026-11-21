@@ -764,13 +764,23 @@ def test_module_graphs_in_other_trees():
 
     # A graph whose nodes the tree lacks is refused with the reason
     try:
-        build_source("use math (gain)\n\nshader graph s(x: Float) -> Float {\n  return gain(x, 0.3)\n}\n", "s.bn")
+        build_source("use math (random_direction)\n\nshader graph s(i: Int) -> Vector {\n"
+                     "  return random_direction(i, 1)\n}\n", "s.bn")
     except BnError as e:
         message = str(e.diagnostics[0])
     else:
-        raise AssertionError("gain built in a shader tree")
-    assert message.startswith("s.bn:4:10  'gain' is a geometry graph that cannot be built in a shader tree: "
-                              "no Compare in a shader tree"), message
+        raise AssertionError("random_direction built in a shader tree")
+    assert message.startswith("s.bn:4:10  'random_direction' is a geometry graph that cannot be built in a shader "
+                              "tree: unknown node 'RandomValue' in a shader tree"), message
+    # A comparison is no such node: Compare in the geometry tree, Math in a shader tree, which has no Compare
+    built = build_source("use math (gain)\n\nshader graph s(x: Float) -> Float {\n  return gain(x, 0.3)\n}\n", "s.bn")
+    variant = bpy.data.node_groups["gain (Shader)"]
+    assert not [n for n in variant.nodes if n.bl_idname == "FunctionNodeCompare"]
+    assert [n.operation for n in variant.nodes if n.bl_idname == "ShaderNodeMath"
+            and n.operation in ("LESS_THAN", "GREATER_THAN")] == ["LESS_THAN"]
+    assert [n.operation for n in bpy.data.node_groups["gain"].nodes if n.bl_idname == "FunctionNodeCompare"] \
+        == ["LESS_THAN"]
+    assert built
 
     bpy.data.batch_remove([g for g in bpy.data.node_groups if g not in before])
     print("   ✓ Module graphs in other kinds of trees verified")
@@ -2307,6 +2317,269 @@ def test_inputs_of_one_name_rebuilt():
     print("   ✓ Inputs of one name rebuilt")
 
 
+def test_smooth_functions_and_shader_keys():
+    """`smooth_min(a, b, k)` and `smooth_max(a, b, k)` are Math nodes of three operands, and the two
+    Shader inputs of Mix Shader and Add Shader are `a` and `b`: both read back as written, and
+    Blender's identifiers (`Shader`, `Shader_001`) are still read."""
+    print("-> Test: smooth_min, smooth_max, MixShader(a:, b:)...")
+    from base_node.host import build_source, export_tree
+    from base_node.lang.errors import BnError
+
+    smooth = ("geometry graph blend(a: Float, b: Float, k: Float = 0.25) -> Float {\n"
+              "  return smooth_min(a, b, k) + smooth_max(a, 2.0, 0.5)\n}\n")
+    tree = build_source(smooth, filename="smooth.bn")[-1]
+    ops = sorted(n.operation for n in tree.nodes if n.bl_idname == "ShaderNodeMath")
+    assert ops == ["ADD", "SMOOTH_MAX", "SMOOTH_MIN"], ops
+    low = next(n for n in tree.nodes if n.bl_idname == "ShaderNodeMath" and n.operation == "SMOOTH_MIN")
+    assert [len(i.links) for i in low.inputs] == [1, 1, 1], "smooth_min links its three operands"
+    text, warnings = export_tree(tree)
+    assert not warnings, warnings
+    assert text == smooth, text
+    bpy.data.node_groups.remove(tree)
+
+    layers = ("shader graph layers(f: Float = 0.5) -> Shader {\n"
+              "  glow = AddShader(a: DiffuseBSDF(), b: Emission())\n"
+              "  return MixShader(factor: f, a: glow, b: GlossyBSDF())\n}\n")
+    tree = build_source(layers, filename="layers.bn")[-1]
+    mix = next(n for n in tree.nodes if n.bl_idname == "ShaderNodeMixShader")
+    assert [l.from_node.bl_idname for i in mix.inputs[1:] for l in i.links] == \
+        ["ShaderNodeAddShader", "ShaderNodeBsdfAnisotropic"], "a is the first Shader, b the second"
+    text, warnings = export_tree(tree)
+    assert not warnings, warnings
+    assert text == layers, text
+    bpy.data.node_groups.remove(tree)
+    # By Blender's identifiers, the same tree: it reads back by a and b
+    old = layers.replace("a: glow, b:", "Shader: glow, Shader_001:").replace("a: DiffuseBSDF(), b:",
+                                                                             "Shader: DiffuseBSDF(), Shader_001:")
+    assert "Shader_001: GlossyBSDF()" in old and "Shader_001: Emission()" in old, old
+    tree = build_source(old, filename="layers.bn")[-1]
+    assert export_tree(tree)[0] == layers, export_tree(tree)[0]
+    bpy.data.node_groups.remove(tree)
+    # The inputs an error lists are the keys; a shared name is still ambiguous
+    try:
+        build_source("shader graph g() -> Shader {\n  return MixShader(nope: 1.0)\n}\n", filename="g.bn")
+        raise AssertionError("MixShader(nope: …) was built")
+    except BnError as err:
+        assert "inputs: factor, a, b" in str(err), err
+    print("   ✓ smooth_min, smooth_max, MixShader(a:, b:)")
+
+
+def test_comparisons_in_a_shader_tree():
+    """A shader tree has no Compare node: there `<`, `<=`, `>`, `>=`, `==` and `!=` are Math nodes
+    giving a Float 0 or 1, and read back as written. A geometry tree keeps its Compare."""
+    print("-> Test: Comparisons in a shader tree...")
+    from base_node.host import build_source, export_tree
+    from base_node.lang.errors import BnError
+
+    def math(tree):
+        return [n.operation for n in tree.nodes if n.bl_idname == "ShaderNodeMath"]
+
+    six = ("shader graph six(\n    a: Float,\n    b: Float\n"
+           ") -> (gt: Float, lt: Float, ge: Float, le: Float, eq: Float, ne: Float) {\n"
+           "  return (gt: a > b, lt: a < b, ge: a >= b, le: a <= b, eq: a == b, ne: a != b)\n}\n")
+    tree = build_source(six, filename="six.bn")[-1]
+    assert not [n for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"]
+    assert sorted(math(tree)) == ["COMPARE", "COMPARE", "GREATER_THAN", "GREATER_THAN", "LESS_THAN", "LESS_THAN",
+                                  "SUBTRACT", "SUBTRACT", "SUBTRACT"], math(tree)
+    for n in tree.nodes:
+        if n.bl_idname == "ShaderNodeMath" and n.operation == "COMPARE":
+            assert abs(n.inputs[2].default_value - 0.001) < 1e-9, n.inputs[2].default_value
+        if n.bl_idname == "ShaderNodeMath" and n.operation == "SUBTRACT":
+            assert n.inputs[0].default_value == 1.0 and not n.inputs[0].links and n.inputs[1].links
+    text, warnings = export_tree(tree)
+    assert not warnings, warnings
+    assert text == six, text
+    bpy.data.node_groups.remove(tree)
+
+    def read(body, sig="shader graph g(a: Float, b: Float) -> Float"):
+        tree = build_source(f"{sig} {{\n{body}\n}}\n", filename="g.bn")[-1]
+        text, warnings = export_tree(tree)
+        assert not warnings, warnings
+        bpy.data.node_groups.remove(tree)
+        return text.split("{\n", 1)[1].rsplit("\n}", 1)[0]
+
+    # Written by hand, the same nodes: they read back as the operator, which then stays
+    assert read("  return Math(a, b, operation: GREATER_THAN)") == "  return a > b"
+    assert read("  return 1.0 - (a < b)") == "  return a >= b"
+    assert read("  return 1.0 - Math(a, b, operation: GREATER_THAN)") == "  return a <= b"
+    assert read("  return Math(a, b, 0.001, operation: COMPARE)") == "  return a == b"
+    assert read("  return a >= b") == "  return a >= b"
+    # Another epsilon is not `==`: Math's own default is 0.5
+    assert read("  return Math(a, b, operation: COMPARE)") == \
+        "  return Math(Value: a, Value_001: b, operation: COMPARE)"
+    assert read("  return Math(a, b, 0.1, operation: COMPARE)") == \
+        "  return Math(Value: a, Value_001: b, Value_002: 0.1, operation: COMPARE)"
+    # A comparison bound to a name is a node of its own: 1 minus it stays a subtraction
+    assert read("  low = a < b\n  return low * (1.0 - low)") == "  low = a < b\n  return low * (1.0 - low)"
+    # Twice from 1 is no operator of its own
+    assert read("  return 1.0 - (a >= b)") == "  return 1.0 - (a >= b)"
+    # In formulas, by precedence
+    assert read("  return (a > b) * (a + 1.0 <= b * 2.0)") == "  return (a > b) * (a + 1.0 <= b * 2.0)"
+
+    # Numbers only: a shader tree has no Compare node to compare vectors or colors
+    try:
+        build_source("shader graph g(v: Vector) -> Float {\n  return v > 0.5\n}\n", filename="g.bn")
+        raise AssertionError("a Vector was compared in a shader tree")
+    except BnError as err:
+        assert "'>' compares numbers only, not Vector: a shader tree has no Compare node" in str(err), err
+
+    # A geometry tree has Compare: nothing changes there, and Math's comparisons stay calls
+    geo = ("geometry graph g(a: Float, b: Float) -> (c: Bool, m: Float, n: Float) {\n"
+           "  return (\n    c: a >= b,\n    m: Math(Value: a, Value_001: b, operation: GREATER_THAN),\n"
+           "    n: 1.0 - Math(Value: a, Value_001: b, operation: LESS_THAN))\n}\n")
+    tree = build_source(geo, filename="geo.bn")[-1]
+    assert [n.operation for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"] == ["GREATER_EQUAL"]
+    text, warnings = export_tree(tree)
+    assert not warnings, warnings
+    assert text == geo, text
+    bpy.data.node_groups.remove(tree)
+    print("   ✓ Comparisons in a shader tree")
+
+
+def test_ternary():
+    """`cond ? a : b`: a Switch of the type of its branches in a geometry tree; a Mix by a condition,
+    or a Mix Shader, in a shader and a compositor tree, where a Switch takes one value for a whole
+    image. Each reads back as written; the nodes that are not one stay calls."""
+    print("-> Test: Ternary...")
+    from base_node.host import build_source, export_tree
+    from base_node.lang.errors import BnError
+
+    def read(source, check=None):
+        tree = build_source(source, filename="g.bn")[-1]
+        if check is not None:
+            check(tree)
+        text, warnings = export_tree(tree)
+        assert not warnings, warnings
+        bpy.data.node_groups.remove(tree)
+        return text
+
+    def body(text):
+        return text.split("{\n", 1)[1].rsplit("\n}", 1)[0]
+
+    def fails(source, message):
+        try:
+            build_source(source, filename="g.bn")
+            raise AssertionError(f"built: {source}")
+        except BnError as err:
+            assert message in str(err), err
+
+    # Geometry: a Switch of each type
+    geo = ("geometry graph g(\n    m: Geometry,\n    a: Float,\n    b: Float,\n    i: Int,\n    v: Vector,\n"
+           "    c: Color,\n    s: String\n"
+           ") -> (f: Float, n: Int, w: Vector, k: Color, t: String, g: Geometry, deep: Float, sum: Float) {\n"
+           "  return (\n"
+           "    f: a > b ? a : b,\n"
+           "    n: a > b ? i : 0,\n"
+           "    w: a > b ? v : (0.0, 0.0, 1.0),\n"
+           "    k: a > b ? c : (1.0, 0.0, 0.0, 1.0),\n"
+           "    t: a > b ? s : \"none\",\n"
+           "    g: a > b ? SubdivideMesh(m) : m,\n"
+           "    deep: a > b ? (a > 0.0 ? 1.0 : 2.0) : b > 0.0 ? 3.0 : 4.0,\n"
+           "    sum: (a > b ? a : 0.0) + 1.0)\n}\n")
+
+    def switches(tree):
+        types = sorted(n.input_type for n in tree.nodes if n.bl_idname == "GeometryNodeSwitch")
+        assert types == sorted(["FLOAT", "INT", "VECTOR", "RGBA", "STRING", "GEOMETRY"] + ["FLOAT"] * 4), types
+        assert not [n for n in tree.nodes if n.bl_idname == "ShaderNodeMix"]
+
+    assert read(geo, switches) == geo, read(geo)
+
+    def geometry(text, expected=None):
+        out = body(read(f"geometry graph g(m: Geometry, on: Bool, a: Float, r: Rotation) -> Geometry {{\n{text}\n}}\n"))
+        assert expected is None or out == expected, out
+        return out
+
+    # A Switch written as a call is the same node: it reads back as the ternary, which then stays
+    geometry("  return Switch(switch: on, false_: m, true_: SubdivideMesh(m))",
+             "  return on ? SubdivideMesh(m) : m")
+    # A branch left alone is written in a ternary, when the text can write it
+    geometry("  return SetPosition(m, offset: Switch(switch: on, true_: a))",
+             "  return SetPosition(m, offset: on ? a : 0.0)")
+    # …and where it cannot (no geometry), the Switch stays a call
+    geometry("  return Switch(switch: on, true_: m)",
+             "  return Switch(switch: on, true_: m, input_type: GEOMETRY)")
+    # A Switch nothing switches stays a call
+    geometry("  return Switch(false_: m, true_: SubdivideMesh(m))",
+             "  return Switch(false_: m, true_: SubdivideMesh(m), input_type: GEOMETRY)")
+    # A Switch whose type its branches do not give says it, in a call: a Rotation's tuple reads as a Vector
+    kept = "  x = Switch(switch: on, false_: (0.0, 0.0, 0.0), true_: r, input_type: ROTATION)\n" \
+           "  return m\n    |> RotateInstances(rotation: x)"
+    text = geometry(kept)
+    assert "Switch(switch: on, true_: r, input_type: ROTATION)" in text and "?" not in text, text
+    # In a geometry tree a Mix is a Mix
+    assert geometry("  return m |> SetPosition(offset: Mix(factor: a > 0.5, a: (0.0, 0.0, 0.0), b: (0.0, 0.0, 1.0)))") \
+        .count("?") == 0
+
+    # Shader: a Mix by a condition, a Mix Shader for shaders
+    shade = ("shader graph g(a: Float, b: Float, v: Vector, c: Color, on: Bool) -> (f: Float, w: Vector, "
+             "k: Color, s: Shader, n: Float) {\n"
+             "  return (\n"
+             "    f: a > b ? a : b,\n"
+             "    w: a >= b ? v : (0.0, 0.0, 1.0),\n"
+             "    k: on ? c : (1.0, 0.0, 0.0, 1.0),\n"
+             "    s: a == b ? DiffuseBSDF() : GlossyBSDF(),\n"
+             "    n: a < b ? 1.0 : a > 1.0 ? 2.0 : 3.0)\n}\n")
+
+    def mixes(tree):
+        types = sorted(n.data_type for n in tree.nodes if n.bl_idname == "ShaderNodeMix")
+        assert types == ["FLOAT", "FLOAT", "FLOAT", "RGBA", "VECTOR"], types
+        assert len([n for n in tree.nodes if n.bl_idname == "ShaderNodeMixShader"]) == 1
+        assert not [n for n in tree.nodes if n.bl_idname == "GeometryNodeSwitch"]
+        for n in tree.nodes:
+            if n.bl_idname == "ShaderNodeMix":
+                assert n.blend_type == "MIX" and n.factor_mode == "UNIFORM" and n.clamp_factor
+
+    from base_node.lang import format_source
+    shade = format_source(shade)
+    assert read(shade, mixes) == shade, read(shade)
+
+    def shader(text, sig="shader graph g(a: Float, b: Float, on: Bool, c: Color) -> Float"):
+        return body(read(f"{sig} {{\n{text}\n}}\n"))
+
+    # By hand, the same nodes
+    assert shader("  return Mix(factor: a > b, a: 1.0, b: 2.0)") == "  return a > b ? 2.0 : 1.0"
+    assert shader("  hot = a > b\n  return hot * (hot ? a : b)") == "  hot = a > b\n  return hot * (hot ? a : b)"
+    # A Mix by any number blends: it stays a call, and so does one with a setting of its own
+    assert shader("  return Mix(factor: a, a: 1.0, b: 2.0)") == "  return Mix(factor: a, a: 1.0, b: 2.0)"
+    assert "?" not in shader("  return Mix(factor: a > b, a: c, b: (1.0, 0.0, 0.0, 1.0), blend_type: MULTIPLY, "
+                             "data_type: RGBA).x")
+    # A Switch of a shader tree stays a Switch
+    assert shader("  return Switch(switch: on, false_: a, true_: b)").startswith(
+        "  return Switch(switch: on, false_: a, true_: b")
+    fails("shader graph g(a: Float, b: Float) -> Float {\n  return a ? 1.0 : b\n}\n",
+          "the condition of '? :' is a Float: in a shader tree it is built with Mix, which blends by any number")
+    fails('shader graph g(on: Bool) -> Float {\n  x = on ? "a" : "b"\n  return 1.0\n}\n',
+          "'? :' chooses between Float, Vector, Color, Rotation and Shader in a shader tree, not String")
+
+    # Compositor: a Mix too, by a Compare
+    comp = ("compositor graph g(image: Color, a: Float, b: Float) -> (image: Color, f: Float) {\n"
+            "  return (image: a > b ? image : (0.0, 0.0, 0.0, 1.0), f: a <= b ? a : b)\n}\n")
+
+    def composite(tree):
+        assert sorted(n.data_type for n in tree.nodes if n.bl_idname == "ShaderNodeMix") == ["FLOAT", "RGBA"]
+        assert len([n for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"]) == 2
+        assert not [n for n in tree.nodes if n.bl_idname in ("GeometryNodeSwitch", "CompositorNodeSwitch")]
+
+    assert read(comp, composite) == comp, read(comp)
+    fails('compositor graph g(on: Bool, s: String) -> Float {\n  x = on ? "a" : s\n  return 1.0\n}\n',
+          "'? :' chooses between Float, Vector, Color and Rotation in a compositor tree, not String")
+
+    # What a geometry Switch gives is the branch chosen
+    counts = []
+    for big in ("false", "true"):
+        tree = build_source(f"geometry graph pick() -> Geometry {{\n  big = {big}\n"
+                            "  return big ? Grid(vertices_x: 4, vertices_y: 4) : Grid(vertices_x: 2, vertices_y: 2)\n}\n",
+                            filename="pick.bn")[-1]
+        obj = bpy.data.objects.new("pick", bpy.data.meshes.new("pick"))
+        bpy.context.scene.collection.objects.link(obj)
+        obj.modifiers.new("pick", "NODES").node_group = tree
+        counts.append(len(obj.evaluated_get(bpy.context.evaluated_depsgraph_get()).data.vertices))
+        bpy.data.objects.remove(obj)
+        bpy.data.node_groups.remove(tree)
+    assert counts == [4, 16], counts
+    print("   ✓ Ternary")
+
+
 def test_outputs_of_one_name_rebuilt():
     """Two outputs of one name, as in the compositor Essentials' Film Grain, are returned by key:
     their shared name would be ambiguous."""
@@ -2511,7 +2784,7 @@ def test_switch_takes_the_type_of_its_values():
         tree = bpy.data.node_groups[name]
         text, _ = export_tree(tree)
         assert text.count("input_type") == {"frame_or_zero": 1, "value_or_zero": 1,
-                                            "count_or_size": 3}.get(name, 0), text
+                                            "count_or_size": 2}.get(name, 0), text
         first = graph_shape(tree)
         rebuilt = build_source(text, filename=f"{name}.bn")[-1]
         assert graph_shape(rebuilt) == first, f"not the same graph:\n{text}"
@@ -3183,6 +3456,9 @@ def main():
         test_zones_read_back,
         test_color_components,
         test_inputs_of_one_name_rebuilt,
+        test_smooth_functions_and_shader_keys,
+        test_comparisons_in_a_shader_tree,
+        test_ternary,
         test_outputs_of_one_name_rebuilt,
         test_tuples_choose_the_type,
         test_switch_takes_the_type_of_its_values,

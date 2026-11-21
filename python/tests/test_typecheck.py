@@ -335,3 +335,23 @@ def test_a_ramp_says_what_it_expects(schema, value, message):
 ])
 def test_curves_say_what_they_expect(schema, node, value, message):
     assert errors(graph(f"  r = {node}(mapping: {value})\n  return geometry"), schema) == [f"t.bn:{message}"]
+
+
+def test_inputs_with_a_key_of_their_own():
+    """Mix Shader's two Shader inputs are `a` and `b` (schema.INPUT_KEYS); Blender's identifiers are
+    still read, and any other node of repeated names falls back on them."""
+    from base_node.schema import Socket, input_key
+    from base_node.typecheck import find_socket, socket_keys
+
+    def sockets(node):
+        return [Socket("Factor", "Fac", "Float")] + [
+            Socket("Shader", i, "Shader", alias=input_key(node, i)) for i in ("Shader", "Shader_001")]
+
+    mix = sockets("ShaderNodeMixShader")
+    assert socket_keys(mix) == "factor, a, b"
+    assert find_socket(mix, "a") is mix[1] and find_socket(mix, "b") is mix[2]
+    assert find_socket(mix, "Shader") is mix[1] and find_socket(mix, "Shader_001") is mix[2]
+    assert find_socket(mix, "shader") is None
+    other = sockets("ShaderNodeSomethingElse")
+    assert socket_keys(other) == "factor, Shader, Shader_001"
+    assert find_socket(other, "a") is None

@@ -28,7 +28,7 @@ from pathlib import Path
 from . import ast
 from .schema import IMPLICIT as SCHEMA_IMPLICIT
 from .schema import CURVE, CURVES, RAMP, is_material, key
-from .sugar import BINOPS, BOOL_FUNCS, MATH_FUNCS, VECTOR_FUNCS
+from .sugar import BINOPS, BOOL_FUNCS, EPSILON, MATH_COMPARE, MATH_FUNCS, VECTOR_FUNCS
 
 HERE = Path(__file__).resolve().parent
 # The targets shipped with this package, then the repository's when run from a checkout
@@ -163,6 +163,8 @@ def _walk(o, out):
         out.append(("op", "-", line, col))
     elif isinstance(o, ast.Not):
         out.append(("op", "not", line, col))
+    elif isinstance(o, ast.Cond):
+        out.append(("op", "?", line, col))
     elif type(o) in ZONE_WORDS:
         out.append(("zone", ZONE_WORDS[type(o)], line, col))
     for f in fields(o):
@@ -224,9 +226,13 @@ def uses(graph, local=frozenset(), modules=frozenset(), every=False):
             elif name in PRODUCTS:
                 out.append(Use("node", ("VectorMath",), line, col))
             elif name in COMPARISONS:
-                out.append(Use("node", ("Compare",), line, col))
+                # Compare where the tree has one, else Math (a shader tree)
+                out.append(Use("node", ("Compare", "Math"), line, col))
             elif name in LOGIC or name == "not":
                 out.append(Use("node", ("BooleanMath",), line, col))
+            elif name == "?":
+                # A Switch where it chooses for each element, else a Mix by the condition (typecheck.ternary)
+                out.append(Use("node", ("Switch",) if graph.kind == "geometry" else ("Mix", "MixShader"), line, col))
         elif "::" in name:
             if name.split("::", 1)[0] not in modules:
                 out.append(Use("node", (name,), line, col))
@@ -374,6 +380,13 @@ def check_targets(file, targets):
 TIMES = "×"
 DEFAULT = object()  # an input the call does not give: its default value, a constant
 ABSENT = object()  # an input of another call the graph does not make: nothing feeds it, not even a value
+# The inputs text names by a key of their own (schema.INPUT_KEYS), by node name: Blender's
+# identifier, which a call may still write, is read as that key
+IDENTIFIERS = {
+    "MixShader": {"Shader": "a", "Shader_001": "b"},
+    "AddShader": {"Shader": "a", "Shader_001": "b"},
+}
+
 # The inputs of a Material Output, which a material's return feeds
 MATERIAL_SOCKETS = ("surface", "volume", "displacement", "thickness")
 
@@ -406,6 +419,20 @@ def _formula(op):
     if op in COMPARISONS:
         return "Compare"
     return "BooleanMath"
+
+
+def _math_comparison(e):
+    """A comparison as the Math nodes it writes in a tree with no Compare node (sugar.MATH_COMPARE):
+    `a >= b` is `1.0 - Math(a, b, operation: LESS_THAN)`."""
+    operation, negated = MATH_COMPARE[e.op]
+    args = [ast.Arg(None, e.left, e.line, e.col), ast.Arg(None, e.right, e.line, e.col)]
+    if operation == "COMPARE":
+        args.append(ast.Arg(None, ast.Number(EPSILON, False, e.line, e.col), e.line, e.col))
+    args.append(ast.Arg("operation", ast.Ref(operation, e.line, e.col), e.line, e.col))
+    call = ast.Call("Math", args, e.line, e.col)
+    if negated:
+        return ast.BinOp("-", ast.Number(1.0, False, e.line, e.col), call, e.line, e.col)
+    return call
 
 
 def _literal(t):
@@ -473,20 +500,26 @@ class _Links:
     """What feeds the inputs of one graph's nodes, read against the rules of a target."""
 
     def __init__(self, graph, target, local):
-        self.target, self.local = target, local
+        self.target, self.local, self.kind = target, local, graph.kind
         # A name the graph binds holds an expression, or the result of a zone
         self.values = {a.name: a.value for a in _assigns(graph.body)}
         self.params = {}
         for p in ast.flatten(graph.params):
             self.params[p.name] = self.params[key(p.name)] = p.type
         self.vectors = {v.lower() for v in target.vectors}
+        self.compared = {}  # id of a comparison -> (it, the Math nodes it writes where there is no Compare)
 
     def follow(self, e):
-        """`e`, through the names it goes by."""
+        """`e`, through the names it goes by. A comparison, in a target with no Compare node, is the
+        Math nodes it writes there."""
         for _ in range(64):
             if not (isinstance(e, ast.Ref) and e.name in self.values):
                 break
             e = self.values[e.name]
+        if isinstance(e, ast.BinOp) and e.op in COMPARISONS and "Compare" not in self.target.nodes:
+            if id(e) not in self.compared:
+                self.compared[id(e)] = (e, _math_comparison(e))
+            e = self.compared[id(e)][1]
         return e
 
     def constant(self, e):
@@ -546,6 +579,11 @@ class _Links:
             return "VectorMath" if self.vector(e.value) else "Math", socket, [(None, e.value)]
         if isinstance(e, ast.Not):
             return "BooleanMath", socket, [(None, e.value)]
+        if isinstance(e, ast.Cond):
+            # The node of a ternary (typecheck.ternary); a Mix Shader's branches are not told from a Mix's here
+            if self.kind == "geometry":
+                return "Switch", socket, [("switch", e.cond), ("false_", e.orelse), ("true_", e.then)]
+            return "Mix", socket, [("factor", e.cond), ("a", e.orelse), ("b", e.then)]
         return None
 
     def given(self, node, args):
@@ -554,7 +592,7 @@ class _Links:
         out = []
         for i, (n, v) in enumerate(args):
             if n is not None:
-                out.append((n, v))
+                out.append((IDENTIFIERS.get(node, {}).get(n, n), v))
             elif i < len(order):
                 out.append((order[i], v))
         return out

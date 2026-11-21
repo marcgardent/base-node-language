@@ -98,11 +98,9 @@ geometry(is_modifier: false) graph "Simulation Wrapper"(
   "Undo Transform" {
     self_object = SelfObject() @ hide
     invert_matrix = InvertMatrix(matrix: ObjectInfo(object: self_object).transform) @ hide
-    switch = Switch(
-      switch: undo_self_transform,
-      false_: group,
-      true_: TransformGeometry(group, mode: Matrix, transform: invert_matrix.matrix),
-      input_type: GEOMETRY) @ hide
+    switch = undo_self_transform
+      ? TransformGeometry(group, mode: Matrix, transform: invert_matrix.matrix)
+      : group @ hide
   }
   return switch
 }

@@ -11,7 +11,7 @@ a value of your own when it did not, rather than reading zero.
 ```bn
 geometry graph "weight or"(name: String = "weight", fallback: Float = 1.0) -> Float {
   a = NamedAttribute(name: name)
-  return Switch(a.exists, fallback, a.attribute)
+  return a.exists ? a.attribute : fallback
 }
 ```
 
@@ -72,7 +72,7 @@ viewport fast and the render detailed.
 
 ```bn
 geometry graph scatter(mesh: Geometry, preview: Float = 10.0, render: Float = 200.0) -> Geometry {
-  density = Switch(IsViewport(), render, preview)
+  density = IsViewport() ? preview : render
   return DistributePointsOnFaces(mesh, density: density).points
 }
 ```
@@ -86,7 +86,7 @@ on: the graph can tell the user and fall back in the same step.
 geometry graph "faces only"(mesh: Geometry) -> Geometry {
   empty = DomainSize(mesh).face_count == 0
   warned = Warning(empty, message: "The input has no faces")
-  return Switch(warned, mesh, Cube(), input_type: GEOMETRY)
+  return warned ? Cube() : mesh
 }
 ```
 

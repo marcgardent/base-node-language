@@ -40,7 +40,11 @@ geometry graph formulas(
   w = normalize(u × v) * 2.0 + u - v / 2.0 + abs(-u)
   d = u ⋅ v + length(w) + distance(u, v)
   valid = (a < b and not i == j or a >= d) xor nand(i > 0, j != 1) and u == v
-  return (number: n + d, vector: w, valid: valid)
+  picked = valid ? n : a > b ? d : (i > j ? 1.0 : 0.0) * 2.0
+  blended = valid and length(u - v) > 0.001
+    ? normalize(u × v) * smooth_min(a, b, 0.1) + (0.0, 0.0, 1.0)
+    : (a > 0.0 ? u : v) * smooth_max(a, b, 0.1) - (0.0, 0.0, 1.0)
+  return (number: picked + d, vector: w + blended, valid: valid)
 }
 
 // Nodes: positional then named arguments, properties, outputs, chaining, + between geometries

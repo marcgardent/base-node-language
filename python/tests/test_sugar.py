@@ -1,7 +1,9 @@
 import pytest
 
 from base_node import BnError, compile_source, ir
-from base_node.sugar import choose
+from base_node.sugar import EPSILON, choose
+from base_node.typecheck import math_condition
+from fake_schema import FakeSchema
 
 
 def compile_one(source, schema):
@@ -83,6 +85,14 @@ def test_length_gives_a_float(schema):
     assert node(g, "c").links == [("X", ir.Link(length.id, "Value"))]
 
 
+def test_smooth_min_and_max_take_three_numbers(schema):
+    g = compile_one(graph("  a = smooth_min(t, 1.0, 0.25)\n  b = smooth_max(a, t, t)"), schema)
+    assert ops(g) == [("Math", "SMOOTH_MIN"), ("Math", "SMOOTH_MAX")]
+    assert node(g, "a").values == {"Value_001": 1.0, "Value_002": 0.25}
+    assert node(g, "a").n_inputs == node(g, "b").n_inputs == 3
+    assert choose("smooth_min", ["Float", "Int", "Float"]) == ("Math", {"operation": "SMOOTH_MIN"}, (0, 1, 2))
+
+
 def test_negative_literals_fold(schema):
     g = compile_one(graph("  a = t * -(2.0)\n  b = v + -(1.0, 2.0, 3.0)"), schema)
     assert node(g, "a").values == {"Value_001": -2.0}
@@ -94,6 +104,8 @@ def test_negative_literals_fold(schema):
     ("  a = t + geometry", "'+' joins Geometry, not Float"),
     ("  a = length(t)", "length expects vectors"),
     ("  a = atan2(t)", "atan2 expects 2 argument(s), receives 1"),
+    ("  a = smooth_min(t, 1.0)", "smooth_min expects 3 argument(s), receives 2"),
+    ("  a = smooth_max(v, w, 0.1)", "smooth_max does not exist for Vector"),
     ("  a = sin(t, base: 2.0)", "sin does not take named arguments"),
     ("  a = sin(nope)", "unknown name 'nope'"),
     ("  a = t.x", "'t' is already an output (Float); '.x' does not exist"),
@@ -207,3 +219,83 @@ def test_product_errors(schema, body, message):
 def test_dot_and_cross_are_reserved(schema):
     assert errors(graph("  dot = 1.0"), schema) == ["'dot' is reserved for dot product: choose another name"]
     assert choose("⋅", ["Vector", "Color"]) == ("VectorMath", {"operation": "DOT_PRODUCT"}, (0, 1))
+
+
+class NoCompare(FakeSchema):
+    """A tree with no Compare node, as a shader tree."""
+
+    def node(self, kind, name):
+        return None if name == "Compare" else super().node(kind, name)
+
+
+def math(g):
+    """(operation, values, the inputs linked) of every Math node, in creation order."""
+    return [(n.props["operation"], n.values, [i for i, _l in n.links]) for n in g.nodes
+            if n.bl_idname == "ShaderNodeMath"]
+
+
+FLOATS = "geometry graph g(geometry: Geometry, a: Float, b: Float, v: Vector) -> Geometry"
+
+
+@pytest.mark.parametrize("op, nodes", [
+    (">", [("GREATER_THAN", {}, ["Value", "Value_001"])]),
+    ("<", [("LESS_THAN", {}, ["Value", "Value_001"])]),
+    (">=", [("LESS_THAN", {}, ["Value", "Value_001"]), ("SUBTRACT", {"Value": 1.0}, ["Value_001"])]),
+    ("<=", [("GREATER_THAN", {}, ["Value", "Value_001"]), ("SUBTRACT", {"Value": 1.0}, ["Value_001"])]),
+    ("==", [("COMPARE", {"Value_002": EPSILON}, ["Value", "Value_001"])]),
+    ("!=", [("COMPARE", {"Value_002": EPSILON}, ["Value", "Value_001"]),
+            ("SUBTRACT", {"Value": 1.0}, ["Value_001"])]),
+])
+def test_a_comparison_is_math_where_the_tree_has_no_compare(op, nodes):
+    g = compile_one(graph(f"  c = a {op} b", FLOATS), NoCompare())
+    assert math(g) == nodes
+    assert not [n for n in g.nodes if n.bl_idname == "FunctionNodeCompare"]
+    # The name goes to the node that gives the result, and the 1 minus takes the comparison
+    c = node(g, "c")
+    assert c.props["operation"] == nodes[-1][0]
+    if len(nodes) == 2:
+        assert g.node(c.links[0][1].node).props["operation"] == nodes[0][0]
+    # With a Compare node, nothing changes
+    g = compile_one(graph(f"  c = a {op} b", FLOATS), FakeSchema())
+    assert math(g) == [] and [n.bl_idname for n in g.nodes if n.name == "c"] == ["FunctionNodeCompare"]
+
+
+def test_a_math_comparison_is_a_float_of_numbers_only():
+    g = compile_one(graph("  c = (a > 0.5) * (2 <= b)", FLOATS), NoCompare())
+    assert [m[0] for m in math(g)] == ["GREATER_THAN", "GREATER_THAN", "SUBTRACT", "MULTIPLY"]
+    assert math(g)[0][1] == {"Value_001": 0.5} and math(g)[1][1] == {"Value": 2}
+    assert errors(graph("  c = v > a", FLOATS), NoCompare()) == [
+        "'>' compares numbers only, not Vector: a geometry tree has no Compare node"]
+    assert errors(graph('  c = "a" == "b"', FLOATS), NoCompare()) == [
+        "'==' compares numbers only, not String: a geometry tree has no Compare node"]
+
+
+def test_a_condition_is_a_comparison_written_with_math():
+    g = compile_one(graph("  gt = a > b\n  ne = a != b\n  hand = Math(a, b, operation: LESS_THAN)\n"
+                          "  flipped = 1.0 - hand\n  sum = a + b\n  not_from_one = 2.0 - hand\n"
+                          "  swapped = hand - 1.0\n  twice = 1.0 - sum", FLOATS), NoCompare())
+    found = {n.name: math_condition(n, g.nodes) for n in g.nodes if n.name}
+    assert found == {"gt": True, "ne": True, "hand": True, "flipped": True, "sum": False,
+                     "not_from_one": False, "swapped": False, "twice": False}
+    assert not math_condition(None, g.nodes)
+
+
+def test_is_condition_follows_names(monkeypatch):
+    from base_node import typecheck
+
+    checkers = []
+    init = typecheck.GraphChecker.__init__
+
+    def keep(self, *args, **kwargs):
+        init(self, *args, **kwargs)
+        checkers.append(self)
+
+    monkeypatch.setattr(typecheck.GraphChecker, "__init__", keep)
+    compile_one(graph("  gt = a >= b\n  hand = 1.0 - Math(a, b, operation: COMPARE)\n  sum = a + b\n"
+                      "  yes = true", FLOATS), NoCompare())
+    c = checkers[-1]
+    assert {k: c.is_condition(c.env[k]) for k in ("gt", "hand", "sum", "yes", "a")} == {
+        "gt": True, "hand": True, "sum": False, "yes": True, "a": False}
+    # A Compare node gives a Bool
+    compile_one(graph("  gt = a >= b", FLOATS), FakeSchema())
+    assert checkers[-1].is_condition(checkers[-1].env["gt"])

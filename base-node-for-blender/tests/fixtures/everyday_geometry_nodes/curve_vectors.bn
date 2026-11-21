@@ -9,11 +9,7 @@ geometry graph "Curve Vectors"() -> (Vectors: Vector, "Is Valid": Bool) {
   position = Position() @ hide
   offset_point_in_curve = OffsetPointInCurve(offset: 1)
   index = Index() @ hide
-  switch = Switch(
-    switch: offset_point_in_curve.is_valid_offset,
-    false_: index,
-    true_: offset_point_in_curve.point_index,
-    input_type: INT) @ hide
+  switch = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : index @ hide
   evaluate_at_index = EvaluateAtIndex(
     value: position,
     index: switch,

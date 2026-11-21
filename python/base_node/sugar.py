@@ -1,6 +1,9 @@
 """Formulas: `a * 2 + sin(t)`, `p.x`, `n ⋅ up`, `h > 0.5 and not edge xor flip`, written as Math,
 Vector Math, Compare and Boolean Math nodes.
 
+A comparison is a Compare node where the tree has one; a shader tree has none, and there it is
+Math: a Float 0 or 1 (MATH_COMPARE).
+
 `choose` decides which node and props a formula means from the types of
 its operands. The checker uses it to build, the reader to check that a
 node reads back as the same formula.
@@ -20,6 +23,15 @@ WORDS = {"dot": "⋅", "cross": "×", "·": "⋅"}
 COMPARE = {"<": "LESS_THAN", "<=": "LESS_EQUAL", ">": "GREATER_THAN", ">=": "GREATER_EQUAL",
            "==": "EQUAL", "!=": "NOT_EQUAL"}
 
+# A comparison of numbers in a tree with no Compare node: Math's operation, and whether the result is
+# taken from 1 (`a >= b` is `1 - (a < b)`)
+MATH_COMPARE = {">": ("GREATER_THAN", False), "<": ("LESS_THAN", False),
+                ">=": ("LESS_THAN", True), "<=": ("GREATER_THAN", True),
+                "==": ("COMPARE", False), "!=": ("COMPARE", True)}
+# What `==` and `!=` give Math's Compare as its Epsilon, its third input: the Epsilon of a new Compare
+# node, so that `a == b` means the same in every tree. Math's own default, 0.5, would not
+EPSILON = 0.001
+
 LOGIC = {"and": "AND", "or": "OR", "xor": "XOR", "not": "NOT"}
 BOOL_FUNCS = {"xor": "XOR", "xnor": "XNOR", "nand": "NAND", "nor": "NOR", "imply": "IMPLY", "nimply": "NIMPLY"}
 
@@ -32,7 +44,8 @@ MATH_FUNCS = {
     "asin": "ARCSINE", "acos": "ARCCOSINE", "atan": "ARCTANGENT", "atan2": "ARCTAN2",
     "sinh": "SINH", "cosh": "COSH", "tanh": "TANH",
     "sqrt": "SQRT", "abs": "ABSOLUTE", "exp": "EXPONENT", "log": "LOGARITHM", "pow": "POWER",
-    "min": "MINIMUM", "max": "MAXIMUM", "floor": "FLOOR", "ceil": "CEIL", "fract": "FRACT",
+    "min": "MINIMUM", "max": "MAXIMUM", "smooth_min": "SMOOTH_MIN", "smooth_max": "SMOOTH_MAX",
+    "floor": "FLOOR", "ceil": "CEIL", "fract": "FRACT",
     "round": "ROUND", "trunc": "TRUNC", "sign": "SIGN", "mod": "MODULO",
     "radians": "RADIANS", "degrees": "DEGREES",
 }
@@ -93,6 +106,19 @@ def compare(op, types):
                 raise ValueError(f"'{op}' cannot be applied to {t}")
         data = "VECTOR" if "vector" in kinds else "INT" if set(types) == {"Int"} else "FLOAT"
     return {"data_type": data, "operation": COMPARE[op]}
+
+
+def math_compare(op, types):
+    """(operation, negated) of a comparison written with Math, which compares numbers only."""
+    for t in types:
+        if kind(t) != "scalar":
+            raise ValueError(f"'{op}' compares numbers only, not {t}")
+    return MATH_COMPARE[op]
+
+
+def math_comparison(operation, negated=False):
+    """The operator Math's `operation` is written as, taken from 1 or not; None when it is none."""
+    return next((op for op, m in MATH_COMPARE.items() if m == (operation, negated)), None)
 
 
 def math(op, types):
