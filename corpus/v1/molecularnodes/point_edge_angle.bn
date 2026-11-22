@@ -60,9 +60,9 @@ geometry graph "Point Edge Angle"(
     Angle: Float(
       description: "Angle between the two selected edges in radians. Returns 0 if not valid"),
     "Edge Index A": Int(
-      description: "Index for 'Edge A' in the Edge domain of the geometry. Returns -1 if not valid"),
+      description: "Index for \"Edge A\" in the Edge domain of the geometry. Returns -1 if not valid"),
     "Edge Index B": Int(
-      description: "Index for 'Edge B' in the Edge domain of the geometry. Returns -1 if not valid"),
+      description: "Index for \"Edge B\" in the Edge domain of the geometry. Returns -1 if not valid"),
     "Edge Vector A": Vector(
       description: "Vector from the current point to the other point in Edge A. Returns (0, 0, 0) if not valid."),
     "Edge Vector B": Vector(

@@ -1,5 +1,7 @@
 geometry graph "Box Selection"(
-    Center: Vector(subtype: TRANSLATION, description: "Center position of box selection"),
+    Center: Vector(
+      subtype: TRANSLATION,
+      description: "Center position of box selection") in -3.40282e+38..3.40282e+38,
     Size: Vector(
       subtype: TRANSLATION,
       description: "Edge length of box selection") = (1.0, 1.0, 1.0) in 0.0..
@@ -12,6 +14,8 @@ geometry graph "Box Selection"(
     use_rotation_z: false,
     use_scale_x: false,
     use_scale_y: false,
-    use_scale_z: false](CombineTransform(translation: Center), position: Center)
+    use_scale_z: false](
+    CombineTransform(translation: Center, rotation: (0.0, -0.0, 0.0)),
+    position: Center)
   return (Selection: position >= Center - vector_math and position <= Center + vector_math)
 }

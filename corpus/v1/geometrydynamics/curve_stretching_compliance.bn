@@ -40,6 +40,6 @@ geometry graph "Curve Stretching Compliance"(
   "Edge length factor for discrete constraints" .. {
     math_3 = math_2 * math_4 @ hide
   }
-  string = "Parameterization of constraint compliance using 'Softness', based on Hooke's law.  A representative curve (longest curve) is stretched by some factor based on the total weight of the curve and the stiffness of the material. The inverse of this relationship yields the stiffness based on a desired maximum geometric stretch factor, computed from the softness parameter.  Constraint stiffness includes the length of adjacent segments."
+  string = "Parameterization of constraint compliance using \"Softness\", based on Hooke's law.\n\nA representative curve (longest curve) is stretched by some factor based on the total weight of the curve and the stiffness of the material. The inverse of this relationship yields the stiffness based on a desired maximum geometric stretch factor, computed from the softness parameter.\n\nConstraint stiffness includes the length of adjacent segments."
   return ("Constraint Compliance": math_3)
 }

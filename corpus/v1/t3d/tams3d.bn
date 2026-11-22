@@ -69,8 +69,9 @@ geometry(is_modifier: true) graph Bend(
 ) -> Geometry {
   {
     position = Position()
+    separate_xyz = SeparateXYZ(vector: position)
     switch = x_y_z == 3
-      ? CombineXYZ(x: position.z, y: position.y, z: position.x)
+      ? CombineXYZ(x: separate_xyz.z, y: separate_xyz.y, z: separate_xyz.x)
       : x_y_z == 2 ? CombineXYZ(x: position.y, y: position.x, z: position.z) : position
   }
   "Bending" {
@@ -109,8 +110,9 @@ geometry(is_modifier: true) graph Bend(
     vector_math = switch + vector_rotate_3
   }
   {
+    separate_xyz_2 = SeparateXYZ(vector: vector_rotate_3)
     vector_math_2 = -(x_y_z == 3
-      ? CombineXYZ(x: vector_rotate_3.z, y: vector_rotate_3.y, z: vector_rotate_3.x)
+      ? CombineXYZ(x: separate_xyz_2.z, y: separate_xyz_2.y, z: separate_xyz_2.x)
       : x_y_z == 2
         ? CombineXYZ(x: vector_rotate_3.y, y: vector_rotate_3.x, z: vector_rotate_3.z)
         : vector_rotate_3)
@@ -203,6 +205,7 @@ geometry(is_modifier: true) graph Bulge(
         rotation: named_attribute_2.attribute)
       - named_attribute.attribute
   }
+  separate_xyz = SeparateXYZ(vector: vector_math)
   "Adding Offsets" {
     named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "Center") @ "Center"
     named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "Rotation") @ "Rotation"
@@ -244,7 +247,7 @@ geometry(is_modifier: true) graph Bulge(
       Value: Math[MULTIPLY_ADD](Value: mix_3, Value_001: -mix_3, Value_002: 1.0),
       Value_001: Strength,
       Value_002: 1.0)
-    combine_xyz = CombineXYZ(x: vector_math.x * math, y: vector_math.y * math, z: vector_math.z)
+    combine_xyz = CombineXYZ(x: separate_xyz.x * math, y: separate_xyz.y * math, z: separate_xyz.z)
   }
   "Adding Offsets" .. {
     vector_rotate = VectorRotate[EULER_XYZ, invert: true](
@@ -369,8 +372,8 @@ geometry graph "Component Selection"() -> (
 
 geometry(is_modifier: true) graph "Curve Ellipse"(
     Resolution: Int = 32 in 4..,
-    "Radius X": Float(subtype: DISTANCE) = 2.0 in 0.0..,
-    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Radius X": Float(subtype: DISTANCE) = 2.0 in 0.0..3.40282e+38,
+    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "Trim Start": Float(subtype: FACTOR) in 0.0..1.0,
     "Trim End": Float(subtype: FACTOR) = 1.0 in 0.0..1.0
 ) -> (Curve: Geometry) {
@@ -529,8 +532,8 @@ geometry graph "Edge Path Selection"(
 geometry(is_modifier: true) graph "Extend Curve"(
     Curve: Geometry,
     Selection: Bool(hide_value: true) = true,
-    "Start Point": Float = 1.0,
-    "End Point": Float = 1.0
+    "Start Point": Float = 1.0 in -3.40282e+38..3.40282e+38,
+    "End Point": Float = 1.0 in -3.40282e+38..3.40282e+38
 ) -> (Curve: Geometry) {
   {
     endpoint_selection = EndpointSelection(end_size: 0)
@@ -1164,9 +1167,9 @@ geometry(is_modifier: true) graph "Parent To Object"(
 geometry(is_modifier: true) graph Phyllotaxis(
     Points: Int = 750 in 1..,
     Angle: Float(subtype: ANGLE) = 2.3998277 in -6.2831855..6.2831855,
-    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "Inner Radius": Float,
-    Depth: Float(subtype: DISTANCE),
+    Depth: Float(subtype: DISTANCE) in -3.40282e+38..3.40282e+38,
     Falloff: Float = 1.0 in 1.0..10000.0,
     "Point Radius": Float(subtype: DISTANCE) = 0.025 in 0.0..
 ) -> (Points: Geometry, Normal: Vector, Rotation: Rotation) {
@@ -1327,7 +1330,7 @@ geometry(is_modifier: true) graph "Poke Faces"(
 
 geometry graph "Prism Field"(
     Clamp: Bool = true,
-    Location: Vector(subtype: TRANSLATION),
+    Location: Vector(subtype: TRANSLATION) in -3.40282e+38..3.40282e+38,
     Rotation: Rotation,
     Scale: Vector = (1.0, 1.0, 1.0) in -10000.0..10000.0
 ) -> (Factor: Float) {
@@ -1341,11 +1344,13 @@ geometry graph "Prism Field"(
     vector_math_2 = vector_math / (0.866025, 0.866025, 1.0)
     math_2 = abs(vector_math_2.z) - Scale.z * 0.5
     combine_xyz = CombineXYZ(x: abs(vector_math_2.x) - 1.0, y: vector_math_2.y + 0.57735026)
-    math_3 = 1.7320508 * combine_xyz.y
+    separate_xyz = SeparateXYZ(vector: combine_xyz)
+    math_3 = 1.7320508 * separate_xyz.y
     mix = Mix[VECTOR](
       factor: Math[GREATER_THAN](Value: combine_xyz.x + math_3, Value_001: 0.0),
       a: combine_xyz,
-      b: CombineXYZ(x: combine_xyz.x - math_3, y: -1.7320508 * combine_xyz.x - combine_xyz.y) * 0.5)
+      b: CombineXYZ(x: separate_xyz.x - math_3, y: -1.7320508 * separate_xyz.x - separate_xyz.y)
+        * 0.5)
     math = length(CombineXYZ(x: mix.x - Clamp(value: mix.x, min: -2.0, max: 0.0), y: mix.y))
       * sign(-mix.y)
     math_4 = -(length(max(CombineXYZ(x: math, y: math_2), 0.0)) + min(max(math, math_2), 0.0))
@@ -1358,8 +1363,8 @@ geometry(is_modifier: true) graph "Radial Instancer"(
     Geometry: Geometry,
     Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
     Count: Int = 32 in 3..10000,
-    "Radius X": Float(subtype: DISTANCE) = 1.0 in 0.0..,
-    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Radius X": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
+    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "End Angle": Float(subtype: ANGLE) = 6.2831855 in 0.0..6.2831855,
     "Offset Angle": Float(subtype: ANGLE),
     "Options"(default_closed: true) {
@@ -1791,7 +1796,8 @@ geometry graph "Spherical to Cartesian"(
 ) -> ("x,y,z": Vector) {
   "to cartesian" {
     math = ρ_θ_φ.x * (sin(ρ_θ_φ.y) * sin(ρ_θ_φ.z))
-    math_2 = ρ_θ_φ.x * (cos(ρ_θ_φ.y) * sin(ρ_θ_φ.z))
+    separate_xyz = SeparateXYZ(vector: ρ_θ_φ)
+    math_2 = separate_xyz.x * (cos(separate_xyz.y) * sin(separate_xyz.z))
     math_3 = ρ_θ_φ.x * cos(ρ_θ_φ.z)
   }
   return ("x,y,z": CombineXYZ(x: math_2, y: math, z: math_3))
@@ -1868,7 +1874,7 @@ geometry(is_modifier: true) graph Spirograph(
 geometry graph Stretch(
     Geometry: Geometry,
     Selection: Bool(hide_value: true) = true,
-    Strength: Vector,
+    Strength: Vector in -3.40282e+38..3.40282e+38,
     Offset: Vector in -1.0..1.0,
     "Mid-Level": Float(subtype: FACTOR) = 0.5 in 0.0..1.0
 ) -> Geometry {

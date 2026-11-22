@@ -78,6 +78,7 @@ shader graph "Car3Layer.002"(
     a: mix_4,
     b: brightness_contrast) @ hide
   mix_shader = MixShader(
+    factor: 0.49999997,
     a: MixShader(
       a: DiffuseBSDF(color: mix_7, normal: Normal),
       b: SheenBSDF[ASHIKHMIN](color: mix_7, roughness: 1.0, normal: Normal)),

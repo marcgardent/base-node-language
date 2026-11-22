@@ -7,7 +7,7 @@
  "groups": {
   ".Halation 3.021": {
    "status": "ok",
-   "text": "e5f084991d72108a"
+   "text": "26c64c5e231fc9ac"
   },
   ".Multisample Displace Group 2.010": {
    "status": "ok",
@@ -19,7 +19,7 @@
   },
   ".Noisegroup Internal 3.022": {
    "status": "ok",
-   "text": "a28476cc2a9a6443",
+   "text": "abbe61fe0a9eb94d",
    "blender_quirk": [
     "composite Result"
    ]
@@ -38,11 +38,11 @@
   },
   "Cheap Blur 2.001": {
    "status": "ok",
-   "text": "04991eb62777a777"
+   "text": "c81ae2ab677b1e68"
   },
   "Chromatic Aberration": {
    "status": "ok",
-   "text": "13a218a69b7b9dd2"
+   "text": "07e66145a2ef9471"
   },
   "Combine Cylindrical": {
    "status": "ok",
@@ -54,7 +54,7 @@
   },
   "Film Grain": {
    "status": "ok",
-   "text": "10064acbdcf6e6d1",
+   "text": "9a7a7e16a5eb108a",
    "blender_quirk": [
     "composite Result"
    ]

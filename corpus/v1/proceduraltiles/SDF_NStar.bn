@@ -23,7 +23,7 @@ shader graph SDF_NStar(
   vector_math_2 = vector_math
     + combine_xyz_2 * Clamp(value: -(vector_math ⋅ combine_xyz_2), max: Radius * math_4 / math_6)
   math_10 = Math[DIVIDE, use_clamp: true](Value_001: 1.0)
-  math_11 = -0.5
+  math_11 = 0.5 * -1.0
   return (
     Value: length(vector_math_2)
       * Mix[clamp_factor: false](factor: vector_math_2.x > 0.0, a: -1.0, b: 1.0))

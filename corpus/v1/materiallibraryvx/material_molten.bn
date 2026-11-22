@@ -5,7 +5,7 @@ shader(material: true) graph Molten() -> (surface: Shader) {
     factor: NoiseTexture(
       vector: Mix[RGBA](
         factor: 0.1909,
-        a: Mapping(vector: texture_coordinate.object),
+        a: Mapping(vector: texture_coordinate.object, rotation: (0.0, -0.0, 0.0)),
         b: NoiseTexture(
           vector: texture_coordinate.object,
           scale: 1.1,

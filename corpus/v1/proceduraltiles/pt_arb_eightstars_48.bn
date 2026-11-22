@@ -31,8 +31,9 @@ shader graph "PT_ARB_EightStars(48)"(
     vector_math_10 = mix * map_range_2 @ hide
     vector_math_11 = mix_2 * map_range_2 @ hide
   }
-  math_4 = vector_math_2.x + vector_math_2.y
-  math_5 = vector_math_2.x - vector_math_2.y
+  separate_xyz_2 = SeparateXYZ(vector: vector_math_2)
+  math_4 = separate_xyz_2.x + separate_xyz_2.y
+  math_5 = separate_xyz_2.x - separate_xyz_2.y
   math_6 = min(-min(math_4, math_5), max(math_4, math_5)) > 0.0
   mix_5 = math_6 ? CombineXYZ(x: mix_3.y, y: mix_3.x) : mix_3
   vector_math_12 = mix_5 - (0.14644662, 0.0, 0.0)

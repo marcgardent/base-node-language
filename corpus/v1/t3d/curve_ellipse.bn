@@ -1,7 +1,7 @@
 geometry(is_modifier: true) graph "Curve Ellipse"(
     Resolution: Int = 32 in 4..,
-    "Radius X": Float(subtype: DISTANCE) = 2.0 in 0.0..,
-    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Radius X": Float(subtype: DISTANCE) = 2.0 in 0.0..3.40282e+38,
+    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "Trim Start": Float(subtype: FACTOR) in 0.0..1.0,
     "Trim End": Float(subtype: FACTOR) = 1.0 in 0.0..1.0
 ) -> (Curve: Geometry) {

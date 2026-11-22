@@ -7,11 +7,11 @@
  "groups": {
   "Car3Layer.002": {
    "status": "ok",
-   "text": "70b87e6eaf8b08c8"
+   "text": "ebfdd698cdd8cc8e"
   },
   "Ceramic.001": {
    "status": "ok",
-   "text": "d9bc3933798588af"
+   "text": "5e2269ab97250e96"
   },
   "Chrome(brushed).002": {
    "status": "ok",
@@ -159,7 +159,7 @@
   },
   "material:Ceramic": {
    "status": "ok",
-   "text": "a8885ed91423cb22"
+   "text": "5c44f2bef9880538"
   },
   "material:Ceramic Polished": {
    "status": "ok",
@@ -175,7 +175,7 @@
   },
   "material:Composite Rubber": {
    "status": "ok",
-   "text": "f791b921c84f0e5e"
+   "text": "aa19cbeacbaa187f"
   },
   "material:Cranberry Juice": {
    "status": "ok",
@@ -223,7 +223,7 @@
   },
   "material:Jewelry": {
    "status": "ok",
-   "text": "fd33fce8014f4648"
+   "text": "7546be6ba844c89c"
   },
   "material:Lemon": {
    "status": "ok",
@@ -239,7 +239,7 @@
   },
   "material:Molten": {
    "status": "ok",
-   "text": "ae402ed8485f6705"
+   "text": "068447f00b354345"
   },
   "material:Polished Walnut": {
    "status": "ok",
@@ -255,7 +255,7 @@
   },
   "material:Wire Musgrave": {
    "status": "ok",
-   "text": "c3824357574eb91b"
+   "text": "2acef927f1a520a7"
   },
   "material:WoodP": {
    "status": "ok",

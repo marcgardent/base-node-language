@@ -2,8 +2,8 @@ geometry graph "Radial Instancer"(
     Geometry: Geometry,
     Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
     Count: Int = 32 in 3..10000,
-    "Radius X": Float(subtype: DISTANCE) = 1.0 in 0.0..,
-    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Radius X": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
+    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "End Angle": Float(subtype: ANGLE) = 6.2831855 in 0.0..6.2831855,
     "Offset Angle": Float(subtype: ANGLE),
     "Options"(default_closed: true) {

@@ -36,5 +36,6 @@ shader graph "Ceramic.001"(
           distance: 0.1,
           filter_width: 1.0,
           height: NoiseTexture(scale: 1000.0, distortion: 0.5).factor,
-          normal: Normal))))
+          normal: Normal))),
+    Color: (0.0, 0.0, 0.0, 0.0))
 }

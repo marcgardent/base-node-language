@@ -39,6 +39,6 @@ geometry graph "Curve Bending Compliance"(
   "Edge length factor for discrete constraints" .. {
     math_9 = math_8 * math_10 @ hide
   }
-  string = "Stiffness model based on static beam deflection:  A representative hair curve is described by a cantilever beam, fixed at one end, with a uniform load. The maximum deflection at the other end can be computed based on the material stiffness (Bernoulli model). Inverting this relationship yields a formula for stiffness based on a simple geometric parameter (maximum deflection, expressed as an angle).  The stiffness of each constraint is dependent on the length of the adjacent segments.  Technically the Bernoulli model is only accurate for small deflections, but it works well enough to provide a simple parameterization of 'softness' to constraint compliance."
+  string = "Stiffness model based on static beam deflection:\n\nA representative hair curve is described by a cantilever beam, fixed at one end, with a uniform load. The maximum deflection at the other end can be computed based on the material stiffness (Bernoulli model). Inverting this relationship yields a formula for stiffness based on a simple geometric parameter (maximum deflection, expressed as an angle).\n\nThe stiffness of each constraint is dependent on the length of the adjacent segments.\n\nTechnically the Bernoulli model is only accurate for small deflections, but it works well enough to provide a simple parameterization of \"softness\" to constraint compliance."
   return ("Constraint Compliance": math_9)
 }

@@ -6,7 +6,7 @@ geometry graph "ov_vat-decoder-vs"(
       default_attribute_name: "VAT_UV"),
     x_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
     x_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,
-    y_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
+    y_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0 in -3.40282e+38..,
     y_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,
     z_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
     z_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,

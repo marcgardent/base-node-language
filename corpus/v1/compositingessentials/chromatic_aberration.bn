@@ -55,6 +55,10 @@ compositor graph "Chromatic Aberration"(
             |> DirectionalBlur(samples: Samples, center: Center, scale: math_2)
             |> Scale(x: math_2, y: math_2),
           alpha: separate_color.alpha),
-        "Lens Dispersion": LensDistortion(Image, dispersion: math_9, fit: Fit)).output
+        "Lens Dispersion": LensDistortion(
+          Image,
+          distortion: -0.0,
+          dispersion: math_9,
+          fit: Fit)).output
       |> SetAlpha(alpha: SeparateColor(Image).alpha, type: "Replace Alpha"))
 }

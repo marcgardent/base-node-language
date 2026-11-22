@@ -22,5 +22,6 @@ shader(material: true) graph Jewelry() -> (surface: Shader) {
       forecolor: (1.0, 0.636669, 0.0, 1.0),
       middlecolor: (0.8000001, 0.350816, 0.0630971, 1.0),
       Roughness: 0.20998996,
-      backcolor: (0.8000001, 0.21196488, 0.0017478662, 1.0)))
+      backcolor: (0.8000001, 0.21196488, 0.0017478662, 1.0),
+      roughness_float: 0.039990805))
 }

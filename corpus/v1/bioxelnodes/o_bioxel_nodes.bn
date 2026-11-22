@@ -2023,5 +2023,4 @@ geometry graph "O Bioxel Nodes"(Geometry: Geometry) -> Geometry {
   group_18 = o_scalar_layer_to_color()
   group_19 = o_scalar_layer_to_factor()
   group_21 = o_label_layer_to_factor()
-  return ()
 }

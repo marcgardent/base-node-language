@@ -21,8 +21,15 @@ compositor graph "Cheap Blur 2.001"(
   return (
     Image: Switch(
       switch: map_range,
-      false_: Switch(switch: map_range, false_: Image) |> Filter(factor: Size * 0.5),
-      true_: Switch(switch: map_range, true_: Image)
+      false_: Switch(
+          switch: map_range,
+          false_: Image,
+          true_: (0.79999995, 0.79999995, 0.79999995, 1.0))
+        |> Filter(factor: Size * 0.5),
+      true_: Switch(
+          switch: map_range,
+          false_: (0.79999995, 0.79999995, 0.79999995, 1.0),
+          true_: Image)
         |> Scale(x: clamp, y: clamp, extension_x: Extend, extension_y: Extend)
         |> Blur(size: clamp * Size)
         |> Scale(x: math, y: math)))

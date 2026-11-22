@@ -9,8 +9,9 @@ geometry graph Bend(
 ) -> Geometry {
   {
     position = Position()
+    separate_xyz = SeparateXYZ(vector: position)
     switch = x_y_z == 3
-      ? CombineXYZ(x: position.z, y: position.y, z: position.x)
+      ? CombineXYZ(x: separate_xyz.z, y: separate_xyz.y, z: separate_xyz.x)
       : x_y_z == 2 ? CombineXYZ(x: position.y, y: position.x, z: position.z) : position
   }
   "Bending" {
@@ -49,8 +50,9 @@ geometry graph Bend(
     vector_math = switch + vector_rotate_3
   }
   {
+    separate_xyz_2 = SeparateXYZ(vector: vector_rotate_3)
     vector_math_2 = -(x_y_z == 3
-      ? CombineXYZ(x: vector_rotate_3.z, y: vector_rotate_3.y, z: vector_rotate_3.x)
+      ? CombineXYZ(x: separate_xyz_2.z, y: separate_xyz_2.y, z: separate_xyz_2.x)
       : x_y_z == 2
         ? CombineXYZ(x: vector_rotate_3.y, y: vector_rotate_3.x, z: vector_rotate_3.z)
         : vector_rotate_3)

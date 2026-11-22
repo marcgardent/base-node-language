@@ -14,14 +14,15 @@ shader graph PT_RotatedScales(
       Value_001: 2.0)
   }
   math_2 = length(combine_xyz - (0.0, 0.5, 0.0)) - 0.5
+  separate_xyz = SeparateXYZ(vector: vector_math_2)
   combine_xyz_2 = CombineXYZ(
-    x: Math[PINGPONG](Value: -vector_math_2.y),
-    y: Math[PINGPONG](Value: vector_math_2.x))
+    x: Math[PINGPONG](Value: -separate_xyz.y),
+    y: Math[PINGPONG](Value: separate_xyz.x))
   math_3 = length(combine_xyz_2 - (0.0, 0.5, 0.0)) - 0.5
   math_4 = vector_math_2.x > 0.5 @ hide
   math_5 = vector_math_2.y > 0.5 @ hide
-  math_6 = vector_math_2.y > 0.5 @ hide
-  math_7 = vector_math_2.x > 0.5 @ hide
+  math_6 = separate_xyz.y > 0.5 @ hide
+  math_7 = separate_xyz.x > 0.5 @ hide
   math_8 = math_2 < 0.0 @ hide
   math_9 = math_3 < 0.0 @ hide
   mix = math_5 ? (0.5, 1.16667, 0.0) : (0.5, -0.166667, 0.0)

@@ -698,7 +698,7 @@ geometry graph "Evaluate on Atoms"(
         |> SeparateGeometry(selection: Selection).selection) -> Geometry
   }
   menu_switch = MenuSwitch(menu: Result, Geometry: 0, Bundle: 1)
-  string = "Evaluate the 'Closure' on the 'Atoms' geometry, join the resulting geometry with the input geometry.  If the input 'Geometry' doesn't contain a 'MN/Atoms' bundle then we treat the input geometry as the 'Atoms'."
+  string = "Evaluate the 'Closure' on the 'Atoms' geometry, join the resulting geometry with the input geometry.\n\nIf the input 'Geometry' doesn't contain a 'MN/Atoms' bundle then we treat the input geometry as the 'Atoms'."
   return SetGeometryBundle(
     group.geometry + IndexSwitch(menu_switch.output, evaluate_closure, _),
     bundle: StoreBundleItem[GEOMETRY](
@@ -953,7 +953,7 @@ geometry(show_modifier_manage_panel: false) graph "Style Surface"(
         |> SetMaterial(material: Material)
     }
   }
-  "Create surface while points are as 'flat' as possible" {
+  "Create surface while points are as \"flat\" as possible" {
     closure_output_6 = graph(Geometry: Geometry, group_id: Int) -> Geometry {
       return Geometry
         |> evluate_while_planar(closure: closure_output_5)

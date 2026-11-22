@@ -29,12 +29,13 @@ shader graph PT_GlareStar(
   vector_math_11 = vector_math_9 + (1000.0, 1000.0, 0.0) @ hide
   math_6 = max(math, math_2)
   vector_math_12 = Vector - vector_math_10
+  separate_xyz = SeparateXYZ(vector: vector_math_4)
   vector_rotate = VectorRotate(
     vector: vector_math_12,
     angle: (MapRange(
           value: floor(
             MapRange(
-              value: atan2(vector_math_4.x, vector_math_4.y) + (vector_math_4.x < 0.0) * 6.2831855,
+              value: atan2(separate_xyz.x, separate_xyz.y) + (separate_xyz.x < 0.0) * 6.2831855,
               from_max: 6.2831855,
               to_max: 4.0)),
           from_max: 4.0,

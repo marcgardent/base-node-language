@@ -12,7 +12,10 @@ shader(material: true) graph "Wire Musgrave"() -> (surface: Shader) {
         size: CheckerTexture(
           vector: noise_texture.factor,
           color1: VectorTransform[NORMAL, convert_from: OBJECT, convert_to: WORLD](
-            vector: Mapping(vector: geometry.position, scale: (0.1, 0.0, -0.19999))),
+            vector: Mapping(
+              vector: geometry.position,
+              rotation: (0.0, -0.0, 0.0),
+              scale: (0.1, 0.0, -0.19999))),
           scale: 11.79999).factor),
       a: TransparentBSDF(),
       b: DiffuseBSDF(color: noise_texture.color)))

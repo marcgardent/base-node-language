@@ -11,7 +11,7 @@
   },
   ".uPT_Penrose_iteration": {
    "status": "ok",
-   "text": "c2119ef6ba1aac39",
+   "text": "18e72061101a1a5e",
    "warnings": [
     "frame 'Frame.020' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.023' is split: its nodes depend on nodes of another frame that depend on them"
@@ -55,7 +55,7 @@
   },
   "PT_ARB_EightStars(48)": {
    "status": "ok",
-   "text": "bcf62db39b09ecd2"
+   "text": "6b5503c153f979d5"
   },
   "PT_ARB_Hive": {
    "status": "ok",
@@ -75,7 +75,7 @@
   },
   "PT_ARB_MiniSuns": {
    "status": "ok",
-   "text": "d09f9bd887ca97d8",
+   "text": "9eb8354d7c821935",
    "warnings": [
     "frame 'Frame' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.001' is split: its nodes depend on nodes of another frame that depend on them",
@@ -170,7 +170,7 @@
   },
   "PT_GlareStar": {
    "status": "ok",
-   "text": "7e70fead3d706f23"
+   "text": "645c105ea2afe7d9"
   },
   "PT_HVBoards": {
    "status": "ok",
@@ -202,7 +202,7 @@
   },
   "PT_Penrose": {
    "status": "ok",
-   "text": "6ca41a1af380ccc7",
+   "text": "7b24785842b0af9f",
    "warnings": [
     "frame 'Frame.020' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.023' is split: its nodes depend on nodes of another frame that depend on them"
@@ -240,7 +240,7 @@
   },
   "PT_RotatedScales": {
    "status": "ok",
-   "text": "8051e9671fd31474"
+   "text": "2642cd6af4f20fb2"
   },
   "PT_Scales": {
    "status": "ok",
@@ -340,7 +340,7 @@
   },
   "SDF_NStar": {
    "status": "ok",
-   "text": "a22e8a0d5d94b471"
+   "text": "75bdd8cfa03679b9"
   },
   "SDF_Pie": {
    "status": "ok",

@@ -97,7 +97,8 @@ shader graph ".uPT_Penrose_iteration"(
       value_8 = 1.3763819 @ "d1" hide
       value_11 = 0.618034 @ "a1" hide
     }
-    math_9 = value_8 * q.y - q.x
+    separate_xyz = SeparateXYZ(vector: q)
+    math_9 = value_8 * separate_xyz.y - separate_xyz.x
     #9b9b9b {
       math_10 = math_9 > 0.0 @ hide
       "consts" {

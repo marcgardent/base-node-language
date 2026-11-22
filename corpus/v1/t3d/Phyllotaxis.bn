@@ -1,9 +1,9 @@
 geometry(is_modifier: true) graph Phyllotaxis(
     Points: Int = 750 in 1..,
     Angle: Float(subtype: ANGLE) = 2.3998277 in -6.2831855..6.2831855,
-    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..3.40282e+38,
     "Inner Radius": Float,
-    Depth: Float(subtype: DISTANCE),
+    Depth: Float(subtype: DISTANCE) in -3.40282e+38..3.40282e+38,
     Falloff: Float = 1.0 in 1.0..10000.0,
     "Point Radius": Float(subtype: DISTANCE) = 0.025 in 0.0..
 ) -> (Points: Geometry, Normal: Vector, Rotation: Rotation) {

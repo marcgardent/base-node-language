@@ -1,5 +1,5 @@
 geometry graph "Normal Selection"(
-    Direction: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    Direction: Vector(subtype: XYZ) = (0.0, 0.0, 1.0) in -3.40282e+38..3.40282e+38,
     Threshold: Float(subtype: ANGLE) = 0.0872665
 ) -> (Selection: Bool) {
   return (

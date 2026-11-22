@@ -23,10 +23,7 @@
   },
   "Cloth Dynamics (Experimental)": {
    "status": "ok",
-   "text": "992b46c72cb0fb75",
-   "warnings": [
-    "'String.String': quotes and newlines replaced"
-   ]
+   "text": "f81adb492edfdf4e"
   },
   "Collection Effector": {
    "status": "ok",
@@ -38,7 +35,7 @@
   },
   "Convert Space Transform": {
    "status": "ok",
-   "text": "4ab7777ee509d161"
+   "text": "85616f5a20c339ff"
   },
   "Copy Solver Data": {
    "status": "ok",
@@ -50,17 +47,11 @@
   },
   "Curve Bending Compliance": {
    "status": "ok",
-   "text": "842a29241c1813a0",
-   "warnings": [
-    "'String.String': quotes and newlines replaced"
-   ]
+   "text": "d6a3a3aad55dc5c6"
   },
   "Curve Stretching Compliance": {
    "status": "ok",
-   "text": "57f1e8a853859f03",
-   "warnings": [
-    "'String.String': quotes and newlines replaced"
-   ]
+   "text": "b0b1edc35f3973ab"
   },
   "Custom Effector": {
    "status": "ok",
@@ -108,10 +99,7 @@
   },
   "Hair Dynamics": {
    "status": "ok",
-   "text": "fd3418ede089b336",
-   "warnings": [
-    "'String.String': quotes and newlines replaced"
-   ]
+   "text": "ec9d795ee3fc82c8"
   },
   "Is Effector for Geometry": {
    "status": "ok",

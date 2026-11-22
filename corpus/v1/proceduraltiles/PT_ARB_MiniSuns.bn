@@ -193,7 +193,7 @@ shader graph PT_ARB_MiniSuns(
   math_106 = math_107 < 0.0 @ hide
   math_108 = math_33 < 0.0 @ hide
   math_109 = vector_math_3 < 0.0 @ hide
-  math_110 = vector_math_2.x * value_3 - value_2 < 0.0 @ hide
+  math_110 = SeparateXYZ(vector: vector_math_2).x * value_3 - value_2 < 0.0 @ hide
   math_111 = max(math_104, math_103) @ hide
   return (
     Position: vector_math_11,

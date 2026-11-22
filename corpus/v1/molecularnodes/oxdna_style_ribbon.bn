@@ -271,7 +271,7 @@ geometry(is_modifier: false) graph "oxDNA Style Ribbon"(
     Quality: Int = 2 in 1..,
     "Backbone" {
         "Backbone Shape": Menu(menu_expanded: true, optional_label: true) = Arrows,
-        "Backbone Radius": Float = 0.8 in 0.0..,
+        "Backbone Radius": Float = 0.8 in 0.0..3.40282e+38,
         "Ball Radius": Float = 2.0 in 0.0..,
         "Arrow Taper": Float(subtype: FACTOR) = 0.3 in 0.0..1.0
     },

@@ -1,8 +1,8 @@
 geometry graph "Extend Curve"(
     Curve: Geometry,
     Selection: Bool(hide_value: true) = true,
-    "Start Point": Float = 1.0,
-    "End Point": Float = 1.0
+    "Start Point": Float = 1.0 in -3.40282e+38..3.40282e+38,
+    "End Point": Float = 1.0 in -3.40282e+38..3.40282e+38
 ) -> (Curve: Geometry) {
   {
     endpoint_selection = EndpointSelection(end_size: 0)

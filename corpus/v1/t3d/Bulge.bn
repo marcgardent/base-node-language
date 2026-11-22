@@ -25,6 +25,7 @@ geometry graph Bulge(
         rotation: named_attribute_2.attribute)
       - named_attribute.attribute
   }
+  separate_xyz = SeparateXYZ(vector: vector_math)
   "Adding Offsets" {
     named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "Center") @ "Center"
     named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "Rotation") @ "Rotation"
@@ -66,7 +67,7 @@ geometry graph Bulge(
       Value: Math[MULTIPLY_ADD](Value: mix_3, Value_001: -mix_3, Value_002: 1.0),
       Value_001: Strength,
       Value_002: 1.0)
-    combine_xyz = CombineXYZ(x: vector_math.x * math, y: vector_math.y * math, z: vector_math.z)
+    combine_xyz = CombineXYZ(x: separate_xyz.x * math, y: separate_xyz.y * math, z: separate_xyz.z)
   }
   "Adding Offsets" .. {
     vector_rotate = VectorRotate[EULER_XYZ, invert: true](

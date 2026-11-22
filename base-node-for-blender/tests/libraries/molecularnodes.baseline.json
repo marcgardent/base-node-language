@@ -693,9 +693,8 @@
   },
   "Break Bonds": {
    "status": "ok",
-   "text": "33f3253fd412997b",
+   "text": "d6307b4c87be0b3c",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -923,7 +922,7 @@
   },
   "Convert Space Transform": {
    "status": "ok",
-   "text": "4ab7777ee509d161",
+   "text": "85616f5a20c339ff",
    "warnings": [
     "appearance of Group Input not exported: label"
    ]
@@ -1017,7 +1016,7 @@
   },
   "DNA From Curve": {
    "status": "ok",
-   "text": "ec46891743c80539",
+   "text": "f66622de841968b1",
    "warnings": [
     "appearance of Group Input not exported: label"
    ]
@@ -1159,9 +1158,8 @@
   },
   "Evaluate on Atoms": {
    "status": "ok",
-   "text": "a2ebd5bcda029a47",
+   "text": "b3614c7c5c1a5c75",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -1258,9 +1256,8 @@
   },
   "Find Bonds": {
    "status": "ok",
-   "text": "39428c89abbf270c",
+   "text": "749e4e1a9691c0b8",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -1826,7 +1823,7 @@
   },
   "Point Edge Angle": {
    "status": "ok",
-   "text": "872e8120ac0fff08",
+   "text": "dd532976c298fa27",
    "warnings": [
     "appearance of Group Input not exported: label"
    ]
@@ -2128,9 +2125,8 @@
   },
   "Separate Atoms": {
    "status": "ok",
-   "text": "bb2bba3cc99541cb",
+   "text": "69cffaff317e3d86",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -2253,7 +2249,7 @@
   },
   "Simulate DNA Guide": {
    "status": "ok",
-   "text": "b1ef527243831170",
+   "text": "9197075b49a34fb0",
    "warnings": [
     "appearance of Group Input not exported: label"
    ]
@@ -2350,49 +2346,43 @@
   },
   "Style Ball and Stick": {
    "status": "ok",
-   "text": "139fb97cade6fa39",
+   "text": "b6d2cdb867a90dbb",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
   "Style Cartoon": {
    "status": "ok",
-   "text": "3c6361ff8938ad0c",
+   "text": "7c836bddc4c3eaf9",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
   "Style Ribbon": {
    "status": "ok",
-   "text": "58634a8dde12c6d9",
+   "text": "4dfb40ec03d1bd01",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
   "Style Spheres": {
    "status": "ok",
-   "text": "78f489690b748b15",
+   "text": "711726ad65cd2575",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
   "Style Sticks": {
    "status": "ok",
-   "text": "2e03c0051cc665b8",
+   "text": "63fa1428f34a7432",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
   "Style Surface": {
    "status": "ok",
-   "text": "326469ce1483ab38",
+   "text": "7f0602352a568ca8",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -2433,9 +2423,8 @@
   },
   "Topology DSSP": {
    "status": "ok",
-   "text": "405b62434aaa83c6",
+   "text": "d736aacbce98d6a9",
    "warnings": [
-    "'String.String': quotes and newlines replaced",
     "appearance of Group Input not exported: label"
    ]
   },
@@ -2663,7 +2652,7 @@
   },
   "oxDNA Style Ribbon": {
    "status": "ok",
-   "text": "a5ec92e5d1461c83",
+   "text": "bc2699497fe0fc4e",
    "warnings": [
     "appearance of Group Input not exported: label"
    ]
