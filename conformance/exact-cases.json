@@ -1,5 +1,5 @@
 {
-  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings, a color as its tuple (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
   "cases": [
     {
       "name": "string_escapes",
@@ -189,6 +189,33 @@
       "about": "Without a comma, parentheses hold the value alone",
       "text": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT), handle_type: ((VECTOR))]()\n}\n",
       "formatted": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: LEFT, handle_type: VECTOR]()\n}\n"
+    },
+    {
+      "name": "color_is_a_tuple",
+      "about": "A color is written as its tuple: `#` starts a frame's or a look's color, no value",
+      "text": "geometry graph g(c: Color = #ff8800) -> Color {\n  return c\n}\n",
+      "error": "1:29",
+      "message": "expression expected, found '#ff8800'"
+    },
+    {
+      "name": "color_is_a_tuple_in_arguments",
+      "about": "Nor is `#rgb` a value given to an input",
+      "text": "geometry graph g(c: Color) -> Color {\n  return Mix[RGBA](a: c, b: #f80)\n}\n",
+      "error": "2:29",
+      "message": "expression expected, found '#f80'"
+    },
+    {
+      "name": "color_is_a_tuple_in_settings",
+      "about": "Nor a setting's value",
+      "text": "geometry graph g(c: Color) -> Color {\n  return Mix[RGBA, x: #ff8800](a: c)\n}\n",
+      "error": "2:23",
+      "message": "expected a setting's value (a literal, an enum value, a tuple), found '#ff8800'"
+    },
+    {
+      "name": "color_as_tuple",
+      "about": "The tuple a color is written as",
+      "text": "geometry graph g(c: Color = (1.0, 0.5, 0.0, 1.0)) -> Color {\n  return c\n}\n",
+      "formatted": "geometry graph g(c: Color = (1.0, 0.5, 0.0, 1.0)) -> Color {\n  return c\n}\n"
     }
   ]
 }

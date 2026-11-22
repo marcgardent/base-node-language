@@ -1257,7 +1257,7 @@ impl<'a> Parser<'a> {
             };
         }
         Err(self.fail(
-            format!("expected expression, found {}", t.describe()),
+            format!("expression expected, found {}", t.describe()),
             Some(&t),
         ))
     }

@@ -139,7 +139,7 @@ compositor graph look(image: Color) -> Color {
 | `Int` | `0` | Signed integer |
 | `Bool` | `false` | Boolean |
 | `Vector` | `(0.0, 0.0, 0.0)` | 2D/3D/4D vector (a 2D or 4D tuple in a formula: [5](#5-expressions)) |
-| `Color` | `(0.0, 0.0, 0.0, 1.0)` | RGBA color (`#rrggbb`, `#rgb`, or tuple) |
+| `Color` | `(0.0, 0.0, 0.0, 1.0)` | RGBA color, written as its tuple: `(r, g, b, a)`, or `(r, g, b)` for an alpha of 1 |
 | `Rotation` | `(0.0, 0.0, 0.0)` | Euler / quaternion rotation |
 | `Matrix` | Identity | 4×4 transform matrix |
 | `String` | `""` | UTF-8 string |
@@ -238,7 +238,7 @@ geometry graph tint(geometry: Geometry, color: Color) -> Geometry {
 2. Else each argument given to an input of type `T` that is linked (a name, a node's output, an
    input of the calling graph) gives its type, and all must give the same: `T` is that type.
 3. Else, with no linked argument, a literal gives its own type: `2.0` a `Float`, `2` an `Int`, `true`
-   a `Bool`, `(x, y, z)` a `Vector`, `(r, g, b, a)` and `#rrggbb` a `Color`, `"text"` a `String`.
+   a `Bool`, `(x, y, z)` a `Vector`, `(r, g, b, a)` a `Color`, `"text"` a `String`.
 4. Else the call is refused: no default type is chosen.
 
 The type found must be one of the constraint; there is no conversion while inferring (a `Vector` linked
@@ -318,7 +318,7 @@ toolchain before 0.12.0: it is refused there at the `<`.
 | `return expr` | Single output return |
 | `return (A: e1, B: e2)` | Multi-output return |
 | no `return` | A graph that leaves its return out has no Group Output node: its outputs, if it has any, give nothing, and the checker warns of them (`warning: no return in 'g': its tree has no Group Output node, its outputs give nothing`). A material's own tree returns |
-| `"Title" #color { ... }` | Visual frame (`#e73` or named color `#teal`) |
+| `"Title" #color { ... }` | Visual frame (`#e73` or named color `#teal`): a frame's or a look's color, never a value, which is a tuple |
 | `"Title" .. { ... }` | Continuation of a previously opened frame |
 | `"Note" #color {}` | Standalone frame note |
 

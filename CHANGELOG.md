@@ -13,6 +13,10 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   compares: `iteration < n, m > (k)` in a `repeat`, `delta_time` in a `simulate`, `index` and
   `element` in a `foreach` are comparisons, no longer a call with types. The parsers of Python and
   Rust know these names (`conformance/chevron-cases.json`).
+- Fixed, in the reference: a color is written as its tuple, `(1.0, 0.5, 0.0, 1.0)`. The reference
+  told of a `#rrggbb` color value that no parser reads: `#` writes the color of a frame or of a look
+  alone, and a value written so is refused (`expression expected, found '#ff8800'`), by the parsers
+  of Python and Rust alike, whose messages now agree.
 
 ## [1.0.0-rc.5] - 2026-11-22
 
