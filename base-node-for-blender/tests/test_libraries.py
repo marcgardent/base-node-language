@@ -27,7 +27,8 @@ Run in Blender via:
 When the change is wanted (a fix, a reader that writes otherwise), write the baselines again and review
 their diff: BASE_NODE_UPDATE_FIXTURES=1. The texts of the last run are kept in the cache
 ($BASE_NODE_CACHE, ~/.cache/base-node by default) under texts/<name>, those of the run before under
-texts/<name>.previous: `diff -r` them to read what changed.
+texts/<name>.previous: `diff -r` them to read what changed. Run with the Blender of `<name>.baseline.json`,
+that writes the library's texts in the repository too, corpus/v1/<name>/ (see `library_corpus.py`).
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import library_corpus  # noqa: E402
 import test_extension as T  # noqa: E402  (loads base_node)
 
 import bpy  # noqa: E402
@@ -56,6 +58,8 @@ LIBRARIES = T.EXT_DIR / "tests" / "libraries"
 CACHE = Path(os.environ.get("BASE_NODE_CACHE") or Path.home() / ".cache" / "base-node")
 KINDS = ("mesh", "curves", "mesh caller", "mesh caller fed")
 TREES = ("geometry", "shader", "material", "compositor")
+# The version of Base Node that reads the libraries, as its corpus names it
+VERSION = tomllib.loads((T.EXT_DIR / "blender_manifest.toml").read_text(encoding="utf-8"))["version"]
 MATERIAL = "material:"  # the key of a material's record, beside those of the groups
 RENDERS = ("render", "render fed")  # a material is rendered as it is, a shader group also fed
 COMPOSITES = ("composite",)  # a compositor group, applied to the stage's render
@@ -396,7 +400,7 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
             r.update(status="export_error", error=first_error(e))
             continue
         texts[name] = text
-        r["text"] = hashlib.sha256(text.encode()).hexdigest()[:16]
+        r["text"] = library_corpus.text_hash(text)
         found = sorted({warning_kind(w) for w in warnings})
         if found:
             r["warnings"] = found
@@ -563,6 +567,11 @@ def test_library(manifest):
                     "blender": bpy.app.version_string, "summary": summary(records), "groups": records}
         written.write_text(json.dumps(baseline, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"   baseline written: {written.name}")
+        if written == main:
+            # The texts of the Blender of the baseline are the corpus: those of another are not kept
+            folder = library_corpus.write_library(name, texts, VERSION, bpy.app.version_string)
+            print(f"   corpus written: {folder.relative_to(library_corpus.ROOT)} ({len(texts)} texts)")
+            return True
         return
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     if baseline.get("blender") != bpy.app.version_string:
@@ -582,10 +591,10 @@ def main():
         assert manifests, f"no library named {names} in {LIBRARIES}"
     print("=== Base Node non-regression on third-party libraries ===")
     T.base_node.register()
-    failed, skipped = 0, 0
+    failed, skipped, corpus = 0, 0, False
     for m in manifests:
         try:
-            test_library(m)
+            corpus = test_library(m) or corpus
         except Skipped as e:
             skipped += 1
             print(f"   - skipped: {e}")
@@ -595,6 +604,8 @@ def main():
     if os.environ.get("BASE_NODE_UPDATE_FIXTURES"):
         import regression_badges
         print(f"   badges written: {regression_badges.write()}")
+    if corpus:
+        print(f"   corpus index written: {library_corpus.write_index().relative_to(library_corpus.ROOT)}")
     if failed:
         print(f"\n❌ FAILED: {failed}/{len(manifests)} libraries changed")
         sys.exit(1)
