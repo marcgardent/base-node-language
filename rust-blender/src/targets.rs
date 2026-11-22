@@ -32,7 +32,8 @@ use std::rc::Rc;
 
 use crate::stdlib;
 use base_node::ast::{
-    key, Arg, AssignValue, Call, Expr, File, Graph, Param, ReturnValue, Stmt, Use as UseLine,
+    key, Arg, AssignValue, Call, Expr, File, Graph, Param, ReturnValue, Setting, Stmt,
+    Use as UseLine,
 };
 
 /// The targets that are a file of their own, `targets/<name>.json`, sorted by name: every one but
@@ -53,14 +54,6 @@ const BLENDER_FILES: &[(&str, &str)] = &include!(concat!(env!("OUT_DIR"), "/blen
 const BLENDER_KINDS: [&str; 3] = ["geometry", "shader", "compositor"];
 /// The names a command line gives a version it does not write: refused in the `@target` of a text.
 const ALIASES: [&str; 2] = ["latest", "lts"];
-/// The targets of before the one `blender`, and what to write now.
-const RENAMED: [(&str, &str); 5] = [
-    ("blender-geometry", "blender"),
-    ("blender-gp", "blender"),
-    ("blender-shader", "blender"),
-    ("blender-compositor", "blender"),
-    ("gltf", "blender gltf"),
-];
 
 /// The bridges of the targets, by their path in `targets/` (that of the target's `bridges`, which
 /// are relative to the target's file).
@@ -69,7 +62,7 @@ const BRIDGES: [(&str, &str); 1] = [(
     include_str!("../../targets/blade/blender_interop.bn"),
 )];
 
-/// A ramp and curves are the value of a node's property (`color_ramp: Ramp(…)`), not nodes.
+/// A ramp and curves are the value of a node's property (`ColorRamp[color_ramp: Ramp(…)]`), not nodes.
 const DATA_CALLS: [&str; 3] = ["Ramp", "Curve", "Curves"];
 
 /// Implicit inputs (`p: Vector = Position()`): a setting of the group's interface, not a node.
@@ -158,17 +151,21 @@ impl NodeRename {
         }
     }
 
-    /// The name of the named argument `arg` once translated.
-    fn arg<'a>(&'a self, arg: &'a str) -> &'a str {
+    /// The name of the input `name` (a named argument) once translated.
+    fn input<'a>(&'a self, name: &'a str) -> &'a str {
         match self {
-            NodeRename::Name(_) => arg,
-            NodeRename::Full {
-                inputs, settings, ..
-            } => inputs
-                .get(arg)
-                .or_else(|| settings.get(arg))
-                .map(String::as_str)
-                .unwrap_or(arg),
+            NodeRename::Name(_) => name,
+            NodeRename::Full { inputs, .. } => inputs.get(name).map(String::as_str).unwrap_or(name),
+        }
+    }
+
+    /// The name of the setting `name` (named in the brackets) once translated.
+    fn setting<'a>(&'a self, name: &'a str) -> &'a str {
+        match self {
+            NodeRename::Name(_) => name,
+            NodeRename::Full { settings, .. } => {
+                settings.get(name).map(String::as_str).unwrap_or(name)
+            }
         }
     }
 }
@@ -193,6 +190,56 @@ pub struct Tree {
     pub implicit: Vec<String>,
     #[serde(default)]
     pub nodes: Vec<String>,
+    /// Of a catalog of Blender: the enum settings of each node that has some, in Blender's order,
+    /// each with its values. Where a setting written by position goes ([`setting_of`]).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub enums: BTreeMap<String, Enums>,
+}
+
+/// The enum settings of a node in Blender's order, each with its values: a JSON object read in
+/// the order it is written.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Enums(pub Vec<(String, Vec<String>)>);
+
+impl Enums {
+    /// The setting a setting written by position goes to: the first whose values hold `value`.
+    pub fn of(&self, value: &str) -> Option<&str> {
+        self.0
+            .iter()
+            .find(|(_, values)| values.iter().any(|v| v == value))
+            .map(|(name, _)| name.as_str())
+    }
+}
+
+impl Serialize for Enums {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = s.serialize_map(Some(self.0.len()))?;
+        for (k, v) in &self.0 {
+            map.serialize_entry(k, v)?;
+        }
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Enums {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct InOrder;
+        impl<'de> serde::de::Visitor<'de> for InOrder {
+            type Value = Enums;
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("an object of settings, each a list of values")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut m: A) -> Result<Enums, A::Error> {
+                let mut out = Vec::new();
+                while let Some(entry) = m.next_entry()? {
+                    out.push(entry);
+                }
+                Ok(Enums(out))
+            }
+        }
+        d.deserialize_map(InOrder)
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -260,6 +307,10 @@ pub struct Target {
     /// when it fits each of them. Not a field of the JSON.
     #[serde(skip)]
     pub members: Vec<Target>,
+    /// Of a version of `blender`: kind -> node -> its enum settings, where a setting written by
+    /// position goes ([`setting_of`]). Not a field of the JSON.
+    #[serde(skip)]
+    pub enums: BTreeMap<String, BTreeMap<String, Enums>>,
 }
 
 impl Target {
@@ -428,6 +479,11 @@ impl Blender {
     fn one(&self, version: &str, variant: Option<&str>) -> Target {
         let catalog: Catalog = serde_json::from_str(blender_file(version))
             .unwrap_or_else(|e| panic!("targets/blender/{version}.json is not a catalog: {e}"));
+        let enums = catalog
+            .trees
+            .iter()
+            .map(|(k, t)| (k.clone(), t.enums.clone()))
+            .collect();
         let Some(variant) = variant else {
             return Target {
                 name: self.name(version),
@@ -438,10 +494,12 @@ impl Blender {
                     .map(|k| (*k).to_owned())
                     .collect(),
                 trees: catalog.trees,
+                enums,
                 ..Target::default()
             };
         };
         let mut t = Blender::variant(variant);
+        t.enums = enums;
         t.name = format!("{} {variant}", self.name(version));
         t.description = format!("{}, in Blender {}", t.description, catalog.blender);
         if !t.nodes.is_empty() {
@@ -595,6 +653,29 @@ pub fn target_names() -> Vec<&'static str> {
     )
 }
 
+/// The enum settings of the nodes of each kind of tree, of the newest catalog of Blender: empty
+/// without one.
+fn newest_enums() -> &'static BTreeMap<String, BTreeMap<String, Enums>> {
+    static NONE: OnceLock<BTreeMap<String, BTreeMap<String, Enums>>> = OnceLock::new();
+    let b = blender();
+    b.versions
+        .last()
+        .and_then(|v| {
+            let name = b.name(v);
+            b.targets.iter().find(|t| t.name == name)
+        })
+        .map(|t| &t.enums)
+        .unwrap_or_else(|| NONE.get_or_init(BTreeMap::new))
+}
+
+/// The setting of `node`, in a tree of `kind`, that a setting written by position goes to:
+/// `Math[MULTIPLY]` is `operation`, `Compare[INT, EQUAL]` `data_type` then `operation`. The
+/// first enum setting of the node, in Blender's order, whose values hold `value`, of the newest
+/// catalog of Blender; none when none does.
+pub fn setting_of(kind: &str, node: &str, value: &str) -> Option<&'static str> {
+    newest_enums().get(kind)?.get(node)?.of(value)
+}
+
 /// The variants of `blender`, sorted: a word after the target, as `blender gltf`.
 pub fn variant_names() -> Vec<&'static str> {
     blender().variants.iter().map(String::as_str).collect()
@@ -654,9 +735,6 @@ fn refusal(name: &str) -> Option<Refusal> {
             return None
         }
         _ => {}
-    }
-    if let Some((_, now)) = RENAMED.iter().find(|(old, _)| *old == name) {
-        hint = Some(format!("'{name}' is now '{now}'"));
     }
     Some(Refusal::Unknown(hint))
 }
@@ -1622,8 +1700,14 @@ fn call_id(c: &Call) -> usize {
     c as *const Call as usize
 }
 
-/// A node as a feed: its name, the output taken, and its arguments (input name or none, value).
-type Node<'a> = (String, Option<&'a str>, Vec<(Option<&'a str>, Value<'a>)>);
+/// A node as a feed: its name, the output taken, its arguments (input name or none, value), and
+/// the settings written in its brackets.
+type Node<'a> = (
+    String,
+    Option<&'a str>,
+    Vec<(Option<&'a str>, Value<'a>)>,
+    &'a [Setting],
+);
 
 /// What a match found: the values its placeholders hold, and the calls its patterns write.
 #[derive(Clone, Default)]
@@ -1643,6 +1727,8 @@ struct Links<'a> {
     vectors: HashSet<String>,
     /// The expressions of each pattern, parsed
     patterns: &'a HashMap<String, Vec<Expr>>,
+    /// The enum settings of the nodes of the graph's tree: where a setting by position goes
+    enums: &'a BTreeMap<String, Enums>,
 }
 
 fn bound<'a>(body: &'a [Stmt], out: &mut HashMap<&'a str, Option<&'a Expr>>) {
@@ -1704,7 +1790,7 @@ impl<'a> Links<'a> {
                 Expr::Tuple(t) => t.items.iter().all(|i| self.constant(Value::Expr(i))),
                 Expr::Neg(n) => self.constant(Value::Expr(&n.value)),
                 // The exporter computes a node it folds whose inputs are values
-                _ => self.node(v).is_some_and(|(node, _, args)| {
+                _ => self.node(v).is_some_and(|(node, _, args, _)| {
                     self.target.folded.contains(&node)
                         && args.iter().all(|(_, a)| self.constant(*a))
                 }),
@@ -1756,32 +1842,39 @@ impl<'a> Links<'a> {
                 };
                 let mut args = vec![(None, Value::Expr(&p.left))];
                 args.extend(Self::call_args(c));
-                Some((self.name(c), socket, args))
+                Some((self.name(c), socket, args, &c.settings))
             }
-            Expr::Call(c) => Some((self.name(c), socket, Self::call_args(c).collect())),
+            Expr::Call(c) => Some((
+                self.name(c),
+                socket,
+                Self::call_args(c).collect(),
+                &c.settings,
+            )),
             Expr::BinOp(b) => {
                 let (l, r) = (Value::Expr(&b.left), Value::Expr(&b.right));
                 let mut node = formula(&b.op);
                 if node == "Math" && (self.vector(l) || self.vector(r)) {
                     node = "VectorMath";
                 }
-                Some((node.to_owned(), socket, vec![(None, l), (None, r)]))
+                Some((node.to_owned(), socket, vec![(None, l), (None, r)], &[]))
             }
             Expr::Neg(n) => {
                 let v = Value::Expr(&n.value);
                 let node = if self.vector(v) { "VectorMath" } else { "Math" };
-                Some((node.to_owned(), socket, vec![(None, v)]))
+                Some((node.to_owned(), socket, vec![(None, v)], &[]))
             }
             Expr::Not(n) => Some((
                 "BooleanMath".to_owned(),
                 socket,
                 vec![(None, Value::Expr(&n.value))],
+                &[],
             )),
             _ => None,
         }
     }
 
     /// (input, value) of a call: a positional argument takes the input of its place in `inputs`.
+    /// An argument is always an input: the settings are in brackets.
     fn given(
         &self,
         node: &str,
@@ -1835,16 +1928,39 @@ impl<'a> Links<'a> {
         }
     }
 
-    /// The value of setting `name` of a call: given, or its default.
-    fn setting(&self, node: &str, given: &[(String, Value<'a>)], name: &str) -> Option<String> {
-        match get(given, name) {
+    /// The setting a setting of `node` written in brackets is: its name, or where a positional
+    /// one goes.
+    fn setting_name(&self, node: &str, s: &'a Setting) -> Option<String> {
+        match &s.name {
+            Some(n) => Some(n.clone()),
+            None => {
+                let word = self.word(Value::Expr(&s.value))?;
+                self.enums.get(node)?.of(&word).map(str::to_owned)
+            }
+        }
+    }
+
+    /// The value setting `name` is written with in a call's brackets, none when it is not.
+    fn written(&self, node: &str, settings: &'a [Setting], name: &str) -> Option<Value<'a>> {
+        settings
+            .iter()
+            .find(|s| {
+                self.setting_name(node, s)
+                    .is_some_and(|n| n.eq_ignore_ascii_case(name))
+            })
+            .map(|s| Value::Expr(&s.value))
+    }
+
+    /// The value of setting `name` of a call: written in its brackets, or its default.
+    fn setting(&self, node: &str, settings: &'a [Setting], name: &str) -> Option<String> {
+        match self.written(node, settings, name) {
             Some(v) => self.word(v),
             None => self.target.settings.get(node)?.get(name).cloned().flatten(),
         }
     }
 
     /// The operation of a Math or Vector Math: its formula's (`*`, `round`), else its setting.
-    fn operation(&self, v: Value<'a>, node: &str, given: &[(String, Value<'a>)]) -> Option<String> {
+    fn operation(&self, v: Value<'a>, node: &str, settings: &'a [Setting]) -> Option<String> {
         let mut f = self.follow(v);
         if let Value::Expr(Expr::Member(m)) = f {
             f = self.follow(Value::Expr(&m.target));
@@ -1861,7 +1977,7 @@ impl<'a> Links<'a> {
             {
                 op_of(&VECTOR_OPS, &c.name).map(str::to_owned)
             }
-            _ => self.setting(node, given, "operation"),
+            _ => self.setting(node, settings, "operation"),
         }
     }
 
@@ -1889,7 +2005,7 @@ impl<'a> Links<'a> {
             Expr::Neg(n) => return self.vector(Value::Expr(&n.value)),
             _ => {}
         }
-        let Some((node, socket, _)) = self.node(v) else {
+        let Some((node, socket, ..)) = self.node(v) else {
             return false;
         };
         let socket = socket.unwrap_or_else(|| self.first(&node));
@@ -1925,18 +2041,18 @@ impl<'a> Links<'a> {
             let (l, r) = (Value::Expr(&b.left), Value::Expr(&b.right));
             return (b.op == "*" && !color && !self.vector(l) && !self.vector(r)).then_some((l, r));
         }
-        let (node, _, args) = self.node(v)?;
+        let (node, _, args, settings) = self.node(v)?;
         let given = self.lowered(&node, &args);
         let (a, b) = if !color
             && node == "Math"
-            && self.operation(v, &node, &given).as_deref() == Some("MULTIPLY")
+            && self.operation(v, &node, settings).as_deref() == Some("MULTIPLY")
         {
             ("value", "value_001")
         } else if color
             && node == "Mix"
-            && self.setting(&node, &given, "blend_type").as_deref() == Some("MULTIPLY")
+            && self.setting(&node, settings, "blend_type").as_deref() == Some("MULTIPLY")
             && self.one(get(&given, "factor"))
-            && self.rgba(&node, &given)
+            && self.rgba(&node, &given, settings)
         {
             ("a", "b")
         } else {
@@ -1947,9 +2063,9 @@ impl<'a> Links<'a> {
     }
 
     /// Whether a Mix mixes colors: its data_type, or a tuple of 4 among its inputs.
-    fn rgba(&self, node: &str, given: &[(String, Value<'a>)]) -> bool {
-        if get(given, "data_type").is_some() {
-            return self.setting(node, given, "data_type").as_deref() == Some("RGBA");
+    fn rgba(&self, node: &str, given: &[(String, Value<'a>)], settings: &'a [Setting]) -> bool {
+        if self.written(node, settings, "data_type").is_some() {
+            return self.setting(node, settings, "data_type").as_deref() == Some("RGBA");
         }
         given.iter().any(|(k, v)| {
             ["factor", "a", "b"].contains(&k.as_str())
@@ -2035,7 +2151,7 @@ impl<'a> Links<'a> {
         }
         let (name, out) = t.split_once('.').unwrap_or((t, ""));
         match self.node(v) {
-            Some((n, socket, _)) => {
+            Some((n, socket, ..)) => {
                 n == name
                     && (out.is_empty()
                         || same_word(socket.unwrap_or_else(|| self.first(name)), out))
@@ -2182,15 +2298,17 @@ impl<'a> Links<'a> {
             _ => {}
         }
         // The node a pattern writes, read without the names of the text: a formula of it is a Math
-        let (pnode, pargs): (String, Vec<(Option<&'a str>, Value<'a>)>) = match p {
-            Expr::Call(c) => (self.name(c), Self::call_args(c).collect()),
+        type Written<'a> = (String, Vec<(Option<&'a str>, Value<'a>)>, &'a [Setting]);
+        let (pnode, pargs, psettings): Written<'a> = match p {
+            Expr::Call(c) => (self.name(c), Self::call_args(c).collect(), &c.settings),
             Expr::BinOp(b) => (
                 formula(&b.op).to_owned(),
                 vec![(None, Value::Expr(&b.left)), (None, Value::Expr(&b.right))],
+                &[],
             ),
             _ => return false,
         };
-        let Some((node, socket, args)) = self.node(Value::Expr(f)) else {
+        let Some((node, socket, args, settings)) = self.node(Value::Expr(f)) else {
             return false;
         };
         if socket.is_some() || node != pnode {
@@ -2199,34 +2317,31 @@ impl<'a> Links<'a> {
         let given = self.lowered(&node, &args);
         let written = self.lowered(&node, &pargs);
         if (node == "Math" || node == "VectorMath")
-            && self.operation(Value::Expr(p), &node, &written)
-                != self.operation(Value::Expr(f), &node, &given)
+            && self.operation(Value::Expr(p), &node, psettings)
+                != self.operation(Value::Expr(f), &node, settings)
         {
             return false;
         }
-        let inputs: Vec<String> = self
-            .target
-            .inputs
-            .get(&node)
-            .map(|i| i.iter().map(|s| s.to_lowercase()).collect())
-            .unwrap_or_default();
-        for (k, pv) in &written {
+        // The settings the pattern writes, each the value the call has
+        for s in psettings {
+            let Some(k) = self.setting_name(&node, s) else {
+                continue;
+            };
             if k == "operation" {
                 continue;
             }
-            if !inputs.contains(k) {
-                let have = self.setting(&node, &given, k).unwrap_or_default();
-                let want = self.word(*pv).unwrap_or_default();
-                if !same_word(&have, &want) {
-                    return false;
-                }
-            } else {
-                let Value::Expr(q) = pv else {
-                    return false;
-                };
-                if !self.shape(get(&given, k).unwrap_or(Value::Default), q, name, st) {
-                    return false;
-                }
+            let have = self.setting(&node, settings, &k).unwrap_or_default();
+            let want = self.word(Value::Expr(&s.value)).unwrap_or_default();
+            if !same_word(&have, &want) {
+                return false;
+            }
+        }
+        for (k, pv) in &written {
+            let Value::Expr(q) = pv else {
+                return false;
+            };
+            if !self.shape(get(&given, k).unwrap_or(Value::Default), q, name, st) {
+                return false;
             }
         }
         let call = match f {
@@ -2333,7 +2448,7 @@ impl<'a> Links<'a> {
         if self.constant(v) {
             return "constant".to_owned();
         }
-        let Some((node, _, args)) = self.node(v) else {
+        let Some((node, _, args, _)) = self.node(v) else {
             return self.opaque(v);
         };
         let inner: Vec<String> = args
@@ -2945,7 +3060,7 @@ const MATH_COMPARE: [(&str, &str, bool); 6] = [
 ];
 
 /// Every comparison of `e` as the Math nodes it writes in a tree with no Compare node:
-/// `a >= b` is `1.0 - Math(a, b, operation: LESS_THAN)`.
+/// `a >= b` is `1.0 - Math[LESS_THAN](a, b)`.
 fn math_comparisons(e: &mut Expr) {
     match e {
         Expr::Call(c) => {
@@ -3004,12 +3119,16 @@ fn math_comparisons(e: &mut Expr) {
     if operation == "COMPARE" {
         args.push(arg(None, number(EPSILON)));
     }
-    let setting = Expr::Ref(base_node::ast::Ref {
-        name: operation.to_owned(),
+    let setting = Setting {
+        name: None,
+        value: Expr::Ref(base_node::ast::Ref {
+            name: operation.to_owned(),
+            line,
+            col,
+        }),
         line,
         col,
-    });
-    args.push(arg(Some("operation"), setting));
+    };
     let call = Expr::Call(Call {
         name: "Math".to_owned(),
         args,
@@ -3018,7 +3137,7 @@ fn math_comparisons(e: &mut Expr) {
         outputs: None,
         single_output: false,
         type_args: None,
-        settings: Vec::new(),
+        settings: vec![setting],
     });
     *e = if negated {
         Expr::BinOp(base_node::ast::BinOp {
@@ -3140,6 +3259,14 @@ fn link_issues_in(
         params.insert(p.name.clone(), p.type_name.as_str());
         params.insert(key(&p.name), p.type_name.as_str());
     }
+    // Where a setting by position goes: the enums of the target's version, else of the newest
+    // catalog of Blender
+    static NONE: BTreeMap<String, Enums> = BTreeMap::new();
+    let enums = if target.enums.is_empty() {
+        newest_enums()
+    } else {
+        &target.enums
+    };
     let links = Links {
         target,
         local,
@@ -3147,6 +3274,7 @@ fn link_issues_in(
         params,
         vectors: target.vectors.iter().map(|v| v.to_lowercase()).collect(),
         patterns: &patterns,
+        enums: enums.get(&graph.kind).unwrap_or(&NONE),
     };
     let mut calls = Calls(Vec::new());
     calls.stmts(&graph.body);
@@ -3204,10 +3332,14 @@ fn link_issues_in(
             piped.map(|p| (None, Value::Expr(p))).into_iter().collect();
         args.extend(Links::call_args(c));
         let given = links.given(&c.name, &args);
-        let settings: BTreeMap<String, &Option<String>> = target
+        let settings: BTreeMap<String, (&str, &Option<String>)> = target
             .settings
             .get(&c.name)
-            .map(|s| s.iter().map(|(k, d)| (k.to_lowercase(), d)).collect())
+            .map(|s| {
+                s.iter()
+                    .map(|(k, d)| (k.to_lowercase(), (k.as_str(), d)))
+                    .collect()
+            })
             .unwrap_or_default();
         let mut refused: Vec<(String, String)> = Vec::new();
         for (input, v) in &given {
@@ -3215,23 +3347,27 @@ fn link_issues_in(
             else {
                 continue;
             };
-            if settings.contains_key(&input.to_lowercase()) && *name != "*" {
-                match links.word(*v) {
-                    Some(w) if takes(feeds, &w) => {}
-                    Some(w) => refused.push(((*input).to_owned(), w)),
-                    None => refused.push(((*input).to_owned(), links.describe(*v))),
-                }
-            } else if !links.accepts(*v, feeds, links.color(&c.name, input), &mut st) {
+            if !links.accepts(*v, feeds, links.color(&c.name, input), &mut st) {
                 let label = if *name == "*" { *input } else { *name };
                 refused.push((label.to_owned(), links.describe(*v)));
             }
         }
-        let written: HashSet<String> = given.iter().map(|(i, _)| i.to_lowercase()).collect();
-        for (s, default) in &settings {
-            if let Some((name, feeds)) = mine.get(s) {
-                if !written.contains(s) && !default.as_deref().is_some_and(|d| takes(feeds, d)) {
-                    let what = default.as_deref().unwrap_or("none").to_owned();
-                    refused.push(((*name).to_owned(), what));
+        // A setting a rule names: the value written in the brackets, else its default
+        for (s, (setting, default)) in &settings {
+            let Some((name, feeds)) = mine.get(s) else {
+                continue;
+            };
+            match links.written(&c.name, &c.settings, setting) {
+                Some(v) => match links.word(v) {
+                    Some(w) if takes(feeds, &w) => {}
+                    Some(w) => refused.push(((*name).to_owned(), w)),
+                    None => refused.push(((*name).to_owned(), links.describe(v))),
+                },
+                None => {
+                    if !default.as_deref().is_some_and(|d| takes(feeds, d)) {
+                        let what = default.as_deref().unwrap_or("none").to_owned();
+                        refused.push(((*name).to_owned(), what));
+                    }
                 }
             }
         }
@@ -3466,7 +3602,13 @@ fn rename_expr(e: &mut Expr, tr: &Translator, bridged: &mut Bridged) {
                 }
                 for a in &mut c.args {
                     if let Some(n) = &a.name {
-                        a.name = Some(r.arg(n).to_owned());
+                        a.name = Some(r.input(n).to_owned());
+                    }
+                }
+                // A setting by position stays as it is written
+                for s in &mut c.settings {
+                    if let Some(n) = &s.name {
+                        s.name = Some(r.setting(n).to_owned());
                     }
                 }
             }

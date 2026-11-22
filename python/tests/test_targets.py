@@ -11,7 +11,8 @@ from base_node_blender import (BnError, check_target, check_targets, header, inf
                                target_names, translate, variant_names)
 from base_node.printer import to_source
 from base_node_blender.targets import (IMPLICIT, Blender, _bridge, _literal, accepted, blender, blender_catalog, catalog,
-                                       graph_issues, inferred_names, promise_refusal, sync, translation_issues)
+                                       graph_issues, inferred_names, promise_refusal, setting_of, sync,
+                                       translation_issues)
 
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = catalog(ROOT)
@@ -142,19 +143,6 @@ def test_an_alias_is_refused_in_the_head_of_a_text():
     assert str(e.value) == ("t.bn:1:12  @target 'blender@4.5-lts': no catalog for Blender 4.5 in this version of "
                             "Base Node (catalogs: 5.2, 5.3)")
     assert header(text.format("blender@5.2-lts"), "t.bn").target == ["blender@5.2-lts"]
-
-
-@pytest.mark.parametrize("old, new", [("blender-geometry", "blender"), ("blender-gp", "blender"),
-                                      ("blender-shader", "blender"), ("blender-compositor", "blender"),
-                                      ("gltf", "blender gltf")])
-def test_a_name_of_before_says_what_to_write(old, new):
-    listed = ", ".join(TARGETS) + VARIANTS + f"; '{old}' is now '{new}'"
-    with pytest.raises(ValueError) as e:
-        load_target(old)
-    assert str(e.value) == f"unknown target '{old}'; targets: {listed}"
-    with pytest.raises(BnError) as e:
-        header(f"// @target {old}\n\ngeometry graph g() -> Float {{\n  return 1.0\n}}\n", "t.bn")
-    assert str(e.value) == f"t.bn:1:12  @target '{old}': one of {listed}"
 
 
 def engine_variant(name):
@@ -297,7 +285,7 @@ def test_a_node_the_exporter_drops_is_outside_gltf():
 
 
 MATERIAL = """shader(material: true) graph Painted() -> (surface: Shader) {
-  t = ImageTexture(vector: UVMap(), image: "Paint")
+  t = ImageTexture[image: "Paint"](vector: UVMap())
   return (surface: PrincipledBSDF(base_color: BASE, normal: NORMAL))
 }
 """
@@ -314,33 +302,33 @@ def links(f, target="blender gltf"):
 def test_a_texture_times_a_constant_fits_gltf():
     tint = "(0.8, 0.5, 0.5, 1.0)"
     assert check_target(material(), "blender gltf") == []
-    assert check_target(material(f"Mix(1.0, t.color, {tint}, blend_type: MULTIPLY, data_type: RGBA)"), "blender gltf") == []
-    assert check_target(material(f"Mix(a: {tint}, b: t, blend_type: MULTIPLY, data_type: RGBA)"), "blender gltf") == []
+    assert check_target(material(f"Mix[RGBA, MULTIPLY](1.0, t.color, {tint})"), "blender gltf") == []
+    assert check_target(material(f"Mix[RGBA, MULTIPLY](a: {tint}, b: t)"), "blender gltf") == []
     # The exporter reads a factor and a color attribute peeled from the outside
-    assert check_target(material(f"Mix(a: {tint}, b: Mix(a: ColorAttribute().color, b: t.color, "
-                                 "blend_type: MULTIPLY, data_type: RGBA), blend_type: MULTIPLY)"), "blender gltf") == []
+    assert check_target(material(f"Mix[MULTIPLY](a: {tint}, b: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, "
+                                 "b: t.color))"), "blender gltf") == []
 
 
 def test_two_textures_multiplied_do_not_fit_gltf():
-    f = material('Mix(a: t.color, b: ImageTexture(image: "Dirt").color, blend_type: MULTIPLY, data_type: RGBA)')
+    f = material('Mix[RGBA, MULTIPLY](a: t.color, b: ImageTexture[image: "Dirt"]().color)')
     assert links(f) == [("PrincipledBSDF.base_color ← Mix(ImageTexture, ImageTexture)", 3)]
     # A Mix that blends rather than multiplies is lost too, and a factor other than 1
-    assert links(material("Mix(a: t.color, b: (0.5, 0.5, 0.5, 1.0), data_type: RGBA)"))
-    assert links(material("Mix(0.5, t.color, (0.5, 0.5, 0.5, 1.0), blend_type: MULTIPLY, data_type: RGBA)"))
+    assert links(material("Mix[RGBA](a: t.color, b: (0.5, 0.5, 0.5, 1.0))"))
+    assert links(material("Mix[RGBA, MULTIPLY](0.5, t.color, (0.5, 0.5, 0.5, 1.0))"))
     # Rules are the target's: blender has none and takes it
     assert check_target(f, "blender") == []
 
 
 def roughness(value):
-    return links(parse("shader graph g(rough: Float = 0.5) -> Shader {\n  t = ImageTexture(image: \"R\")\n"
+    return links(parse("shader graph g(rough: Float = 0.5) -> Shader {\n  t = ImageTexture[image: \"R\"]()\n"
                        f"  return PrincipledBSDF(roughness: {value})\n}}\n"))
 
 
 def test_a_formula_between_textures_and_constants():
     assert roughness("t.alpha * 0.5") == []
     assert roughness("0.5 * SeparateColor(t.color).green") == []
-    assert roughness("Math(t.alpha, rough, operation: MULTIPLY)") == []
-    assert roughness("Math(t.alpha, operation: MULTIPLY)") == []  # the other value is its default
+    assert roughness("Math[MULTIPLY](t.alpha, rough)") == []
+    assert roughness("Math[MULTIPLY](t.alpha)") == []  # the other value is its default
     assert roughness("t.alpha * t.alpha") == [("PrincipledBSDF.roughness ← Math(ImageTexture, ImageTexture)", 3)]
     assert roughness("t.alpha + 0.5") == [("PrincipledBSDF.roughness ← Math(ImageTexture)", 3)]
     # Both sides constant: Blender computes the Math before the exporter reads it
@@ -389,9 +377,40 @@ def test_what_the_gltf_exporter_reads(case):
     assert [i.name for i in check_target(parse(gltf_case(case)), "blender gltf")] == case["issues"]
 
 
+def test_a_setting_by_position_goes_to_the_first_enum_setting_that_holds_it():
+    assert setting_of("shader", "Math", "MULTIPLY") == "operation"
+    assert setting_of("geometry", "Compare", "INT") == "data_type"
+    assert setting_of("geometry", "Compare", "EQUAL") == "operation"
+    # X is in `axis` and `pivot_axis`: the first, in Blender's order
+    assert setting_of("geometry", "AlignEulerToVector", "X") == "axis"
+    assert setting_of("shader", "Math", "NOPE") is None
+    assert setting_of("shader", "Nope", "ADD") is None
+    assert setting_of("shader", "Math", "ADD", version="5.2") == "operation"
+
+
+def test_the_catalog_lists_the_enum_settings_of_each_node_in_blender_s_order():
+    enums = blender_catalog(BACKEND)["trees"]["geometry"]["enums"]
+    assert list(enums["Compare"]) == ["operation", "data_type", "mode"]
+    assert enums["Math"]["operation"][0] == "ADD"
+    # A node with no enum setting is not listed
+    assert "Position" not in enums
+
+
+def test_a_rule_reads_a_setting_by_position_or_by_name_never_in_parentheses():
+    def texture(call):
+        f = parse("shader(material: true) graph m() -> (surface: Shader) {\n"
+                  f"  t = {call}\n  return (surface: PrincipledBSDF(base_color: t))\n}}\n")
+        return [i.name for i in check_target(f, "blender gltf")]
+
+    assert texture('ImageTexture[CLIP, image: "Paint"](vector: UVMap())') == ["ImageTexture.extension ← CLIP"]
+    assert texture('ImageTexture[image: "Paint", extension: CLIP](vector: UVMap())') == ["ImageTexture.extension ← CLIP"]
+    # No image in the brackets: no texture
+    assert texture("ImageTexture[MIRROR](vector: UVMap())") == ["ImageTexture.image ← none"]
+
+
 def test_a_ramp_is_the_value_of_a_property_not_a_node():
     f = parse("shader graph g(f: Float) -> Color {\n"
-              "  return ColorRamp(factor: f, color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))).color\n"
+              "  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: f).color\n"
               "}\n")
     assert check_target(f, "blender") == []
 
@@ -659,12 +678,16 @@ def test_a_translator_renames_inputs_and_settings():
     f = parse(
         "compositor graph g(image: Color) -> Color {\n"
         "  blurred = Blur(image, size: 4.0)\n"
-        "  return MixLegacy(image, color2: blurred, blend_type: MULTIPLY)\n"
+        "  mixed = MixLegacy[MULTIPLY](image, color2: blurred)\n"
+        "  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n"
         "}\n"
     )
     text = to_source(translate(f, "blender", "blade"))
     assert "Blur(image, radius: 4.0)" in text
-    assert "Mix(image, b: blurred, blend: MULTIPLY)" in text
+    # A setting by position stays as it is written, one by name takes its new name
+    assert "Mix[MULTIPLY](image, b: blurred)" in text
+    assert "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](" in text
+    assert "image: mixed)" in text
 
 
 def test_what_the_editor_shows():

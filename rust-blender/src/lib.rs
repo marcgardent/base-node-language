@@ -10,6 +10,7 @@ pub mod zones;
 pub use header::{header, header_of, Header};
 pub use targets::{
     check_against, check_target, check_target_with, check_targets, check_targets_with, infer,
-    infer_with, inferred_names, load_target, promise_names, promise_refusal, target_names,
-    translate, translation_issues, variant_names, Inference, Issue, Target, UnknownTarget,
+    infer_with, inferred_names, load_target, promise_names, promise_refusal, setting_of,
+    target_names, translate, translation_issues, variant_names, Inference, Issue, Target,
+    UnknownTarget,
 };

@@ -50,9 +50,6 @@ BLENDER = "blender"
 BLENDER_KINDS = ["geometry", "shader", "compositor"]
 # The names a command line gives a version it does not write: refused in the `@target` of a text
 ALIASES = ("latest", "lts")
-# The targets of before the one `blender`, and what to write now
-RENAMED = {"blender-geometry": "blender", "blender-gp": "blender", "blender-shader": "blender",
-           "blender-compositor": "blender", "gltf": "blender gltf"}
 # A target as it is written: a name, a version after `@`, words after a space. What they mean is
 # the target's to say
 SPELLING = re.compile(r"(?P<name>[a-z0-9][a-z0-9_-]*)(?:@(?P<version>[A-Za-z0-9.-]+))?(?P<words>(?: [a-z0-9_-]+)*)")
@@ -61,7 +58,7 @@ ZONES = {"geometry": ["repeat", "foreach", "simulate", "closure"], "shader": ["r
          "compositor": ["repeat"]}
 # An implicit input (`p: Vector = Position()`) is a setting of the group's interface, not a node
 IMPLICIT = sorted(SCHEMA_IMPLICIT)
-# A ramp and curves are the value of a node's property (`color_ramp: Ramp(…)`), not nodes
+# A ramp and curves are the value of a node's property (`ColorRamp[color_ramp: Ramp(…)]`), not nodes
 DATA_CALLS = {RAMP, CURVE, CURVES}
 
 
@@ -121,9 +118,12 @@ class Target:
     members: list = field(default_factory=list, repr=False)
     # The file it was read from: its bridges are paths relative to it. Not a field of the JSON
     path: Path | None = field(default=None, repr=False, compare=False)
+    # Of a version of `blender`: kind -> node -> its enum settings in Blender's order, each with
+    # its values, where a setting written by position goes (`setting_of`). Not a field of the JSON
+    enums: dict = field(default_factory=dict, repr=False, compare=False)
 
 
-NOT_JSON = ("path", "members")
+NOT_JSON = ("path", "members", "enums")
 
 
 def _bare(name):
@@ -234,15 +234,16 @@ class Blender:
     def _one(self, version, variant):
         catalog = self.catalog(version)
         trees = catalog["trees"]
+        enums = {k: tree.get("enums", {}) for k, tree in trees.items()}
         if variant is None:
             return Target(name=self.name(version),
                           description=f"Every node of Blender {catalog['blender']}, by kind of tree",
-                          kinds=list(trees), trees=trees)
+                          kinds=list(trees), trees=trees, enums=enums)
         data = dict(self.variant(variant))
         data["name"] = f"{self.name(version)} {variant}"
         data["description"] = f"{data.get('description', '')}, in Blender {catalog['blender']}"
         t = Target(**{f.name: data[f.name] for f in fields(Target) if f.name in data and f.name not in NOT_JSON},
-                   path=self.root / BLENDER / f"{variant}.json")
+                   path=self.root / BLENDER / f"{variant}.json", enums=enums)
         if t.nodes:
             # A list of its own: the nodes of it this version has
             has = {n for k in t.kinds for n in trees.get(k, {}).get("nodes", [])}
@@ -270,6 +271,32 @@ def _others():
     """The targets that are a file of their own, sorted: every one but `blender`."""
     root = _dir()
     return sorted(p.stem for p in root.glob("*.json") if p.stem != BLENDER) if root else []
+
+
+def _positional(enums, node, value):
+    """The setting of `node` a setting written by position goes to, of `enums` (node -> its enum
+    settings in Blender's order): the first whose values hold `value`, None when none does."""
+    return next((name for name, values in enums.get(node, {}).items() if value in values), None)
+
+
+def _newest_enums():
+    """kind -> node -> its enum settings, of the newest catalog of Blender: {} without one."""
+    b = blender()
+    if b is None or not b.versions:
+        return {}
+    return {k: tree.get("enums", {}) for k, tree in b.catalog(b.versions[-1])["trees"].items()}
+
+
+def setting_of(kind, node, value, version=None):
+    """The setting of `node`, in a tree of `kind`, that a setting written by position goes to:
+    `Math[MULTIPLY]` is `operation`, `Compare[INT, EQUAL]` `data_type` then `operation`. The first
+    enum setting of the node, in Blender's order, whose values hold `value`; None when none does.
+    Of the newest catalog of Blender, or of `version`."""
+    b = blender()
+    if b is None or not b.versions:
+        return None
+    trees = b.catalog(version or b.versions[-1])["trees"]
+    return _positional(trees.get(kind, {}).get("enums", {}), node, value)
 
 
 def target_names():
@@ -311,8 +338,6 @@ def refusal(name):
         hint = found[1]
     elif _bare(name) and name in _others():
         return None
-    elif name in RENAMED:
-        hint = f"'{name}' is now '{RENAMED[name]}'"
     said = ", ".join(target_names())
     if b is not None and b.variants:
         said += f"; variants of {BLENDER}, written after it: {', '.join(b.variants)}"
@@ -714,13 +739,13 @@ def _formula(op):
 
 def _math_comparison(e):
     """A comparison as the Math nodes it writes in a tree with no Compare node (sugar.MATH_COMPARE):
-    `a >= b` is `1.0 - Math(a, b, operation: LESS_THAN)`."""
+    `a >= b` is `1.0 - Math[LESS_THAN](a, b)`."""
     operation, negated = MATH_COMPARE[e.op]
     args = [ast.Arg(None, e.left, e.line, e.col), ast.Arg(None, e.right, e.line, e.col)]
     if operation == "COMPARE":
         args.append(ast.Arg(None, ast.Number(EPSILON, False, e.line, e.col), e.line, e.col))
-    args.append(ast.Arg("operation", ast.Ref(operation, e.line, e.col), e.line, e.col))
-    call = ast.Call("Math", args, e.line, e.col)
+    call = ast.Call("Math", args, e.line, e.col,
+                    settings=[ast.Setting(None, ast.Ref(operation, e.line, e.col), e.line, e.col)])
     if negated:
         return ast.BinOp("-", ast.Number(1.0, False, e.line, e.col), call, e.line, e.col)
     return call
@@ -792,6 +817,10 @@ class _Links:
 
     def __init__(self, graph, target, local):
         self.target, self.local, self.kind = target, local, graph.kind
+        # Where a setting written by position goes: the enums of the target's version, else of
+        # the newest catalog of Blender
+        enums = target.enums or _newest_enums()
+        self.enums = enums.get(graph.kind, {})
         # A name the graph binds holds an expression, or the result of a zone
         self.values = {a.name: a.value for a in _assigns(graph.body)}
         self.params = {}
@@ -845,7 +874,8 @@ class _Links:
         return n
 
     def node(self, e):
-        """(node, the output taken or None, [(input name or None, value)]) of `e`, None when no node makes it."""
+        """(node, the output taken or None, [(input name or None, value)], its settings) of `e`, None
+        when no node makes it. The settings are those written in brackets, ast.Settings."""
         if e is DEFAULT or e is ABSENT or isinstance(e, _Values):
             return None
         e = self.follow(e)
@@ -858,27 +888,28 @@ class _Links:
                 socket, call = call.socket, call.target
             if not isinstance(call, ast.Call):
                 return None
-            return self.name(call), socket, [(None, e.left)] + [(a.name, a.value) for a in call.args]
+            return self.name(call), socket, [(None, e.left)] + [(a.name, a.value) for a in call.args], call.settings
         if isinstance(e, ast.Call):
-            return self.name(e), socket, [(a.name, a.value) for a in e.args]
+            return self.name(e), socket, [(a.name, a.value) for a in e.args], e.settings
         if isinstance(e, ast.BinOp):
             node = _formula(e.op)
             if node == "Math" and (self.vector(e.left) or self.vector(e.right)):
                 node = "VectorMath"
-            return node, socket, [(None, e.left), (None, e.right)]
+            return node, socket, [(None, e.left), (None, e.right)], []
         if isinstance(e, ast.Neg):
-            return "VectorMath" if self.vector(e.value) else "Math", socket, [(None, e.value)]
+            return "VectorMath" if self.vector(e.value) else "Math", socket, [(None, e.value)], []
         if isinstance(e, ast.Not):
-            return "BooleanMath", socket, [(None, e.value)]
+            return "BooleanMath", socket, [(None, e.value)], []
         if isinstance(e, ast.Cond):
             # The node of a ternary (typecheck.ternary); a Mix Shader's branches are not told from a Mix's here
             if self.kind == "geometry":
-                return "Switch", socket, [("switch", e.cond), ("false_", e.orelse), ("true_", e.then)]
-            return "Mix", socket, [("factor", e.cond), ("a", e.orelse), ("b", e.then)]
+                return "Switch", socket, [("switch", e.cond), ("false_", e.orelse), ("true_", e.then)], []
+            return "Mix", socket, [("factor", e.cond), ("a", e.orelse), ("b", e.then)], []
         return None
 
     def given(self, node, args):
-        """[(input, value)] of a call: a positional argument takes the input of its place in `inputs`."""
+        """[(input, value)] of a call: a positional argument takes the input of its place in `inputs`.
+        An argument is always an input: the settings are in brackets."""
         order = self.target.inputs.get(node, [])
         out = []
         for i, (n, v) in enumerate(args):
@@ -902,13 +933,23 @@ class _Links:
             return str(v.value).lower()
         return None
 
-    def setting(self, node, given, name):
-        """The value of setting `name` of a call: given, written by its formula, or its default."""
-        if name in given:
-            return self.word(given[name])
+    def written(self, node, settings, name):
+        """The value setting `name` is written with in a call's brackets, None when it is not: by
+        its name, or by position when that is where a positional setting of `node` goes."""
+        for s in settings:
+            n = s.name if s.name is not None else _positional(self.enums, node, self.word(s.value))
+            if n is not None and n.lower() == name.lower():
+                return s.value
+        return None
+
+    def setting(self, node, settings, name):
+        """The value of setting `name` of a call: written in its brackets, or its default."""
+        v = self.written(node, settings, name)
+        if v is not None:
+            return self.word(v)
         return self.target.settings.get(node, {}).get(name)
 
-    def operation(self, e, node, given):
+    def operation(self, e, node, settings):
         """The operation of a Math or Vector Math: its formula's (`*`, `round`), else its setting."""
         e = self.follow(e)
         if isinstance(e, ast.Member):
@@ -919,7 +960,7 @@ class _Links:
             return MATH_FUNCS[e.name]
         if isinstance(e, ast.Call) and node == "VectorMath" and e.name in VECTOR_FUNCS:
             return VECTOR_FUNCS[e.name]
-        return self.setting(node, given, "operation")
+        return self.setting(node, settings, "operation")
 
     def one(self, v):
         if v is None:
@@ -943,7 +984,7 @@ class _Links:
         n = self.node(e)
         if n is None:
             return False
-        node, socket, _ = n
+        node, socket = n[0], n[1]
         return f"{node}.{socket or self.first(node)}".lower() in self.vectors
 
     def first(self, node):
@@ -971,21 +1012,21 @@ class _Links:
         n = self.node(e)
         if n is None:
             return None
-        node, _, args = n
+        node, _, args, settings = n
         given = self.lowered(node, args)
-        if not color and node == "Math" and self.operation(e, node, given) == "MULTIPLY":
+        if not color and node == "Math" and self.operation(e, node, settings) == "MULTIPLY":
             a, b = "value", "value_001"
-        elif (color and node == "Mix" and self.setting(node, given, "blend_type") == "MULTIPLY"
-              and self.one(given.get("factor")) and self.rgba(node, given)):
+        elif (color and node == "Mix" and self.setting(node, settings, "blend_type") == "MULTIPLY"
+              and self.one(given.get("factor")) and self.rgba(node, given, settings)):
             a, b = "a", "b"
         else:
             return None
         return given.get(a, DEFAULT), given.get(b, DEFAULT)
 
-    def rgba(self, node, given):
+    def rgba(self, node, given, settings):
         """Whether a Mix mixes colors: its data_type, or a tuple of 4 among its inputs."""
-        if "data_type" in given:
-            return self.setting(node, given, "data_type") == "RGBA"
+        if self.written(node, settings, "data_type") is not None:
+            return self.setting(node, settings, "data_type") == "RGBA"
         return any(isinstance(self.follow(v), ast.Tuple) and len(self.follow(v).items) == 4
                    for k, v in given.items() if k in ("factor", "a", "b"))
 
@@ -1102,25 +1143,26 @@ class _Links:
         n = self.node(f)
         # The node a pattern writes, read without the names of the text: a formula of it is a Math
         if isinstance(p, ast.Call):
-            pn = (self.name(p), [(a.name, a.value) for a in p.args])
+            pn = (self.name(p), [(a.name, a.value) for a in p.args], p.settings)
         elif isinstance(p, ast.BinOp):
-            pn = (_formula(p.op), [(None, p.left), (None, p.right)])
+            pn = (_formula(p.op), [(None, p.left), (None, p.right)], [])
         else:
             return False
         if n is None or n[1] is not None or n[0] != pn[0]:
             return False
         node = n[0]
         given, written = self.lowered(node, n[2]), self.lowered(node, pn[1])
-        if node in ("Math", "VectorMath") and self.operation(p, node, written) != self.operation(f, node, given):
+        if node in ("Math", "VectorMath") and self.operation(p, node, pn[2]) != self.operation(f, node, n[3]):
             return False
-        inputs = [i.lower() for i in self.target.inputs.get(node, [])]
-        for k, v in written.items():
-            if k == "operation":
+        # The settings the pattern writes, each the value the call has
+        for s in pn[2]:
+            k = s.name if s.name is not None else _positional(self.enums, node, self.word(s.value))
+            if k is None or k == "operation":
                 continue
-            if k not in inputs:
-                if (self.setting(node, given, k) or "").lower() != (self.word(v) or "").lower():
-                    return False
-            elif not self.shape(given.get(k, DEFAULT), v, name, st):
+            if (self.setting(node, n[3], k) or "").lower() != (self.word(s.value) or "").lower():
+                return False
+        for k, v in written.items():
+            if not self.shape(given.get(k, DEFAULT), v, name, st):
                 return False
         call = f.call.target if isinstance(f, ast.Pipe) and isinstance(f.call, ast.Member) else \
             f.call if isinstance(f, ast.Pipe) else f
@@ -1188,7 +1230,7 @@ class _Links:
         n = self.node(e)
         if n is None:
             return self.opaque(e)
-        node, _, args = n
+        node, args = n[0], n[2]
         inner = [self.short(v) for _, v in args if not self.constant(v)]
         return f"{node}({', '.join(inner)})" if inner else node
 
@@ -1460,22 +1502,23 @@ def link_issues(graph, target, local=frozenset(), file=None):
         st = _State()
         args = ([(None, piped)] if piped is not None else []) + [(a.name, a.value) for a in c.args]
         given = links.given(c.name, args)
-        settings = {s.lower(): d for s, d in target.settings.get(c.name, {}).items()}
         refused = []
         for inp, v in given:
             name, feeds = mine.get(inp.lower(), mine.get("*", (None, None)))
-            if feeds is None:
+            if feeds is not None and not links.accepts(v, feeds, links.color(c.name, inp), st):
+                refused.append((inp if name == "*" else name, links.describe(v)))
+        # A setting a rule names: the value written in the brackets, else its default
+        for s, default in sorted(target.settings.get(c.name, {}).items(), key=lambda x: x[0].lower()):
+            if s.lower() not in mine:
                 continue
-            if inp.lower() in settings and name != "*":
+            name, feeds = mine[s.lower()]
+            v = links.written(c.name, c.settings, s)
+            if v is not None:
                 word = links.word(v)
                 if word is None or not _takes(feeds, word):
-                    refused.append((inp, word or links.describe(v)))
-            elif not links.accepts(v, feeds, links.color(c.name, inp), st):
-                refused.append((inp if name == "*" else name, links.describe(v)))
-        written = {inp.lower() for inp, _ in given}
-        for s, default in sorted(settings.items()):
-            if s in mine and s not in written and (default is None or not _takes(mine[s][1], default)):
-                refused.append((mine[s][0], default or "none"))
+                    refused.append((name, word or links.describe(v)))
+            elif default is None or not _takes(feeds, default):
+                refused.append((name, default or "none"))
         values = {inp.lower(): v for inp, v in given}
         for inputs, feeds in many.get(c.name, []):
             together = [values.get(i, DEFAULT) if "." not in i else elsewhere(i) for i in inputs]
@@ -1595,7 +1638,11 @@ def translate(file, source, target):
                 bridged.append(name.split("::", 1)[0])
             for a in o.args:
                 if a.name is not None:
-                    a.name = inputs.get(a.name, settings.get(a.name, a.name))
+                    a.name = inputs.get(a.name, a.name)
+            # A setting by position stays as it is written
+            for s in o.settings:
+                if s.name is not None:
+                    s.name = settings.get(s.name, s.name)
         for f in fields(o):
             visit(getattr(o, f.name))
 
@@ -1680,15 +1727,23 @@ def catalog(root, version=None):
 
 def blender_catalog(backend):
     """The catalog of one version of Blender, targets/blender/<x.y>.json: for each kind of tree
-    its types, zones, implicit inputs and nodes."""
+    its types, zones, implicit inputs and nodes, and the enum settings of its nodes in Blender's
+    order with their values: where a setting written by position goes (`setting_of`)."""
     trees = {}
     for kind in BLENDER_KINDS:
         nodes = backend["kinds"][kind]
+        enums = {}
+        for n in sorted(nodes, key=lambda n: n["name"]):
+            mine = {s["name"]: [i["value"] for i in s["items"]]
+                    for s in n.get("settings", []) if s.get("kind") == "ENUM" and s.get("items")}
+            if mine:
+                enums[n["name"]] = mine
         trees[kind] = {
             "types": sorted({s["type"] for n in nodes for s in n["inputs"] + n["outputs"]}),
             "zones": ZONES[kind],
             "implicit": IMPLICIT,
             "nodes": sorted(n["name"] for n in nodes),
+            "enums": enums,
         }
     return {"blender": backend["blender"], "trees": trees}
 

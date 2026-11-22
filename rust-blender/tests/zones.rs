@@ -34,7 +34,7 @@ fn the_calls_that_take_a_body_are_the_zones() {
             "simulate",
         ),
         (
-            "  e = foreach(geometry, domain: FACE) -> {\n    return ()\n  }\n  return e",
+            "  e = foreach[FACE](geometry) -> {\n    return ()\n  }\n  return e",
             "foreach",
         ),
         (
@@ -82,12 +82,20 @@ fn a_zone_of_another_shape_is_refused() {
         )
     );
     assert_eq!(
-        said("  e = foreach(domain: FACE) -> {\n    return ()\n  }"),
+        said("  e = foreach[FACE](item: 0.0) -> {\n    return ()\n  }"),
         at(
             2,
             7,
-            "foreach expects geometry first, then named items: foreach(geometry, domain: FACE, item: field, …) -> { … }"
+            "foreach expects geometry first, then named items: foreach[FACE](geometry, item: field, …) -> { … }"
         )
+    );
+    assert_eq!(
+        said("  r = repeat[FACE](3, s: 0.0) -> {\n    return s\n  }"),
+        at(2, 7, "repeat has no settings")
+    );
+    assert_eq!(
+        said("  s = simulate[FACE](mesh: geometry) -> {\n    return (mesh: mesh)\n  }"),
+        at(2, 7, "simulate has no settings")
     );
     assert_eq!(
         said("  e = foreach(geometry, a as b: 0.0) -> {\n    return ()\n  }"),

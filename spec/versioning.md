@@ -92,8 +92,6 @@ target defined from another. Its fields and the way a text is checked against it
 - `blade` and `materialx` belong to other projects: they leave this repository before 1.0.0, each for
   the repository of its destination.
 - A target added, or a node added to one, changes no text that fits it; a node taken out of one may.
-- The names of before (`blender-geometry`, `blender-gp`, `blender-shader`, `blender-compositor`,
-  `gltf`) are unknown targets; the message says what to write.
 
 ### The core and its hosts
 

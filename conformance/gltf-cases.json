@@ -4,74 +4,74 @@
   "cases": [
     {
       "name": "base_texture",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorFactor"]
     },
     {
       "name": "base_times_constant",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: Mix(a: (0.8, 0.5, 0.5, 1.0), b: t, blend_type: MULTIPLY)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: Mix[MULTIPLY](a: (0.8, 0.5, 0.5, 1.0), b: t)))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "pbrMetallicRoughness.baseColorFactor=[0.8, 0.5, 0.5, 1.0]"]
     },
     {
       "name": "base_times_attribute",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: Mix(a: ColorAttribute().color, b: t.color, blend_type: MULTIPLY, data_type: RGBA)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, b: t.color)))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "mesh.COLOR_0"]
     },
     {
       "name": "base_mix_of_numbers",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: Mix(a: ColorAttribute().color, b: t.color, blend_type: MULTIPLY)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: Mix[MULTIPLY](a: ColorAttribute().color, b: t.color)))",
       "issues": ["PrincipledBSDF.base_color ← Mix(ColorAttribute, ImageTexture)"],
       "gltf": ["!mesh.COLOR_0"],
       "gltf_warnings": ["The active Vertex Color will not be exported"]
     },
     {
       "name": "base_vector_math",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t.color * 0.5))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t.color * 0.5))",
       "issues": ["PrincipledBSDF.base_color ← VectorMath(ImageTexture)"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorFactor"]
     },
     {
       "name": "base_math",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t.alpha * 0.5))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t.alpha * 0.5))",
       "issues": ["PrincipledBSDF.base_color ← Math(ImageTexture)"],
       "gltf": ["!pbrMetallicRoughness.baseColorFactor"]
     },
     {
       "name": "base_two_textures",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: Mix(a: t.color, b: ImageTexture(vector: UVMap(), image: \"Dirt\").color, blend_type: MULTIPLY, data_type: RGBA)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: Mix[RGBA, MULTIPLY](a: t.color, b: ImageTexture[image: \"Dirt\"](vector: UVMap()).color)))",
       "issues": ["PrincipledBSDF.base_color ← Mix(ImageTexture, ImageTexture)"],
       "gltf": ["!json.textures.1"]
     },
     {
       "name": "rough_times_constant",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(roughness: t.alpha * 0.4))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(roughness: t.alpha * 0.4))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "pbrMetallicRoughness.roughnessFactor=0.4"]
     },
     {
       "name": "rough_channel",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(roughness: SeparateColor(t.color).green))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(roughness: SeparateColor(t.color).green))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture"]
     },
     {
       "name": "rough_vector_math",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(roughness: t.color * 0.4))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(roughness: t.color * 0.4))",
       "issues": ["PrincipledBSDF.roughness ← VectorMath(ImageTexture)"],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "!pbrMetallicRoughness.roughnessFactor"]
     },
     {
       "name": "rough_mix",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(roughness: Mix(a: 0.4, b: t.alpha, blend_type: MULTIPLY)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(roughness: Mix[MULTIPLY](a: 0.4, b: t.alpha)))",
       "issues": ["PrincipledBSDF.roughness ← Mix(ImageTexture)"],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "!pbrMetallicRoughness.roughnessFactor"]
     },
     {
       "name": "rough_constants",
-      "body": "return (surface: PrincipledBSDF(roughness: Math(0.5, 0.4, operation: MULTIPLY), base_color: Mix(0.5, (1.0, 0.0, 0.0, 1.0), (0.0, 0.0, 1.0, 1.0), data_type: RGBA)))",
+      "body": "return (surface: PrincipledBSDF(roughness: Math[MULTIPLY](0.5, 0.4), base_color: Mix[RGBA](0.5, (1.0, 0.0, 0.0, 1.0), (0.0, 0.0, 1.0, 1.0))))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.roughnessFactor=0.2", "pbrMetallicRoughness.baseColorFactor=[0.5, 0.0, 0.5, 1.0]"]
     },
@@ -83,56 +83,56 @@
     },
     {
       "name": "alpha_round",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: round(t.alpha)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: round(t.alpha)))",
       "issues": [],
       "gltf": ["alphaMode=MASK", "!alphaCutoff"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, 0.3, operation: GREATER_THAN)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math[GREATER_THAN](t.alpha, 0.3)))",
       "issues": [],
       "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater_or_equal",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: 1.0 - Math(t.alpha, 0.3, operation: LESS_THAN)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: 1.0 - Math[LESS_THAN](t.alpha, 0.3)))",
       "issues": [],
       "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater_by_operator",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha > 0.3))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha > 0.3))",
       "issues": [],
       "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_greater_or_equal_by_operator",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha >= 0.3))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha >= 0.3))",
       "issues": [],
       "gltf": ["alphaMode=MASK", "alphaCutoff=0.3"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_less_by_operator",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha < 0.3))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: t.alpha < 0.3))",
       "issues": ["PrincipledBSDF.alpha ← Math(ImageTexture)"],
       "gltf": ["alphaMode=BLEND", "!alphaCutoff"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_less",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, 0.3, operation: LESS_THAN)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math[LESS_THAN](t.alpha, 0.3)))",
       "issues": ["PrincipledBSDF.alpha ← Math(ImageTexture)"],
       "gltf": ["alphaMode=BLEND", "!alphaCutoff"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "alpha_of_a_texture_cutoff",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math(t.alpha, t.alpha, operation: GREATER_THAN)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t, alpha: Math[GREATER_THAN](t.alpha, t.alpha)))",
       "issues": ["PrincipledBSDF.alpha ← Math(ImageTexture, ImageTexture)"],
       "gltf": ["!alphaCutoff"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
@@ -152,76 +152,76 @@
     },
     {
       "name": "attribute_of_geometry",
-      "body": "return (surface: PrincipledBSDF(base_color: Attribute(attribute_name: \"Col\").color))",
+      "body": "return (surface: PrincipledBSDF(base_color: Attribute[attribute_name: \"Col\"]().color))",
       "issues": [],
       "gltf": ["mesh.COLOR_0"]
     },
     {
       "name": "attribute_of_object",
-      "body": "return (surface: PrincipledBSDF(base_color: Attribute(attribute_name: \"Col\", attribute_type: OBJECT).color))",
+      "body": "return (surface: PrincipledBSDF(base_color: Attribute[OBJECT, attribute_name: \"Col\"]().color))",
       "issues": ["Attribute.attribute_type ← OBJECT"],
       "gltf": ["!mesh.COLOR_0"],
       "gltf_warnings": ["The active Vertex Color will not be exported"]
     },
     {
       "name": "mapping_around_z",
-      "body": "t = ImageTexture(vector: Mapping(vector: UVMap(), rotation: (0.0, 0.0, 0.3), scale: (2.0, 2.0, 1.0)), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: Mapping(vector: UVMap(), rotation: (0.0, 0.0, 0.3), scale: (2.0, 2.0, 1.0)))\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.baseColorTexture.extensions.KHR_texture_transform.rotation=0.3"]
     },
     {
       "name": "mapping_around_x",
-      "body": "t = ImageTexture(vector: Mapping(vector: UVMap(), rotation: (0.3, 0.0, 0.0)), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: Mapping(vector: UVMap(), rotation: (0.3, 0.0, 0.0)))\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["Mapping.rotation ← constant"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"],
       "gltf_warnings": ["non-zero rotations in the X/Y direction"]
     },
     {
       "name": "mapping_of_normals",
-      "body": "t = ImageTexture(vector: Mapping(vector: UVMap(), scale: (2.0, 2.0, 1.0), vector_type: NORMAL), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: Mapping[NORMAL](vector: UVMap(), scale: (2.0, 2.0, 1.0)))\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["Mapping.vector_type ← NORMAL"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"],
       "gltf_warnings": ["had type NORMAL"]
     },
     {
       "name": "image_mirror_closest",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\", extension: MIRROR, interpolation: Closest)\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[Closest, MIRROR, image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": [],
       "gltf": ["sampler.wrapS=33648", "sampler.magFilter=9728"]
     },
     {
       "name": "image_clip",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\", extension: CLIP)\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[CLIP, image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["ImageTexture.extension ← CLIP"],
       "gltf": ["sampler.wrapS=33071"]
     },
     {
       "name": "image_cubic",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\", interpolation: Cubic)\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[Cubic, image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["ImageTexture.interpolation ← Cubic"],
       "gltf": ["sampler.magFilter=9729"]
     },
     {
       "name": "image_box",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\", projection: BOX)\nreturn (surface: PrincipledBSDF(base_color: t))",
+      "body": "t = ImageTexture[BOX, image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t))",
       "issues": ["ImageTexture.projection ← BOX"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorTexture.extensions"]
     },
     {
       "name": "normal_map",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Normal\")\nreturn (surface: PrincipledBSDF(normal: NormalMap(color: t.color, strength: 0.8)))",
+      "body": "t = ImageTexture[image: \"Normal\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(normal: NormalMap(color: t.color, strength: 0.8)))",
       "issues": [],
       "gltf": ["normalTexture.scale=0.8"]
     },
     {
       "name": "normal_map_directx",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Normal\")\nreturn (surface: PrincipledBSDF(normal: NormalMap(color: t.color, convention: DIRECTX)))",
+      "body": "t = ImageTexture[image: \"Normal\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(normal: NormalMap[DIRECTX](color: t.color)))",
       "issues": ["NormalMap.convention ← DIRECTX"],
       "gltf": ["normalTexture", "!normalTexture.extensions"]
     },
     {
       "name": "normal_map_object",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Normal\")\nreturn (surface: PrincipledBSDF(normal: NormalMap(color: t.color, space: OBJECT)))",
+      "body": "t = ImageTexture[image: \"Normal\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(normal: NormalMap[OBJECT](color: t.color)))",
       "issues": ["NormalMap.space ← OBJECT"],
       "gltf": ["normalTexture", "!normalTexture.extensions"]
     },
@@ -233,27 +233,27 @@
     },
     {
       "name": "anisotropy_gray",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(anisotropic: t.color, anisotropic_rotation: 0.25))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(anisotropic: t.color, anisotropic_rotation: 0.25))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_anisotropy.anisotropyTexture"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "anisotropy_pattern",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\ns = SeparateXYZ(VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD))\nreturn (surface: PrincipledBSDF(anisotropic: s.z * 0.7, anisotropic_rotation: (atan2(s.y, s.x) + 0.1) / 6.283185, tangent: Tangent(direction_type: UV_MAP)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\ns = SeparateXYZ(VectorMath[MULTIPLY_ADD](t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0)))\nreturn (surface: PrincipledBSDF(anisotropic: s.z * 0.7, anisotropic_rotation: (atan2(s.y, s.x) + 0.1) / 6.283185, tangent: Tangent[UV_MAP]()))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_anisotropy.anisotropyTexture", "extensions.KHR_materials_anisotropy.anisotropyStrength=0.7", "extensions.KHR_materials_anisotropy.anisotropyRotation=0.1"]
     },
     {
       "name": "anisotropy_without_tangent",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\ns = SeparateXYZ(VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD))\nreturn (surface: PrincipledBSDF(anisotropic: s.z * 0.7, anisotropic_rotation: (atan2(s.y, s.x) + 0.1) / 6.283185))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\ns = SeparateXYZ(VectorMath[MULTIPLY_ADD](t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0)))\nreturn (surface: PrincipledBSDF(anisotropic: s.z * 0.7, anisotropic_rotation: (atan2(s.y, s.x) + 0.1) / 6.283185))",
       "issues": ["PrincipledBSDF.anisotropic ← Math(SeparateXYZ)", "PrincipledBSDF.anisotropic_rotation ← Math(Math)"],
       "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "anisotropy_of_two_separates",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nv = VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD)\nreturn (surface: PrincipledBSDF(anisotropic: SeparateXYZ(v).z * 0.7, anisotropic_rotation: (atan2(SeparateXYZ(v).y, SeparateXYZ(v).x) + 0.1) / 6.283185, tangent: Tangent(direction_type: UV_MAP)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nv = VectorMath[MULTIPLY_ADD](t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0))\nreturn (surface: PrincipledBSDF(anisotropic: SeparateXYZ(v).z * 0.7, anisotropic_rotation: (atan2(SeparateXYZ(v).y, SeparateXYZ(v).x) + 0.1) / 6.283185, tangent: Tangent[UV_MAP]()))",
       "issues": ["PrincipledBSDF.anisotropic ← Math(SeparateXYZ)", "PrincipledBSDF.anisotropic_rotation ← Math(Math)"],
       "gltf": ["!extensions.KHR_materials_anisotropy.anisotropyRotation"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
@@ -265,19 +265,19 @@
     },
     {
       "name": "unlit",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color)))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "pbrMetallicRoughness.baseColorTexture"]
     },
     {
       "name": "unlit_by_key",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(factor: LightPath().is_camera_ray, a: TransparentBSDF(), b: Emission(color: t.color)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(factor: LightPath().is_camera_ray, a: TransparentBSDF(), b: Emission(color: t.color)))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "pbrMetallicRoughness.baseColorTexture"]
     },
     {
       "name": "unlit_by_identifier",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(factor: LightPath().is_camera_ray, Shader: TransparentBSDF(), Shader_001: Emission(color: t.color)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(factor: LightPath().is_camera_ray, Shader: TransparentBSDF(), Shader_001: Emission(color: t.color)))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "pbrMetallicRoughness.baseColorTexture"]
     },
@@ -289,7 +289,7 @@
     },
     {
       "name": "unlit_background",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: Background(color: Mix(a: ColorAttribute().color, b: t.color, blend_type: MULTIPLY, data_type: RGBA)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: Background(color: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, b: t.color)))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "pbrMetallicRoughness.baseColorTexture", "mesh.COLOR_0"]
     },
@@ -302,39 +302,39 @@
     },
     {
       "name": "emission_strength",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(emission_color: t.color, emission_strength: 3.0))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(emission_color: t.color, emission_strength: 3.0))",
       "issues": [],
       "gltf": ["emissiveTexture", "extensions.KHR_materials_emissive_strength.emissiveStrength=3.0"]
     },
     {
       "name": "unlit_blend",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "alphaMode=BLEND"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "unlit_clip",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(round(t.alpha), TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(round(t.alpha), TransparentBSDF(), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))",
       "issues": [],
       "gltf": ["extensions.KHR_materials_unlit", "alphaMode=MASK"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "transparent_over_principled",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), PrincipledBSDF(base_color: t.color)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), PrincipledBSDF(base_color: t.color)))",
       "issues": ["MixShader(ImageTexture, TransparentBSDF, PrincipledBSDF)", "TransparentBSDF"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!alphaMode"]
     },
     {
       "name": "transparent_over_emission",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), Emission(color: t.color)))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(t.alpha, TransparentBSDF(), Emission(color: t.color)))",
       "issues": ["MixShader(ImageTexture, TransparentBSDF, Emission)", "TransparentBSDF"],
       "gltf": ["!alphaMode", "!extensions"]
     },
     {
       "name": "light_path_swapped",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: MixShader(LightPath().is_camera_ray, Emission(color: t.color), TransparentBSDF()))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: MixShader(LightPath().is_camera_ray, Emission(color: t.color), TransparentBSDF()))",
       "issues": ["MixShader(LightPath, Emission, TransparentBSDF)", "LightPath", "TransparentBSDF"],
       "gltf": ["!extensions"]
     },
@@ -347,38 +347,38 @@
     {
       "name": "thickness",
       "outputs": "surface: Shader, thickness: Float",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(transmission_weight: 1.0), thickness: t.alpha)",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(transmission_weight: 1.0), thickness: t.alpha)",
       "issues": ["MaterialOutput.thickness ← ImageTexture(UVMap)"],
       "gltf": ["extensions.KHR_materials_transmission", "!extensions.KHR_materials_volume"]
     },
     {
       "name": "displacement",
       "outputs": "surface: Shader, displacement: Vector",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Normal\")\nreturn (surface: PrincipledBSDF(), displacement: NormalMap(color: t.color))",
+      "body": "t = ImageTexture[image: \"Normal\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(), displacement: NormalMap(color: t.color))",
       "issues": ["MaterialOutput.displacement ← NormalMap(ImageTexture)"],
       "gltf": ["!normalTexture"]
     },
     {
       "name": "group",
-      "text": "shader graph tinted(c: Color) -> Color {\n  return Mix(a: (0.8, 0.5, 0.5, 1.0), b: c, blend_type: MULTIPLY)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: PrincipledBSDF(base_color: tinted(t.color)))\n}\n",
+      "text": "shader graph tinted(c: Color) -> Color {\n  return Mix[MULTIPLY](a: (0.8, 0.5, 0.5, 1.0), b: c)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: PrincipledBSDF(base_color: tinted(t.color)))\n}\n",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "pbrMetallicRoughness.baseColorFactor=[0.8, 0.5, 0.5, 1.0]"]
     },
     {
       "name": "group_vector_math",
-      "text": "shader graph darker(c: Color) -> Color {\n  return c * 0.5\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: PrincipledBSDF(base_color: darker(t.color)))\n}\n",
+      "text": "shader graph darker(c: Color) -> Color {\n  return c * 0.5\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: PrincipledBSDF(base_color: darker(t.color)))\n}\n",
       "issues": ["PrincipledBSDF.base_color ← VectorMath(ImageTexture)"],
       "gltf": ["pbrMetallicRoughness.baseColorTexture", "!pbrMetallicRoughness.baseColorFactor"]
     },
     {
       "name": "group_shader",
-      "text": "shader graph rough(r: Float = 0.3) -> Shader {\n  return PrincipledBSDF(roughness: r)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: rough(t.alpha * 0.4))\n}\n",
+      "text": "shader graph rough(r: Float = 0.3) -> Shader {\n  return PrincipledBSDF(roughness: r)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: rough(t.alpha * 0.4))\n}\n",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "pbrMetallicRoughness.roughnessFactor=0.4"]
     },
     {
       "name": "group_shader_refused",
-      "text": "shader graph rough(r: Float = 0.3) -> Shader {\n  return PrincipledBSDF(roughness: r)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: rough(t.color * 0.4))\n}\n",
+      "text": "shader graph rough(r: Float = 0.3) -> Shader {\n  return PrincipledBSDF(roughness: r)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: rough(t.color * 0.4))\n}\n",
       "issues": ["PrincipledBSDF.roughness ← VectorMath(ImageTexture)"],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "!pbrMetallicRoughness.roughnessFactor"]
     },
@@ -390,7 +390,7 @@
     },
     {
       "name": "group_material",
-      "text": "shader graph NAME(r: Float = 0.3) -> Shader {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return PrincipledBSDF(roughness: t.alpha * r)\n}\n",
+      "text": "shader graph NAME(r: Float = 0.3) -> Shader {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return PrincipledBSDF(roughness: t.alpha * r)\n}\n",
       "issues": [],
       "gltf": ["pbrMetallicRoughness.metallicRoughnessTexture", "pbrMetallicRoughness.roughnessFactor=0.3"]
     },
@@ -402,13 +402,13 @@
     },
     {
       "name": "occlusion_texture",
-      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  g = gltf_material_output(Occlusion: SeparateColor(t.color).red)\n  return (surface: PrincipledBSDF())\n}\n",
+      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  g = gltf_material_output(Occlusion: SeparateColor(t.color).red)\n  return (surface: PrincipledBSDF())\n}\n",
       "issues": [],
       "gltf": ["occlusionTexture", "!occlusionTexture.strength"]
     },
     {
       "name": "occlusion_strength",
-      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  g = gltf_material_output(Occlusion: Mix(0.6, (1.0, 1.0, 1.0, 1.0), SeparateColor(t.color).red, blend_type: MIX))\n  return (surface: PrincipledBSDF())\n}\n",
+      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  g = gltf_material_output(Occlusion: Mix[MIX](0.6, (1.0, 1.0, 1.0, 1.0), SeparateColor(t.color).red))\n  return (surface: PrincipledBSDF())\n}\n",
       "issues": [],
       "gltf": ["occlusionTexture.strength=0.6"]
     },
@@ -420,7 +420,7 @@
     },
     {
       "name": "occlusion_misnamed",
-      "text": "shader graph \"glTF Material Output\"(occlusion: Float = 1.0) -> (out: Float) {\n  return (out: occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  g = gltf_material_output(occlusion: SeparateColor(t.color).red)\n  return (surface: PrincipledBSDF())\n}\n",
+      "text": "shader graph \"glTF Material Output\"(occlusion: Float = 1.0) -> (out: Float) {\n  return (out: occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  g = gltf_material_output(occlusion: SeparateColor(t.color).red)\n  return (surface: PrincipledBSDF())\n}\n",
       "issues": ["glTFMaterialOutput.occlusion (not read) ← SeparateColor(ImageTexture)"],
       "gltf": ["!occlusionTexture"]
     },
@@ -444,7 +444,7 @@
     },
     {
       "name": "volume_density_linked",
-      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader, volume: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  g = gltf_material_output(Thickness: 0.5)\n  return (surface: PrincipledBSDF(transmission_weight: 1.0), volume: VolumeAbsorption(density: t.alpha))\n}\n",
+      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader, volume: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  g = gltf_material_output(Thickness: 0.5)\n  return (surface: PrincipledBSDF(transmission_weight: 1.0), volume: VolumeAbsorption(density: t.alpha))\n}\n",
       "issues": ["VolumeAbsorption.density ← ImageTexture(UVMap)"],
       "gltf": ["extensions.KHR_materials_volume.attenuationDistance=1.0"]
     },
@@ -480,38 +480,38 @@
     },
     {
       "name": "iridescence_texture",
-      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  lo = 150.0\n  hi = 450.0\n  g = gltf_material_output(iridescence_factor: 1.0, iridescence_thickness_minimum: lo)\n  return (surface: PrincipledBSDF(thin_film_thickness: Mix(SeparateColor(t.color).red, lo, hi)))\n}\n",
+      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  lo = 150.0\n  hi = 450.0\n  g = gltf_material_output(iridescence_factor: 1.0, iridescence_thickness_minimum: lo)\n  return (surface: PrincipledBSDF(thin_film_thickness: Mix(SeparateColor(t.color).red, lo, hi)))\n}\n",
       "issues": [],
       "gltf": ["extensions.KHR_materials_iridescence.iridescenceThicknessTexture", "extensions.KHR_materials_iridescence.iridescenceThicknessMinimum=150.0", "extensions.KHR_materials_iridescence.iridescenceThicknessMaximum=450.0"]
     },
     {
       "name": "iridescence_texture_of_numbers",
-      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  g = gltf_material_output(iridescence_factor: 1.0, iridescence_thickness_minimum: 150.0)\n  return (surface: PrincipledBSDF(thin_film_thickness: Mix(SeparateColor(t.color).red, 150.0, 450.0)))\n}\n",
+      "text": "shader graph \"glTF Material Output\"(Occlusion: Float = 1.0, Thickness: Float = 0.0, \"Iridescence Factor\": Float = 0.0, \"Iridescence Thickness Minimum\": Float = 100.0, Dispersion: Float = 0.0) -> (out: Float) {\n  return (out: Occlusion)\n}\n\nshader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  g = gltf_material_output(iridescence_factor: 1.0, iridescence_thickness_minimum: 150.0)\n  return (surface: PrincipledBSDF(thin_film_thickness: Mix(SeparateColor(t.color).red, 150.0, 450.0)))\n}\n",
       "issues": ["PrincipledBSDF.thin_film_thickness ← Mix(SeparateColor)"],
       "gltf": ["!extensions.KHR_materials_iridescence.iridescenceThicknessTexture"]
     },
     {
       "name": "unlit_strength",
-      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color, strength: 4.0)))\n}\n",
+      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color, strength: 4.0)))\n}\n",
       "issues": ["MixShader(LightPath, TransparentBSDF, Emission)", "LightPath", "TransparentBSDF"],
       "gltf": ["extensions.KHR_materials_unlit", "!extensions.KHR_materials_emissive_strength"]
     },
     {
       "name": "background_strength",
-      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: Background(color: t.color, strength: 3.0))\n}\n",
+      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: Background(color: t.color, strength: 3.0))\n}\n",
       "issues": ["Background.strength ← constant"],
       "gltf": ["extensions.KHR_materials_unlit", "!extensions.KHR_materials_emissive_strength"]
     },
     {
       "name": "transparent_color",
-      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: MixShader(t.alpha, TransparentBSDF(color: (1.0, 0.0, 0.0, 1.0)), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))\n}\n",
+      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: MixShader(t.alpha, TransparentBSDF(color: (1.0, 0.0, 0.0, 1.0)), MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: t.color))))\n}\n",
       "issues": ["MixShader(ImageTexture, TransparentBSDF, MixShader)", "TransparentBSDF"],
       "gltf": ["extensions.KHR_materials_unlit", "!pbrMetallicRoughness.baseColorFactor"],
       "gltf_warnings": ["More than one shader node tex image used for a texture"]
     },
     {
       "name": "light_path_other_branch",
-      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture(vector: UVMap(), image: \"Paint\")\n  return (surface: MixShader(LightPath().is_camera_ray, Emission(color: (1.0, 0.0, 0.0, 1.0)), Emission(color: t.color)))\n}\n",
+      "text": "shader(material: true) graph NAME() -> (surface: Shader) {\n  t = ImageTexture[image: \"Paint\"](vector: UVMap())\n  return (surface: MixShader(LightPath().is_camera_ray, Emission(color: (1.0, 0.0, 0.0, 1.0)), Emission(color: t.color)))\n}\n",
       "issues": ["MixShader(LightPath, Emission, Emission)", "LightPath"],
       "gltf": ["extensions.KHR_materials_unlit"]
     },
@@ -565,7 +565,7 @@
     },
     {
       "name": "base_color_by_ternary",
-      "body": "t = ImageTexture(vector: UVMap(), image: \"Paint\")\nreturn (surface: PrincipledBSDF(base_color: t.alpha > 0.3 ? (1.0, 0.0, 0.0, 1.0) : t.color))",
+      "body": "t = ImageTexture[image: \"Paint\"](vector: UVMap())\nreturn (surface: PrincipledBSDF(base_color: t.alpha > 0.3 ? (1.0, 0.0, 0.0, 1.0) : t.color))",
       "issues": ["PrincipledBSDF.base_color ← Mix(Math, ImageTexture)"],
       "gltf": []
     }

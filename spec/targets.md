@@ -48,8 +48,7 @@ A target is written as a name, an optional version after `@`, and optional words
 the target's to say; only [`blender`](#blender-by-version) has them. A name that is not a target's
 is an error: Python raises `ValueError`, Rust returns `Err(UnknownTarget)`, with the same message,
 `unknown target 'nope'; targets: blade, blender, blender@5.3; variants of blender, written after
-it: cycles, eevee, gltf`. A name of before the one `blender` target gets what to write:
-`…; 'gltf' is now 'blender gltf'`.
+it: cycles, eevee, gltf`.
 
 ## The file of a target
 
@@ -95,11 +94,15 @@ it: cycles, eevee, gltf`. A name of before the one `blender` target gets what to
 | `once` | The nodes the destination reads one of: the last the material reaches, its inputs walked in order |
 
 A translator only renames. A node becomes one node: its new name, and the inputs and settings whose
-names change. What is more than a rename, one node of the source made of several nodes of the
-target, is a **bridge**: a graph of one of the target's bridge modules, which the translator names
-by its module, `"Kuwahara": "blender_interop::kuwahara"`, or with its renames,
-`{"node": "blender_interop::kuwahara", "inputs": {"size": "radius"}}`. The translator stays a
-table, and a bridge is just a module: a text may `use` it, and the tools check it as any other.
+names change. `inputs` renames the named arguments of the call, `settings` the named settings in
+its brackets; a setting written by position stays as it is, in the brackets:
+`MixRGB[MULTIPLY](a, fac: f)` becomes `Mix[MULTIPLY](a, factor: f)`, and
+`MixRGB[blend_type: MULTIPLY](a)` becomes `Mix[mode: MULTIPLY](a)`. What is more than a rename,
+one node of the source made of several nodes of the target, is a **bridge**: a graph of one of the
+target's bridge modules, which the translator names by its module,
+`"Kuwahara": "blender_interop::kuwahara"`, or with its renames,
+`{"node": "blender_interop::kuwahara", "inputs": {"size": "radius"}}`. The translator stays a table,
+and a bridge is just a module: a text may `use` it, and the tools check it as any other.
 
 - A node sent to a bridge is translated when the target has that graph and the graph fits the
   target. One that does not is an issue of kind `graph` at the call: `blender_interop::kuwahara
@@ -162,8 +165,12 @@ that lists the versions:
 
 `targets/blender/<x.y>.json` is the catalog of one version: `"blender"`, the version as Blender
 says it, and `"trees"`, for each kind of tree (`geometry`, `shader`, `compositor`) its `types`,
-`zones`, `implicit` inputs and `nodes`. It is written from `targets/backends/blender-<x.y>.json`,
-the nodes that Blender reports (`make backend`, run with that Blender, writes both; a test checks
+`zones`, `implicit` inputs and `nodes`, and its `enums`: the enum settings of each node that has
+some, in Blender's order, each with its values (`"Math": {"operation": ["ADD", …]}`). They say
+where a setting written by position goes: to the first of them whose values hold it
+(`Compare[INT, EQUAL]` is `data_type` then `operation`); `setting_of(kind, node, value)` answers
+it, in Python and in Rust, of the newest catalog. It is written from
+`targets/backends/blender-<x.y>.json`, the nodes that Blender reports (`make backend`, run with that Blender, writes both; a test checks
 they agree). Every catalog found is a version: `blender@latest` is the newest.
 
 The policy is Blender's LTS and its latest version. This version of Base Node has the catalogs of
@@ -303,7 +310,7 @@ input of the node. A feed is one of:
 | `constant` | A value rather than a link: a literal, a tuple of them, a parameter of the graph, a setting's value (`MULTIPLY`), or a call of a `folded` node on values (`0.5 * 0.4`, the destination computes it). An input the call does not give keeps its default, a constant |
 | `Node` | Any output of a call to `Node`, the call itself among them (`t`, `t.color`, `t.alpha`) |
 | `Node.output` | That output of a call to `Node`, named (`TextureCoordinate().uv`); the call taken whole is its first output (`t` is `t.color`) |
-| `a × b × c` | A multiply of `a` by the others, as the input's type has it: on an input of `vectors`, a Mix whose `blend_type` is `MULTIPLY`, factor 1 and `data_type` `RGBA` (written, or taken from a tuple of 4 among its inputs); on another input a Math whose operation is `MULTIPLY`, the node or the `*` formula of two numbers. The others are peeled off one at a time from the outside, in any order: `ImageTexture × ColorAttribute × constant` takes `Mix(a: (0.8, 0.8, 0.8, 1.0), b: Mix(a: ColorAttribute().color, b: t.color, …), …)`, not a Mix of three |
+| `a × b × c` | A multiply of `a` by the others, as the input's type has it: on an input of `vectors`, a Mix whose `blend_type` is `MULTIPLY`, factor 1 and `data_type` `RGBA` (written, or taken from a tuple of 4 among its inputs); on another input a Math whose operation is `MULTIPLY`, the node or the `*` formula of two numbers. The others are peeled off one at a time from the outside, in any order: `ImageTexture × ColorAttribute × constant` takes `Mix[RGBA, MULTIPLY](a: (0.8, 0.8, 0.8, 1.0), b: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, b: t.color))`, not a Mix of three |
 | `(0.0, 0.0, constant)` | A tuple of these items: numbers, or `constant` for any value. An input left to its default is taken |
 | `Pattern` | A value of the shape of one of the expressions of `patterns[Pattern]` (see below) |
 | `any` | Anything: the destination does not read it, and the calls in it are not checked |
@@ -311,7 +318,12 @@ input of the node. A feed is one of:
 | `≠ 0.0` | A constant other than that number; an input left to its default is not |
 | `named` | A name bound to a number (`lo = 150.0`): a named constant is a node of its own, a Value |
 
-A rule on a setting (`ImageTexture.extension`, one of `settings`) lists the values it takes:
+A rule on a setting (`ImageTexture.extension`, one of `settings`) reads the setting in the call's
+brackets, by its name (`ImageTexture[extension: CLIP]`) or by position: a setting written by
+position is an enum value, and goes to the first enum setting of the node, in Blender's order, whose
+values hold it (`ImageTexture[CLIP]` is its `extension`). Blender's catalog of each version lists
+those settings (`trees.<kind>.enums`, [below](#blender-by-version)). An argument in parentheses is
+always an input. The rule lists the values it takes:
 `["REPEAT", "EXTEND", "MIRROR"]`, or `any` for any value written. A setting without a default
 (`null`, as an image) that the call does not write is `none`. A call that does not write the setting has its default, which the
 rule takes or refuses as any value: `Tangent()` is `RADIAL`.
@@ -319,7 +331,7 @@ rule takes or refuses as any value: `Tangent()` is `RADIAL`.
 A **pattern** is a `.bn` expression whose free names, its `inputs`, are placeholders:
 
 ```json
-"patterns": {"AlphaClip": ["round(value)", "Math(value, threshold, operation: GREATER_THAN)"]},
+"patterns": {"AlphaClip": ["round(value)", "Math[GREATER_THAN](value, threshold)"]},
 "inputs": {"AlphaClip": ["value", "threshold"]},
 "rules": {"AlphaClip.value": ["ImageTexture", "SeparateColor"], "AlphaClip.threshold": ["constant"]}
 ```
@@ -387,7 +399,7 @@ rules on the same cases.
 | `coat_tint`, `coat_ior` | Their defaults, or any constant when `coat_weight` is 0: glTF's clearcoat has neither |
 | `emission_color`, `specular_tint`, `sheen_tint`, `Emission.color` | A constant, a texture's color, either times a constant |
 | `normal`, `coat_normal` | A constant, or a `NormalMap` of an image texture's color, tangent space and OpenGL convention, with a constant strength |
-| `anisotropic`, `anisotropic_rotation`, `tangent` | Constants; or a texture's color, either times a constant (read as a gray texture); or the pattern the exporter writes: `s = SeparateXYZ(VectorMath(t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0), operation: MULTIPLY_ADD))`, `anisotropic: s.z * strength`, `anisotropic_rotation: (atan2(s.y, s.x) + rotation) / 6.283185`, `tangent: Tangent(direction_type: UV_MAP)` |
+| `anisotropic`, `anisotropic_rotation`, `tangent` | Constants; or a texture's color, either times a constant (read as a gray texture); or the pattern the exporter writes: `s = SeparateXYZ(VectorMath[MULTIPLY_ADD](t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0)))`, `anisotropic: s.z * strength`, `anisotropic_rotation: (atan2(s.y, s.x) + rotation) / 6.283185`, `tangent: Tangent[UV_MAP]()` |
 | `Background.strength` | 1: the exporter reads a Background as unlit, without its strength |
 | Every other input of `PrincipledBSDF`, `Emission`, `Background`, `VolumeAbsorption` | A constant: the exporter reads its value, or it changes nothing the glTF shows (the radius of a subsurface of weight 0) |
 | `glTFMaterialOutput` | A group named `glTF Material Output` (or `glTF Settings`): `Occlusion` 1, a texture or a channel of one, or `Mix(strength, (1.0, 1.0, 1.0, 1.0), it)` (an `occlusionTexture` and its strength); `Thickness`, `Iridescence Factor` a constant, a texture or a channel, either times a constant; `Iridescence Thickness Minimum` a constant; `Dispersion` 0, or a constant with a `Thickness` that is not 0 (`KHR_materials_dispersion` needs the volume); any other input a constant |
@@ -398,8 +410,8 @@ rules on the same cases.
 | `PrincipledBSDF`, once | The exporter reads the last Principled BSDF the surface reaches, its inputs walked in order (in `MixShader(0.5, a, b)`, `b`); a Principled BSDF no link reaches is not in the material |
 | `Attribute.attribute_type`, `Tangent.direction_type`, `NormalMap.space`, `NormalMap.convention` | Geometry; UV Map; Tangent; OpenGL |
 
-An **alpha clip** is `round(a)`, `a > cutoff` (`Math(a, cutoff, operation: GREATER_THAN)`), `cutoff < a`
-(`Math(cutoff, a, operation: LESS_THAN)`), or `1.0 - ` the other two, which is `a >= cutoff` and
+An **alpha clip** is `round(a)`, `a > cutoff` (`Math[GREATER_THAN](a, cutoff)`), `cutoff < a`
+(`Math[LESS_THAN](cutoff, a)`), or `1.0 - ` the other two, which is `a >= cutoff` and
 `cutoff <= a` (a shader tree has no Compare node: a comparison is these Math nodes there, and a rule
 reads it as them): alpha mode `MASK`, the cutoff a constant. `folded` is
 Math, Vector Math and Mix: Blender computes them on constants before the exporter reads the

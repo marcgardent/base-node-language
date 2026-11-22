@@ -384,7 +384,1912 @@
         "WaveTexture",
         "WhiteNoiseTexture",
         "XPBDSolver"
-      ]
+      ],
+      "enums": {
+        "AccumulateField": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "FLOAT_VECTOR",
+            "TRANSFORM"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "ActiveElement": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "LAYER"
+          ]
+        },
+        "AdvectGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "AlignEulerToVector": {
+          "axis": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "pivot_axis": [
+            "AUTO",
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "AlignRotationToVector": {
+          "axis": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "pivot_axis": [
+            "AUTO",
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "Arc": {
+          "mode": [
+            "POINTS",
+            "RADIUS"
+          ]
+        },
+        "AttributeStatistic": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "AxesToRotation": {
+          "primary_axis": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "secondary_axis": [
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "BezierSegment": {
+          "mode": [
+            "POSITION",
+            "OFFSET"
+          ]
+        },
+        "BitMath": {
+          "operation": [
+            "AND",
+            "OR",
+            "XOR",
+            "NOT",
+            "SHIFT",
+            "ROTATE"
+          ]
+        },
+        "BlurAttribute": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "BoneInfo": {
+          "transform_space": [
+            "ORIGINAL",
+            "RELATIVE"
+          ]
+        },
+        "BooleanMath": {
+          "operation": [
+            "AND",
+            "OR",
+            "NOT",
+            "NAND",
+            "NOR",
+            "XNOR",
+            "XOR",
+            "IMPLY",
+            "NIMPLY"
+          ]
+        },
+        "CaptureAttribute": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "Clamp": {
+          "clamp_type": [
+            "MINMAX",
+            "RANGE"
+          ]
+        },
+        "ClipGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "CollectionInfo": {
+          "transform_space": [
+            "ORIGINAL",
+            "RELATIVE"
+          ]
+        },
+        "CombineColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL"
+          ]
+        },
+        "Compare": {
+          "operation": [
+            "LESS_THAN",
+            "LESS_EQUAL",
+            "GREATER_THAN",
+            "GREATER_EQUAL",
+            "EQUAL",
+            "NOT_EQUAL",
+            "BRIGHTER",
+            "DARKER"
+          ],
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ],
+          "mode": [
+            "ELEMENT",
+            "LENGTH",
+            "AVERAGE",
+            "DOT_PRODUCT",
+            "DIRECTION"
+          ]
+        },
+        "Cone": {
+          "fill_type": [
+            "NONE",
+            "NGON",
+            "TRIANGLE_FAN"
+          ]
+        },
+        "CurveCircle": {
+          "mode": [
+            "POINTS",
+            "RADIUS"
+          ]
+        },
+        "CurveLine": {
+          "mode": [
+            "POINTS",
+            "DIRECTION"
+          ]
+        },
+        "CurveToPoints": {
+          "mode": [
+            "EVALUATED",
+            "COUNT",
+            "LENGTH"
+          ]
+        },
+        "Cylinder": {
+          "fill_type": [
+            "NONE",
+            "NGON",
+            "TRIANGLE_FAN"
+          ]
+        },
+        "DeleteGeometry": {
+          "mode": [
+            "ALL",
+            "EDGE_FACE",
+            "ONLY_FACE"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "DialGizmo": {
+          "color_id": [
+            "PRIMARY",
+            "SECONDARY",
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "DistributePointsInGrid": {
+          "mode": [
+            "DENSITY_RANDOM",
+            "DENSITY_GRID"
+          ]
+        },
+        "DistributePointsOnFaces": {
+          "distribute_method": [
+            "RANDOM",
+            "POISSON"
+          ]
+        },
+        "DomainSize": {
+          "component": [
+            "MESH",
+            "POINTCLOUD",
+            "CURVE",
+            "INSTANCES",
+            "GREASEPENCIL",
+            "VOLUME"
+          ]
+        },
+        "DuplicateElements": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "SPLINE",
+            "LAYER",
+            "INSTANCE"
+          ]
+        },
+        "EnableOutput": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "EvaluateAtIndex": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ],
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "EvaluateOnDomain": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ],
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "ExtrudeMesh": {
+          "mode": [
+            "VERTICES",
+            "EDGES",
+            "FACES"
+          ]
+        },
+        "FieldAverage": {
+          "data_type": [
+            "FLOAT",
+            "FLOAT_VECTOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "FieldMinAndMax": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "FLOAT_VECTOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "FieldToGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "FieldVariance": {
+          "data_type": [
+            "FLOAT",
+            "FLOAT_VECTOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "FilterList": {
+          "socket_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "FloatToInteger": {
+          "rounding_mode": [
+            "ROUND",
+            "FLOOR",
+            "CEILING",
+            "TRUNCATE"
+          ]
+        },
+        "GaborTexture": {
+          "gabor_type": [
+            "2D",
+            "3D"
+          ]
+        },
+        "GeometryProximity": {
+          "target_element": [
+            "POINTS",
+            "EDGES",
+            "FACES"
+          ]
+        },
+        "GetBundleItem": {
+          "socket_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ],
+          "structure_type": [
+            "AUTO",
+            "DYNAMIC",
+            "FIELD",
+            "GRID",
+            "LIST",
+            "SINGLE"
+          ]
+        },
+        "GetListItem": {
+          "socket_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ],
+          "structure_type": [
+            "AUTO",
+            "DYNAMIC",
+            "FIELD",
+            "GRID",
+            "LIST",
+            "SINGLE"
+          ]
+        },
+        "GetNamedGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GradientTexture": {
+          "gradient_type": [
+            "LINEAR",
+            "QUADRATIC",
+            "EASING",
+            "DIAGONAL",
+            "SPHERICAL",
+            "QUADRATIC_SPHERE",
+            "RADIAL"
+          ]
+        },
+        "GridDilateAndErode": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GridInfo": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GridMean": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GridMedian": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GridToPoints": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "HandleTypeSelection": {
+          "handle_type": [
+            "FREE",
+            "AUTO",
+            "VECTOR",
+            "ALIGN"
+          ]
+        },
+        "HashValue": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "ImageTexture": {
+          "interpolation": [
+            "Linear",
+            "Closest",
+            "Cubic"
+          ],
+          "extension": [
+            "REPEAT",
+            "EXTEND",
+            "CLIP",
+            "MIRROR"
+          ]
+        },
+        "IndexSwitch": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "IntegerMath": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "ABSOLUTE",
+            "NEGATE",
+            "POWER",
+            "MINIMUM",
+            "MAXIMUM",
+            "SIGN",
+            "DIVIDE_ROUND",
+            "DIVIDE_FLOOR",
+            "DIVIDE_CEIL",
+            "FLOORED_MODULO",
+            "MODULO",
+            "GCD",
+            "LCM"
+          ]
+        },
+        "LinearGizmo": {
+          "color_id": [
+            "PRIMARY",
+            "SECONDARY",
+            "X",
+            "Y",
+            "Z"
+          ],
+          "draw_style": [
+            "ARROW",
+            "CROSS",
+            "BOX"
+          ]
+        },
+        "ListLength": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "MapRange": {
+          "interpolation_type": [
+            "LINEAR",
+            "STEPPED",
+            "SMOOTHSTEP",
+            "SMOOTHERSTEP"
+          ],
+          "data_type": [
+            "FLOAT",
+            "FLOAT_VECTOR"
+          ]
+        },
+        "Math": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "POWER",
+            "LOGARITHM",
+            "SQRT",
+            "INVERSE_SQRT",
+            "ABSOLUTE",
+            "EXPONENT",
+            "MINIMUM",
+            "MAXIMUM",
+            "LESS_THAN",
+            "GREATER_THAN",
+            "SIGN",
+            "COMPARE",
+            "SMOOTH_MIN",
+            "SMOOTH_MAX",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "TRUNC",
+            "FRACT",
+            "MODULO",
+            "FLOORED_MODULO",
+            "WRAP",
+            "SNAP",
+            "PINGPONG",
+            "SINE",
+            "COSINE",
+            "TANGENT",
+            "ARCSINE",
+            "ARCCOSINE",
+            "ARCTANGENT",
+            "ARCTAN2",
+            "SINH",
+            "COSH",
+            "TANH",
+            "RADIANS",
+            "DEGREES"
+          ]
+        },
+        "MenuSwitch": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "MergeLayers": {
+          "mode": [
+            "MERGE_BY_NAME",
+            "MERGE_BY_ID"
+          ]
+        },
+        "MeshBoolean": {
+          "operation": [
+            "INTERSECT",
+            "UNION",
+            "DIFFERENCE"
+          ],
+          "solver": [
+            "EXACT",
+            "FLOAT",
+            "MANIFOLD"
+          ]
+        },
+        "MeshCircle": {
+          "fill_type": [
+            "NONE",
+            "NGON",
+            "TRIANGLE_FAN"
+          ]
+        },
+        "MeshLine": {
+          "mode": [
+            "OFFSET",
+            "END_POINTS"
+          ],
+          "count_mode": [
+            "TOTAL",
+            "RESOLUTION"
+          ]
+        },
+        "MeshToCurve": {
+          "mode": [
+            "EDGES",
+            "FACES"
+          ]
+        },
+        "MeshToPoints": {
+          "mode": [
+            "VERTICES",
+            "EDGES",
+            "FACES",
+            "CORNERS"
+          ]
+        },
+        "Mix": {
+          "data_type": [
+            "FLOAT",
+            "VECTOR",
+            "RGBA",
+            "ROTATION"
+          ],
+          "factor_mode": [
+            "UNIFORM",
+            "NON_UNIFORM"
+          ],
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "MixLegacy": {
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "NamedAttribute": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "NoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "noise_type": [
+            "MULTIFRACTAL",
+            "RIDGED_MULTIFRACTAL",
+            "HYBRID_MULTIFRACTAL",
+            "FBM",
+            "HETERO_TERRAIN"
+          ]
+        },
+        "ObjectInfo": {
+          "transform_space": [
+            "ORIGINAL",
+            "RELATIVE"
+          ]
+        },
+        "PruneGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "Quadrilateral": {
+          "mode": [
+            "RECTANGLE",
+            "PARALLELOGRAM",
+            "TRAPEZOID",
+            "KITE",
+            "POINTS"
+          ]
+        },
+        "RandomValue": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "Raycast": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "RotateEuler": {
+          "rotation_type": [
+            "AXIS_ANGLE",
+            "EULER"
+          ],
+          "space": [
+            "OBJECT",
+            "LOCAL"
+          ]
+        },
+        "RotateRotation": {
+          "rotation_space": [
+            "GLOBAL",
+            "LOCAL"
+          ]
+        },
+        "SDFGridBoolean": {
+          "operation": [
+            "INTERSECT",
+            "UNION",
+            "DIFFERENCE"
+          ]
+        },
+        "SampleCurve": {
+          "mode": [
+            "FACTOR",
+            "LENGTH"
+          ],
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "SampleGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "SampleGridIndex": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "SampleIndex": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "SampleNearest": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER"
+          ]
+        },
+        "SampleNearestSurface": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "SampleUVSurface": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ]
+        },
+        "ScaleElements": {
+          "domain": [
+            "FACE",
+            "EDGE"
+          ]
+        },
+        "SeparateColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL"
+          ]
+        },
+        "SeparateGeometry": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "SetGreasePencilColor": {
+          "mode": [
+            "STROKE",
+            "FILL"
+          ]
+        },
+        "SetGreasePencilDepth": {
+          "depth_order": [
+            "2D",
+            "3D"
+          ]
+        },
+        "SetGridBackground": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "SetGridTransform": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "SetHandlePositions": {
+          "mode": [
+            "LEFT",
+            "RIGHT"
+          ]
+        },
+        "SetHandleType": {
+          "handle_type": [
+            "FREE",
+            "AUTO",
+            "VECTOR",
+            "ALIGN"
+          ]
+        },
+        "SetMeshNormal": {
+          "mode": [
+            "SHARPNESS",
+            "FREE",
+            "TANGENT_SPACE"
+          ],
+          "domain": [
+            "POINT",
+            "FACE",
+            "CORNER"
+          ]
+        },
+        "SetSelection": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CURVE"
+          ],
+          "selection_type": [
+            "BOOLEAN",
+            "FLOAT"
+          ]
+        },
+        "SetShadeSmooth": {
+          "domain": [
+            "EDGE",
+            "FACE"
+          ]
+        },
+        "SetSplineType": {
+          "spline_type": [
+            "CATMULL_ROM",
+            "POLY",
+            "BEZIER",
+            "NURBS"
+          ]
+        },
+        "SortElements": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CURVE",
+            "INSTANCE"
+          ]
+        },
+        "SortList": {
+          "socket_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "SplitToInstances": {
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "StoreBundleItem": {
+          "socket_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ],
+          "structure_type": [
+            "AUTO",
+            "DYNAMIC",
+            "FIELD",
+            "GRID",
+            "LIST",
+            "SINGLE"
+          ]
+        },
+        "StoreNamedAttribute": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "FLOAT_VECTOR",
+            "FLOAT_COLOR",
+            "QUATERNION",
+            "FLOAT4X4",
+            "STRING",
+            "INT8",
+            "INT16_2D",
+            "INT32_2D",
+            "FLOAT2",
+            "FLOAT4",
+            "BYTE_COLOR"
+          ],
+          "domain": [
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "StoreNamedGrid": {
+          "data_type": [
+            "BOOLEAN",
+            "FLOAT",
+            "DOUBLE",
+            "INT",
+            "INT64",
+            "MASK",
+            "VECTOR_FLOAT",
+            "VECTOR_DOUBLE",
+            "VECTOR_INT",
+            "POINTS",
+            "UNKNOWN"
+          ]
+        },
+        "StringToValue": {
+          "data_type": [
+            "FLOAT",
+            "INT"
+          ]
+        },
+        "Switch": {
+          "input_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "TrimCurve": {
+          "mode": [
+            "FACTOR",
+            "LENGTH"
+          ]
+        },
+        "ValueToString": {
+          "data_type": [
+            "FLOAT",
+            "INT"
+          ]
+        },
+        "VectorMath": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "CROSS_PRODUCT",
+            "PROJECT",
+            "REFLECT",
+            "REFRACT",
+            "FACEFORWARD",
+            "DOT_PRODUCT",
+            "DISTANCE",
+            "LENGTH",
+            "SCALE",
+            "NORMALIZE",
+            "ABSOLUTE",
+            "POWER",
+            "SIGN",
+            "MINIMUM",
+            "MAXIMUM",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "FRACTION",
+            "MODULO",
+            "WRAP",
+            "SNAP",
+            "SINE",
+            "COSINE",
+            "TANGENT"
+          ]
+        },
+        "VectorRotate": {
+          "rotation_type": [
+            "AXIS_ANGLE",
+            "X_AXIS",
+            "Y_AXIS",
+            "Z_AXIS",
+            "EULER_XYZ"
+          ]
+        },
+        "Viewer": {
+          "domain": [
+            "AUTO",
+            "POINT",
+            "EDGE",
+            "FACE",
+            "CORNER",
+            "CURVE",
+            "INSTANCE",
+            "LAYER"
+          ]
+        },
+        "VoronoiTexture": {
+          "voronoi_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "distance": [
+            "EUCLIDEAN",
+            "MANHATTAN",
+            "CHEBYCHEV",
+            "MINKOWSKI"
+          ],
+          "feature": [
+            "F1",
+            "F2",
+            "SMOOTH_F1",
+            "DISTANCE_TO_EDGE",
+            "N_SPHERE_RADIUS"
+          ]
+        },
+        "VoxelizeGrid": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "Warning": {
+          "warning_type": [
+            "ERROR",
+            "WARNING",
+            "INFO"
+          ]
+        },
+        "WaveTexture": {
+          "wave_type": [
+            "BANDS",
+            "RINGS"
+          ],
+          "bands_direction": [
+            "X",
+            "Y",
+            "Z",
+            "DIAGONAL"
+          ],
+          "rings_direction": [
+            "X",
+            "Y",
+            "Z",
+            "SPHERICAL"
+          ],
+          "wave_profile": [
+            "SIN",
+            "SAW",
+            "TRI"
+          ]
+        },
+        "WhiteNoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ]
+        }
+      }
     },
     "shader": {
       "types": [
@@ -520,7 +2425,566 @@
         "WhiteNoiseTexture",
         "Wireframe",
         "WorldOutput"
-      ]
+      ],
+      "enums": {
+        "Attribute": {
+          "attribute_type": [
+            "GEOMETRY",
+            "OBJECT",
+            "INSTANCER",
+            "VIEW_LAYER"
+          ]
+        },
+        "Clamp": {
+          "clamp_type": [
+            "MINMAX",
+            "RANGE"
+          ]
+        },
+        "CombineColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL"
+          ]
+        },
+        "Displacement": {
+          "space": [
+            "OBJECT",
+            "WORLD"
+          ]
+        },
+        "EnvironmentTexture": {
+          "projection": [
+            "EQUIRECTANGULAR",
+            "MIRROR_BALL"
+          ],
+          "interpolation": [
+            "Linear",
+            "Closest",
+            "Cubic",
+            "Smart"
+          ]
+        },
+        "GaborTexture": {
+          "gabor_type": [
+            "2D",
+            "3D"
+          ]
+        },
+        "GlassBSDF": {
+          "distribution": [
+            "BECKMANN",
+            "GGX",
+            "MULTI_GGX"
+          ]
+        },
+        "GlossyBSDF": {
+          "distribution": [
+            "BECKMANN",
+            "GGX",
+            "ASHIKHMIN_SHIRLEY",
+            "MULTI_GGX"
+          ]
+        },
+        "GradientTexture": {
+          "gradient_type": [
+            "LINEAR",
+            "QUADRATIC",
+            "EASING",
+            "DIAGONAL",
+            "SPHERICAL",
+            "QUADRATIC_SPHERE",
+            "RADIAL"
+          ]
+        },
+        "HairBSDF": {
+          "component": [
+            "Reflection",
+            "Transmission"
+          ]
+        },
+        "IESTexture": {
+          "mode": [
+            "INTERNAL",
+            "EXTERNAL"
+          ]
+        },
+        "ImageTexture": {
+          "projection": [
+            "FLAT",
+            "BOX",
+            "SPHERE",
+            "TUBE"
+          ],
+          "interpolation": [
+            "Linear",
+            "Closest",
+            "Cubic",
+            "Smart"
+          ],
+          "extension": [
+            "REPEAT",
+            "EXTEND",
+            "CLIP",
+            "MIRROR"
+          ]
+        },
+        "LightOutput": {
+          "target": [
+            "ALL",
+            "EEVEE",
+            "CYCLES"
+          ]
+        },
+        "LineStyleOutput": {
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "MapRange": {
+          "interpolation_type": [
+            "LINEAR",
+            "STEPPED",
+            "SMOOTHSTEP",
+            "SMOOTHERSTEP"
+          ],
+          "data_type": [
+            "FLOAT",
+            "FLOAT_VECTOR"
+          ]
+        },
+        "Mapping": {
+          "vector_type": [
+            "POINT",
+            "TEXTURE",
+            "VECTOR",
+            "NORMAL"
+          ]
+        },
+        "MaterialOutput": {
+          "target": [
+            "ALL",
+            "EEVEE",
+            "CYCLES"
+          ]
+        },
+        "Math": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "POWER",
+            "LOGARITHM",
+            "SQRT",
+            "INVERSE_SQRT",
+            "ABSOLUTE",
+            "EXPONENT",
+            "MINIMUM",
+            "MAXIMUM",
+            "LESS_THAN",
+            "GREATER_THAN",
+            "SIGN",
+            "COMPARE",
+            "SMOOTH_MIN",
+            "SMOOTH_MAX",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "TRUNC",
+            "FRACT",
+            "MODULO",
+            "FLOORED_MODULO",
+            "WRAP",
+            "SNAP",
+            "PINGPONG",
+            "SINE",
+            "COSINE",
+            "TANGENT",
+            "ARCSINE",
+            "ARCCOSINE",
+            "ARCTANGENT",
+            "ARCTAN2",
+            "SINH",
+            "COSH",
+            "TANH",
+            "RADIANS",
+            "DEGREES"
+          ]
+        },
+        "MenuSwitch": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "MetallicBSDF": {
+          "distribution": [
+            "BECKMANN",
+            "GGX",
+            "MULTI_GGX"
+          ],
+          "fresnel_type": [
+            "PHYSICAL_CONDUCTOR",
+            "F82"
+          ]
+        },
+        "Mix": {
+          "data_type": [
+            "FLOAT",
+            "VECTOR",
+            "RGBA",
+            "ROTATION"
+          ],
+          "factor_mode": [
+            "UNIFORM",
+            "NON_UNIFORM"
+          ],
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "MixLegacy": {
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "NoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "noise_type": [
+            "MULTIFRACTAL",
+            "RIDGED_MULTIFRACTAL",
+            "HYBRID_MULTIFRACTAL",
+            "FBM",
+            "HETERO_TERRAIN"
+          ]
+        },
+        "NormalMap": {
+          "space": [
+            "TANGENT",
+            "OBJECT",
+            "WORLD",
+            "BLENDER_OBJECT",
+            "BLENDER_WORLD"
+          ],
+          "convention": [
+            "OPENGL",
+            "DIRECTX"
+          ],
+          "base": [
+            "ORIGINAL",
+            "DISPLACED"
+          ]
+        },
+        "PrincipledBSDF": {
+          "distribution": [
+            "GGX",
+            "MULTI_GGX"
+          ],
+          "subsurface_method": [
+            "BURLEY",
+            "RANDOM_WALK",
+            "RANDOM_WALK_SKIN",
+            "RANDOM_WALK_LEGACY"
+          ]
+        },
+        "PrincipledHairBSDF": {
+          "model": [
+            "CHIANG",
+            "HUANG"
+          ],
+          "parametrization": [
+            "ABSORPTION",
+            "MELANIN",
+            "COLOR"
+          ]
+        },
+        "RefractionBSDF": {
+          "distribution": [
+            "BECKMANN",
+            "GGX"
+          ]
+        },
+        "Script": {
+          "mode": [
+            "INTERNAL",
+            "EXTERNAL"
+          ]
+        },
+        "SeparateColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL"
+          ]
+        },
+        "SheenBSDF": {
+          "distribution": [
+            "ASHIKHMIN",
+            "MICROFIBER"
+          ]
+        },
+        "SkyTexture": {
+          "sky_type": [
+            "SINGLE_SCATTERING",
+            "MULTIPLE_SCATTERING",
+            "PREETHAM",
+            "HOSEK_WILKIE"
+          ]
+        },
+        "SubsurfaceScattering": {
+          "falloff": [
+            "BURLEY",
+            "RANDOM_WALK",
+            "RANDOM_WALK_SKIN",
+            "RANDOM_WALK_LEGACY"
+          ]
+        },
+        "Tangent": {
+          "direction_type": [
+            "RADIAL",
+            "UV_MAP"
+          ],
+          "axis": [
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "ToonBSDF": {
+          "component": [
+            "DIFFUSE",
+            "GLOSSY"
+          ]
+        },
+        "VectorDisplacement": {
+          "space": [
+            "TANGENT",
+            "OBJECT",
+            "WORLD"
+          ]
+        },
+        "VectorMath": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "CROSS_PRODUCT",
+            "PROJECT",
+            "REFLECT",
+            "REFRACT",
+            "FACEFORWARD",
+            "DOT_PRODUCT",
+            "DISTANCE",
+            "LENGTH",
+            "SCALE",
+            "NORMALIZE",
+            "ABSOLUTE",
+            "POWER",
+            "SIGN",
+            "MINIMUM",
+            "MAXIMUM",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "FRACTION",
+            "MODULO",
+            "WRAP",
+            "SNAP",
+            "SINE",
+            "COSINE",
+            "TANGENT"
+          ]
+        },
+        "VectorRotate": {
+          "rotation_type": [
+            "AXIS_ANGLE",
+            "X_AXIS",
+            "Y_AXIS",
+            "Z_AXIS",
+            "EULER_XYZ"
+          ]
+        },
+        "VectorTransform": {
+          "vector_type": [
+            "POINT",
+            "VECTOR",
+            "NORMAL"
+          ],
+          "convert_from": [
+            "WORLD",
+            "OBJECT",
+            "CAMERA"
+          ],
+          "convert_to": [
+            "WORLD",
+            "OBJECT",
+            "CAMERA"
+          ]
+        },
+        "VolumeCoefficients": {
+          "phase": [
+            "HENYEY_GREENSTEIN",
+            "FOURNIER_FORAND",
+            "DRAINE",
+            "RAYLEIGH",
+            "MIE"
+          ]
+        },
+        "VolumeScatter": {
+          "phase": [
+            "HENYEY_GREENSTEIN",
+            "FOURNIER_FORAND",
+            "DRAINE",
+            "RAYLEIGH",
+            "MIE"
+          ]
+        },
+        "VoronoiTexture": {
+          "voronoi_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "distance": [
+            "EUCLIDEAN",
+            "MANHATTAN",
+            "CHEBYCHEV",
+            "MINKOWSKI"
+          ],
+          "feature": [
+            "F1",
+            "F2",
+            "SMOOTH_F1",
+            "DISTANCE_TO_EDGE",
+            "N_SPHERE_RADIUS"
+          ]
+        },
+        "WaveTexture": {
+          "wave_type": [
+            "BANDS",
+            "RINGS"
+          ],
+          "bands_direction": [
+            "X",
+            "Y",
+            "Z",
+            "DIAGONAL"
+          ],
+          "rings_direction": [
+            "X",
+            "Y",
+            "Z",
+            "SPHERICAL"
+          ],
+          "wave_profile": [
+            "SIN",
+            "SAW",
+            "TRI"
+          ]
+        },
+        "WhiteNoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ]
+        },
+        "WorldOutput": {
+          "target": [
+            "ALL",
+            "EEVEE",
+            "CYCLES"
+          ]
+        }
+      }
     },
     "compositor": {
       "types": [
@@ -711,7 +3175,638 @@
         "Warning",
         "WaveTexture",
         "WhiteNoiseTexture"
-      ]
+      ],
+      "enums": {
+        "AlignRotationToVector": {
+          "axis": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "pivot_axis": [
+            "AUTO",
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "AxesToRotation": {
+          "primary_axis": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "secondary_axis": [
+            "X",
+            "Y",
+            "Z"
+          ]
+        },
+        "Clamp": {
+          "clamp_type": [
+            "MINMAX",
+            "RANGE"
+          ]
+        },
+        "CombineColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL",
+            "YCC",
+            "YUV"
+          ],
+          "ycc_mode": [
+            "ITUBT601",
+            "ITUBT709",
+            "JFIF"
+          ]
+        },
+        "ConvertColorspace": {
+          "from_color_space": [
+            "ACES 1.3 sRGB",
+            "ACES 2.0 sRGB",
+            "ACES2065-1",
+            "ACEScc",
+            "ACEScct",
+            "ACEScg",
+            "ADX10",
+            "ADX16",
+            "ARRI LogC3 (EI800)",
+            "ARRI LogC4",
+            "AgX Base sRGB",
+            "AgX Log",
+            "Apple Log",
+            "Apple Log 2",
+            "BMDFilm WideGamut Gen5",
+            "CanonLog2 CinemaGamut D55",
+            "CanonLog3 CinemaGamut D55",
+            "D-Log D-Gamut",
+            "DaVinci Intermediate WideGamut",
+            "Display P3",
+            "Filmic Log",
+            "Filmic sRGB",
+            "Gamma 1.8 Encoded Rec.709",
+            "Gamma 2.2 Encoded AP1",
+            "Gamma 2.2 Encoded AdobeRGB",
+            "Gamma 2.2 Encoded Rec.709",
+            "Gamma 2.4 Encoded Rec.709",
+            "Khronos PBR Neutral sRGB",
+            "Linear ARRI Wide Gamut 3",
+            "Linear ARRI Wide Gamut 4",
+            "Linear Adobe RGB",
+            "Linear Apple Wide Gamut",
+            "Linear BMD WideGamut Gen5",
+            "Linear CIE-XYZ D65",
+            "Linear CIE-XYZ E",
+            "Linear CinemaGamut D55",
+            "Linear D-Gamut",
+            "Linear DCI-P3 D65",
+            "Linear DaVinci WideGamut",
+            "Linear FilmLight E-Gamut",
+            "Linear REDWideGamutRGB",
+            "Linear Rec.2020",
+            "Linear Rec.709",
+            "Linear S-Gamut3",
+            "Linear S-Gamut3.Cine",
+            "Linear V-Gamut",
+            "Linear Venice S-Gamut3",
+            "Linear Venice S-Gamut3.Cine",
+            "Log3G10 REDWideGamutRGB",
+            "Non-Color",
+            "Rec.1886",
+            "Rec.2020",
+            "Rec.2100-HLG",
+            "Rec.2100-PQ",
+            "S-Log3 S-Gamut3",
+            "S-Log3 S-Gamut3.Cine",
+            "S-Log3 Venice S-Gamut3",
+            "S-Log3 Venice S-Gamut3.Cine",
+            "V-Log V-Gamut",
+            "sRGB",
+            "sRGB Encoded AP1",
+            "sRGB Encoded P3-D65",
+            "scene_linear"
+          ],
+          "to_color_space": [
+            "ACES 1.3 sRGB",
+            "ACES 2.0 sRGB",
+            "ACES2065-1",
+            "ACEScc",
+            "ACEScct",
+            "ACEScg",
+            "ADX10",
+            "ADX16",
+            "ARRI LogC3 (EI800)",
+            "ARRI LogC4",
+            "AgX Base sRGB",
+            "AgX Log",
+            "Apple Log",
+            "Apple Log 2",
+            "BMDFilm WideGamut Gen5",
+            "CanonLog2 CinemaGamut D55",
+            "CanonLog3 CinemaGamut D55",
+            "D-Log D-Gamut",
+            "DaVinci Intermediate WideGamut",
+            "Display P3",
+            "Filmic Log",
+            "Filmic sRGB",
+            "Gamma 1.8 Encoded Rec.709",
+            "Gamma 2.2 Encoded AP1",
+            "Gamma 2.2 Encoded AdobeRGB",
+            "Gamma 2.2 Encoded Rec.709",
+            "Gamma 2.4 Encoded Rec.709",
+            "Khronos PBR Neutral sRGB",
+            "Linear ARRI Wide Gamut 3",
+            "Linear ARRI Wide Gamut 4",
+            "Linear Adobe RGB",
+            "Linear Apple Wide Gamut",
+            "Linear BMD WideGamut Gen5",
+            "Linear CIE-XYZ D65",
+            "Linear CIE-XYZ E",
+            "Linear CinemaGamut D55",
+            "Linear D-Gamut",
+            "Linear DCI-P3 D65",
+            "Linear DaVinci WideGamut",
+            "Linear FilmLight E-Gamut",
+            "Linear REDWideGamutRGB",
+            "Linear Rec.2020",
+            "Linear Rec.709",
+            "Linear S-Gamut3",
+            "Linear S-Gamut3.Cine",
+            "Linear V-Gamut",
+            "Linear Venice S-Gamut3",
+            "Linear Venice S-Gamut3.Cine",
+            "Log3G10 REDWideGamutRGB",
+            "Non-Color",
+            "Rec.1886",
+            "Rec.2020",
+            "Rec.2100-HLG",
+            "Rec.2100-PQ",
+            "S-Log3 S-Gamut3",
+            "S-Log3 S-Gamut3.Cine",
+            "S-Log3 Venice S-Gamut3",
+            "S-Log3 Venice S-Gamut3.Cine",
+            "V-Log V-Gamut",
+            "sRGB",
+            "sRGB Encoded AP1",
+            "sRGB Encoded P3-D65",
+            "scene_linear"
+          ]
+        },
+        "Cryptomatte": {
+          "source": [
+            "RENDER",
+            "IMAGE"
+          ],
+          "layer_name": [
+            "CryptoObject",
+            "CryptoMaterial",
+            "CryptoAsset"
+          ],
+          "layer": [
+            "PLACEHOLDER"
+          ],
+          "view": [
+            "ALL"
+          ]
+        },
+        "Defocus": {
+          "bokeh": [
+            "OCTAGON",
+            "HEPTAGON",
+            "HEXAGON",
+            "PENTAGON",
+            "SQUARE",
+            "TRIANGLE",
+            "CIRCLE"
+          ]
+        },
+        "EnableOutput": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "GaborTexture": {
+          "gabor_type": [
+            "2D",
+            "3D"
+          ]
+        },
+        "GradientTexture": {
+          "gradient_type": [
+            "LINEAR",
+            "QUADRATIC",
+            "EASING",
+            "DIAGONAL",
+            "SPHERICAL",
+            "QUADRATIC_SPHERE",
+            "RADIAL"
+          ]
+        },
+        "Image": {
+          "layer": [
+            "PLACEHOLDER"
+          ],
+          "view": [
+            "ALL"
+          ]
+        },
+        "IndexSwitch": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "MapRange": {
+          "interpolation_type": [
+            "LINEAR",
+            "STEPPED",
+            "SMOOTHSTEP",
+            "SMOOTHERSTEP"
+          ],
+          "data_type": [
+            "FLOAT",
+            "FLOAT_VECTOR"
+          ]
+        },
+        "Math": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "POWER",
+            "LOGARITHM",
+            "SQRT",
+            "INVERSE_SQRT",
+            "ABSOLUTE",
+            "EXPONENT",
+            "MINIMUM",
+            "MAXIMUM",
+            "LESS_THAN",
+            "GREATER_THAN",
+            "SIGN",
+            "COMPARE",
+            "SMOOTH_MIN",
+            "SMOOTH_MAX",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "TRUNC",
+            "FRACT",
+            "MODULO",
+            "FLOORED_MODULO",
+            "WRAP",
+            "SNAP",
+            "PINGPONG",
+            "SINE",
+            "COSINE",
+            "TANGENT",
+            "ARCSINE",
+            "ARCCOSINE",
+            "ARCTANGENT",
+            "ARCTAN2",
+            "SINH",
+            "COSH",
+            "TANH",
+            "RADIANS",
+            "DEGREES"
+          ]
+        },
+        "MenuSwitch": {
+          "data_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "Mix": {
+          "data_type": [
+            "FLOAT",
+            "VECTOR",
+            "RGBA",
+            "ROTATION"
+          ],
+          "factor_mode": [
+            "UNIFORM",
+            "NON_UNIFORM"
+          ],
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "MixLegacy": {
+          "blend_type": [
+            "MIX",
+            "DARKEN",
+            "MULTIPLY",
+            "BURN",
+            "LIGHTEN",
+            "SCREEN",
+            "DODGE",
+            "ADD",
+            "OVERLAY",
+            "SOFT_LIGHT",
+            "LINEAR_LIGHT",
+            "DIFFERENCE",
+            "EXCLUSION",
+            "SUBTRACT",
+            "DIVIDE",
+            "HUE",
+            "SATURATION",
+            "COLOR",
+            "VALUE"
+          ]
+        },
+        "NoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "noise_type": [
+            "MULTIFRACTAL",
+            "RIDGED_MULTIFRACTAL",
+            "HYBRID_MULTIFRACTAL",
+            "FBM",
+            "HETERO_TERRAIN"
+          ]
+        },
+        "ObjectInfo": {
+          "transform_space": [
+            "ORIGINAL",
+            "RELATIVE"
+          ]
+        },
+        "RelativeToPixel": {
+          "data_type": [
+            "FLOAT",
+            "VECTOR"
+          ],
+          "reference_dimension": [
+            "PER_DIMENSION",
+            "X",
+            "Y",
+            "Greater",
+            "Smaller",
+            "Diagonal"
+          ]
+        },
+        "RenderLayers": {
+          "layer": [
+            "PLACEHOLDER"
+          ]
+        },
+        "RotateRotation": {
+          "rotation_space": [
+            "GLOBAL",
+            "LOCAL"
+          ]
+        },
+        "SeparateColor": {
+          "mode": [
+            "RGB",
+            "HSV",
+            "HSL",
+            "YCC",
+            "YUV"
+          ],
+          "ycc_mode": [
+            "ITUBT601",
+            "ITUBT709",
+            "JFIF"
+          ]
+        },
+        "StringToValue": {
+          "data_type": [
+            "FLOAT",
+            "INT"
+          ]
+        },
+        "Switch": {
+          "input_type": [
+            "FLOAT",
+            "INT",
+            "BOOLEAN",
+            "VECTOR",
+            "RGBA",
+            "ROTATION",
+            "MATRIX",
+            "STRING",
+            "MENU",
+            "SHADER",
+            "OBJECT",
+            "IMAGE",
+            "GEOMETRY",
+            "COLLECTION",
+            "TEXTURE",
+            "MATERIAL",
+            "BUNDLE",
+            "CLOSURE",
+            "FONT",
+            "SCENE",
+            "TEXT",
+            "MASK",
+            "SOUND",
+            "INT_VECTOR"
+          ]
+        },
+        "ValueToString": {
+          "data_type": [
+            "FLOAT",
+            "INT"
+          ]
+        },
+        "VectorMath": {
+          "operation": [
+            "ADD",
+            "SUBTRACT",
+            "MULTIPLY",
+            "DIVIDE",
+            "MULTIPLY_ADD",
+            "CROSS_PRODUCT",
+            "PROJECT",
+            "REFLECT",
+            "REFRACT",
+            "FACEFORWARD",
+            "DOT_PRODUCT",
+            "DISTANCE",
+            "LENGTH",
+            "SCALE",
+            "NORMALIZE",
+            "ABSOLUTE",
+            "POWER",
+            "SIGN",
+            "MINIMUM",
+            "MAXIMUM",
+            "ROUND",
+            "FLOOR",
+            "CEIL",
+            "FRACTION",
+            "MODULO",
+            "WRAP",
+            "SNAP",
+            "SINE",
+            "COSINE",
+            "TANGENT"
+          ]
+        },
+        "VectorRotate": {
+          "rotation_type": [
+            "AXIS_ANGLE",
+            "X_AXIS",
+            "Y_AXIS",
+            "Z_AXIS",
+            "EULER_XYZ"
+          ]
+        },
+        "VoronoiTexture": {
+          "voronoi_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ],
+          "distance": [
+            "EUCLIDEAN",
+            "MANHATTAN",
+            "CHEBYCHEV",
+            "MINKOWSKI"
+          ],
+          "feature": [
+            "F1",
+            "F2",
+            "SMOOTH_F1",
+            "DISTANCE_TO_EDGE",
+            "N_SPHERE_RADIUS"
+          ]
+        },
+        "Warning": {
+          "warning_type": [
+            "ERROR",
+            "WARNING",
+            "INFO"
+          ]
+        },
+        "WaveTexture": {
+          "wave_type": [
+            "BANDS",
+            "RINGS"
+          ],
+          "bands_direction": [
+            "X",
+            "Y",
+            "Z",
+            "DIAGONAL"
+          ],
+          "rings_direction": [
+            "X",
+            "Y",
+            "Z",
+            "SPHERICAL"
+          ],
+          "wave_profile": [
+            "SIN",
+            "SAW",
+            "TRI"
+          ]
+        },
+        "WhiteNoiseTexture": {
+          "noise_dimensions": [
+            "1D",
+            "2D",
+            "3D",
+            "4D"
+          ]
+        }
+      }
     }
   }
 }

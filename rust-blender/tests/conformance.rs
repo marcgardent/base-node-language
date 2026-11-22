@@ -3,7 +3,7 @@ use std::path::Path;
 
 use base_node::{format_source, parse, File};
 use base_node_blender::targets::{
-    check_targets, infer, is_bridge, translate, translation_issues, tree_kinds,
+    check_targets, infer, is_bridge, setting_of, translate, translation_issues, tree_kinds,
 };
 use base_node_blender::{Issue, UnknownTarget};
 
@@ -180,7 +180,7 @@ fn a_principled_bsdf_fits_gltf_a_noise_does_not() {
 }
 
 const MATERIAL: &str = "shader(material: true) graph Painted() -> (surface: Shader) {
-  t = ImageTexture(vector: UVMap(), image: \"Paint\")
+  t = ImageTexture[image: \"Paint\"](vector: UVMap())
   return (surface: PrincipledBSDF(base_color: BASE, normal: NORMAL))
 }
 ";
@@ -204,7 +204,7 @@ fn links(f: &File, target: &str) -> Vec<(String, usize)> {
 
 fn roughness(value: &str) -> Vec<(String, usize)> {
     let src = format!(
-        "shader graph g(rough: Float = 0.5) -> Shader {{\n  t = ImageTexture(image: \"R\")\n  return PrincipledBSDF(roughness: {value})\n}}\n"
+        "shader graph g(rough: Float = 0.5) -> Shader {{\n  t = ImageTexture[image: \"R\"]()\n  return PrincipledBSDF(roughness: {value})\n}}\n"
     );
     links(&parse(&src, "r.bn").unwrap(), "blender gltf")
 }
@@ -216,24 +216,24 @@ fn a_texture_times_a_constant_fits_gltf() {
     let tint = "(0.8, 0.5, 0.5, 1.0)";
     assert!(check_target(&material("t.color", FLAT), "blender gltf").is_empty());
     for base in [
-        format!("Mix(1.0, t.color, {tint}, blend_type: MULTIPLY, data_type: RGBA)"),
-        format!("Mix(a: {tint}, b: t, blend_type: MULTIPLY, data_type: RGBA)"),
+        format!("Mix[RGBA, MULTIPLY](1.0, t.color, {tint})"),
+        format!("Mix[RGBA, MULTIPLY](a: {tint}, b: t)"),
         format!(
-            "Mix(a: {tint}, b: Mix(a: ColorAttribute().color, b: t.color, blend_type: MULTIPLY, data_type: RGBA), blend_type: MULTIPLY)"
+            "Mix[MULTIPLY](a: {tint}, b: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, b: t.color))"
         ),
     ] {
         assert!(check_target(&material(&base, FLAT), "blender gltf").is_empty(), "{base}");
     }
     assert!(roughness("t.alpha * 0.5").is_empty());
     assert!(roughness("0.5 * SeparateColor(t.color).green").is_empty());
-    assert!(roughness("Math(t.alpha, rough, operation: MULTIPLY)").is_empty());
-    assert!(roughness("Math(t.alpha, operation: MULTIPLY)").is_empty());
+    assert!(roughness("Math[MULTIPLY](t.alpha, rough)").is_empty());
+    assert!(roughness("Math[MULTIPLY](t.alpha)").is_empty());
 }
 
 #[test]
 fn two_textures_multiplied_do_not_fit_gltf() {
     let f = material(
-        "Mix(a: t.color, b: ImageTexture(image: \"Dirt\").color, blend_type: MULTIPLY, data_type: RGBA)",
+        "Mix[RGBA, MULTIPLY](a: t.color, b: ImageTexture[image: \"Dirt\"]().color)",
         FLAT,
     );
     assert_eq!(
@@ -246,7 +246,7 @@ fn two_textures_multiplied_do_not_fit_gltf() {
     assert!(check_target(&f, "blender").is_empty());
     assert!(!links(
         &material(
-            "Mix(0.5, t.color, (0.5, 0.5, 0.5, 1.0), blend_type: MULTIPLY, data_type: RGBA)",
+            "Mix[RGBA, MULTIPLY](0.5, t.color, (0.5, 0.5, 0.5, 1.0))",
             FLAT
         ),
         "blender gltf"
@@ -611,17 +611,22 @@ fn a_compositor_text_reaches_blade_through_its_translator() {
 #[test]
 fn a_translator_renames_inputs_and_settings() {
     let f = parse(
-        "compositor graph g(image: Color) -> Color {\n  blurred = Blur(image, size: 4.0)\n  return MixLegacy(image, color2: blurred, blend_type: MULTIPLY)\n}\n",
+        "compositor graph g(image: Color) -> Color {\n  blurred = Blur(image, size: 4.0)\n  mixed = MixLegacy[MULTIPLY](image, color2: blurred)\n  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n}\n",
         "m.bn",
     )
     .unwrap();
     let out = translate(&f, "blender", "blade").unwrap();
     let text = base_node::format_file(&out);
     assert!(text.contains("Blur(image, radius: 4.0)"), "{text}");
+    // A setting by position stays as it is written, one by name takes its new name
+    assert!(text.contains("Mix[MULTIPLY](image, b: blurred)"), "{text}");
     assert!(
-        text.contains("Mix(image, b: blurred, blend: MULTIPLY)"),
+        text.contains(
+            "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))]("
+        ),
         "{text}"
     );
+    assert!(text.contains("image: mixed)"), "{text}");
 }
 
 #[test]
@@ -719,9 +724,54 @@ fn what_the_gltf_exporter_reads() {
 }
 
 #[test]
+fn a_setting_by_position_goes_to_the_first_enum_setting_that_holds_it() {
+    assert_eq!(setting_of("shader", "Math", "MULTIPLY"), Some("operation"));
+    assert_eq!(setting_of("geometry", "Compare", "INT"), Some("data_type"));
+    assert_eq!(
+        setting_of("geometry", "Compare", "EQUAL"),
+        Some("operation")
+    );
+    // X is in `axis` and `pivot_axis`: the first, in Blender's order
+    assert_eq!(
+        setting_of("geometry", "AlignEulerToVector", "X"),
+        Some("axis")
+    );
+    assert_eq!(setting_of("shader", "Math", "NOPE"), None);
+    assert_eq!(setting_of("shader", "Nope", "ADD"), None);
+}
+
+#[test]
+fn a_rule_reads_a_setting_by_position_or_by_name_never_in_parentheses() {
+    let texture = |call: &str| {
+        let src = format!(
+            "shader(material: true) graph m() -> (surface: Shader) {{\n  t = {call}\n  return (surface: PrincipledBSDF(base_color: t))\n}}\n"
+        );
+        let f = parse(&src, "m.bn").unwrap();
+        check_target(&f, "blender gltf")
+            .into_iter()
+            .map(|i| i.name)
+            .collect::<Vec<_>>()
+    };
+    let clip = vec!["ImageTexture.extension ← CLIP".to_owned()];
+    assert_eq!(
+        texture("ImageTexture[CLIP, image: \"Paint\"](vector: UVMap())"),
+        clip
+    );
+    assert_eq!(
+        texture("ImageTexture[image: \"Paint\", extension: CLIP](vector: UVMap())"),
+        clip
+    );
+    // No image in the brackets: no texture
+    assert_eq!(
+        texture("ImageTexture[MIRROR](vector: UVMap())"),
+        vec!["ImageTexture.image ← none".to_owned()]
+    );
+}
+
+#[test]
 fn a_ramp_is_the_value_of_a_property_not_a_node() {
     let f = parse(
-        "shader graph g(f: Float) -> Color {\n  return ColorRamp(factor: f, color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))).color\n}\n",
+        "shader graph g(f: Float) -> Color {\n  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: f).color\n}\n",
         "g.bn",
     )
     .unwrap();
@@ -886,30 +936,6 @@ fn an_alias_is_refused_in_the_head_of_a_text() {
     );
     let lts = base_node_blender::header(&text("blender@5.2-lts"), "t.bn").unwrap();
     assert_eq!(lts.target, ["blender@5.2-lts"]);
-}
-
-#[test]
-fn a_name_of_before_says_what_to_write() {
-    for (old, new) in [
-        ("blender-geometry", "blender"),
-        ("blender-gp", "blender"),
-        ("blender-shader", "blender"),
-        ("blender-compositor", "blender"),
-        ("gltf", "blender gltf"),
-    ] {
-        let listed = format!("{}{VARIANTS}; '{old}' is now '{new}'", targets().join(", "));
-        assert_eq!(
-            refused(old),
-            format!("unknown target '{old}'; targets: {listed}")
-        );
-        let src = format!("// @target {old}\n\ngeometry graph g() -> Float {{\n  return 1.0\n}}\n");
-        assert_eq!(
-            base_node_blender::header(&src, "t.bn")
-                .unwrap_err()
-                .to_string(),
-            format!("t.bn:1:12: @target '{old}': one of {listed}")
-        );
-    }
 }
 
 #[test]
