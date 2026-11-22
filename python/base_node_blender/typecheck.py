@@ -7,6 +7,8 @@ import copy
 import dataclasses
 import difflib
 import itertools
+import math
+import struct
 from dataclasses import dataclass, field
 
 from . import ir, sugar, zones
@@ -190,6 +192,45 @@ def deprecations(file, filename="<text>", find=None):
     return deprecated_calls(file.graphs, callable_, filename)
 
 
+def float32(v):
+    """The number Blender keeps of a float: the nearest IEEE 754 single precision one."""
+    return struct.unpack("f", struct.pack("f", v))[0]
+
+
+def stored(v):
+    """The shortest decimal that reads back as the float32 of v: what a tree reads back to."""
+    kept = float32(v)
+    for digits in range(1, 10):
+        written = float(f"{kept:.{digits}g}")
+        if float32(written) == kept:
+            return written
+    return kept
+
+
+def precision_warnings(file, filename="<text>"):
+    """A warning at each number written with a point or an exponent that Blender cannot keep as
+    written: every such number lands in a 32-bit float (a Float socket or setting, a component of a
+    vector, a color or a rotation, a default or a bound of a Float input). Blender's value is the
+    one the tree holds and reads back: `16777217.0` is 16777216.0 there, `0.1` stays 0.1."""
+    out = []
+
+    def walk(o):
+        if isinstance(o, (list, tuple)):
+            for item in o:
+                walk(item)
+        elif isinstance(o, ast.Number):
+            if not o.is_int and math.isfinite(o.value) and stored(o.value) != o.value:
+                out.append(Diagnostic(filename, o.line, o.col,
+                                      f"precision lost: {o.value!r} is stored as {stored(o.value)!r} "
+                                      "(IEEE 754 single precision)", "warning"))
+        elif dataclasses.is_dataclass(o) and not isinstance(o, type):
+            for f in dataclasses.fields(o):
+                walk(getattr(o, f.name))
+
+    walk(file.graphs)
+    return sorted(out, key=lambda d: (d.line, d.col))
+
+
 @dataclass
 class Unit:
     """A checked file: its graphs by key, and every graph it needs, callees first."""
@@ -348,7 +389,8 @@ class Modules:
         if diags:
             raise BnError(diags)
         if ident is None:
-            self.warnings += deprecated_calls(file.graphs, callable_, filename)
+            self.warnings += sorted(deprecated_calls(file.graphs, callable_, filename)
+                                    + precision_warnings(file, filename), key=lambda d: (d.line, d.col))
         for g in own:
             g.module = ident
         seen = set()

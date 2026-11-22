@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from base_node import EDITION, STDLIB_VERSION, BnError, __version__, format_source, parse
-from base_node_blender import check_targets, deprecations, infer, load_target
+from base_node_blender import check_targets, deprecations, infer, load_target, precision_warnings
 
 
 def _serialize_ast(obj: Any) -> Any:
@@ -97,7 +97,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     not: `blender@latest`, `blender@lts`, the version each names in this version of the tool.
 
     A file that promises no target fits whatever accepts it: the targets that do are printed.
-    The calls of a graph marked deprecated are warned of, and fail nothing."""
+    The calls of a graph marked deprecated are warned of, and so is a number Blender cannot keep as
+    written (a 32-bit float): warnings fail nothing."""
     from base_node_blender import header
 
     exit_code = 0
@@ -120,7 +121,8 @@ def cmd_check(args: argparse.Namespace) -> int:
             file_ast = parse(content, p.name)
             promised = given or header(content, p.name, file_ast).target
             # A warning stops nothing: the file is still what the lines below say of it
-            for warning in deprecations(file_ast, p.name):
+            said = deprecations(file_ast, p.name) + precision_warnings(file_ast, p.name)
+            for warning in sorted(said, key=lambda d: (d.line, d.col)):
                 print(warning, file=sys.stderr)
             if not promised:
                 print(f"{path_str}:")

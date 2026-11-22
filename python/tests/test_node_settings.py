@@ -121,3 +121,42 @@ def test_repeat_and_simulate_have_no_settings(schema, word):
     count = "3, " if word == "repeat" else ""
     src = graph(f"  r = {word}[FACE]({count}s: 0.0) -> {{\n    return (s: s)\n  }}\n  return geometry")
     assert errors(src, schema) == [f"t.bn:2:7  {word} has no settings"]
+
+
+# A number Blender cannot keep: a warning where it is written, and the tree holds Blender's value
+
+def warned(body, schema):
+    warnings = []
+    compile_source(graph(body), schema, "t.bn", warnings=warnings)
+    return [str(w) for w in warnings]
+
+
+@pytest.mark.parametrize("written", ["0.1", "1e-7", "3.141593", "0.5", "16777216.0", "-2.75"])
+def test_a_number_a_float_keeps_is_not_warned_of(schema, written):
+    assert warned(f"  x = Math[ADD](t, {written})\n  return geometry", schema) == []
+
+
+@pytest.mark.parametrize("written, kept", [("16777217.0", "16777216.0"), ("0.123456789123", "0.12345679")])
+def test_a_number_a_float_cannot_keep_is_warned_of_where_it_is_written(schema, written, kept):
+    assert warned(f"  x = Math[ADD](t, {written})\n  return geometry", schema) == [
+        f"t.bn:2:20  warning: precision lost: {written} is stored as {kept} (IEEE 754 single precision)"]
+
+
+def test_every_place_a_float_lands_is_looked_at(schema):
+    src = ("geometry graph g(geometry: Geometry, t: Float = 0.123456789123 in 0.0..16777217.0) -> Geometry {\n"
+           "  v = CombineXYZ(0.1, 16777217.0, 0.0)\n"
+           "  return geometry |> SetPosition(offset: (1.0, 2.0, 0.123456789123))\n}\n")
+    warnings = []
+    compile_source(src, schema, "t.bn", warnings=warnings)
+    assert [(w.line, w.col, w.severity) for w in warnings] == [
+        (1, 49, "warning"), (1, 72, "warning"), (2, 23, "warning"), (3, 53, "warning")]
+
+
+def test_the_command_line_warns_of_a_number_too(tmp_path, capsys):
+    from base_node_cli.cli import main
+
+    path = tmp_path / "p.bn"
+    path.write_text("geometry graph g(t: Float) -> Float {\n  return t * 16777217.0\n}\n", encoding="utf-8")
+    assert main(["check", "--target", "blender", str(path)]) == 0
+    assert capsys.readouterr().err == (
+        f"{path.name}:2:14  warning: precision lost: 16777217.0 is stored as 16777216.0 (IEEE 754 single precision)\n")
