@@ -230,7 +230,7 @@ fn a_texture_times_a_constant_fits_gltf() {
     let tint = "(0.8, 0.5, 0.5, 1.0)";
     assert!(check_target(&material("t.color", FLAT), "blender gltf").is_empty());
     for base in [
-        format!("Mix[RGBA, MULTIPLY](1.0, t.color, {tint})"),
+        format!("Mix[RGBA, MULTIPLY](factor: 1.0, a: t.color, b: {tint})"),
         format!("Mix[RGBA, MULTIPLY](a: {tint}, b: t)"),
         format!(
             "Mix[MULTIPLY](a: {tint}, b: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, b: t.color))"
@@ -283,7 +283,7 @@ fn two_textures_multiplied_do_not_fit_gltf() {
 fn a_normal_map_from_an_image_fits_gltf_a_raw_noise_does_not() {
     for normal in [
         "NormalMap(color: t.color, strength: 0.8)",
-        "NormalMap(1.0, t.color)",
+        "NormalMap(strength: 1.0, color: t.color)",
     ] {
         assert!(
             check_target(&material("t", normal), "blender gltf").is_empty(),
@@ -292,7 +292,8 @@ fn a_normal_map_from_an_image_fits_gltf_a_raw_noise_does_not() {
     }
     let case = |normal: &str| links(&material("t", normal), "blender gltf");
     assert_eq!(
-        case("t.color |> NormalMap(color: t.color)"),
+        // A link into the strength is flagged: the exporter reads its value only
+        case("NormalMap(strength: t.color, color: t.color)"),
         [("NormalMap.strength ← ImageTexture(UVMap)".to_owned(), 3)]
     );
     assert_eq!(

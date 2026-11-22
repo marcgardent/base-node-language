@@ -309,7 +309,7 @@ def links(f, target="blender gltf"):
 def test_a_texture_times_a_constant_fits_gltf():
     tint = "(0.8, 0.5, 0.5, 1.0)"
     assert check_target(material(), "blender gltf") == []
-    assert check_target(material(f"Mix[RGBA, MULTIPLY](1.0, t.color, {tint})"), "blender gltf") == []
+    assert check_target(material(f"Mix[RGBA, MULTIPLY](factor: 1.0, a: t.color, b: {tint})"), "blender gltf") == []
     assert check_target(material(f"Mix[RGBA, MULTIPLY](a: {tint}, b: t)"), "blender gltf") == []
     # The exporter reads a factor and a color attribute peeled from the outside
     assert check_target(material(f"Mix[MULTIPLY](a: {tint}, b: Mix[RGBA, MULTIPLY](a: ColorAttribute().color, "
@@ -344,9 +344,9 @@ def test_a_formula_between_textures_and_constants():
 
 def test_a_normal_map_from_an_image_fits_gltf_a_raw_noise_does_not():
     assert check_target(material(normal="NormalMap(color: t.color, strength: 0.8)"), "blender gltf") == []
-    assert check_target(material(normal="NormalMap(1.0, t.color)"), "blender gltf") == []
-    # A piped value is the first input, here the strength
-    assert links(material(normal="t.color |> NormalMap(color: t.color)")) == [
+    assert check_target(material(normal="NormalMap(strength: 1.0, color: t.color)"), "blender gltf") == []
+    # A link into the strength is flagged: the exporter reads its value only
+    assert links(material(normal="NormalMap(strength: t.color, color: t.color)")) == [
         ("NormalMap.strength ← ImageTexture(UVMap)", 3)]
     noisy = material(normal="NoiseTexture(scale: 4.0).color")
     assert links(noisy) == [("PrincipledBSDF.normal ← NoiseTexture", 3)]
