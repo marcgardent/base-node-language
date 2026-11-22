@@ -113,7 +113,7 @@ def rounded(value):
     return value
 
 
-# Per Blender version and kind: ({text name: NodeSpec}, {bl_idname: NodeSpec}, {former name: text name}),
+# Per Blender version and kind: ({text name: NodeSpec}, {bl_idname: NodeSpec}),
 # and the socket memo
 _specs = {}
 _sockets = {}
@@ -253,13 +253,7 @@ class BlenderSchema:
             taken[name] = idname
         specs = {name: NodeSpec(name, idname, *found[idname]) for name, idname in taken.items()}
         by_idname = {s.bl_idname: s for s in specs.values()}
-        # What an old text wrote, the full bl_idname too: refused, with the name it is now written by
-        renamed = {}
-        for idname in ordered:
-            for old in (*former[idname], idname):
-                if old not in specs and old not in renamed:
-                    renamed[old] = by_idname[idname].name
-        return specs, by_idname, renamed
+        return specs, by_idname
 
     # Schema protocol
 
@@ -272,9 +266,6 @@ class BlenderSchema:
 
     def node_names(self, kind):
         return sorted(self.specs(kind)[0]) if kind in TREE_TYPES else []
-
-    def renamed(self, kind):
-        return self.specs(kind)[2] if kind in TREE_TYPES else {}
 
     def sockets(self, kind, spec, props):
         inputs, outputs, _values, _props = self.fresh(kind, spec, props)
@@ -305,6 +296,17 @@ class BlenderSchema:
             fresh = self.tree(kind).nodes.new(spec.bl_idname)
             try:
                 _data[key] = {n: data_value(getattr(fresh, n)) for n in spec.data}
+            finally:
+                self.tree(kind).nodes.remove(fresh)
+        return _data[key]
+
+    def fresh_outputs(self, kind, spec):
+        """{output identifier: value} of a new node: what a node that holds its value on an output starts with."""
+        key = (self.version, kind, spec.bl_idname, "outputs")
+        if key not in _data:
+            fresh = self.tree(kind).nodes.new(spec.bl_idname)
+            try:
+                _data[key] = {s.identifier: snapshot(s) for s in fresh.outputs}
             finally:
                 self.tree(kind).nodes.remove(fresh)
         return _data[key]

@@ -19,7 +19,7 @@ from ..blender import sugar
 from ..lang import ast
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..blender.typecheck import (MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
+from ..blender.typecheck import (MIX_TYPES, OUTPUT_PROPS, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
                                 branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
@@ -28,8 +28,8 @@ from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, EVALU
                            SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
-from .schema import (BUILTIN_FONT, DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema,
-                     builtin_font, data_value, fresh_item, fresh_item_options, fresh_item_value, fresh_options,
+from .schema import (DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema,
+                     data_value, fresh_item, fresh_item_options, fresh_item_value, fresh_options,
                      item_option_names, option_names, root_panel, prop_value, rounded, same_option, snapshot,
                      socket_keys, text_name, ui_name)
 
@@ -396,13 +396,6 @@ class GraphReader:
         for what, counts in looks.items():
             if +counts:
                 self.warn(f"appearance {what}not exported: " + ", ".join(f"{k} ({v})" for k, v in counts.items() if v))
-        # A font of the file named as Blender's own reads as Blender's own, which the text builds back
-        held = [getattr(n, "font", None) for n in self.tree.nodes] \
-            + [getattr(s, "default_value", None) for n in self.tree.nodes for s in n.inputs] \
-            + [getattr(i, "default_value", None) for i in self.tree.interface.items_tree if i.item_type == "SOCKET"]
-        if any(isinstance(f, bpy.types.VectorFont) and f.name == BUILTIN_FONT and not builtin_font(f) for f in held):
-            self.warn(f"the font '{BUILTIN_FONT}' of this file is not Blender's own, and reads as Blender's own: "
-                      "rename it")
 
     # Looks
 
@@ -825,14 +818,13 @@ class GraphReader:
         return ast.BodyCall("simulate", states, body, 0, 0)
 
     def foreach(self, zout):
-        """`foreach(geometry, domain: FACE, item: field, …) -> { … return (main: v, …, mesh: g, attribute: a) }`."""
+        """`foreach[FACE](geometry, item: field, …) -> { … return (main: v, …, mesh: g, attribute: a) }`."""
         zin = self.pairs[zout.name]
         incoming = self.incoming.get(zin.name, {})
         sockets = self.items(zin.inputs)
         geometry = self.zone_item("foreach", zout, zin, sockets[0], incoming, outside=True).value
         args = []
-        if zout.domain != "POINT":
-            args.append(ast.Arg("domain", ast.Ref(zout.domain, 0, 0), 0, 0))
+        settings = [ast.Setting(None, ast.Ref(zout.domain, 0, 0), 0, 0)] if zout.domain != "POINT" else []
         links = incoming.get(sockets[1].identifier)
         if links:
             args.append(ast.Arg("selection", self.use(*links[0]), 0, 0))
@@ -860,7 +852,7 @@ class GraphReader:
             self.warn(f"foreach '{zout.name}': duplicate item names, not yet supported in text")
         ret = ast.Return(ast.Record([f for f in fields if f.value is not None], 0, 0), 0, 0, self.looked(zout))
         body = self.framed(statements + [(zout, ret)], base=frame_path(zout), notes=False)
-        return ast.BodyCall("foreach", [ast.Arg(None, geometry, 0, 0)] + args, body, 0, 0)
+        return ast.BodyCall("foreach", [ast.Arg(None, geometry, 0, 0)] + args, body, 0, 0, settings=settings)
 
     def zone_item(self, word, zout, node, sock, incoming, outside=False):
         """`name: value` for an item of a zone or a node the text declares: its link or its value,
@@ -1012,14 +1004,14 @@ class GraphReader:
             if inputs_at else []
         for sock, item, options in zip(sockets[fixed:], given, settings):
             args.extend(self.item_arg(spec.name, node, sock, item, options, closure is not None))
-        if getattr(node, "define_signature", False):
-            args.append(ast.Arg("define_signature", ast.Bool(True, 0, 0), 0, 0))
+        settings = [ast.Setting("define_signature", ast.Bool(True, 0, 0), 0, 0)] \
+            if getattr(node, "define_signature", False) else []
         if closure is not None:
             target = positional[0].value
-            if isinstance(target, ast.Ref) and self.callable_name(target.name):
+            if isinstance(target, ast.Ref) and self.callable_name(target.name) and not settings:
                 return ast.Call(target.name, args, 0, 0)
-            return ast.Call(spec.name, positional + args, 0, 0)
-        call = ast.Call(spec.name, positional + args, 0, 0)
+            return ast.Call(spec.name, positional + args, 0, 0, settings=settings)
+        call = ast.Call(spec.name, positional + args, 0, 0, settings=settings)
         if outputs_at:
             call.outputs = self.declared(node, "out_items")
             call.single_output = len(call.outputs) == 1 and call.outputs[0].name == call.outputs[0].type \
@@ -1180,28 +1172,15 @@ class GraphReader:
                 positional = False
         if spec is not None and spec.bl_idname == SWITCH and SWITCH_PROP in spec.props:
             self.switch_type(node, spec, incoming, written, props, prop_defaults)
-        for pname, value in props.items():
-            if isinstance(value, str) and ('"' in value or "\n" in value):
-                self.warn(f"'{node.name}.{pname}': quotes and newlines replaced")
-                value = value.replace('"', "'").replace("\n", " ")
-            args.append(ast.Arg(pname, prop_literal(spec.props[pname], value), 0, 0))
-        if node.bl_idname in VALUE_PROPS:
-            # The value of a Rotation, a 4D Vector, an Integer Vector: no literal makes those nodes
-            pname, integers = VALUE_PROPS[node.bl_idname]
-            value = tuple(getattr(node, pname))
-            if any(value):
-                args.append(ast.Arg(pname, ast.Tuple([ast.Number(int(v), True, 0, 0) if integers else number(v)
-                                                      for v in value], 0, 0), 0, 0))
-        for pname, value in data.items():
-            args.append(ast.Arg(pname, value, 0, 0))
+        settings = self.call_settings(node, spec, props, data) if spec is not None else []
 
         type_args = self.template_types(node, incoming, written) if group else None
-        call = ast.Call(name, args, 0, 0, type_args=type_args)
+        call = ast.Call(name, args, 0, 0, type_args=type_args, settings=settings)
         if not (geometry_first and args and args[0].name is None):
             return call
         # Geometry (or an image) passed from call to call reads as a pipe
         first = args[0].value
-        rest = ast.Call(name, args[1:], 0, 0, type_args=type_args)
+        rest = ast.Call(name, args[1:], 0, 0, type_args=type_args, settings=settings)
         if isinstance(first, ast.Pipe):
             return ast.Pipe(first, rest, 0, 0)
         # A node of several outputs passes on the one it picks, in every tree kind:
@@ -1212,13 +1191,48 @@ class GraphReader:
         if isinstance(first, ast.Call):
             if id(first) in self.chain_heads:
                 # The chain starts from the inner call's own geometry
-                inner = ast.Call(first.name, first.args[1:], 0, 0)
+                inner = ast.Call(first.name, first.args[1:], 0, 0, type_args=first.type_args,
+                                 settings=first.settings)
                 first = ast.Pipe(first.args[0].value, inner if socket is None else ast.Member(inner, socket, 0, 0), 0, 0)
             elif socket is not None:
                 first = ast.Member(first, socket, 0, 0)
             return ast.Pipe(first, rest, 0, 0)
         self.chain_heads.add(id(call))
         return call
+
+    def call_settings(self, node, spec, props, data):
+        """The settings of a call, in brackets: an enum value by position when no other enum setting of
+        the node holds it, the others by name; those by position first, each in Blender's order. Then the
+        value of an input node no literal makes (VALUE_PROPS), the one a node holds on an output
+        (OUTPUT_PROPS), its ramps and curves."""
+        positional, named = [], []
+        for pname, value in props.items():
+            prop = spec.props[pname]
+            if isinstance(value, str) and ('"' in value or "\n" in value):
+                self.warn(f"'{node.name}.{pname}': quotes and newlines replaced")
+                value = value.replace('"', "'").replace("\n", " ")
+            holders = [p for p in spec.props.values() if p.kind == "ENUM" and value in p.items] \
+                if prop.kind == "ENUM" else []
+            if holders == [prop]:
+                positional.append(ast.Setting(None, prop_literal(prop, value), 0, 0))
+            else:
+                named.append(ast.Setting(pname, prop_literal(prop, value), 0, 0))
+        if node.bl_idname in VALUE_PROPS:
+            # The value of a Rotation, a 4D Vector, an Integer Vector: no literal makes those nodes
+            pname, integers = VALUE_PROPS[node.bl_idname]
+            value = tuple(getattr(node, pname))
+            if any(value):
+                named.append(ast.Setting(pname, ast.Tuple([ast.Number(int(v), True, 0, 0) if integers else number(v)
+                                                           for v in value], 0, 0), 0, 0))
+        if node.bl_idname in OUTPUT_PROPS:
+            # A Normal holds its vector on its output
+            pname, output = OUTPUT_PROPS[node.bl_idname]
+            value = tuple(node.outputs[output].default_value)
+            if not same(value, self.schema.fresh_outputs(self.kind, spec).get(output)):
+                named.append(ast.Setting(pname, ast.Tuple([number(v) for v in value], 0, 0), 0, 0))
+        for pname, value in data.items():
+            named.append(ast.Setting(pname, value, 0, 0))
+        return positional + named
 
     def ternary(self, node, spec, props):
         """`cond ? a : b` for the node the checker builds from one (typecheck.ternary), None for any other.
@@ -1832,7 +1846,7 @@ def prop_literal(prop, value):
     if prop.kind == "FLOAT":
         return number(value)
     if prop.kind == "ID" and value is None:
-        return ast.Ref(NO_VALUE, 0, 0)  # no datablock where a new node holds one: Font(font: _)
+        return ast.Ref(NO_VALUE, 0, 0)  # no datablock where a new node holds one: Font[font: _]()
     return ast.String(str(value), 0, 0)
 
 
