@@ -97,7 +97,7 @@ those of the inflated mesh, not of the first one.
 
 ```bn
 geometry graph inflate(mesh: Geometry, distance: Float = 0.5, steps: Int = 10 in 1..) -> Geometry {
-  r = repeat(steps, g: mesh) {
+  r = repeat(steps, g: mesh) -> {
     return (g: SetPosition(g, offset: Normal() * (distance / steps)))
   }
   return r.g

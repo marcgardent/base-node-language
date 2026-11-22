@@ -2,7 +2,7 @@
 // @title The final shot, step 3: a light added after the render
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use merge (keymix)
@@ -12,8 +12,8 @@ compositor graph final_shot() -> Color {
   "The render rebuilt from its passes, the sphere painted blue, a warm light added at the lamp post"
   l = RenderLayers()
   // The sphere, found in the world by the Position pass; its colour changed, its light kept
-  sphere = p_matte(l.position, (-1.2, 2.2, 0.9), 0.9, 0.05).matte
-  paint = keymix((0.04, 0.16, 0.45, 1.0), l.diffuse_color, sphere)
+  sphere = p_matte(position: l.position, center: (-1.2, 2.2, 0.9), radius: 0.9, falloff: 0.05).matte
+  paint = keymix(a: (0.04, 0.16, 0.45, 1.0), b: l.diffuse_color, mask: sphere)
   beauty = rebuild_beauty(
     diffuse_direct: l.diffuse_direct,
     diffuse_indirect: l.diffuse_indirect,
@@ -30,9 +30,9 @@ compositor graph final_shot() -> Color {
   // A point light at the bulb of the lamp post, on the colours of the diffuse surfaces
   return beauty
     |> relight(
-      paint,
-      l.normal,
-      l.position,
+      albedo: paint,
+      normal: l.normal,
+      position: l.position,
       light_position: (1.7, 1.2, 3.05),
       light_color: (1.0, 0.6, 0.3, 1.0),
       intensity: 12.0)

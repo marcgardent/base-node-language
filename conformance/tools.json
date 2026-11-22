@@ -58,7 +58,8 @@
       "description_line": 4,
       "settings": [],
       "param_tree": null,
-      "output_tree": null
+      "output_tree": null,
+      "type_params": []
     },
     {
       "kind": "geometry",
@@ -148,7 +149,8 @@
                         "line": 9,
                         "col": 54,
                         "outputs": null,
-                        "single_output": false
+                        "single_output": false,
+                        "type_args": null
                       },
                       "line": 9,
                       "col": 51,
@@ -160,7 +162,8 @@
                   "line": 9,
                   "col": 40,
                   "outputs": null,
-                  "single_output": false
+                  "single_output": false,
+                  "type_args": null
                 },
                 "line": 9,
                 "col": 32,
@@ -172,7 +175,8 @@
             "line": 9,
             "col": 10,
             "outputs": null,
-            "single_output": false
+            "single_output": false,
+            "type_args": null
           },
           "line": 9,
           "col": 3,
@@ -186,7 +190,8 @@
       "description_line": 0,
       "settings": [],
       "param_tree": null,
-      "output_tree": null
+      "output_tree": null,
+      "type_params": []
     }
   ],
   "uses": [],

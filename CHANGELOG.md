@@ -1,0 +1,264 @@
+# Changelog
+
+What changed for a user of Base Node, by version. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the versions follow
+[Semantic Versioning](https://semver.org/) as [`spec/versioning.md`](spec/versioning.md) says.
+Versions below 1.0.0 are pre-releases: the text format can change between them.
+
+## [Unreleased]
+
+## [1.0.0-rc.1] - 2026-11-22
+
+The release candidate of 1.0.0 LTS. A text written for 0.13.1 needs an edit where it writes a zone,
+a closure or a target; [`spec/versioning.md`](spec/versioning.md) says what 1.0.0 promises.
+
+### Language
+
+- Changed, a text needs an edit: a zone is a call that takes a body after an arrow,
+  `r = repeat(8, v: 1.0) -> { … }`, and likewise `simulate(…) -> { … }` and `foreach(…) -> { … }`.
+  `repeat`, `simulate` and `foreach` are no longer words of the language, and `repeat` is no longer
+  reserved. The spelling of before is refused, with what to write.
+- Changed, a text needs an edit: a closure is a graph with no name,
+  `f = graph(x: Float) -> (y: Float) { … }`. `closure(…)` is refused, with what to write.
+- Added: a reader refuses a text whose `// @edition` it does not know, at the line of the directive.
+- Added: a graph marked `deprecated` still works and warns whoever calls it:
+  `geometry(deprecated: "use Grid") graph plane(…)`. `base-node check` prints the warning and
+  exits 0.
+- Added: the ternary `c ? a : b`. In a geometry tree it is a Switch of the type of its branches;
+  in a shader or a compositor tree, where a Switch takes one value for the whole image, a Mix by
+  the condition (a Mix Shader for shaders), whose condition is a `Bool` or a comparison. It binds
+  looser than `|>`. A tree reads back to it.
+- Added: `smooth_min(a, b, k)` and `smooth_max(a, b, k)`, Math's Smooth Minimum and Smooth Maximum.
+- Added: Mix Shader and Add Shader name their two Shader inputs `a` and `b`; `Shader` and
+  `Shader_001` are still read.
+- Changed: a comparison (`a > b`, `==`, …) builds in a tree with no Compare node, a shader tree
+  and the compositor of Blender 5.2 LTS: Math nodes that give a Float, 0 or 1; `==` writes
+  Compare's Epsilon, 0.001. Such a tree reads these nodes back as the comparison.
+
+### Targets
+
+- Changed, a text needs an edit: one target `blender`, named by the version of Blender, in place
+  of `blender-geometry`, `blender-shader`, `blender-compositor` and `blender-gp`: `blender`,
+  `blender@5.3`, `blender@5.2-lts`. `gltf` is a variant of it, `blender gltf`, beside two
+  experimental ones, `blender eevee` and `blender cycles`. `blender@lts` and `blender@latest` are
+  aliases for a command line. The names of before are unknown targets; the message says what to write.
+- Changed: a variant of `blender` is tried by the inference only for a text that holds a shader.
+- Added: the catalog of Blender 5.2 LTS. `blender` is now Blender 5.2 LTS and Blender 5.3: a text
+  that says `blender` fits both, `blender@5.2-lts` and `blender@lts` name the LTS.
+  [`spec/targets.md`](spec/targets.md#what-blender-53-has-that-blender-52-lts-has-not) lists what
+  5.3 has that 5.2 has not; a text that uses it says `// @target blender@5.3`.
+
+### Standard library
+
+- Changed: the modules are written as a tree reads back to them now: 205 Switch calls are
+  ternaries, and Mix Shader's inputs are `a` and `b`.
+- Changed: `planar2d`, shape builder pick: each seed picks the region it is in, or the nearest
+  within `pick_radius`; the regions no seed picks are deleted, the picked ones stay in place. It
+  read the first seed only and moved the picked region away.
+- Fixed: `stmap`, canvas: an odd size is no longer rounded up to an even one (65 × 33 gave
+  66 × 34), which lost the first column and row of what was built on it.
+
+### Tools
+
+- Changed, an import needs an edit: the Python package is three. `base_node` is the core (read,
+  print, format a text) and names nothing of Blender; `base_node_blender` holds the checker and the
+  targets, and exports the core's names too, so `from base_node_blender import …` replaces
+  `from base_node import check, load_target, …`; `base_node_cli` holds the command line. In Rust,
+  the crate `base-node` is the core and `base-node-blender` the targets.
+- Fixed: `<bn-view>` no longer leaves a node over a frame in a graph of many frames.
+- Added: `make test-promised BLENDERS="…"` runs the Blender tests and the third-party libraries
+  with each promised version of Blender; the CI runs Blender 5.2.4 LTS and 5.3.0.
+
+### Blender extension
+
+- Changed: the extension holds the targets of Blender only.
+- Added: the warnings of a text (a deprecated graph called) are listed under its errors and
+  underlined, without blocking the tree.
+
+### Site and documents
+
+- Changed: the repository is named `base-node-language`; its site and the extension repository are
+  at `basenode.ludopant.com`, hosted and sponsored by Ludopant. The old addresses redirect, and
+  keep serving the extension index.
+- Added: the tutorial "SRT subtitles": a Geometry Nodes group that reads a SubRip file (`.srt`)
+  and draws the cue of the scene's time (`make srt-check` builds it in Blender).
+- Changed: every tutorial text names each input, as a tree reads back.
+- Changed: the home page is about the open source project; what developers read (examples with
+  their code, targets, the web component, Python and Rust) is on a page of its own.
+- Added: a State of the Art page on node graphs as text, a sitemap and `robots.txt`.
+- Added: this changelog.
+
+## [0.13.1] - 2026-11-19
+
+### Fixed
+
+- The Python tests could not be collected before Python 3.12: a script used f-string syntax of
+  3.12. `make python-min` parses every `.py` with Python 3.10.
+
+## [0.13.0] - 2026-11-19
+
+### Language
+
+- Changed: a Switch takes the type of its values when the text writes none (it was RGBA in the
+  compositor and shaders, Float in geometry).
+- Changed: formulas take 2D and colour tuples and integer vectors; a graph named like a function
+  is refused.
+- Fixed: the formatter keeps comments and blank lines when it sorts the `use` lines.
+- Fixed: `Ramp(...)` and `Curve(...)` no longer count as nodes for the targets.
+
+### Standard library
+
+- Changed: the standard library is split. Eleven modules stay open source: `curves2d`, `fillet2d`,
+  `grade`, `mask2d`, `math`, `merge`, `patterns2d`, `planar2d`, `qc`, `sdf2d`, `stmap`. Eleven
+  modules of 0.12.0 leave it and are sold by the author as packs: `deform2d`, `hachures2d`,
+  `ink2d`, `generators`, `mesh_effects`, `mesh_maps`, `grain`, `keying`, `light`, `passes`,
+  `vr360`.
+- Changed: each module says its manifest entry in the head of its `.bn`; `stdlib/manifest.json`
+  no longer lists the modules.
+
+### Tools
+
+- Added: a Makefile: `make test`, `make extension`, `make docs`; `make help` lists the targets.
+- Changed: `<bn-view>` shows the graphs of a text as tabs and its comments in the graph; its code
+  scrolls only once clicked; a page chooses the tab and the view it opens on.
+- Changed: the CI runs on version tags or by hand.
+
+## [0.12.0] - 2026-11-17
+
+### Language
+
+- Changed: profiles become targets: what a destination accepts, inferred from the text, promised
+  with `@target`. The targets are `blender-geometry`, `blender-shader`, `blender-compositor`,
+  `blender-gp`, `gltf` (checked against Blender's glTF exporter) and `blade`, with bridges between
+  them. A text no longer starts with `@profile`.
+- Added: templates, graphs generic over a value's type, built as one group per use.
+- Added: a tuple chooses the type of a Switch, Mix or Compare.
+- Added: a shader graph that is a material is set by its bare name from a geometry graph of the
+  same text: `SetMaterial(material: rusty)`.
+- Added: a node is written and read by its UI name in one word.
+- Changed: the formatter breaks every structure at 100 columns and prints each step of a pipe on
+  its own line.
+- Changed: a module given by a URL is refused.
+
+### Standard library
+
+- Added: compositor modules after Nuke: `merge`, `passes`, `grade`, `keying`, `light`, `stmap`,
+  `vr360`, `mask2d`, `grain`, `qc`.
+- Added: smart materials: `mesh_maps` (curvature, ambient occlusion, thickness, position, island
+  and sky maps computed in Geometry Nodes), `generators` (masks from those maps), `mesh_effects`
+  (chipped edges, dents, rivets, stitches, rust streaks, drips, dust).
+
+### Blender extension
+
+- Added: a `.bn` file dropped onto Blender offers, from the directives at its head, to install it
+  as a module, import its groups, add its example, or make a mesh with its modifier.
+- Added: Copy as .bn and Paste .bn: nodes copied as text, text pasted as nodes.
+- Changed: the suggestions are found as Blender's Add menu search finds nodes.
+- Fixed: the order of the links into a multi-input socket; a zone state with no name gives an
+  error, not a crash; the size of a 2D Vector output is kept.
+
+### Tools
+
+- Added: `<bn-view>` shows a `.bn` text in the browser, its code and its node graph; `<bn-file>`
+  shows it as a card to download.
+- Added: `base-node docs` writes the reference pages of the site from the repository.
+
+### Site and documents
+
+- Added: a Tutorials section: Lunar ground and Mini moon.
+- Added: examples written in Base Node: hydraulic erosion, Gray-Scott reaction-diffusion,
+  differential growth of a closed curve.
+
+## [0.11.0] - 2026-11-15
+
+### Language
+
+- Added: Shader and Compositor node groups, and a material's own tree as a shader graph.
+- Added: Color Ramps and curves are written in the text and built back.
+- Changed: a node with several outputs passes the one it picks through a pipe, in every kind of
+  tree: `mesh |> TransferAttributes(…).target |> …`. Some geometry texts are written differently.
+- Added: the comments of a text stay on their nodes and show above them in the Node Editor.
+- Fixed: a Repeat or Simulation state named like the zone's own socket, two inputs of one name, a
+  tree with no Group Output, a Group node with no tree, the components of a Color, the outer
+  iteration a nested zone uses.
+- Changed: a malformed or hostile `.bn` text gives an error, never a crash or a hang; modules and
+  profiles are looked up only inside their own folders.
+
+### Blender extension
+
+- Added: errors are underlined while the text is typed and listed in the sidebar.
+- Added: errors suggest the likely fix: `did you mean sin?`.
+- Changed: building a large text is about 25 % faster.
+
+### Tools
+
+- Added: 567 node groups of 8 third-party libraries are read, rebuilt and evaluated in the CI.
+
+## [0.10.0] - 2026-11-14
+
+### Blender extension
+
+- Added: the tree follows its text while it is typed, half a second after the last key once the
+  text is valid ("Apply while typing", on by default).
+- Added: the pipe `|>` shows as ▷, except on the lines being edited ("Show |> as ▷").
+- Added: Arrange Nodes: links left to right, in line with their sockets, frames kept together.
+- Changed: the keys follow Blender's: Alt+Z switches between a tree and its text (was Ctrl+`),
+  Alt+P applies a text to its tree (was Ctrl+Enter), Ctrl+Space opens the suggestions,
+  Ctrl+Shift+A formats a text and arranges the nodes. The panels show each shortcut.
+- Changed: the suggestions open by themselves only when turned on.
+
+## [0.9.0] - 2026-11-14
+
+### Language
+
+- Changed: a tree reads back with every input named:
+  `MeshCube(size: CombineXYZ(x: 1.0, y: 2.0, z: 3.0), vertices_x: 4)`. Positional values are still
+  read.
+- Added: a literal bound to a name builds an input node of that name, `size = 10`, and an input
+  node reads back as a named constant.
+- Added: two numbers build a 2D Vector node: `p = (0.5, 0.25)`.
+
+### Blender extension
+
+- Added: inside a call, the prototype shows under the line, the input being written lit.
+- Changed: the suggestions are coloured by kind, the call's inputs first.
+
+## [0.8.2] - 2026-11-13
+
+### Language
+
+- Added: a repeat or simulate state takes a key of its own with `as`:
+  `simulate(mesh: geometry, "Delta Time" as delta_time_2: 0.0)`.
+- Fixed: a frame around nodes inside a zone and outside it reads back as one frame; a zone output
+  whose key is shared is written by its name.
+- Fixed: an argument that fails no longer gives type errors on the arguments after it.
+
+### Tools
+
+- Added: the 17 Geometry Nodes assets of Cartesian Caramel's Everyday Nodes (CC0) are read, built
+  back and evaluated by the tests.
+
+## [0.8.1] - 2026-11-13
+
+### Blender extension
+
+- Changed: the extension is named "Base Node" and declares the files permission.
+- Added: the standard library is bundled: `use math` works with no setup. The Module Folder of the
+  preferences still comes first.
+
+## [0.8.0] - 2026-11-13
+
+### Blender extension
+
+- Changed: the node tree is the only data in Blender. Ctrl+` switches a Node Editor to the tree's
+  `.bn` text and back; Ctrl+Enter applies the text without leaving it. The persistent text beside
+  a tree, and the sync between text and nodes, are removed.
+- Added: File > Import > Base Node (.bn) builds the graphs of one or more files.
+- Added: `use name` also finds `name.bn` beside the imported file and in the Module Folder of the
+  preferences.
+
+### Standard library
+
+- Added: `planar2d`, `fillet2d`, `hachures2d`, `deform2d`.
+
+0.8.0 is the first tagged version; what came before is not listed.

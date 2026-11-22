@@ -24,7 +24,7 @@ struct View {
     error: Option<Problem>,
     graphs: Vec<GraphView>,
     backends: Vec<Backend>,
-    /// The targets the text fits (`blender-geometry`, `gltf`…), translated ones last.
+    /// The targets the text fits (`blender`, `blender gltf`…), translated ones last.
     targets: Vec<backends::Fit>,
     /// The text as a `.bn` file to drag on a host; none when it does not parse.
     drop: Option<drop::Drop>,

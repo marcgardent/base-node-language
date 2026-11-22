@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from .schema import key
+from .names import key
 
 
 @dataclass
@@ -48,7 +48,7 @@ class Arg:
     value: object
     line: int
     col: int
-    # `Smooth(description: "…"): a`: an item's other settings, by their Blender name
+    # `Smooth(description: "…"): a`: an item's other settings, by the name the destination gives them
     options: list = field(default_factory=list)  # of Arg, all named
     # `height: Float = h`: an item given its type, a Param (its options are merged into `options`)
     type: object = None
@@ -152,12 +152,12 @@ class Return:
     value: object
     line: int
     col: int
-    look: Look | None = None  # of the group output, or of the output node of the zone it ends
+    look: Look | None = None  # of the group output, or of what the body it ends makes
 
 
 @dataclass
 class Frame:
-    """`"Title" #color { … }`: a Blender frame around the nodes its statements make. Not a scope."""
+    """`"Title" #color { … }`: a frame around the nodes its statements make. Not a scope."""
     label: str | None
     color: object  # the color's text with its `#`, or None; an (r, g, b) when read from a tree
     body: list
@@ -169,14 +169,15 @@ class Frame:
 
 
 @dataclass
-class Repeat:
-    """`repeat(count, state: start, …) { … return (state: next, …) }`: a Repeat zone.
+class BodyCall:
+    """`name(arguments) -> { … return … }`: a call that takes a body.
 
-    Written only as the value of an assignment. In the body the states are names,
-    and `iteration` is the number of the current turn, from 0.
+    Written only as the value of an assignment. The name may be qualified, as any call's.
+    Which names take a body, what their arguments are, what the body sees beside the names
+    outside and what it returns, the host says.
     """
-    count: object
-    states: list  # of Arg, all named
+    name: str
+    args: list  # of Arg
     body: list
     line: int
     col: int
@@ -184,11 +185,12 @@ class Repeat:
 
 
 @dataclass
-class Closure:
-    """`closure(x: Float, …) -> Float { … return … }`: a Closure zone.
+class NamelessGraph:
+    """`graph(x: Float, …) -> Float { … return … }`: a graph with no name, a value.
 
-    Written only as the value of an assignment. In the body the inputs are names,
-    and the names outside are seen too: their values are captured.
+    Written only as the value of an assignment. It writes no kind: it has the kind of the
+    graph that holds it. In the body the inputs are names, and the names outside are seen
+    too: their values are captured.
     """
     params: list   # of Param
     outputs: list  # of Param
@@ -199,40 +201,8 @@ class Closure:
     end: int = 0  # line of the closing brace
 
 
-@dataclass
-class Simulate:
-    """`simulate(state: start, …) { … return (state: next, …, skip: c) }`: a Simulation zone.
-
-    Written only as the value of an assignment. In the body the states are names,
-    and `delta_time` is the time since the last step.
-    """
-    states: list  # of Arg, all named
-    body: list
-    line: int
-    col: int
-    end: int = 0  # line of the closing brace
-
-
-@dataclass
-class Foreach:
-    """`foreach(geometry, domain: FACE, item: field, …) { … return (main: v, …, mesh: g, attribute: a, …) }`:
-    a For Each Geometry Element zone.
-
-    Written only as the value of an assignment. The named arguments are the domain, the
-    selection and the input items; in the body `index`, `element` and the input items are
-    names. The returned fields before the first Geometry are main items, the rest
-    generation items: each Geometry and the attributes after it.
-    """
-    geometry: object
-    args: list  # of Arg, all named
-    body: list
-    line: int
-    col: int
-    end: int = 0  # line of the closing brace
-
-
-# Zones are blocks written as the value of an assignment
-ZONES = (Repeat, Simulate, Foreach, Closure)
+# What holds a body of statements, written as the value of an assignment
+BODIES = (BodyCall, NamelessGraph)
 
 
 @dataclass
@@ -244,7 +214,7 @@ class Param:
     col: int
     default: object = None  # a literal, or a call such as Position() for an implicit input
     range: tuple | None = None  # (lo, hi) literals, None for an open side
-    # `x: Float(subtype: FACTOR, description: "…")`: other interface settings, by their Blender name
+    # `x: Float(subtype: FACTOR, description: "…")`: other interface settings, by the name the destination gives them
     options: list = field(default_factory=list)  # of Arg, all named
     # `"Seed" as guide_seed: Int`: the name the text gives it, when two sockets share a name
     alias: str | None = None
@@ -293,14 +263,14 @@ class Graph:
     name: str
     params: list   # every input, panels opened: see `inputs` for the list as written
     outputs: list
-    single_output: bool  # `-> Geometry` rather than `-> (name: Geometry)`
+    single_output: bool  # `-> Float` rather than `-> (name: Float)`
     body: list
     line: int
     col: int
     end: int = 0  # line of the closing brace
     description: str | None = None  # a string first in the body: the group's tooltip
     description_line: int = 0
-    # `geometry(is_tool: true) graph …`: the tree's own settings, by their Blender name
+    # `kind(is_tool: true) graph …`: the tree's own settings, by the name the destination gives them
     settings: list = field(default_factory=list)  # of Arg, all named
     # The lists as written, with their Panels; None when they have none
     param_tree: list | None = None
@@ -319,7 +289,7 @@ class Graph:
 class Use:
     """`use math as m (fbm, bump) from "//lib/math.bn"`: alias, list and source are optional.
 
-    With no source, the host finds the module: in Blender, the text `math.bn` of the .blend,
+    With no source, the host finds the module: in an add-on, the text `math.bn` of the open file,
     else `math.bn` next to the imported file or in the module folder of the preferences.
     """
     name: str

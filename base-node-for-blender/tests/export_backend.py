@@ -8,10 +8,11 @@ Run in Blender:
 For each kind of tree (geometry, shader, compositor), every node the text can write: its text name,
 bl_idname, Blender's label and tooltip, its settings with their values, and the sockets of a new
 node (the ones a setting shows or hides aside). For each graph of the stdlib, the kinds of tree it
-builds in, called from a graph of that kind, or the reason it is refused there.
+builds in, called from a graph of that kind, or the reason it is refused there. A module the
+Blender that runs refuses (it uses a node that Blender has not) says so for each of its graphs.
 The nodes go to targets/backends/blender-<x.y>.json, the graphs of each module to
 targets/backends/blender-<x.y>/<module>.json: a new module adds its own file, and two branches that
-each add one merge without a conflict. `python/base_node/refdoc.py` reads them to write the
+each add one merge without a conflict. `python/base_node_cli/refdoc.py` reads them to write the
 reference pages, without Blender.
 """
 
@@ -37,9 +38,9 @@ _spec.loader.exec_module(base_node)
 
 import bpy
 from base_node.host.schema import TREE_TYPES, BlenderSchema
-from base_node.lang import BnError, compile_source, parse
+from base_node.blender import BnError, compile_source, parse
 from base_node.lang import ast as A
-from base_node.lang.schema import key
+from base_node.blender.schema import key
 
 
 def plain(value):
@@ -111,12 +112,19 @@ def load(name, source):
     return path.read_text(encoding="utf-8"), str(path)
 
 
-def builds(schema, module, graph, kind):
+def reason(error):
+    """Why Blender refuses a text: its first diagnostic, the files of stdlib/ named by their name."""
+    message = str(error.diagnostics[0]) if getattr(error, "diagnostics", None) else str(error)
+    return message.replace(f"{STDLIB_DIR}/", "")
+
+
+def builds(schema, module, graph, kind, refused=None):
     """"ok" when `graph` of `module` builds called from a `kind` graph, else why not.
 
-    Every input is given a value of its type, so that the call needs nothing from the context."""
+    Every input is given a value of its type, so that the call needs nothing from the context.
+    `refused` is why this Blender refuses the module itself, None when it builds."""
     if graph.kind == kind:
-        return "ok"
+        return refused or "ok"
     args = []
     for p in A.flatten(graph.params):
         if p.type not in LIT:
@@ -131,7 +139,8 @@ def builds(schema, module, graph, kind):
         message = str(e.diagnostics[0]) if getattr(e, "diagnostics", None) else str(e)
         message = message.split("  ", 1)[-1]
         # The reason only: the graph and the tree are said by the table
-        return message.split(": ", 1)[-1].split(" (/")[0].split(f" ({STDLIB_DIR}")[0]
+        message = message.split(": ", 1)[-1].split(" (/")[0].split(f" ({STDLIB_DIR}")[0]
+        return message.replace(f"{STDLIB_DIR}/", "")
     return "ok"
 
 
@@ -139,8 +148,14 @@ def stdlib_entries(schema):
     out = {}
     for path in sorted(STDLIB_DIR.glob("*.bn")):
         module = path.stem
-        tree = parse(path.read_text(encoding="utf-8"), path.name)
-        out[module] = {g.name: {kind: builds(schema, module, g, kind) for kind in TREE_TYPES}
+        source = path.read_text(encoding="utf-8")
+        tree = parse(source, path.name)
+        refused = None
+        try:
+            compile_source(source, schema, str(path), load)
+        except BnError as e:
+            refused = reason(e)
+        out[module] = {g.name: {kind: builds(schema, module, g, kind, refused) for kind in TREE_TYPES}
                        for g in tree.graphs}
     return out
 

@@ -1,0 +1,247 @@
+{
+ "library": "Geometry Nodes Dynamics Assets",
+ "version": "Blender 5.3.0",
+ "sha256": "a2e6b4013abfc3b9355927e33b2ae5af2182dc079e820041124652a75ce7b100",
+ "blender": "5.2.4 LTS",
+ "summary": "55 ok",
+ "groups": {
+  "Apply Each Geometry Cache": {
+   "status": "ok",
+   "text": "a40d11b4f06ff806"
+  },
+  "Apply Geo Cache - Deform Only": {
+   "status": "ok",
+   "text": "46635210b310d27e"
+  },
+  "Apply Geo Cache - Topology Changing": {
+   "status": "ok",
+   "text": "0987fa46fd5dfe8d"
+  },
+  "Clear Previous World Items": {
+   "status": "ok",
+   "text": "813e6d82e11a8c36"
+  },
+  "Cloth Dynamics (Experimental)": {
+   "status": "ok",
+   "text": "a0ea5e2d836f02b5",
+   "warnings": [
+    "'String.String': quotes and newlines replaced"
+   ]
+  },
+  "Collection Effector": {
+   "status": "ok",
+   "text": "667a7c6997801838"
+  },
+  "Collider": {
+   "status": "ok",
+   "text": "3c99c23c3e7f2e35"
+  },
+  "Convert Space Transform": {
+   "status": "ok",
+   "text": "4ab7777ee509d161"
+  },
+  "Copy Solver Data": {
+   "status": "ok",
+   "text": "c14225674218bf12"
+  },
+  "Cross Edge Length Constraint": {
+   "status": "ok",
+   "text": "4eb2e9c0e167f66b"
+  },
+  "Curve Bending Compliance": {
+   "status": "ok",
+   "text": "0adb65feea0955c9",
+   "warnings": [
+    "'String.String': quotes and newlines replaced"
+   ]
+  },
+  "Curve Stretching Compliance": {
+   "status": "ok",
+   "text": "82492c69afbf5a67",
+   "warnings": [
+    "'String.String': quotes and newlines replaced"
+   ]
+  },
+  "Custom Effector": {
+   "status": "ok",
+   "text": "5fd9953e3a6df6d8"
+  },
+  "Custom Force": {
+   "status": "ok",
+   "text": "4683eb71f3ac30c8"
+  },
+  "Custom/World/Object Space": {
+   "status": "ok",
+   "text": "a5de1f49d8fe42d6"
+  },
+  "Damping": {
+   "status": "ok",
+   "text": "b15d88fd07617109"
+  },
+  "Edge Length Constraint": {
+   "status": "ok",
+   "text": "57de425365d09a83"
+  },
+  "Evaluate Custom Effectors": {
+   "status": "ok",
+   "text": "79661ea77dc1b512"
+  },
+  "Evaluate Effector Attributes": {
+   "status": "ok",
+   "text": "7c52243f3b92a659"
+  },
+  "Evaluate Forces": {
+   "status": "ok",
+   "text": "6cc0fbbd6c812185"
+  },
+  "For Each Sim Geometry": {
+   "status": "ok",
+   "text": "02e81b5d3ef15da1"
+  },
+  "For Each Typed Bundle": {
+   "status": "ok",
+   "text": "15a7927dc384a7eb"
+  },
+  "Gravity": {
+   "status": "ok",
+   "text": "842b3ca5c114bf3c"
+  },
+  "Hair Dynamics": {
+   "status": "ok",
+   "text": "cb60421cf9e99584",
+   "warnings": [
+    "'String.String': quotes and newlines replaced"
+   ]
+  },
+  "Is Effector for Geometry": {
+   "status": "ok",
+   "text": "fc3985ea6163e77e"
+  },
+  "Object Effector": {
+   "status": "ok",
+   "text": "b9ab943dc6fd42a2"
+  },
+  "Pin Positions": {
+   "status": "ok",
+   "text": "f700f66a964d2a71"
+  },
+  "Pin Rotation": {
+   "status": "ok",
+   "text": "232637850e4efeab"
+  },
+  "Randomize Float": {
+   "status": "ok",
+   "text": "2efdf6161c6d648e"
+  },
+  "Remove Sim Attributes": {
+   "status": "ok",
+   "text": "80ad3a66a789126b"
+  },
+  "Rename Sim Attributes": {
+   "status": "ok",
+   "text": "56c6d8abe408890c"
+  },
+  "Rod Bend/Twist Constraint": {
+   "status": "ok",
+   "text": "79a4b6fde170f779"
+  },
+  "Rod Stretch/Shear Constraint": {
+   "status": "ok",
+   "text": "cf4ac64c09ce6e3e"
+  },
+  "Sample Surface Deformation": {
+   "status": "ok",
+   "text": "a4e88f69e6e58792",
+   "not_compared": [
+    "mesh caller fed"
+   ]
+  },
+  "Sample Surface Transform": {
+   "status": "ok",
+   "text": "13fc9abd44470a3b",
+   "not_compared": [
+    "mesh caller fed"
+   ]
+  },
+  "Set Effector": {
+   "status": "ok",
+   "text": "5e357f9abfa4b1db"
+  },
+  "Set Friction": {
+   "status": "ok",
+   "text": "fbb437a71c77b6c1"
+  },
+  "Set Geo Updater - Deform Only": {
+   "status": "ok",
+   "text": "035910cd06280d98"
+  },
+  "Set Geo Updater - Simulated Topology": {
+   "status": "ok",
+   "text": "aec22cc3879f20c3"
+  },
+  "Set Geometry Tags": {
+   "status": "ok",
+   "text": "83459e8f68cce6fc"
+  },
+  "Set Mass": {
+   "status": "ok",
+   "text": "8a625cc757f6dc57"
+  },
+  "Set Previous World Items": {
+   "status": "ok",
+   "text": "98907fc7ccc68275"
+  },
+  "Setup Structural Rest Data": {
+   "status": "ok",
+   "text": "8aebeac969092a5e"
+  },
+  "Sim Attributes": {
+   "status": "ok",
+   "text": "0e4020d0f137929c"
+  },
+  "Simplify Cached Collider Info": {
+   "status": "ok",
+   "text": "03f93feafb4990f0"
+  },
+  "Softness to Compliance": {
+   "status": "ok",
+   "text": "f9943d62fa970f15"
+  },
+  "Store Bend Rotation": {
+   "status": "ok",
+   "text": "7bfa8d2247f0bd12"
+  },
+  "Store Edge Length": {
+   "status": "ok",
+   "text": "199b35620b878150"
+  },
+  "Store Segment Length": {
+   "status": "ok",
+   "text": "c1b170605765fb13"
+  },
+  "Store Segment Rotation": {
+   "status": "ok",
+   "text": "6773104ec2b6734d"
+  },
+  "String to List": {
+   "status": "ok",
+   "text": "e7a78321e57581c9"
+  },
+  "Tearing Effector": {
+   "status": "ok",
+   "text": "73479d1c3b136b0d"
+  },
+  "Thin Rod Moment of Inertia": {
+   "status": "ok",
+   "text": "fc57e301f18fb97d"
+  },
+  "XPBD Simulation": {
+   "status": "ok",
+   "text": "46a59b7b6f93cd57"
+  },
+  "XPBD Solver": {
+   "status": "ok",
+   "text": "1f6deb539ae857e7"
+  }
+ }
+}

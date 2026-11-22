@@ -5,18 +5,19 @@ With a promise, the highlight colors what it uses outside and the panel lists wh
 """
 
 from ..lang.header import directives
-from ..lang.targets import target_names
+from ..blender.targets import promise_refusal
 
 # text name -> (source, Inference or None, issues of the promise)
 _cache = {}
 
 
 def promised(text):
-    """The targets the head of `text` promises (`// @target a, b`), the unknown ones left out."""
-    known = set(target_names())
+    """The targets the head of `text` promises (`// @target blender@5.3 gltf`), those a text
+    may not promise left out: the unknown ones, and the aliases of a command line."""
     for name, value, _line, _col in directives(text.as_string()):
         if name == "target":
-            return [w for w in (p.strip().strip('"') for p in value.split(",")) if w in known]
+            words = (" ".join(p.strip().strip('"').split()) for p in value.split(","))
+            return [w for w in words if promise_refusal(w) is None]
     return []
 
 
@@ -28,7 +29,7 @@ def state(text):
         return cached[1], cached[2]
     from ..lang.errors import BnError
     from ..lang.parser import parse
-    from ..lang.targets import check_targets, infer
+    from ..blender.targets import check_targets, infer
 
     try:
         file = parse(source, text.name)

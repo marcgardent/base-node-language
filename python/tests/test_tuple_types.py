@@ -2,7 +2,7 @@
 
 import pytest
 
-from base_node import BnError, compile_source
+from base_node_blender import BnError, compile_source
 
 
 def node(body, schema, bl_idname):

@@ -177,13 +177,13 @@
     <ul>
       <li><strong>As the eye sees it.</strong> The compositor works on linear light, where most of a picture sits low: cut in four even levels there, the hills would be black. <code>grade</code> with a <code>gamma</code> of 2.2 lifts the image to about what a screen shows, <code>seen</code>; the levels are cut there, and a gamma of 1 / 2.2 brings the result back.</li>
       <li><strong><code>posterize</code></strong> cuts each channel into 4 even levels: flat areas of colour, as an offset print with few inks.</li>
-      <li><strong><code>halftone</code></strong> draws a dot of ink in each cell of 7 pixels, its share of the cell 1 − the luma there: big dots in the dark, none in the light. Its <code>.mask</code> is the dots alone; <code>keymix</code> lays the ink through them, at 85 %, on the flat colours. The dots are measured on <code>seen</code> one stop brighter, <code>exposure_stops(seen, 1.0)</code>, so they stay in the shadows and the sky stays clean, as in a comic.</li>
+      <li><strong><code>halftone</code></strong> draws a dot of ink in each cell of 7 pixels, its share of the cell 1 − the luma there: big dots in the dark, none in the light. Its <code>.mask</code> is the dots alone; <code>keymix</code> lays the ink through them, at 85 %, on the flat colours. The dots are measured on <code>seen</code> one stop brighter, <code>exposure_stops(seen, stops: 1.0)</code>, so they stay in the shadows and the sky stays clean, as in a comic.</li>
     </ul>
     <figure>
       <img src="../images/tutorials/promo-cut-step6.webp" width="640" height="427" loading="lazy" alt="The hills as a comic print, flat colours and dots of ink in the shadows, developed into the render by a soft wipe from the left">
       <figcaption>Step 6. Printed, then developed: a wipe from one look of the plate to another.</figcaption>
     </figure>
-    <p class="try"><strong>Try:</strong> <code>color_halftone(image, 6.0)</code> in place of <code>comic(b)</code>: three screens of red, green and blue dots, turned so that they do not beat.</p>
+    <p class="try"><strong>Try:</strong> <code>color_halftone(image, cell: 6.0)</code> in place of <code>comic(b)</code>: three screens of red, green and blue dots, turned so that they do not beat.</p>
 
     <h2 id="step-7"><span class="n">7.</span> Tape and glitch</h2>
     <p>

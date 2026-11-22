@@ -1,6 +1,6 @@
 # Base Node (`.bn`) Language Reference
 
-Language Edition 2026 · Specification Version 0.13.1 (Pre-LTS).  
+Language Edition 2026 · Specification Version 1.0.0-rc.1 (release candidate of the LTS).  
 See [Versioning Specification](versioning.md) for stability policies and release lifecycles.
 
 ## 1. File Structure
@@ -55,14 +55,14 @@ The comment lines before the first `use` or graph may hold directives, `// @name
 | `@example`, `@modifier` | The graph each uses, by its name quoted or as an identifier, when several could |
 | `@mesh` | The mesh `modifier` makes when no object takes it: `cube` (default), `plane`, `sphere`, `cylinder`, `grid` |
 
-Without `@offer`, a file offers `library` when it has a `@module`, `groups` always, `example` when a geometry graph nobody calls has a `Geometry` output and no `Geometry` input, and `modifier` when a geometry graph nobody calls has `Geometry` as its first input and first output (as Blender decides `is_modifier`, unless the graph's settings write it). With several such graphs and no `@example` or `@modifier`, the last one is used. A directive written twice or without a value, a `@module` that is not an identifier, an unknown `@offer` or `@mesh` value, a choice offered that no graph allows, and an `@example` or `@modifier` naming no graph of the file, or one of the wrong shape, are errors at their line and column.
+Without `@offer`, a file offers `library` when it has a `@module`, `groups` always, `example` when a geometry graph nobody calls has a `Geometry` output and no `Geometry` input, and `modifier` when a geometry graph nobody calls has `Geometry` as its first input and first output (as Blender decides `is_modifier`, unless the graph's settings write it). With several such graphs and no `@example` or `@modifier`, the last one is used. A directive written twice or without a value, a `@module` that is not an identifier, an unknown `@offer` or `@mesh` value, a choice offered that no graph allows, and an `@example` or `@modifier` naming no graph of the file, or one of the wrong shape, are errors at their line and column. So is an `@edition` the reader does not know (`@edition '2028': not an edition this reader knows (2026)`): the parser and the formatter refuse the text too, a later edition being another language to them.
 
 ## 2. Identifiers and Keywords
 
 - **Identifier**: Unicode letters, digits, and `_`, not starting with a digit (`height`, `frequency_2`, `p`).
 - **Quoted name**: `"Point Count"`. Referenced in expressions by its `snake_case` key (`point_count`), or given an explicit key via `as`: `"Scale" as random_scale: Float`.
-- **Reserved words**: `graph`, `return`, `true`, `false`, `and`, `or`, `xor`, `not`, `repeat`, `dot`, `cross`. Host sockets matching a reserved word take a trailing `_` (`not_`).
-- **Contextual keywords**: `use`, `from`, `simulate`, `foreach`, `closure`, `_`.
+- **Reserved words**: `graph`, `return`, `true`, `false`, `and`, `or`, `xor`, `not`, `dot`, `cross`. Host sockets matching a reserved word take a trailing `_` (`not_`).
+- **Contextual keywords**: `use`, `from`, `_`. The zones are no words of the language: `repeat`, `simulate` and `foreach` are names a host gives to calls that take a body ([6](#6-calls-with-a-body-and-nameless-graphs)), and may name a state, a local or a graph.
 - **Enum values**: Unbound identifiers in argument positions resolve as enum literals (`domain: FACE`, `operation: POWER`).
 
 ## 3. Graph Declaration
@@ -73,11 +73,25 @@ Without `@offer`, a file offers `library` when it has a `@module`, `groups` alwa
 }
 ```
 
+A graph with a name is declared at the top of a file. Inside a body, `graph(inputs...) -> outputs { body... }`, with no name and no kind, is a value: a nameless graph ([6](#6-calls-with-a-body-and-nameless-graphs)).
+
 - **Kind**: `geometry`, `shader`, `compositor`, `vector`, `pixel`.
 - **Options**: `geometry(is_tool: true, is_mode_edit: true) graph ...`.
 - **Outputs**: Single type `-> Geometry` or named tuple `-> (Mesh: Geometry, Centers: Geometry)`.
 - **Vector size**: an input's is the size of its default (`uv: Vector = (0.5, 0.5)` is a 2D vector); an output, having no default, says it as an option (`-> (UV: Vector(dimensions: 2))`).
 - **Docstring**: An optional string literal as the first statement of the body.
+- **Deprecated**: the option `deprecated` marks a graph on its way out, with what to use instead in quotes, or `true` to say nothing more. It is no setting of the tree: the graph is built and called as before, and each call of it, from the same text or through a `use` of its module, is a **warning** at the call (`old.bn:9:10  warning: 'plane' is deprecated: use Grid`). A warning is not an error: `base-node check` prints it and its result is unchanged, the add-on lists it under the errors and builds the tree. A graph that is deprecated itself calls deprecated graphs without a warning, and a text is not told of the calls inside the modules it uses. Tree → Text writes the mark back. Any other value (`deprecated: SOON`) is an error; `deprecated: false` is a graph that stays.
+
+  ```bn
+  geometry(deprecated: "use Grid") graph plane(size: Float) -> Geometry {
+    "A square of that size"
+    return Grid(size, size, 2, 2)
+  }
+
+  geometry graph field() -> Geometry {
+    return plane(1.0)  // warning: 'plane' is deprecated: use Grid
+  }
+  ```
 
 ### 3.0 Shader and Compositor Graphs
 
@@ -161,8 +175,9 @@ geometry graph scatter(
 
 ### 3.4 Templates
 
-*For the next specification version (0.12.0). The Python checker checks it, the Rust parser
-reads and prints it, and the Blender add-on builds and reads back its groups.*
+*Since the specification version 0.12.0. The Python and Rust parsers read and print it, the
+Python checker checks it, and the Blender add-on builds and reads back its groups. The Rust crates
+have no checker: they build no template.*
 
 A Blender node group has one type per socket: a graph that reads an attribute with a fallback is
 written once for a `Float`, again for a `Vector`, again for a `Color`. A **template** is a graph
@@ -243,7 +258,7 @@ of its groups.
 template for the caller's tree and for the type, and each type is checked in that tree
 (`'attribute_or<Vector>' is a geometry graph that cannot be built in a compositor tree: no
 NamedAttribute in a compositor tree`). A module that promises a target (`@target`) must have every
-type of its templates' constraints in it: a template of `blender-compositor` cannot list `Geometry`.
+type of its templates' constraints in it: a template that is a `compositor graph`, held to `blender`, cannot list `Geometry`.
 
 **Errors**
 
@@ -322,7 +337,7 @@ Flags: `"Label"`, `#color`, `hide` (collapsed), `mute` (bypassed).
 - **Vector swizzle**: `v.x`, `v.y`, `v.z`, of a vector, a color or an integer vector (one Separate XYZ, which leaves the alpha out)
 - **Pipe**: `a |> f(b)` is `f(a, b)`. The value passed on may be one output of a node of several, in every kind of tree: `mesh |> SeparateGeometry(selection: s).selection |> SetPosition(…)` is `SetPosition(SeparateGeometry(mesh, selection: s).selection)`; a tree reads back to the pipe. Its canonical layout is in [5.2](#52-canonical-layout)
 - **Math operators**: `+`, `-`, `*`, `/`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `and`, `or`, `xor`, `not`
-- **Comparisons**: `<`, `<=`, `>`, `>=`, `==`, `!=` are a Compare node where the tree has one (a geometry or a compositor tree), which gives a `Bool` and compares numbers, vectors, colors and strings. A shader tree has no Compare node: there they compare numbers only, with Math nodes that give a `Float`, 0.0 or 1.0, so `height > 0.5` is written the same in every tree and a module's graph that compares builds in a shader tree too. `a > b` and `a < b` are Math's Greater Than and Less Than; `a >= b` is `1.0 - (a < b)` and `a <= b` is `1.0 - (a > b)`, two nodes; `a == b` is Math's Compare, its Epsilon 0.001 as that of a new Compare node (Math's own default, 0.5, is not written by `==`), and `a != b` is `1.0 - (a == b)`. A shader tree reads these nodes back as the operator, those written by hand too: `Math(a, b, operation: GREATER_THAN)` reads `a > b` and `1.0 - (a < b)` reads `a >= b`; a Math Compare of another Epsilon stays a call. In a tree that has Compare, Math's comparisons stay calls (`Math(Value: a, Value_001: b, operation: GREATER_THAN)`). Example, in a shader graph: `mask = (height > 0.5) * (slope <= 0.2)` is three Math nodes for the comparisons and one for the product
+- **Comparisons**: `<`, `<=`, `>`, `>=`, `==`, `!=` are a Compare node where the tree has one (a geometry tree, and a compositor tree of Blender 5.3), which gives a `Bool` and compares numbers, vectors, colors and strings. A shader tree has no Compare node, nor has the compositor of Blender 5.2 LTS ([targets](targets.md#what-blender-53-has-that-blender-52-lts-has-not)): there they compare numbers only, with Math nodes that give a `Float`, 0.0 or 1.0, so `height > 0.5` is written the same in every tree and a module's graph that compares builds in a shader tree too. `a > b` and `a < b` are Math's Greater Than and Less Than; `a >= b` is `1.0 - (a < b)` and `a <= b` is `1.0 - (a > b)`, two nodes; `a == b` is Math's Compare, its Epsilon 0.001 as that of a new Compare node (Math's own default, 0.5, is not written by `==`), and `a != b` is `1.0 - (a == b)`. Such a tree reads these nodes back as the operator, those written by hand too: `Math(a, b, operation: GREATER_THAN)` reads `a > b` and `1.0 - (a < b)` reads `a >= b`; a Math Compare of another Epsilon stays a call. In a tree that has Compare, Math's comparisons stay calls (`Math(Value: a, Value_001: b, operation: GREATER_THAN)`). Example, in a shader graph: `mask = (height > 0.5) * (slope <= 0.2)` is three Math nodes for the comparisons and one for the product
 - **Ternary**: `cond ? a : b` is `a` where the condition holds, `b` elsewhere. It binds loosest, looser than `|>`: its branches are whole expressions (`big ? mesh |> SubdivideMesh() : mesh`), the last one may be a ternary again (`a > b ? 1.0 : a < 0.0 ? 2.0 : 3.0` reads `a > b ? 1.0 : (a < 0.0 ? 2.0 : 3.0)`), and it takes parentheses as a condition, as the first branch, as an operand (`(on ? a : b) * 2.0`) and before a pipe (`(on ? fine : coarse) |> SetShadeSmooth()`). The node it writes depends on the kind of tree:
   - in a **geometry** tree, a Switch (`Switch(switch: cond, false_: b, true_: a)`) of the type of its branches, every type Switch takes: `shape = dense ? SubdivideMesh(mesh) : mesh` is a Geometry switch, `radius = index > 4 ? 0.1 : 0.2` a Float one, chosen for each element when the condition is a field;
   - in a **shader** tree, where a Switch takes one value for the whole surface, a Mix by the condition (`Mix(factor: cond, a: b, b: a)`, the value when false being its A) for `Float`, `Vector`, `Color` and `Rotation` branches, and a Mix Shader for `Shader` branches: `color = height > 0.5 ? snow : rock`, `surface = facing > 0.5 ? DiffuseBSDF() : GlossyBSDF()`;
@@ -392,30 +407,67 @@ The formatter and a tree read back print one layout, set by a width of 100 chara
 
 The layout depends on the syntax tree alone: printing the parse of a printed text gives the same text.
 
-## 6. Control Zones
+## 6. Calls with a Body, and Nameless Graphs
+
+Two forms hold a body of statements. Both are written only as the value of an assignment (`name = …`), and their body sees the names outside it.
+
+```bn
+name = call(arguments...) -> {
+  body...
+}
+
+name = graph(inputs...) -> outputs {
+  body...
+}
+```
+
+- **A call with a body**: a call, its name qualified or not and its arguments as any call's, then `->` and the body in braces. The arrow makes the body: `x = f(a)` followed by `{ … }` on the next line is a call, then a frame with no title ([4](#4-statements)). Which names take a body, what their arguments are, what the body sees beside the names outside and what it returns, the host says; a body given to any other name is an error at the call (`'Grid' takes no body: repeat, simulate and foreach do`).
+- **A nameless graph**: `graph` followed by `(`. It writes no tree kind: it has the kind of the graph that holds it. Its inputs and outputs are written as a graph's (`-> Float` or `-> (name: Type, …)`, quoted names, options), without panels or `as` keys. In the body the inputs are names; the names outside are seen too, and their values are captured. The value is called by the name it is assigned to, its inputs by name: `shape(t: 0.25)`.
+
+Elsewhere than as the value of an assignment, both are errors: `a call with a body is the value of an assignment: r = repeat(…) -> { … }`, `a graph with no name is the value of an assignment: f = graph(x: Float) -> Float { … }`.
+
+### 6.1 Blender's Zones
+
+In Blender, the calls that take a body are its zones, and a nameless graph is a Closure zone, a value of type `Closure`:
 
 ```bn
 // Repeat zone
-r = repeat(iterations, val: initial) {
+r = repeat(iterations, val: initial) -> {
   return (val: val * 0.5)
 }
 
-// Foreach element zone
-out = foreach(geometry, domain: FACE, p: Position()) {
+// For Each Element zone
+out = foreach(geometry, domain: FACE, p: Position()) -> {
   return (geometry: Points(position: p))
 }
 
-// Closure & Bundle
-fn = closure(x: Float) -> (y: Float) {
-  return (y: x * 2.0)
+// Simulation zone
+s = simulate(mesh: geometry) -> {
+  return (mesh: SetPosition(mesh, offset: (0.0, 0.0, delta_time)))
 }
-b = CombineBundle(factor: 0.5, fn: fn)
+
+// Closure zone & Bundle
+shape = graph(t: Float) -> (h: Float) {
+  return (h: sin(t * 6.28) * amount)
+}
+low = shape(t: 0.25)
+b = CombineBundle(factor: 0.5, shape: shape)
 ```
 
-The body of `repeat` sees `iteration`, the body of `simulate` sees `delta_time` and returns `skip`; a state cannot go by these names. Names are case-sensitive: a state `Iteration` is its own name, beside `iteration` (`repeat(n, Iteration: 0) { return (Iteration: Iteration + iteration) }`). A state named like them in Blender takes a key of its own with `as`, used by the body, the return and the users of the zone:
+| Call | Arguments | The body sees | The body returns |
+|---|---|---|---|
+| `repeat(count, state: start, …)` | The iteration count first, then one state at least, each named | `iteration`, the states | The next value of each state by name, or the value alone for a single state; a state left out goes on unchanged |
+| `simulate(state: start, …)` | Named states | `delta_time`, the states | The same, and `skip` |
+| `foreach(geometry, domain: FACE, selection: s, item: field, …)` | The geometry first, then `domain`, `selection` and the input items, each named | `index`, `element`, the input items | Its items by name: the main items, then from the first geometry on, the generated geometry and its attributes |
+
+A call of another shape is an error at the call, which says the shape (`repeat expects iteration count first: repeat(10, state: start, …) -> { … }`, `foreach expects geometry first, then named items: foreach(geometry, domain: FACE, item: field, …) -> { … }`). So is a call of `repeat`, `simulate` or `foreach` with no body, when the text has nothing else of that name (`repeat takes a body after '->': r = repeat(10, state: start) -> { … }`): it is how a zone written without its arrow reads, the brace after it opening a frame. `closure(…) -> … { … }`, as a nameless graph was written, is refused the same way (`closure(…) is now written as a graph with no name: f = graph(x: Float) -> Float { … }`).
+
+The inputs and outputs of a Closure zone are items: they take no default value and no range (`a closure item has no default value or range`).
+
+A state cannot go by the names of its zone: `iteration` in a `repeat`, `delta_time` and `skip` in a `simulate`; an input item of `foreach` cannot be `index` or `element`. Names are case-sensitive: a state `Iteration` is its own name, beside `iteration` (`repeat(n, Iteration: 0) -> { return (Iteration: Iteration + iteration) }`). A state named like them in Blender takes a key of its own with `as`, used by the body, the return and the users of the zone:
 
 ```bn
-s = simulate(mesh: geometry, "Delta Time" as dt: 0.0) {
+s = simulate(mesh: geometry, "Delta Time" as dt: 0.0) -> {
   return (mesh: mesh, dt: dt + delta_time)
 }
 t = s.dt
@@ -429,12 +481,14 @@ then held to them. See [targets](targets.md).
 
 | Target | Accepts |
 |---|---|
-| `blender-geometry` | Every Geometry Nodes node |
-| `blender-gp` | Every Geometry Nodes node, on a Grease Pencil object |
-| `blender-shader` | Every shader node |
-| `blender-compositor` | Every compositor node |
-| `gltf` | The shader nodes Blender's glTF exporter turns into a material |
-| `blade` | Blade's Pixel Nodes, and what its translator carries from `blender-compositor` |
+| `blender` | Every node of Blender, by kind of tree: a `geometry graph` may use the Geometry Nodes, a `shader graph` the shader nodes, a `compositor graph` the compositor's. In every version of Blender this version of Base Node promises |
+| `blender@5.3` | The same in one version of Blender. An LTS says so in its name: `blender@5.2-lts` |
+| `blender gltf` | A variant, a word after the target or one of its versions: the shader nodes Blender's glTF exporter turns into a material |
+| `blender eevee`, `blender cycles` | Variants, experimental: the shader nodes Blender says each render engine takes |
+| `blade` | Blade's Pixel Nodes, and what its translator carries from the compositor graphs of `blender` |
+
+`blender@latest` and `blender@lts` are aliases for a command line; a `// @target` that names one is
+an error.
 
 ## 8. Limits
 
@@ -443,7 +497,7 @@ A `.bn` text may come from anyone. Reading one ends with a tree or an error, nev
 | Limit | Value | What counts |
 |---|---|---|
 | Source size | 4 MiB | The bytes of the text, in UTF-8 |
-| Nesting | 32 | What is open at once: `(…)`, the arguments or options of a call, a `{…}` block (frame, zone, closure, panel), each prefix `-` or `not`, and the branches of each `? :` (a chain `a ? x : b ? y : …` opens one per `?`) |
+| Nesting | 32 | What is open at once: `(…)`, the arguments or options of a call, a `{…}` block (frame, panel, the body of a call or of a nameless graph), each prefix `-` or `not`, and the branches of each `? :` (a chain `a ? x : b ? y : …` opens one per `?`) |
 | Expression height | 256 | The nodes one inside another in an expression: a name or a literal is 1, and each operator, call, tuple or `.socket` is one more than the tallest of what it holds. A chain counts for its length: `a + b + c` is 3, and so is a pipe of two steps |
 | Integer | 2⁶³ − 1 | The digits of an integer literal; a float literal must be finite (`1e999` is refused) |
 

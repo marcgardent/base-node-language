@@ -13,7 +13,7 @@ import blf
 import bpy
 
 from ..host import BlenderSchema, modules
-from ..lang.complete import OPENERS, complete, product_sign, signature
+from ..blender.complete import OPENERS, complete, product_sign, signature
 from . import actions, draw, prefs
 from .highlight import COLORS, SOCKETS, rgb
 

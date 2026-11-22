@@ -69,7 +69,7 @@ geometry graph erode(
   // The pipes carry gravity waves: past a time step of 0.64 * sqrt(l / g) with eight pipes,
   // the shortest ones (two cells long) grow at each step into stripes along the grid
   dt = courant * sqrt(l / 9.81)
-  out = repeat(iterations, ground: terrain) {
+  out = repeat(iterations, ground: terrain) -> {
     water = NamedAttribute(name: "water").attribute
     sediment = NamedAttribute(name: "sediment").attribute
     a = SeparateColor(NamedAttribute(name: "flux", data_type: FLOAT_COLOR).attribute)

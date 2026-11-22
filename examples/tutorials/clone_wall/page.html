@@ -211,7 +211,7 @@
       <tr><td><code>spring_effector</code></td><td><code>stiffness</code>, <code>damping</code></td><td>How fast and how springy they follow.</td></tr>
       <tr><td><code>clone_paint</code></td><td><code>paint</code>, <code>hot</code>, <code>glow</code></td><td>The colour at rest, under the band, and how bright it glows there.</td></tr>
     </table>
-    <p class="try"><strong>Try:</strong> on step 8, set <code>damping</code> to 1.5: the wall rings long after the band. Give the effectors <code>invert_falloff(w)</code> instead of <code>w</code>: the whole wall stands out, and the band is a trough that runs through it. Swap <code>grid_cloner</code> for <code>radial_cloner(count: 48, radius: 1.5)</code> and the band sweeps a ring.</p>
+    <p class="try"><strong>Try:</strong> on step 8, set <code>damping</code> to 1.5: the wall rings long after the band. Give the effectors <code>invert_falloff(weight: w)</code> instead of <code>w</code>: the whole wall stands out, and the band is a trough that runs through it. Swap <code>grid_cloner</code> for <code>radial_cloner(count: 48, radius: 1.5)</code> and the band sweeps a ring.</p>
 
     <h2 id="files">Take it to Blender</h2>
     <p>

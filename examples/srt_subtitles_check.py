@@ -6,6 +6,7 @@
 2. An .srt written with Unix line ends, then with Windows ones and a byte order mark: at each
    time, the cue read must be the one of the file (its start, its end and its text), or none.
 3. "srt subtitles" draws a text while a cue shows and nothing between two cues.
+4. Its material is the text's, and another font draws other shapes.
 """
 
 import sys
@@ -97,6 +98,24 @@ def check_drawing(path):
     bpy.data.objects.remove(obj)
 
 
+def check_material_and_font(path):
+    scene = bpy.context.scene
+    obj = new_object("srt subtitles")
+    set_input(obj.modifiers[0], "file", str(path))
+    scene.frame_set(round(2.0 * scene.render.fps / scene.render.fps_base))
+    mono = bpy.data.fonts.load(str(Path(bpy.utils.system_resource("DATAFILES")) / "fonts" / "DejaVuSansMono.woff2"))
+    paint = bpy.data.materials.new("Subtitle paint")
+    first = evaluated(obj)  # kept: its mesh lives as long as it does
+    faces = len(first.mesh.polygons)
+    set_input(obj.modifiers[0], "material", paint)
+    set_input(obj.modifiers[0], "font", mono)
+    geometry = evaluated(obj)
+    print(f"  {paint.name}, {mono.name}: {len(geometry.mesh.polygons)} faces, Blender's font {faces}")
+    assert [m.name for m in geometry.mesh.materials] == [paint.name], list(geometry.mesh.materials)
+    assert len(geometry.mesh.polygons) not in (0, faces), faces
+    bpy.data.objects.remove(obj)
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     base_node.register()
@@ -111,6 +130,7 @@ def main():
         print(path.name)
         check_cues(path)
     check_drawing(unix)
+    check_material_and_font(unix)
     print("srt subtitles: ok")
 
 

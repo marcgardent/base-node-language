@@ -1,0 +1,237 @@
+{
+ "bias": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "gain": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "ease in": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "ease out": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "ease in out": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "impulse": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "bump": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "parabola": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "steps": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "bounce": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "elastic": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "recoil": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "triangle": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "square": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sine01": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "project on plane": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "perpendicular": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "max component": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "min component": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "closest on segment": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "wrap angle": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "angle between": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "signed angle": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "luminance": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "palette": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf sphere": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf box": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf torus": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf cylinder": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf capsule": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf cone": {
+  "geometry": "ok",
+  "shader": "no BooleanMath in a shader tree",
+  "compositor": "no BooleanMath in a compositor tree"
+ },
+ "sdf ellipsoid": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf octahedron": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf circle": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf rectangle": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "smooth subtraction": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "shell": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "repetition": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "twist": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "bend": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "sdf normal": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "fbm": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "ridge fbm": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "random direction": {
+  "geometry": "ok",
+  "shader": "unknown node 'RandomValue' in a shader tree; did you mean Value?",
+  "compositor": "unknown node 'RandomValue' in a compositor tree; did you mean Value, StringToValue, Normalize?"
+ },
+ "point in disk": {
+  "geometry": "ok",
+  "shader": "unknown node 'RandomValue' in a shader tree; did you mean Value?",
+  "compositor": "unknown node 'RandomValue' in a compositor tree; did you mean Value, StringToValue, Normalize?"
+ },
+ "fibonacci point": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "r2 sequence": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ }
+}

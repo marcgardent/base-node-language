@@ -8,9 +8,9 @@ import bpy
 from ..host import build_source, export_tree, modules
 from ..host.outputs import find_tree, owner, tree_ref
 from ..host.schema import BlenderSchema
-from ..lang import BnError, compile_source
+from ..blender import BnError, compile_source
 from ..lang.format import format_source
-from ..lang.ir import ZONE_INPUTS
+from ..blender.ir import ZONE_INPUTS
 from ..lang.lexer import span_at
 
 EXT = ".bn"
@@ -19,16 +19,20 @@ EXT = ".bn"
 # Runtime only: they are not saved with the file.
 DIAGNOSTICS = {}
 WARNINGS = {}
-CHECKED = {}  # text name -> the source DIAGNOSTICS speak of: checked, built, or formatted
+# Per text name: the warnings of the last check or build of a valid text (a call of a deprecated
+# graph). They stop nothing: the text is built with them
+LINT = {}
+CHECKED = {}  # text name -> the source DIAGNOSTICS and LINT speak of: checked, built, or formatted
 
 
-def found(text, source, diagnostics=None):
-    """Keep what a look at this source of the text found: its errors, or none."""
+def found(text, source, diagnostics=None, warnings=None):
+    """Keep what a look at this source of the text found: its errors, or none, and its warnings."""
     CHECKED[text.name] = source
-    if diagnostics:
-        DIAGNOSTICS[text.name] = diagnostics
-    else:
-        DIAGNOSTICS.pop(text.name, None)
+    for kept, said in ((DIAGNOSTICS, diagnostics), (LINT, warnings)):
+        if said:
+            kept[text.name] = said
+        else:
+            kept.pop(text.name, None)
 
 
 def is_bn(text):
@@ -43,8 +47,11 @@ def build_text(text, live=False):
     """
     source = text.as_string()
     found(text, source)
+    warnings = []
     try:
-        return build_source(source, text.name)
+        trees = build_source(source, text.name, warnings=warnings)
+        found(text, source, None, warnings)
+        return trees
     except BnError as e:
         found(text, source, e.diagnostics)
         if not live:
@@ -54,18 +61,20 @@ def build_text(text, live=False):
 
 
 def check_text(text):
-    """Parse and check the text without building anything: its errors go to DIAGNOSTICS.
+    """Parse and check the text without building anything: its errors go to DIAGNOSTICS, the
+    warnings of a valid text to LINT.
 
     Cheaper than a build, to show the errors while typing. True when the text is valid.
     """
     source = text.as_string()
+    warnings = []
     try:
         with BlenderSchema() as schema:
-            compile_source(source, schema, text.name, modules.load)
+            compile_source(source, schema, text.name, modules.load, warnings)
     except BnError as e:
         found(text, source, e.diagnostics)
         return False
-    found(text, source)
+    found(text, source, None, warnings)
     return True
 
 
@@ -157,6 +166,7 @@ def close_view(text):
     tree = apply_view(text)
     WARNINGS.pop(text.name, None)
     DIAGNOSTICS.pop(text.name, None)
+    LINT.pop(text.name, None)
     CHECKED.pop(text.name, None)
     bpy.data.texts.remove(text)
     return tree

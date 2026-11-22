@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from base_node import check_target, format_source, infer, parse
+from base_node import STDLIB_VERSION
+from base_node_blender import check_target, format_source, infer, parse
+from base_node_blender.targets import tree_kinds
 from base_node.manifest import manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -24,15 +26,15 @@ def test_2d_modules_manifest_registration():
         assert mod_name in modules, f"Module {mod_name} must be in stdlib manifest"
         entry = modules[mod_name]
         assert entry["name"] == mod_name
-        assert "blender-geometry" in entry["targets"]
-        assert entry["version"] == "0.13.1"
+        assert entry["targets"] == ["blender"]
+        assert entry["version"] == STDLIB_VERSION
         assert entry["edition"] == "2026"
         assert (STDLIB_DIR / entry["file"]).exists()
 
 
 @pytest.mark.parametrize("mod_name", MODULES_2D)
 def test_2d_modules_parse_and_fit_geometry_nodes(mod_name):
-    """Each 2D module parses and fits blender-geometry."""
+    """Each 2D module parses and fits blender, in a geometry tree."""
     file_path = STDLIB_DIR / f"{mod_name}.bn"
     text = file_path.read_text(encoding="utf-8")
 
@@ -40,10 +42,10 @@ def test_2d_modules_parse_and_fit_geometry_nodes(mod_name):
     assert len(ast.graphs) == 4, f"{mod_name} must contain exactly 4 canonical graphs"
 
     # Every 2D module fits Geometry Nodes, and only Blender's targets
-    assert check_target(ast, "blender-geometry") == []
+    assert check_target(ast, "blender") == []
     fits = infer(ast).fits
-    assert "blender-geometry" in fits
-    assert "gltf" not in fits and "blade" not in fits
+    assert "blender" in fits and "geometry" in tree_kinds(ast)
+    assert "blender gltf" not in fits and "blade" not in fits
 
 
 def test_planar2d_graphs_signatures():

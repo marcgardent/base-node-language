@@ -12,9 +12,9 @@ shader graph haze(surface: Shader) -> Shader {
   "surface faded into the pale air of the horizon with its distance from the camera: 60 % of the way at 330 m, all of it from 1 km on, where the sky takes over"
   far = distance(TextureCoordinate().object, (-64.0, -17.0, 12.0))
   return MixShader(
-    Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
-    surface,
-    Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
+    factor: Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
+    a: surface,
+    b: Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
 }
 
 shader(material: true) graph Ground() -> (surface: Shader) {
@@ -34,7 +34,7 @@ shader(material: true) graph Ground() -> (surface: Shader) {
   // The mask fades from the road's edge: the dirt gives way to grass in a ragged line
   verge = Clamp(value: worn * 1.6 + (fine - 0.5) * 0.8)
   color = Mix(factor: verge, a: grass, b: dirt, data_type: RGBA)
-  return (surface: haze(PrincipledBSDF(base_color: color, roughness: 0.92)))
+  return (surface: haze(surface: PrincipledBSDF(base_color: color, roughness: 0.92)))
 }
 
 shader(material: true) graph Asphalt() -> (surface: Shader) {
@@ -161,7 +161,7 @@ geometry graph game_level() -> Geometry {
     |> MeshToCurve()
   made = road(
     path,
-    rough,
+    terrain: rough,
     width: 7.0,
     lanes: 2,
     shoulder: 1.2,
@@ -174,8 +174,8 @@ geometry graph game_level() -> Geometry {
   // The ground under the road laid 12 cm below it, eased back to its own height over 5 m; its
   // road_mask, which the material wears to dirt, fading over 1.5 m past the shoulders
   levelled = rough
-    |> flatten_terrain(made, depth: 0.12, falloff: 5.0)
-    |> road_mask_on_terrain(made, falloff: 1.5)
+    |> flatten_terrain(road: made, depth: 0.12, falloff: 5.0)
+    |> road_mask_on_terrain(road: made, falloff: 1.5)
   // Six houses along the road, turned to face it, each on a pad levelled into the slope
   a = house(
     at: (-22.2, 4.0, 0.0),
@@ -227,7 +227,7 @@ geometry graph game_level() -> Geometry {
     terrain: levelled)
   pads = a.pad + b.pad + c.pad + d.pad + e.pad + f.pad
   ground = levelled
-    |> flatten_terrain(pads, depth: 0.05, falloff: 3.5)
+    |> flatten_terrain(road: pads, depth: 0.05, falloff: 3.5)
   // Each wall face to the row of a sheet 6 m across that its width calls for: walls (3 m) take
   // the first row, plinths and rooftop units (1.1 m, 0.9 m) the third, ledges (0.3 m) the fourth
   town = a.house + b.house + c.house + d.house + e.house + f.house

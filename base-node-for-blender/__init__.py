@@ -9,8 +9,8 @@ no top-level module: Blender reports those as a policy violation, and a global
 
 from __future__ import annotations
 
-# Embedded core modules
-from . import host, lang
+# Embedded: the core of the language (lang), what is Blender's without bpy (blender)
+from . import blender, host, lang
 
 try:
     from . import ui
@@ -28,4 +28,4 @@ def unregister():
         ui.unregister()
 
 
-__all__ = ["host", "lang", "ui", "register", "unregister"]
+__all__ = ["blender", "host", "lang", "ui", "register", "unregister"]

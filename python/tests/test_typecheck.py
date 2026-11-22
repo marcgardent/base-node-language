@@ -1,7 +1,7 @@
 import pytest
 
-from base_node import BnError, compile_source, ir
-from base_node.layout import layout
+from base_node_blender import BnError, compile_source, ir
+from base_node_blender.layout import layout
 
 
 def compile_one(source, schema):
@@ -201,7 +201,7 @@ def test_outputs_may_stay_unlinked(schema):
 
 def test_datablock_by_name(schema):
     from fake_schema import NODES, S
-    from base_node.schema import NodeSpec
+    from base_node_blender.schema import NodeSpec
     NODES["SetMaterial"] = (NodeSpec("SetMaterial", "GeometryNodeSetMaterial"),
                             [S("Geometry", "Geometry"), S("Selection", "Bool"), S("Material", "Material")],
                             [S("Geometry", "Geometry")])
@@ -337,11 +337,94 @@ def test_curves_say_what_they_expect(schema, node, value, message):
     assert errors(graph(f"  r = {node}(mapping: {value})\n  return geometry"), schema) == [f"t.bn:{message}"]
 
 
+# Deprecated graphs: `kind(deprecated: "what to use instead") graph …`
+
+OLD = """\
+geometry(deprecated: "use twice") graph double(x: Float) -> Float {
+  return x * 2.0
+}
+
+geometry(deprecated: true) graph half(x: Float) -> Float {
+  return double(x) / 4.0
+}
+
+geometry(deprecated: false) graph twice(x: Float) -> Float {
+  return x * 2.0
+}
+"""
+
+
+def test_a_call_of_a_deprecated_graph_is_warned_of(schema):
+    from base_node_blender import deprecations, parse
+
+    source = OLD + "\ngeometry graph g(x: Float) -> Float {\n  y = double(x) + twice(x)\n  return half(y)\n}\n"
+    warnings = []
+    graphs = compile_source(source, schema, "t.bn", warnings=warnings)
+    # The text is valid and whole: the graphs are those of a text without the mark
+    assert [g.name for g in graphs] == ["double", "half", "twice", "g"]
+    assert [g.deprecated for g in graphs] == ["use twice", "", None, None]
+    assert all("deprecated" not in g.settings for g in graphs)
+    # At each call, with what the author wrote; none inside a graph that is deprecated itself
+    assert [str(w) for w in warnings] == ["t.bn:14:7  warning: 'double' is deprecated: use twice",
+                                         "t.bn:15:10  warning: 'half' is deprecated"]
+    assert {w.severity for w in warnings} == {"warning"}
+    # Without a schema, as the command line reads it: the same
+    assert deprecations(parse(source, "t.bn"), "t.bn") == warnings
+    # Nobody asking for them, they are not said
+    assert compile_source(source, schema, "t.bn")
+
+
+def test_a_deprecated_graph_of_a_module(schema):
+    from base_node_blender import deprecations, parse
+
+    def load(name, source):
+        return OLD, f"{name}.bn"
+
+    def find(name):
+        return parse(OLD, f"{name}.bn")
+
+    for use, call, at in (("use old", "double", 4), ("use old (double)", "double", 4), ("use old", "old::double", 4),
+                          ("use old as o", "o::double", 4)):
+        source = f"{use}\n\ngeometry graph g(x: Float) -> Float {{\n  return {call}(x)\n}}\n"
+        warnings = []
+        compile_source(source, schema, "t.bn", load, warnings)
+        # Of the text, not of its module: `half` calling `double` in old.bn is its author's to see
+        assert [str(w) for w in warnings] == [f"t.bn:{at}:10  warning: '{call}' is deprecated: use twice"], use
+        assert deprecations(parse(source, "t.bn"), "t.bn", find) == warnings
+    source = "use old (twice)\n\ngeometry graph g(x: Float) -> Float {\n  return twice(x)\n}\n"
+    warnings = []
+    compile_source(source, schema, "t.bn", load, warnings)
+    assert warnings == [] and deprecations(parse(source, "t.bn"), "t.bn", find) == []
+
+
+def test_a_warning_comes_with_no_error(schema):
+    source = OLD + "\ngeometry graph g(x: Float) -> Float {\n  return double(y)\n}\n"
+    warnings = []
+    assert errors(source, schema) == ["t.bn:14:17  unknown name 'y'"]
+    with pytest.raises(BnError):
+        compile_source(source, schema, "t.bn", warnings=warnings)
+    assert warnings == []
+
+
+def test_what_deprecated_takes(schema):
+    for value in ("SOON", "1", "(1.0, 2.0)"):
+        msgs = errors(f"geometry(deprecated: {value}) graph f(x: Float) -> Float {{\n  return x\n}}\n", schema)
+        assert len(msgs) == 1 and "deprecated" in msgs[0], msgs
+    assert errors("geometry(deprecated: SOON) graph f(x: Float) -> Float {\n  return x\n}\n", schema) == [
+        "t.bn:1:10  setting 'deprecated': true, or what to use instead, in quotes"]
+
+
+def test_deprecated_is_written_back():
+    from base_node_blender import format_source, parse, to_source
+
+    assert format_source(OLD, "t.bn") == OLD and to_source(parse(OLD, "t.bn")) == OLD
+
+
 def test_inputs_with_a_key_of_their_own():
     """Mix Shader's two Shader inputs are `a` and `b` (schema.INPUT_KEYS); Blender's identifiers are
     still read, and any other node of repeated names falls back on them."""
-    from base_node.schema import Socket, input_key
-    from base_node.typecheck import find_socket, socket_keys
+    from base_node_blender.schema import Socket, input_key
+    from base_node_blender.typecheck import find_socket, socket_keys
 
     def sockets(node):
         return [Socket("Factor", "Fac", "Float")] + [

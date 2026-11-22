@@ -21,7 +21,8 @@ pip install "base-node @ git+https://github.com/marcgardent/base-node-language.g
 base-node fmt file.bn
 base-node fmt --check file.bn
 base-node check file.bn                # its @target, or the targets it fits
-base-node check --target gltf file.bn
+base-node check --target "blender gltf" file.bn
+base-node check --target blender@latest file.bn   # the newest Blender this version knows
 base-node ast file.bn
 base-node docs                 # the site's reference pages, from a checkout of the repository
 ```
@@ -29,12 +30,13 @@ base-node docs                 # the site's reference pages, from a checkout of 
 ## Library
 
 ```python
-import base_node as bn
+import base_node as bn              # the core: the text, knowing no destination
+import base_node_blender as blender  # Blender's nodes, the checker, the targets
 
 ast = bn.parse(source)
 formatted = bn.format_source(source)
-issues = bn.check_target(ast, "gltf")  # [] when it fits
-fits = bn.infer(ast).fits             # target -> None, or the target it translates from
+issues = blender.check_target(ast, "blender gltf")  # [] when it fits
+fits = blender.infer(ast).fits             # target -> None, or the target it translates from
 ```
 
 The language, the targets, the standard library and the Blender extension are described in the repository: <https://github.com/marcgardent/base-node-language>.

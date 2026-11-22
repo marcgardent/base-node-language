@@ -1,7 +1,7 @@
 // Base Node Standard Library — Module math
 // @module math
-// @version 0.13.1
-// @target blender-compositor, blender-geometry, blender-gp
+// @version 1.0.0-rc.1
+// @target blender
 // @edition 2026
 // @description Mathematical toolkit for Geometry Nodes: shaping curves, waves, vectors, SDFs, and noise distributions
 
@@ -299,7 +299,7 @@ geometry graph fbm(
     persistence: Float = 0.5 in 0.0..1.0
 ) -> Float {
   "Fractal noise: octave layers of increasing frequency and decreasing amplitude, roughly -1 to 1"
-  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) {
+  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
     // Each octave offset: prevents identical noise near origin
     noise = NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0
     return (
@@ -317,7 +317,7 @@ geometry graph "ridge fbm"(
     persistence: Float = 0.5 in 0.0..1.0
 ) -> Float {
   "Ridged fractal noise: sharp mountain ridges, roughly 0 to 1"
-  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) {
+  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
     ridge = 1.0
       - abs(NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0)
     return (

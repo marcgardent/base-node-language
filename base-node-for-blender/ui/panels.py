@@ -119,6 +119,15 @@ class TEXT_PT_base_node(bpy.types.Panel):
                 op = box.operator("base_node.goto", text=f"{d.line}:{d.col}  {d.message}", emboss=False)
                 op.line, op.col, op.message = d.line, d.col, str(d)
 
+        lint = actions.LINT.get(text.name)
+        if lint:
+            # The text is valid and built with them: what it should change
+            box = layout.box()
+            box.label(text=f"{len(lint)} warning(s)", icon="INFO")
+            for d in lint:
+                op = box.operator("base_node.goto", text=f"{d.line}:{d.col}  {d.message}", emboss=False)
+                op.line, op.col, op.message = d.line, d.col, str(d)
+
         warnings = actions.WARNINGS.get(text.name)
         if warnings:
             box = layout.box()

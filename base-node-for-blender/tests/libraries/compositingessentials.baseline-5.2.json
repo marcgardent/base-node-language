@@ -1,0 +1,111 @@
+{
+ "library": "Compositing Nodes Essentials",
+ "version": "Blender 5.2.4",
+ "sha256": "2ec397d77d2feec13c738a4b8fdf23f9e7e663c61554986618ec9c44ca6c1cbd",
+ "blender": "5.2.4 LTS",
+ "summary": "24 ok",
+ "groups": {
+  ".Halation 3.021": {
+   "status": "ok",
+   "text": "3a433c02afbdefc0"
+  },
+  ".Multisample Displace Group 2.010": {
+   "status": "ok",
+   "text": "038d6995b9a8f39b"
+  },
+  ".Noise Maschine 3.022": {
+   "status": "ok",
+   "text": "b6954dd8b55dcf08"
+  },
+  ".Noisegroup Internal 3.022": {
+   "status": "ok",
+   "text": "98e82dd3dff3a7cf",
+   "blender_quirk": [
+    "composite Result"
+   ]
+  },
+  ".log space >1.001": {
+   "status": "ok",
+   "text": "0145814a57ba1e9b"
+  },
+  "3D to Screen Space": {
+   "status": "ok",
+   "text": "05b6b8b297fb29b9"
+  },
+  "Cheap Blur 2.001": {
+   "status": "ok",
+   "text": "0bf2347c2bb21da1"
+  },
+  "Chromatic Aberration": {
+   "status": "ok",
+   "text": "da4544c430a5c50a"
+  },
+  "Combine Cylindrical": {
+   "status": "ok",
+   "text": "69e72dbb59b71ae6"
+  },
+  "Combine Spherical": {
+   "status": "ok",
+   "text": "e4530c49775e2538"
+  },
+  "Film Grain": {
+   "status": "ok",
+   "text": "5970e73700e8bdcf",
+   "blender_quirk": [
+    "composite Result"
+   ]
+  },
+  "Project with Depth": {
+   "status": "ok",
+   "text": "14022b0cacecb206"
+  },
+  "Retime": {
+   "status": "ok",
+   "text": "70f98c581c8f9b9c"
+  },
+  "Rounded Square Mask": {
+   "status": "ok",
+   "text": "e55652ee2909bf19"
+  },
+  "Screen to 3D Space": {
+   "status": "ok",
+   "text": "65088a211b8d25d8"
+  },
+  "Sensor Noise": {
+   "status": "ok",
+   "text": "e80f7c2a86bd1f3b"
+  },
+  "Separate Cylindrical": {
+   "status": "ok",
+   "text": "f833e26fec9b5005"
+  },
+  "Separate Spherical": {
+   "status": "ok",
+   "text": "cc2113c0998d1400"
+  },
+  "Sepia": {
+   "status": "ok",
+   "text": "f2bedf7f0202f5fd"
+  },
+  "Split Toning": {
+   "status": "ok",
+   "text": "9b7604ee46937de6"
+  },
+  "Transform and Project": {
+   "status": "ok",
+   "text": "78ff62b5501752ea"
+  },
+  "Tune Image": {
+   "status": "ok",
+   "text": "2ea88b21bd36a0db"
+  },
+  "Unsharp Mask": {
+   "status": "ok",
+   "text": "a93889db047b0e11"
+  },
+  "Vignette": {
+   "status": "ok",
+   "text": "1bb631a337c8229d"
+  }
+ }
+}

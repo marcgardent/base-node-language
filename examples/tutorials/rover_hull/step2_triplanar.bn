@@ -13,7 +13,7 @@ shader graph hull_paint(paint: Color = (0.55, 0.12, 0.012)) -> Shader {
   surface = projection_frame(space: Object).normal
   "Paint" #orange {
     // A 2D texture, as an image would be: it reads x and y of the coordinates it is given
-    smears = closure(vector: Vector) -> (color: Color) {
+    smears = graph(vector: Vector) -> (color: Color) {
       return (color: NoiseTexture(vector: vector * (1.0, 2.5, 0.0), scale: 3.0, detail: 8.0).color)
     }
     tone = triplanar(texture: smears, sharpness: 8.0).color.x

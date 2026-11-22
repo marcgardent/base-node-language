@@ -24,8 +24,12 @@ geometry graph rounded_cube(
   // Every point of a dense cube pulled to radius from the core, a smaller cube inside it
   h = size * 0.5 - radius
   p = Position()
-  core = min(max(p, CombineXYZ(-h, -h, -h)), CombineXYZ(h, h, h))
-  return Cube(size: CombineXYZ(size, size, size), vertices_x: 9, vertices_y: 9, vertices_z: 9)
+  core = min(max(p, CombineXYZ(x: -h, y: -h, z: -h)), CombineXYZ(x: h, y: h, z: h))
+  return Cube(
+      size: CombineXYZ(x: size, y: size, z: size),
+      vertices_x: 9,
+      vertices_y: 9,
+      vertices_z: 9)
     |> SetPosition(position: core + normalize(p - core) * radius)
     |> SetShadeSmooth()
 }

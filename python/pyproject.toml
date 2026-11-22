@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "base-node"
-version = "0.13.1"
+version = "1.0.0rc1"
 description = "Base Node (.bn) parser, formatter, and target checker"
 readme = "README.md"
 authors = [{ name = "Marc Gardent" }]
@@ -18,15 +18,21 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-base-node = "base_node.cli:main"
+base-node = "base_node_cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["base_node*"]
 
+# base_node is the core of the language, base_node_blender what is Blender's (its nodes, its targets),
+# base_node_cli the command line
 [tool.setuptools.package-data]
-base_node = [
+base_node = ["py.typed"]
+base_node_cli = ["py.typed"]
+base_node_blender = [
   "py.typed", "_targets/*.json", "_targets/*/*.bn",
+  # The blender target: the catalog of each version of Blender, and its variants
+  "_targets/blender/*.json",
 ]
 
 [tool.pytest.ini_options]

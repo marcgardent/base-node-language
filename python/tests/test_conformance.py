@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from base_node import format_source, parse
-from base_node.cli import main as cli_main
+from base_node_cli.cli import main as cli_main
 
 MANIFEST_PATH = Path(__file__).resolve().parents[2] / "conformance" / "manifest.json"
 CONFORMANCE_DIR = MANIFEST_PATH.parent

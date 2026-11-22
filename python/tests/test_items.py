@@ -2,7 +2,7 @@
 
 import pytest
 
-from base_node import BnError, compile_source, parse
+from base_node_blender import BnError, compile_source, parse
 from base_node.format import format_source
 from base_node.printer import to_source
 
@@ -151,10 +151,9 @@ def test_options_only_go_on_items(schema):
         "Bake: item name and type must be written 'name: value'"]
 
 
-def test_a_repeat_state_takes_no_options():
-    with pytest.raises(BnError) as err:
-        parse("geometry graph g(x: Float) -> Float {\n  r = repeat(3, s(a: 1): x) {\n    return s\n  }\n  return r\n}\n")
-    assert err.value.diagnostics[0].message == "repeat state does not take options"
+def test_a_repeat_state_takes_no_options(schema):
+    src = "geometry graph g(x: Float) -> Float {\n  r = repeat(3, s(a: 1): x) -> {\n    return s\n  }\n  return r\n}\n"
+    assert errors(src, schema) == ["repeat state does not take options"]
 
 
 def test_an_item_named_like_an_input_goes_by_a_key_of_its_own(schema):
@@ -178,5 +177,5 @@ def test_a_key_must_be_free_and_only_names_an_item(schema):
     assert errors(taken, schema) == ["CaptureAttribute: key 'selection' is already an input, setting, or item of the node"]
     plain = graph("  return SetPosition(geometry, offset as o: (0.0, 0.0, 1.0)).geometry", "Geometry")
     assert errors(plain, schema)[0].startswith("'offset as o': only item node items")
-    with pytest.raises(BnError, match="'as' only aliases an item"):
-        parse(graph("  e = foreach(geometry, a as b: 0.0) {\n    return ()\n  }\n  return e"))
+    zone = graph("  e = foreach(geometry, a as b: 0.0) -> {\n    return ()\n  }\n  return e")
+    assert errors(zone, schema) == ["'a as b': 'as' only aliases an item of an item node"]

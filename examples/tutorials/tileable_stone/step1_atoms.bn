@@ -2,7 +2,7 @@
 // @title Tileable stone, step 1: atoms that tile
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use texture_atoms

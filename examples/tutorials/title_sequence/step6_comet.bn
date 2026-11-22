@@ -13,7 +13,10 @@ shader(material: true) graph Title() -> (surface: Shader) {
   "Warm white letters that give their own light, as opaque as their opacity"
   shown = Attribute(attribute_name: "opacity").factor
   return (
-    surface: MixShader(shown, TransparentBSDF(), Emission(color: (1.0, 0.86, 0.62), strength: 2.5)))
+    surface: MixShader(
+      factor: shown,
+      a: TransparentBSDF(),
+      b: Emission(color: (1.0, 0.86, 0.62), strength: 2.5)))
 }
 
 shader(material: true) graph Tagline() -> (surface: Shader) {
@@ -26,14 +29,19 @@ shader(material: true) graph Spark() -> (surface: Shader) {
   life = Attribute(attribute_type: INSTANCER, attribute_name: "life_factor").factor
   shown = Attribute(attribute_type: INSTANCER, attribute_name: "opacity").factor
   hot = Mix(factor: life, a: (1.0, 0.62, 0.18, 1.0), b: (1.0, 0.08, 0.55, 1.0), data_type: RGBA)
-  return (surface: MixShader(shown, TransparentBSDF(), Emission(color: hot, strength: 3.0)))
+  return (
+    surface: MixShader(factor: shown, a: TransparentBSDF(), b: Emission(color: hot, strength: 3.0)))
 }
 
 shader(material: true) graph Comet() -> (surface: Shader) {
   "The head and its echoes: white now, toward the tint stored on the oldest, as opaque as their opacity"
   tint = Attribute(attribute_name: "tint").color
   shown = Attribute(attribute_name: "opacity").factor
-  return (surface: MixShader(shown, TransparentBSDF(), Emission(color: tint, strength: 4.0)))
+  return (
+    surface: MixShader(
+      factor: shown,
+      a: TransparentBSDF(),
+      b: Emission(color: tint, strength: 4.0)))
 }
 
 shader(material: true) graph Trail() -> (surface: Shader) {
@@ -41,9 +49,9 @@ shader(material: true) graph Trail() -> (surface: Shader) {
   tail = Attribute(attribute_name: "trail_factor").factor
   return (
     surface: MixShader(
-      1.0 - tail,
-      TransparentBSDF(),
-      Emission(color: (1.0, 0.1, 0.55), strength: 3.0)))
+      factor: 1.0 - tail,
+      a: TransparentBSDF(),
+      b: Emission(color: (1.0, 0.1, 0.55), strength: 3.0)))
 }
 
 geometry graph centred(geometry: Geometry) -> Geometry {
@@ -115,7 +123,12 @@ geometry graph sparks(letters: Geometry) -> Geometry {
 
 geometry graph comet(progress: Float(subtype: FACTOR)) -> Geometry {
   "A bright disc that sweeps in from the left, under the title, and out at the top right as progress goes from 0 to 1, easing in and out; its echoes over the frames before, and a trail that thins to its tail"
-  path = BezierSegment(64, (-7.5, -2.4, 0.0), (-1.5, -3.9, 0.0), (4.5, -2.6, 0.0), (6.8, 4.8, 0.0))
+  path = BezierSegment(
+    resolution: 64,
+    start: (-7.5, -2.4, 0.0),
+    start_handle: (-1.5, -3.9, 0.0),
+    end_handle: (4.5, -2.6, 0.0),
+    end: (6.8, 4.8, 0.0))
   eased = progress * progress * (3.0 - 2.0 * progress)
   at = SampleCurve(path, factor: eased).position
   head = MeshCircle(vertices: 24, radius: 0.13, fill_type: NGON)

@@ -5,39 +5,35 @@
 //! // @title Mesh maps
 //! // @author Marc
 //! // @license MIT
-//! // @offer library, groups
 //! ```
 //!
 //! The head is the comment and blank lines before the first `use` or graph. `@module`,
 //! `@version` and `@edition` are those of the standard library, `@target` the targets the file
-//! promises to fit (spec/targets.md); the others tell a host what it may do with the file when it is dropped on it (see [`OFFERS`]). A directive
-//! this module does not know is left alone, for other tools to read; one it knows is checked.
-//! The Python package's `base_node/header.py`, message for message.
+//! promises to fit (spec/targets.md). A directive this module does not know is left alone, for
+//! other tools to read; one it knows is checked. `@edition` is the language's: a text of an edition
+//! this reader does not know is refused, here and by the parser ([`edition_error`]). A host has directives of its own, saying what it
+//! may do with the file: [`read_head`] checks that each is written once, with a value, and gives
+//! them back as written, for the host to judge. The Python package's `python/base_node/header.py`,
+//! message for message.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::ast::{flatten, is_identifier, key, AssignValue, Expr, File, Graph, ReturnValue, Stmt};
+use crate::ast::is_identifier;
 use crate::errors::{BnError, Diagnostic};
-use crate::parser::parse;
 
-/// What a dropped file may be used for, in the order a dialog lists them.
-pub const OFFERS: [&str; 4] = ["library", "groups", "example", "modifier"];
-/// The mesh `modifier` makes when no object takes the modifier.
-pub const MESHES: [&str; 5] = ["cube", "plane", "sphere", "cylinder", "grid"];
 const TEXT: [&str; 5] = ["title", "author", "license", "version", "edition"];
-const KNOWN: [&str; 11] = [
-    "module", "target", "offer", "example", "modifier", "mesh", "title", "author", "license",
-    "version", "edition",
+const KNOWN: [&str; 7] = [
+    "module", "target", "title", "author", "license", "version", "edition",
 ];
 
-/// The directives of a file, checked against its graphs.
-///
-/// `offer` is what the file offers, as written or inferred; `example` and `modifier` the
-/// graph each of these uses (none when not offered), `examples` and `modifiers` every graph
-/// that could be used. `lines` keeps the line of each directive written.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+/// The editions of the language this reader knows, the latest last: a text that names none is of
+/// the latest.
+pub const EDITIONS: [&str; 1] = ["2026"];
+
+/// The directives of a file. `lines` keeps the line of each directive written.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Header {
     pub module: Option<String>,
     pub version: Option<String>,
@@ -47,36 +43,7 @@ pub struct Header {
     pub title: Option<String>,
     pub author: Option<String>,
     pub license: Option<String>,
-    pub offer: Vec<String>,
-    pub offer_written: bool,
-    pub example: Option<String>,
-    pub modifier: Option<String>,
-    pub mesh: String,
-    pub examples: Vec<String>,
-    pub modifiers: Vec<String>,
     pub lines: HashMap<String, usize>,
-}
-
-impl Default for Header {
-    fn default() -> Self {
-        Self {
-            module: None,
-            version: None,
-            target: Vec::new(),
-            edition: None,
-            title: None,
-            author: None,
-            license: None,
-            offer: Vec::new(),
-            offer_written: false,
-            example: None,
-            modifier: None,
-            mesh: "cube".to_owned(),
-            examples: Vec::new(),
-            modifiers: Vec::new(),
-            lines: HashMap::new(),
-        }
-    }
 }
 
 /// A directive of the head as written: its name, its value, and the line and column (1-based,
@@ -148,7 +115,7 @@ fn directive(text: &str) -> Option<(String, String, usize)> {
 }
 
 /// A quoted name, or a bare one, as written: none when it is neither.
-fn unquote(value: &str) -> Option<String> {
+pub fn unquote(value: &str) -> Option<String> {
     let chars: Vec<char> = value.chars().collect();
     if chars.len() >= 2 && chars[0] == '"' && chars[chars.len() - 1] == '"' {
         let inner: String = chars[1..chars.len() - 1].iter().collect();
@@ -167,116 +134,68 @@ fn unquoted_text(value: &str) -> String {
     }
 }
 
-/// The value of a tree setting the graph writes, as `geometry(is_modifier: true) graph`.
-fn setting(g: &Graph, name: &str) -> Option<bool> {
-    g.settings.iter().find_map(|a| match (&a.name, &a.value) {
-        (Some(n), Expr::Bool(b)) if n == name => Some(b.value),
-        _ => None,
+fn unknown_edition(value: &str) -> String {
+    format!(
+        "@edition '{value}': not an edition this reader knows ({})",
+        EDITIONS.join(", ")
+    )
+}
+
+/// The diagnostic of the `@edition` of a source when this reader does not know that edition.
+pub fn edition_error(source: &str, filename: &str) -> Option<Diagnostic> {
+    // The first one written is the file's: a second is an error of the head
+    let d = directives(source)
+        .into_iter()
+        .find(|d| d.name == "edition")?;
+    let value = unquoted_text(&d.value);
+    (!d.value.is_empty() && !EDITIONS.contains(&value.as_str())).then(|| Diagnostic {
+        filename: filename.to_owned(),
+        line: d.line,
+        col: d.col,
+        message: unknown_edition(&value),
     })
 }
 
-/// (examples, modifiers): the names of the graphs nobody calls that make their own geometry (a
-/// Geometry output, no Geometry input), then of those that are modifiers (first input and first
-/// output Geometry, as the Blender builder decides).
-pub fn shapes(file: &File) -> (Vec<String>, Vec<String>) {
-    let mut called = HashSet::new();
-    for g in &file.graphs {
-        calls_in(&g.body, &mut called);
-    }
-    let (mut examples, mut modifiers) = (Vec::new(), Vec::new());
-    for g in &file.graphs {
-        if g.kind != "geometry" || called.contains(&key(&g.name)) || !g.type_params.is_empty() {
-            continue;
-        }
-        let ins: Vec<String> = flatten(&g.tree("INPUT"))
-            .into_iter()
-            .map(|p| p.type_name)
-            .collect();
-        let outs: Vec<String> = flatten(&g.tree("OUTPUT"))
-            .into_iter()
-            .map(|p| p.type_name)
-            .collect();
-        let modifier = setting(g, "is_modifier").unwrap_or_else(|| {
-            ins.first().is_some_and(|t| t == "Geometry")
-                && outs.first().is_some_and(|t| t == "Geometry")
-        });
-        if modifier {
-            modifiers.push(g.name.clone());
-        }
-        if outs.iter().any(|t| t == "Geometry") && !ins.iter().any(|t| t == "Geometry") {
-            examples.push(g.name.clone());
-        }
-    }
-    (examples, modifiers)
+/// The head of a source as [`read_head`] read it: nothing has failed yet.
+#[derive(Clone, Debug)]
+pub struct Head {
+    pub header: Header,
+    /// What is wrong in the head so far; the caller adds what it finds.
+    pub diagnostics: Vec<Diagnostic>,
+    written: HashMap<String, Directive>,
 }
 
-fn calls_in(body: &[Stmt], out: &mut HashSet<String>) {
-    for stmt in body {
-        match stmt {
-            Stmt::Assign(a) => match &a.value {
-                AssignValue::Expr(e) => calls_of(e, out),
-                AssignValue::Repeat(z) => {
-                    calls_of(&z.count, out);
-                    z.states.iter().for_each(|s| calls_of(&s.value, out));
-                    calls_in(&z.body, out);
-                }
-                AssignValue::Simulate(z) => {
-                    z.states.iter().for_each(|s| calls_of(&s.value, out));
-                    calls_in(&z.body, out);
-                }
-                AssignValue::Foreach(z) => {
-                    calls_of(&z.geometry, out);
-                    z.args.iter().for_each(|s| calls_of(&s.value, out));
-                    calls_in(&z.body, out);
-                }
-                AssignValue::Closure(z) => calls_in(&z.body, out),
-            },
-            Stmt::Return(r) => match &r.value {
-                ReturnValue::Expr(e) => calls_of(e, out),
-                ReturnValue::Record(rec) => rec.fields.iter().for_each(|f| calls_of(&f.value, out)),
-            },
-            Stmt::Frame(f) => calls_in(&f.body, out),
-        }
+impl Head {
+    /// A directive as written, and where its value is; none when it is not written, or has no
+    /// value.
+    pub fn get(&self, name: &str) -> Option<&Directive> {
+        self.written.get(name).filter(|d| !d.value.is_empty())
     }
 }
 
-fn calls_of(e: &Expr, out: &mut HashSet<String>) {
-    match e {
-        Expr::Call(c) => {
-            out.insert(c.name.clone());
-            c.args.iter().for_each(|a| calls_of(&a.value, out));
-        }
-        Expr::Tuple(t) => t.items.iter().for_each(|i| calls_of(i, out)),
-        Expr::Member(m) => calls_of(&m.target, out),
-        Expr::Pipe(p) => {
-            calls_of(&p.left, out);
-            calls_of(&p.call, out);
-        }
-        Expr::BinOp(b) => {
-            calls_of(&b.left, out);
-            calls_of(&b.right, out);
-        }
-        Expr::Neg(n) => calls_of(&n.value, out),
-        Expr::Not(n) => calls_of(&n.value, out),
-        Expr::Cond(c) => {
-            calls_of(&c.cond, out);
-            calls_of(&c.then, out);
-            calls_of(&c.orelse, out);
-        }
-        Expr::Number(_) | Expr::String(_) | Expr::Bool(_) | Expr::Ref(_) => {}
-    }
+/// The head of a .bn source, read: nothing fails.
+///
+/// `targets` are the names the caller accepts after `@target`: with none, any name is read.
+/// `extra` are the directives of the caller: [`Head::get`] gives each as written, and the caller
+/// adds to the diagnostics what it finds.
+pub fn read_head(source: &str, filename: &str, targets: &[&str], extra: &[&str]) -> Head {
+    let refuse = |word: &str| {
+        (!targets.is_empty() && !targets.contains(&word))
+            .then(|| format!("one of {}", targets.join(", ")))
+    };
+    read_head_by(source, filename, &refuse, extra)
 }
 
-/// The checked header of a .bn source. Fails on a malformed directive, a choice offered that no
-/// graph allows, a graph named that is not one of the file or not of its shape; a syntax error
-/// is the parser's.
-pub fn header(source: &str, filename: &str) -> Result<Header, BnError> {
-    let file = parse(source, filename)?;
-    header_of(source, filename, &file)
-}
-
-/// The checked header of a source whose syntax tree `file` the caller has already.
-pub fn header_of(source: &str, filename: &str, file: &File) -> Result<Header, BnError> {
+/// The same, for a caller whose targets are more than a list of names: `refuse` says of a name as
+/// written why it is refused (what follows `@target '<name>': `), or none. A name is written
+/// `name`, `name@version` or either with words after it, spaces apart: what the version and the
+/// words mean is the caller's.
+pub fn read_head_by(
+    source: &str,
+    filename: &str,
+    refuse: &dyn Fn(&str) -> Option<String>,
+    extra: &[&str],
+) -> Head {
     let mut h = Header::default();
     let mut diags: Vec<Diagnostic> = Vec::new();
     let error = |diags: &mut Vec<Diagnostic>, line: usize, col: usize, message: String| {
@@ -290,7 +209,7 @@ pub fn header_of(source: &str, filename: &str, file: &File) -> Result<Header, Bn
 
     let mut written: HashMap<String, Directive> = HashMap::new();
     for d in directives(source) {
-        if !KNOWN.contains(&d.name.as_str()) {
+        if !KNOWN.contains(&d.name.as_str()) && !extra.contains(&d.name.as_str()) {
             continue;
         }
         if let Some(first) = written.get(&d.name) {
@@ -322,19 +241,28 @@ pub fn header_of(source: &str, filename: &str, file: &File) -> Result<Header, Bn
             _ => h.edition = value,
         }
     }
+    if let (Some(d), Some(value)) = (get("edition"), h.edition.as_deref()) {
+        if !EDITIONS.contains(&value) {
+            error(&mut diags, d.line, d.col, unknown_edition(value));
+        }
+    }
     if let Some(d) = get("target") {
-        let known = crate::targets::target_names();
         let mut at = d.col;
         for part in d.value.split(',') {
             let word = part.trim().trim_matches('"');
+            let word = word.split_whitespace().collect::<Vec<_>>().join(" ");
             let lead = part.chars().count() - part.trim_start().chars().count();
             let where_ = at + lead;
             at += part.chars().count() + 1;
-            if !known.is_empty() && !known.contains(&word) {
-                let message = format!("@target '{word}': one of {}", known.join(", "));
-                error(&mut diags, d.line, where_, message);
-            } else if !h.target.iter().any(|t| t == word) {
-                h.target.push(word.to_owned());
+            if let Some(why) = refuse(&word) {
+                error(
+                    &mut diags,
+                    d.line,
+                    where_,
+                    format!("@target '{word}': {why}"),
+                );
+            } else if !h.target.contains(&word) {
+                h.target.push(word);
             }
         }
     }
@@ -352,138 +280,20 @@ pub fn header_of(source: &str, filename: &str, file: &File) -> Result<Header, Bn
             ),
         }
     }
-    if let Some(d) = get("mesh") {
-        let mesh = d.value.trim_matches('"');
-        if MESHES.contains(&mesh) {
-            h.mesh = mesh.to_owned();
-        } else {
-            let message = format!("@mesh '{}': one of {}", d.value, MESHES.join(", "));
-            error(&mut diags, d.line, d.col, message);
-        }
+    Head {
+        header: h,
+        diagnostics: diags,
+        written,
     }
+}
 
-    (h.examples, h.modifiers) = shapes(file);
-    let by_key: HashMap<String, String> = file
-        .graphs
-        .iter()
-        .map(|g| (key(&g.name), g.name.clone()))
-        .collect();
-    let pick = |diags: &mut Vec<Diagnostic>, kind: &str, candidates: &[String], shape: &str| {
-        let Some(d) = get(kind) else {
-            // The last graph is the file's main one.
-            return candidates.last().cloned();
-        };
-        let Some(name) = unquote(&d.value) else {
-            let message = format!(
-                "@{kind} {}: a graph's name, quoted, or a bare identifier",
-                d.value
-            );
-            error(diags, d.line, d.col, message);
-            return None;
-        };
-        let graph = if file.graphs.iter().any(|g| g.name == name) {
-            Some(name.clone())
-        } else {
-            by_key.get(&key(&name)).cloned()
-        };
-        let Some(graph) = graph else {
-            let message = format!("@{kind} '{name}': no graph of that name in this file");
-            error(diags, d.line, d.col, message);
-            return None;
-        };
-        if !candidates.contains(&graph) {
-            error(diags, d.line, d.col, format!("@{kind} '{name}': {shape}"));
-            return None;
-        }
-        Some(graph)
-    };
-    let examples = h.examples.clone();
-    let modifiers = h.modifiers.clone();
-    let example = pick(
-        &mut diags,
-        "example",
-        &examples,
-        "not a geometry graph nobody calls that makes its own geometry (a Geometry output, no Geometry input)",
-    );
-    let modifier = pick(
-        &mut diags,
-        "modifier",
-        &modifiers,
-        "not a modifier: a geometry graph nobody calls whose first input and output are Geometry",
-    );
-
-    if let Some(d) = get("offer") {
-        h.offer_written = true;
-        let mut offered: Vec<&str> = Vec::new();
-        let mut at = d.col;
-        for part in d.value.split(',') {
-            let word = part.trim();
-            let lead = part.chars().count() - part.trim_start().chars().count();
-            let where_ = at + lead;
-            at += part.chars().count() + 1;
-            if !OFFERS.contains(&word) {
-                let message = format!("@offer '{word}': one of {}", OFFERS.join(", "));
-                error(&mut diags, d.line, where_, message);
-            } else if !offered.contains(&word) {
-                offered.push(word);
-            }
-        }
-        let why = |word: &str| -> Option<(bool, &str, &str)> {
-            Some(match word {
-                "library" => (
-                    h.module.is_some(),
-                    "module",
-                    "there is no @module to install the file as",
-                ),
-                "example" => (
-                    example.is_some(),
-                    "example",
-                    "no geometry graph nobody calls makes its own geometry",
-                ),
-                "modifier" => (
-                    modifier.is_some(),
-                    "modifier",
-                    "no geometry graph nobody calls has Geometry as first input and output",
-                ),
-                _ => return None,
-            })
-        };
-        let mut missing = Vec::new();
-        for word in &offered {
-            if let Some((false, source, message)) = why(word) {
-                // A directive already in error says why: once is enough.
-                let line = h.lines.get(source).copied();
-                let told = diags.iter().any(|x| Some(x.line) == line);
-                if !told {
-                    missing.push(format!("@offer {word}: {message}"));
-                }
-            }
-        }
-        for message in missing {
-            error(&mut diags, d.line, d.col, message);
-        }
-        h.offer = OFFERS
-            .iter()
-            .filter(|o| offered.contains(o))
-            .map(|o| o.to_string())
-            .collect();
+/// The checked header of a .bn source. Fails on a malformed directive. `targets` are the names
+/// accepted after `@target`: with none, any name is read.
+pub fn header(source: &str, filename: &str, targets: &[&str]) -> Result<Header, BnError> {
+    let head = read_head(source, filename, targets, &[]);
+    if head.diagnostics.is_empty() {
+        Ok(head.header)
     } else {
-        h.offer = [
-            ("library", h.module.is_some()),
-            ("groups", true),
-            ("example", example.is_some()),
-            ("modifier", modifier.is_some()),
-        ]
-        .iter()
-        .filter(|(_, ok)| *ok)
-        .map(|(o, _)| o.to_string())
-        .collect();
-    }
-    h.example = example.filter(|_| h.offer.iter().any(|o| o == "example"));
-    h.modifier = modifier.filter(|_| h.offer.iter().any(|o| o == "modifier"));
-    if diags.is_empty() {
-        Ok(h)
-    } else {
-        Err(BnError::from_diagnostics(diags))
+        Err(BnError::from_diagnostics(head.diagnostics))
     }
 }

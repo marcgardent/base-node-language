@@ -2,7 +2,7 @@
 
 import pytest
 
-from base_node import BnError, compile_source
+from base_node_blender import BnError, compile_source
 from fake_schema import FakeSchema
 
 # The math nodes a compositor tree shares with a geometry tree, as in Blender

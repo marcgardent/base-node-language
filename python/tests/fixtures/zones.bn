@@ -3,7 +3,7 @@ geometry graph chute(
     gravité: Float = -9.8,
     pause: Bool
 ) -> (Geometry: Geometry, Vitesse: Float) {
-  s = simulate(points: geometry, vitesse: 0.0, cache: Bundle) {
+  s = simulate(points: geometry, vitesse: 0.0, cache: Bundle) -> {
     "Pas" #steelblue {
       v = vitesse + gravité * delta_time
       tombés = SetPosition(points, offset: CombineXYZ(z: v * delta_time))
@@ -16,14 +16,14 @@ geometry graph chute(
 geometry graph semis(
     mesh: Geometry
 ) -> (Geometry: Geometry, Double: Float, Points: Geometry, Rang: Int) {
-  e = foreach(mesh, domain: FACE, selection: Index() < 3, centre: Position()) {
+  e = foreach(mesh, domain: FACE, selection: Index() < 3, centre: Position()) -> {
     return (double: index * 2.0, points: Points(position: centre), rang: index)
   }
   return (Geometry: e, Double: e.double, Points: e.points, Rang: e.rang)
 }
 
 geometry graph compte(pas: Float) -> Float {
-  c = simulate(total: 0.0) {
+  c = simulate(total: 0.0) -> {
     return total + pas
   }
   return c

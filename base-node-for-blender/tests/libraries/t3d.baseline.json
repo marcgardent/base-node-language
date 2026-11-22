@@ -158,25 +158,7 @@
   },
   "Matrix Viewer": {
    "status": "ok",
-   "text": "98e07da7303be749",
-   "warnings": [
-    "value of 'String to Curves.001.Font' (FONT) not exported",
-    "value of 'String to Curves.002.Font' (FONT) not exported",
-    "value of 'String to Curves.003.Font' (FONT) not exported",
-    "value of 'String to Curves.004.Font' (FONT) not exported",
-    "value of 'String to Curves.005.Font' (FONT) not exported",
-    "value of 'String to Curves.006.Font' (FONT) not exported",
-    "value of 'String to Curves.007.Font' (FONT) not exported",
-    "value of 'String to Curves.008.Font' (FONT) not exported",
-    "value of 'String to Curves.009.Font' (FONT) not exported",
-    "value of 'String to Curves.010.Font' (FONT) not exported",
-    "value of 'String to Curves.011.Font' (FONT) not exported",
-    "value of 'String to Curves.012.Font' (FONT) not exported",
-    "value of 'String to Curves.013.Font' (FONT) not exported",
-    "value of 'String to Curves.014.Font' (FONT) not exported",
-    "value of 'String to Curves.015.Font' (FONT) not exported",
-    "value of 'String to Curves.Font' (FONT) not exported"
-   ]
+   "text": "98e07da7303be749"
   },
   "Mesh To Field": {
    "status": "ok",
@@ -432,23 +414,7 @@
     "frame 'Frame.001' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.002' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.003' is split: its nodes depend on nodes of another frame that depend on them",
-    "frame 'Frame.004' is split: its nodes depend on nodes of another frame that depend on them",
-    "value of 'String to Curves.001.Font' (FONT) not exported",
-    "value of 'String to Curves.002.Font' (FONT) not exported",
-    "value of 'String to Curves.003.Font' (FONT) not exported",
-    "value of 'String to Curves.004.Font' (FONT) not exported",
-    "value of 'String to Curves.005.Font' (FONT) not exported",
-    "value of 'String to Curves.006.Font' (FONT) not exported",
-    "value of 'String to Curves.007.Font' (FONT) not exported",
-    "value of 'String to Curves.008.Font' (FONT) not exported",
-    "value of 'String to Curves.009.Font' (FONT) not exported",
-    "value of 'String to Curves.010.Font' (FONT) not exported",
-    "value of 'String to Curves.011.Font' (FONT) not exported",
-    "value of 'String to Curves.012.Font' (FONT) not exported",
-    "value of 'String to Curves.013.Font' (FONT) not exported",
-    "value of 'String to Curves.014.Font' (FONT) not exported",
-    "value of 'String to Curves.015.Font' (FONT) not exported",
-    "value of 'String to Curves.Font' (FONT) not exported"
+    "frame 'Frame.004' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   }
  }

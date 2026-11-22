@@ -26,6 +26,82 @@ _spec.loader.exec_module(base_node)
 
 import bpy
 
+# The Blender that runs, as a catalog names it: targets/blender/<x.y>.json
+BLENDER_VERSION = ".".join(str(v) for v in bpy.app.version[:2])
+
+
+class Skip(Exception):
+    """A test that needs what the Blender that runs has not: left out, with the reason said."""
+
+
+def needs_node(kind: str, *names: str) -> None:
+    """Skip the test when a `kind` tree of the Blender that runs has not one of these nodes."""
+    from base_node.host.schema import BlenderSchema
+
+    with BlenderSchema() as schema:
+        missing = [n for n in names if schema.node(kind, n) is None]
+    if missing:
+        raise Skip(f"no {', '.join(missing)} in a {kind} tree of Blender {bpy.app.version_string}")
+
+
+def promises_this_blender(module: str) -> bool:
+    """Whether the stdlib module's `// @target` holds the Blender that runs: `blender` is every
+    promised version, `blender@5.3` that one alone."""
+    from base_node.blender import header
+    from base_node.blender.targets import blender, load_target
+
+    path = STDLIB_DIR / f"{module}.bn"
+    this = blender().name(BLENDER_VERSION)
+    for name in header(path.read_text(encoding="utf-8"), path.name).target:
+        target = load_target(name)
+        if this in [m.name for m in target.members or [target]]:
+            return True
+    return False
+
+
+def outside_promise(error) -> str | None:
+    """Why a build error is no failure: it comes from a stdlib module that does not promise the
+    Blender that runs. None when every module it names promises it."""
+    import re
+
+    from base_node.blender import header
+
+    for module in dict.fromkeys(re.findall(r"(\w+)\.bn:\d+:\d+", str(error))):
+        path = STDLIB_DIR / f"{module}.bn"
+        if path.exists() and not promises_this_blender(module):
+            promise = ", ".join(header(path.read_text(encoding="utf-8"), path.name).target)
+            return (f"stdlib/{module}.bn promises {promise}, not Blender {bpy.app.version_string}: "
+                    + str(error).split("  ")[-1])
+    return None
+
+
+def scene_compositors(scene) -> list:
+    """The compositing groups of a scene: its stack of effects since Blender 5.3, its one group before."""
+    effects = getattr(scene, "compositor_effects", None)
+    if effects is None:
+        return [scene.compositing_node_group] if scene.compositing_node_group is not None else []
+    return [e.node_group for e in effects]
+
+
+def add_scene_compositor(scene, tree) -> None:
+    effects = getattr(scene, "compositor_effects", None)
+    if effects is None:
+        scene.compositing_node_group = tree
+    else:
+        effects.new(name=tree.name).node_group = tree
+
+
+def remove_scene_compositors(scene, keep=()) -> None:
+    """Take the scene's compositing groups out, those of `keep` aside."""
+    effects = getattr(scene, "compositor_effects", None)
+    if effects is None:
+        if scene.compositing_node_group not in keep:
+            scene.compositing_node_group = None
+        return
+    for e in list(effects):
+        if e.node_group not in keep:
+            effects.remove(e)
+
 
 def test_import_and_registration():
     """1. Verify import and registration of base_node."""
@@ -42,11 +118,12 @@ def test_import_and_registration():
 
 
 def test_stdlib_keeps_its_targets():
-    """2. Each stdlib module builds in Blender and fits the targets its `// @target` promises."""
+    """2. Each stdlib module fits the targets its `// @target` promises, and builds in the Blender
+    that runs when they hold it: a module that promises `blender@5.3` is not built by Blender 5.2."""
     print("-> Test 2: Verifying the targets of the stdlib...")
     from base_node.host.schema import BlenderSchema
-    from base_node.lang import compile_source, header, parse
-    from base_node.lang.targets import check_targets
+    from base_node.blender import compile_source, header, parse
+    from base_node.blender.targets import check_targets
 
     def loader(name: str, _caller: str):
         p = STDLIB_DIR / f"{name}.bn"
@@ -57,12 +134,15 @@ def test_stdlib_keeps_its_targets():
     with BlenderSchema() as schema:
         for filepath in sorted(STDLIB_DIR.glob("*.bn")):
             source = filepath.read_text(encoding="utf-8")
-            graphs = compile_source(source, schema, str(filepath), load=loader)
-            assert len(graphs) > 0, f"No graph compiled for {filepath.name}"
             promised = header(source, filepath.name).target
             assert promised, f"{filepath.name} promises no target"
             issues = check_targets(parse(source, filepath.name), promised)
             assert issues == [], f"{filepath.name} outside {promised}:\n" + "\n".join(map(str, issues))
+            if not promises_this_blender(filepath.stem):
+                print(f"   - {filepath.name} fits {', '.join(promised)}: not built by Blender {bpy.app.version_string}")
+                continue
+            graphs = compile_source(source, schema, str(filepath), load=loader)
+            assert len(graphs) > 0, f"No graph compiled for {filepath.name}"
             print(f"   ✓ {filepath.name} ({len(graphs)} graphs) fits {', '.join(promised)}")
 
 
@@ -104,6 +184,29 @@ geometry graph wave(geometry: Geometry, frequency: Float = 2.0, amplitude: Float
     re_exported, _ = export_tree(rebuilt_tree)
     assert re_exported == exported, "Tree -> Text round trip is not stable"
     print("   ✓ Tree -> Text -> Tree round-trip verified")
+
+
+def test_datablock_inputs():
+    """A group takes every datablock Blender lets it: a font, a sound… and reads back the same."""
+    print("-> Test: datablock inputs (Font, Sound)...")
+    from base_node.host import build_source, export_tree
+
+    src = '''
+geometry graph datablocks(geometry: Geometry, font: Font = "Bfont Regular", sound: Sound, paint: Material) -> Geometry {
+  return StringToCurves(string: "Hi", font: font).curve_instances |> SetMaterial(material: paint)
+}
+'''
+    tree = build_source(src, filename="datablocks.bn")[0]
+    kinds = {i.name: i.socket_type for i in tree.interface.items_tree if i.item_type == "SOCKET" and i.in_out == "INPUT"}
+    assert kinds == {"geometry": "NodeSocketGeometry", "font": "NodeSocketFont", "sound": "NodeSocketSound",
+                     "paint": "NodeSocketMaterial"}, kinds
+    font = next(i for i in tree.interface.items_tree if i.name == "font")
+    assert font.default_value and font.default_value.name == "Bfont Regular", font.default_value
+    exported, _ = export_tree(tree)
+    assert 'font: Font = "Bfont Regular"' in exported and "sound: Sound" in exported, exported
+    again, _ = export_tree(build_source(exported, filename="datablocks.bn")[0])
+    assert again == exported, f"not stable:\n{exported}\n---\n{again}"
+    print("   ✓ Font and Sound inputs round trip")
 
 
 def test_named_constants():
@@ -163,7 +266,7 @@ def test_comments():
     from base_node.lang import format_source
 
     src = """// Above the target line
-// @target blender-geometry
+// @target blender
 
 // Before the uses
 use math (bump)
@@ -189,7 +292,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
   "Note" {
     // a note
   }
-  r = repeat(3, g: geometry) {
+  r = repeat(3, g: geometry) -> {
     // in the zone
     g2 = SetPosition(g, offset: CombineXYZ(z: h + k))
     // the zone's return
@@ -204,7 +307,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
     tree = build_source(src, filename="relief.bn")[-1]
     notes = {n.name: n[KEY].to_dict() for n in tree.nodes if KEY in n}
     assert tree[KEY].to_dict() == {
-        "head": "// Above the target line", "target": "// @target blender-geometry", "file": "// Before the uses",
+        "head": "// Above the target line", "target": "// @target blender", "file": "// Before the uses",
         "before": "// The terrain",
         "after": "// its header", "end": "// end of the graph", "below": "// below the graph"}, tree[KEY].to_dict()
     assert notes["h"] == {"before": "// the height\n// on two lines", "after": "// after the code"}, notes
@@ -224,7 +327,7 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4) -> Geometry {  //
     for comment in src.split("\n"):
         if "//" in comment:
             assert comment.strip()[comment.strip().index("//"):] in exported, f"'{comment}' lost:\n{exported}"
-    assert lines[0] == "// Above the target line" and lines[2] == "// @target blender-geometry", exported
+    assert lines[0] == "// Above the target line" and lines[2] == "// @target blender", exported
     assert any(line.startswith("h = bump(") and line.endswith(" * height  // after the code") for line in lines), \
         exported
     assert "}  // after its brace" in lines and "return g2  // its end" in lines, exported
@@ -285,8 +388,8 @@ geometry graph spiral(r: Float = 1.0) -> Geometry {
 """
     exported, _ = export_tree(build_source(src, filename="spiral.bn")[0])
     assert "@target" not in exported and "@profile" not in exported, exported
-    exported, _ = export_tree(build_source("// @target blender-gp\n" + src, filename="spiral2.bn")[0])
-    assert exported.startswith("// @target blender-gp\n\n"), exported
+    exported, _ = export_tree(build_source("// @target blender@5.3 gltf\n" + src, filename="spiral2.bn")[0])
+    assert exported.startswith("// @target blender@5.3 gltf\n\n"), exported
 
     toks = tokenize("use curves2d as c2\n", strict=False)
     classes = dict((t.text, c) for t, c in classify(toks))
@@ -477,6 +580,56 @@ def test_live_diagnostics():
     print("   ✓ Live diagnostics verified")
 
 
+def test_edition_and_deprecated():
+    """A text of an unknown edition is built by nothing; a call of a deprecated graph is a warning
+    the sidebar lists, the tree being built all the same, and the mark comes back from the tree."""
+    print("-> Test: Unknown edition, deprecated graphs...")
+    from base_node.host import build_source, export_tree
+    from base_node.ui import actions
+
+    later = "// @edition 2028\ngeometry graph Later(geometry: Geometry) -> Geometry {\n  return geometry\n}\n"
+    text = bpy.data.texts.new("later.bn")
+    text.from_string(later)
+    refused = "@edition '2028': not an edition this reader knows (2026)"
+    assert not actions.check_text(text)
+    assert [(d.line, d.col, d.message) for d in actions.DIAGNOSTICS[text.name]] == [(1, 13, refused)]
+    for act in (actions.build_text, actions.format_text):
+        try:
+            act(text)
+            raise AssertionError("a text of an unknown edition must not be read")
+        except Exception as e:
+            assert type(e).__name__ == "BnError" and refused in str(e), e
+    assert "Later" not in bpy.data.node_groups and text.as_string() == later
+
+    old = ('geometry(deprecated: "use DepGrid") graph DepPlane(size: Float) -> Geometry {\n'
+           "  return Grid(size, size, 2, 2)\n}\n\n"
+           "geometry(deprecated: true) graph DepHalf(x: Float) -> Float {\n  return x / 2.0\n}\n\n"
+           "geometry graph DepField() -> Geometry {\n  return DepPlane(DepHalf(2.0))\n}\n")
+    text = bpy.data.texts.new("deprecated.bn")
+    text.from_string(old)
+    assert actions.check_text(text), [str(d) for d in actions.DIAGNOSTICS[text.name]]
+    assert text.name not in actions.DIAGNOSTICS
+    said = ["deprecated.bn:10:10  warning: 'DepPlane' is deprecated: use DepGrid",
+            "deprecated.bn:10:19  warning: 'DepHalf' is deprecated"]
+    assert [str(w) for w in actions.LINT[text.name]] == said
+    actions.LINT.pop(text.name)
+    trees = actions.build_text(text)
+    assert [t.name for t in trees] == ["DepPlane", "DepHalf", "DepField"], "built all the same"
+    assert [str(w) for w in actions.LINT[text.name]] == said and text.name not in actions.DIAGNOSTICS
+    # Tree → Text writes the mark back, and a text without it takes it off the group
+    assert export_tree(trees[0])[0].startswith('geometry(deprecated: "use DepGrid") graph DepPlane(')
+    assert export_tree(trees[1])[0].startswith("geometry(deprecated: true) graph DepHalf(")
+    whole = export_tree(trees[2])[0]
+    assert whole.count("(deprecated: ") == 2 and "geometry graph DepField(" in whole, whole
+    text.from_string(old.replace('(deprecated: "use DepGrid")', ""))
+    actions.build_text(text)
+    assert export_tree(trees[0])[0].startswith("geometry graph DepPlane(")
+    assert [str(w) for w in actions.LINT[text.name]] == said[1:]
+    # Fixed: no warning stays
+    text.from_string(old.replace("DepPlane(DepHalf(2.0))", "Grid(1.0, 1.0, 2, 2)"))
+    assert actions.check_text(text) and text.name not in actions.LINT
+
+
 def test_tree_without_output():
     """A tree with no Group Output node reads as a graph that returns nothing, and builds again."""
     print("-> Test: Tree without output...")
@@ -628,7 +781,7 @@ def test_shader_and_compositor():
     # The compositor group is the scene's compositor, once
     scene = bpy.context.scene
     build_source(LOOK, "t.bn")
-    assert [e.node_group for e in scene.compositor_effects] == [bpy.data.node_groups["look"]]
+    assert scene_compositors(scene) == [bpy.data.node_groups["look"]]
 
     # Named outputs go to the Material Output's sockets of the same names; a called graph is no material
     build_source("""shader graph bumpy_part() -> Float {
@@ -680,10 +833,12 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
 
     assert error('shader graph w() -> Shader {\n  return DiffuseBSDF(color: ImageTexture(image: "nope").color)\n}') \
         == "t.bn:2:29  image: Image 'nope' not found in file"
+    # The interface of a shader group takes a String since Blender 5.3
+    string = "String, " if bpy.app.version >= (5, 3) else ""
     assert error("shader graph g(g: Geometry) -> Shader {\n  return DiffuseBSDF()\n}") \
         == "t.bn:1:1  'g': a shader tree has no Geometry socket; types: Float, Int, Bool, Vector, Color, " \
-           "String, Menu, Shader, Bundle, Closure"
-    assert error("compositor graph c(x: Float) -> Float {\n  s = simulate(v: x) {\n    return (v: v)\n  }\n"
+           f"{string}Menu, Shader, Bundle, Closure"
+    assert error("compositor graph c(x: Float) -> Float {\n  s = simulate(v: x) -> {\n    return (v: v)\n  }\n"
                  "  return s.v\n}") == "t.bn:2:7  simulate does not exist in a compositor tree"
 
     # The Node Editor's text view takes shader and compositor groups, and a material's own tree
@@ -693,8 +848,7 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
     assert shown(world.node_tree) is None, "a world's tree is no material"
     bpy.data.worlds.remove(world)
 
-    for e in list(scene.compositor_effects):
-        scene.compositor_effects.remove(e)
+    remove_scene_compositors(scene)
     for name in ("rust", "bumpy", "mine"):
         bpy.data.materials.remove(bpy.data.materials[name])
     for name in ("rust", "look", "bumpy", "bumpy_part", "mine", "wall"):
@@ -710,7 +864,7 @@ def shown(tree):
     return edit_tree(SimpleNamespace(space_data=SimpleNamespace(type="NODE_EDITOR", edit_tree=tree)))
 
 
-KEPT = """// @target blender-geometry
+KEPT = """// @target blender
 
 geometry graph kept(geometry: Geometry, source: Geometry) -> Geometry {
   return geometry
@@ -739,6 +893,7 @@ def test_module_graphs_in_other_trees():
     """A module's geometry graph called from a compositor graph is built again in a compositor group,
     and read back as the use and the call it was."""
     print("-> Test: Module graphs in other kinds of trees...")
+    needs_node("compositor", "Compare")  # math's gain compares, built here in a compositor tree
     from base_node.host import build_source, export_tree, modules
     from base_node.lang import BnError
 
@@ -792,7 +947,7 @@ TEMPLATES = """geometry graph attribute_or<T: Float | Vector | Color>(name: Stri
 }
 """
 
-FALLBACKS = """// @target blender-geometry
+FALLBACKS = """// @target blender
 
 use attrs (attribute_or)
 
@@ -860,7 +1015,7 @@ class CompositorBench:
         self.objects = [self.camera]
         self.tree = bpy.data.node_groups.new(f".base_node {name}", "CompositorNodeTree")
         self.tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
-        scene.compositor_effects.new(name=self.tree.name).node_group = self.tree
+        add_scene_compositor(scene, self.tree)
         self.name = name
         self.images: dict = {}
         self.path = os.path.join(tempfile.mkdtemp(prefix=f"base-node-{name}-"), f"{name}.exr")
@@ -1778,8 +1933,7 @@ def test_ramps_and_curves():
 
     bpy.data.node_groups.remove(tree)
     bpy.data.node_groups.remove(hue)
-    for e in list(bpy.context.scene.compositor_effects):
-        bpy.context.scene.compositor_effects.remove(e)
+    remove_scene_compositors(bpy.context.scene)
     print("   ✓ Ramps and curves verified")
 
 
@@ -1916,7 +2070,7 @@ def test_import_files():
     print("   ✓ Import verified")
 
 
-LIFTED = """// @target blender-geometry
+LIFTED = """// @target blender
 
 use math (sine01)
 
@@ -2034,7 +2188,7 @@ def test_copy_paste():
 
     # A compositor tree
     scene = bpy.context.scene
-    effects = [e.node_group for e in scene.compositor_effects]
+    effects = scene_compositors(scene)
     build_source(LOOK, "look.bn")
     copied = copy_operator(bpy.data.node_groups["look"])[2]
     assert copied == LOOK, copied
@@ -2044,9 +2198,7 @@ def test_copy_paste():
     look = bpy.data.node_groups["look"]
     assert space.node_tree == look and space.tree_type == "CompositorNodeTree"
     assert export_tree(look)[0] == LOOK
-    for e in list(scene.compositor_effects):
-        if e.node_group not in effects:
-            scene.compositor_effects.remove(e)
+    remove_scene_compositors(scene, keep=effects)
     forget({"look"})
 
     # The selected nodes alone, as a graph of their own; the tree and the file are left as they were
@@ -2175,7 +2327,7 @@ geometry graph framed(geometry: Geometry) -> Geometry {
   "F" {
     up = CombineXYZ(z: 0.1) @ hide
   }
-  s = simulate(mesh: geometry) {
+  s = simulate(mesh: geometry) -> {
     "F" .. {
       moved = SetPosition(mesh, offset: up) @ hide
     }
@@ -2192,7 +2344,7 @@ geometry graph framed(geometry: Geometry) -> Geometry {
     # A state Blender calls "Delta Time", beside the zone's own elapsed time
     timed, = build_source("""
 geometry graph timed(geometry: Geometry) -> (Geometry: Geometry, Time: Float) {
-  s = simulate(mesh: geometry, "Delta Time" as delta_time_2: 0.0) {
+  s = simulate(mesh: geometry, "Delta Time" as delta_time_2: 0.0) -> {
     return (mesh: mesh, delta_time_2: delta_time_2 + delta_time)
   }
   return (Geometry: s.mesh, Time: s.delta_time_2)
@@ -2207,7 +2359,7 @@ geometry graph timed(geometry: Geometry) -> (Geometry: Geometry, Time: Float) {
     # A generation item of a foreach named like its main geometry
     each, = build_source("""
 geometry graph each(geometry: Geometry) -> (Geometry: Geometry, Points: Geometry) {
-  e = foreach(geometry, domain: FACE) {
+  e = foreach(geometry, domain: FACE) -> {
     return (points: Points(1))
   }
   return (Geometry: e, Points: e.points)
@@ -2222,10 +2374,10 @@ geometry graph each(geometry: Geometry) -> (Geometry: Geometry, Points: Geometry
     # `outer * 2.0` sits in the outer zone, but is written in the inner one, where it is used
     nested, = build_source("""
 geometry graph nested(geometry: Geometry) -> Geometry {
-  r = repeat(3, mesh: geometry) {
+  r = repeat(3, mesh: geometry) -> {
     outer = iteration
     first = mesh
-    r2 = repeat(2, mesh: mesh) {
+    r2 = repeat(2, mesh: mesh) -> {
       return SetPosition(mesh, offset: CombineXYZ(x: outer * 2.0, z: outer + iteration * 10)) + first
     }
     return r2
@@ -2442,7 +2594,14 @@ def test_ternary():
     image. Each reads back as written; the nodes that are not one stay calls."""
     print("-> Test: Ternary...")
     from base_node.host import build_source, export_tree
+    from base_node.host.schema import BlenderSchema
     from base_node.lang.errors import BnError
+
+    # Blender 5.2 has no Switch in a shader tree and no Compare in the compositor, where a comparison
+    # is Math nodes (spec/targets.md, what 5.3 has that 5.2 has not)
+    with BlenderSchema() as schema:
+        shader_switch = schema.node("shader", "Switch") is not None
+        compositor_compare = schema.node("compositor", "Compare") is not None
 
     def read(source, check=None):
         tree = build_source(source, filename="g.bn")[-1]
@@ -2544,8 +2703,9 @@ def test_ternary():
     assert "?" not in shader("  return Mix(factor: a > b, a: c, b: (1.0, 0.0, 0.0, 1.0), blend_type: MULTIPLY, "
                              "data_type: RGBA).x")
     # A Switch of a shader tree stays a Switch
-    assert shader("  return Switch(switch: on, false_: a, true_: b)").startswith(
-        "  return Switch(switch: on, false_: a, true_: b")
+    if shader_switch:
+        assert shader("  return Switch(switch: on, false_: a, true_: b)").startswith(
+            "  return Switch(switch: on, false_: a, true_: b")
     fails("shader graph g(a: Float, b: Float) -> Float {\n  return a ? 1.0 : b\n}\n",
           "the condition of '? :' is a Float: in a shader tree it is built with Mix, which blends by any number")
     fails('shader graph g(on: Bool) -> Float {\n  x = on ? "a" : "b"\n  return 1.0\n}\n',
@@ -2557,7 +2717,12 @@ def test_ternary():
 
     def composite(tree):
         assert sorted(n.data_type for n in tree.nodes if n.bl_idname == "ShaderNodeMix") == ["FLOAT", "RGBA"]
-        assert len([n for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"]) == 2
+        compares = [n for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"]
+        maths = [n.operation for n in tree.nodes if n.bl_idname == "ShaderNodeMath"]
+        if compositor_compare:
+            assert len(compares) == 2 and maths == [], (compares, maths)
+        else:
+            assert compares == [] and sorted(maths) == ["GREATER_THAN", "GREATER_THAN", "SUBTRACT"], maths
         assert not [n for n in tree.nodes if n.bl_idname in ("GeometryNodeSwitch", "CompositorNodeSwitch")]
 
     assert read(comp, composite) == comp, read(comp)
@@ -2658,7 +2823,7 @@ def test_tuples_choose_the_type():
     print("-> Test: Tuples choose the type...")
     from base_node.host import build_source, export_tree
     from base_node.host.schema import BlenderSchema
-    from base_node.lang import compile_source
+    from base_node.blender import compile_source
     from base_node.lang.errors import BnError
 
     tree = build_source(TUPLE_TYPES, filename="tuple_types.bn")[-1]
@@ -2762,6 +2927,7 @@ def test_switch_takes_the_type_of_its_values():
     first: a Float switch in a compositor or a shader tree, where a new Switch is a Color one. Read
     back, input_type is written where it is not a new Switch's, and where the values tell another."""
     print("-> Test: Switch takes the type of its values...")
+    needs_node("shader", "Switch")
     from base_node.host import build_source, export_tree
 
     trees = build_source(SWITCH_TYPES, filename="switch_types.bn")
@@ -3157,7 +3323,7 @@ def test_real_world_assets():
     """8. Third-party assets (tests/fixtures, CC0) read as text, built back, evaluate the same."""
     print("-> Test 8: Real-world assets...")
     from base_node.host import build_source, export_tree
-    from base_node.lang.schema import key
+    from base_node.blender.schema import key
 
     fixture = EXT_DIR / "tests" / "fixtures" / "everyday_geometry_nodes.blend"
     with bpy.data.libraries.load(str(fixture), link=False) as (src, dst):
@@ -3397,11 +3563,51 @@ def test_drop_bn():
 
 
 def test_gltf_export():
-    """The gltf target against Blender's glTF exporter (test_gltf_export.py)."""
+    """The gltf variant of the blender target against Blender's glTF exporter (test_gltf_export.py)."""
     spec = importlib.util.spec_from_file_location("test_gltf_export", EXT_DIR / "tests" / "test_gltf_export.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.test_gltf_export()
+
+
+def test_engine_variants():
+    """The variants eevee and cycles of the blender target against what this Blender says: its Add
+    menu offers a shader node for one engine or not for EEVEE, and a tooltip says "only supported in"."""
+    print("-> Test: the eevee and cycles variants against Blender's Add menu and tooltips...")
+    import json
+    import re
+
+    version = ".".join(str(v) for v in bpy.app.version[:2])
+    without = {name: json.loads((LIB_ROOT / "targets" / "blender" / f"{name}.json").read_text(encoding="utf-8"))["without"]
+               for name in ("eevee", "cycles")}
+    backend = json.loads((LIB_ROOT / "targets" / "backends" / f"blender-{version}.json").read_text(encoding="utf-8"))
+    names = {n["bl_idname"]: n["name"] for n in backend["kinds"]["shader"]}
+    menu = Path(bpy.utils.system_resource('SCRIPTS')) / "startup" / "bl_ui" / "node_add_menu_shader.py"
+    source = menu.read_text(encoding="utf-8")
+    # node_operator(layout, "ShaderNodeX", poll=…) on one line or three, and the nodes under `if cycles_…:`
+    polls = dict(re.findall(r'"(ShaderNode\w+)",?\s*poll=([^\n]+)', source))
+    said = {"eevee": set(), "cycles": set()}
+    for idname, poll in polls.items():
+        if "not eevee_shader_nodes_poll" in poll or "object_not_eevee_shader_nodes_poll" in poll:
+            said["eevee"].add(names[idname])
+        elif "object_eevee_shader_nodes_poll" in poll:
+            said["cycles"].add(names[idname])
+    for block in re.findall(r"if cycles_shader_nodes_poll\(context\):\n((?:\s+.*\n)+?)\n", source):
+        said["eevee"].update(names[i] for i in re.findall(r'"(ShaderNode\w+)"', block))
+    assert said["eevee"] and said["cycles"], "the Add menu of this Blender names no engine: " + str(menu)
+    for n in backend["kinds"]["shader"]:
+        tooltip = n.get("description") or ""
+        if "only supported in Cycles" in tooltip:
+            said["eevee"].add(n["name"])
+        if "only supported in EEVEE" in tooltip:
+            said["cycles"].add(n["name"])
+    # One list for every version: a node the list names that this Blender has not (the EEVEE light
+    # nodes, new in 5.3) is out of this version's catalog already
+    has = set(names.values())
+    for name in ("eevee", "cycles"):
+        listed = set(without[name]) & has
+        assert listed == said[name], (name, sorted(listed ^ said[name]))
+    print("   ✓ Engine variants verified")
 
 
 def pack_tests():
@@ -3427,12 +3633,14 @@ def main():
         test_import_and_registration,
         test_stdlib_keeps_its_targets,
         test_build_and_round_trip,
+        test_datablock_inputs,
         test_named_constants,
         test_comments,
         test_targets_and_linter,
         test_pipe_symbol,
         test_live_apply,
         test_live_diagnostics,
+        test_edition_and_deprecated,
         test_tree_without_output,
         test_multi_input_order,
         test_planar2d_shape_builder_pick,
@@ -3471,21 +3679,39 @@ def main():
         test_idioms_build,
         test_real_world_assets,
         test_gltf_export,
+        test_engine_variants,
     ]
     tests += pack_tests()
-    failed = 0
+    from base_node.lang import BnError
+
+    failed, skipped = 0, []
     for fn in tests:
         try:
             fn()
+        except Skip as e:
+            skipped.append((fn.__name__, str(e)))
+        except BnError as e:
+            reason = outside_promise(e)
+            if reason is None:
+                failed += 1
+                traceback.print_exc()
+            else:
+                skipped.append((fn.__name__, reason))
         except Exception:
             failed += 1
             traceback.print_exc()
 
+    ran = len(tests) - len(skipped)
+    if skipped:
+        print(f"\n{len(skipped)} test(s) skipped on Blender {bpy.app.version_string}:")
+        for name, reason in skipped:
+            print(f"   - {name}: {reason}")
     if failed:
         print(f"\n❌ FAILED: {failed} test(s) failed")
         sys.exit(1)
     else:
-        print(f"\n✅ SUCCESS: 100% of tests ({len(tests)}/{len(tests)}) passed successfully!")
+        print(f"\n✅ SUCCESS: 100% of tests ({ran}/{ran}) passed successfully!"
+              + (f" {len(skipped)} skipped" if skipped else ""))
         sys.exit(0)
 
 

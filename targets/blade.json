@@ -66,7 +66,7 @@
     "WhiteBalance"
   ],
   "translators": {
-    "blender-compositor": {
+    "blender": {
       "kinds": {
         "compositor": "pixel"
       },

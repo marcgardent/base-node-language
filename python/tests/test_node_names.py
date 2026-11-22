@@ -2,8 +2,8 @@
 
 import pytest
 
-from base_node import BnError, compile_source
-from base_node.schema import loose, node_name
+from base_node_blender import BnError, compile_source
+from base_node_blender.schema import loose, node_name
 
 
 def errors(source, schema):

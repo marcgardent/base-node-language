@@ -1,8 +1,8 @@
-"""Simulation and For Each zones: `s = simulate(state: start, …) { … }`, `e = foreach(geometry, …) { … }`."""
+"""Simulation and For Each zones: `s = simulate(state: start, …) -> { … }`, `e = foreach(geometry, …) -> { … }`."""
 
 import pytest
 
-from base_node import BnError, compile_source, ir, parse
+from base_node_blender import BnError, compile_source, ir, parse
 from base_node.format import format_source
 from base_node.printer import to_source
 
@@ -39,7 +39,7 @@ def test_simulate_and_foreach_stay_names_without_a_block():
 
 
 def test_states_and_skip_of_a_simulation(schema):
-    g = compile_one(graph("  s = simulate(mesh: geometry, v: 0.0) {\n"
+    g = compile_one(graph("  s = simulate(mesh: geometry, v: 0.0) -> {\n"
                           "    return (mesh: mesh |> SetPosition(offset: CombineXYZ(z: v * delta_time)), "
                           "skip: t > 1.0)\n  }\n  return s.mesh"), schema)
     zin, zout = zone(g, ir.SIMULATION_INPUT)
@@ -54,7 +54,7 @@ def test_states_and_skip_of_a_simulation(schema):
 
 
 def test_a_type_alone_is_an_item_with_no_value(schema):
-    g = compile_one(graph("  s = simulate(mesh: Geometry, cache: Bundle) {\n    return ()\n  }\n  return s.mesh"),
+    g = compile_one(graph("  s = simulate(mesh: Geometry, cache: Bundle) -> {\n    return ()\n  }\n  return s.mesh"),
                     schema)
     zin, zout = zone(g, ir.SIMULATION_INPUT)
     assert zout.items == [("mesh", "Geometry"), ("cache", "Bundle")]
@@ -62,7 +62,7 @@ def test_a_type_alone_is_an_item_with_no_value(schema):
 
 
 def test_foreach_items_main_then_generated(schema):
-    g = compile_one(graph("  e = foreach(geometry, domain: FACE, selection: false, h: Position().z) {\n"
+    g = compile_one(graph("  e = foreach(geometry, domain: FACE, selection: false, h: Position().z) -> {\n"
                           "    return (aire: h * 2.0, rang: index, mesh: element, couleur: h)\n  }\n"
                           "  return e.mesh", "Geometry"), schema)
     zin, zout = zone(g, ir.FOREACH_INPUT)
@@ -76,16 +76,16 @@ def test_foreach_items_main_then_generated(schema):
 
 
 def test_the_zone_alone_is_the_geometry_it_went_through(schema):
-    g = compile_one(graph("  e = foreach(geometry) {\n    return (geometry: element)\n  }\n  return e"), schema)
+    g = compile_one(graph("  e = foreach(geometry) -> {\n    return (geometry: element)\n  }\n  return e"), schema)
     _zin, zout = zone(g, ir.FOREACH_INPUT)
     assert g.node(ir.GROUP_OUTPUT).links == [("Geometry", ir.Link(zout.id, ir.FOREACH_GEOMETRY))]
-    g = compile_one(graph("  e = foreach(geometry) {\n    return (geometry: element)\n  }\n  return e.geometry"), schema)
+    g = compile_one(graph("  e = foreach(geometry) -> {\n    return (geometry: element)\n  }\n  return e.geometry"), schema)
     assert g.node(ir.GROUP_OUTPUT).links == [("Geometry", ir.Link(zout.id, "geometry"))]
 
 
 def test_a_state_named_like_the_zone_goes_by_a_key_of_its_own(schema):
     # A Simulation zone whose state is called "Delta Time", as Blender lets one name it
-    src = graph('  s = simulate(mesh: geometry, "Delta Time" as delta_time_2: 0.0) {\n'
+    src = graph('  s = simulate(mesh: geometry, "Delta Time" as delta_time_2: 0.0) -> {\n'
                 "    return (mesh: mesh, delta_time_2: delta_time_2 + delta_time)\n  }\n"
                 "  return s.mesh\n    |> SetPosition(offset: CombineXYZ(z: s.delta_time_2))")
     assert to_source(parse(src)) == src
@@ -100,33 +100,33 @@ def test_a_state_named_like_the_zone_goes_by_a_key_of_its_own(schema):
 
 
 def test_a_state_key_is_checked_like_a_name(schema):
-    src = graph("  s = simulate(v as delta_time: 0.0) {\n    return ()\n  }\n  return geometry")
+    src = graph("  s = simulate(v as delta_time: 0.0) -> {\n    return ()\n  }\n  return geometry")
     assert errors(src, schema) == ["t.bn:2:16  'delta_time' is the elapsed time since previous step: "
                                    "choose another state name"]
-    src = graph("  r = repeat(2, a: 0.0, b as a: 1.0) {\n    return (a: a)\n  }\n  return geometry")
+    src = graph("  r = repeat(2, a: 0.0, b as a: 1.0) -> {\n    return (a: a)\n  }\n  return geometry")
     assert errors(src, schema) == ["t.bn:2:25  state 'b' declared twice"]
 
 
 @pytest.mark.parametrize("body, message", [
-    ("  s = simulate(v: 0.0) {\n    x = v\n  }\n  return geometry",
+    ("  s = simulate(v: 0.0) -> {\n    x = v\n  }\n  return geometry",
      "t.bn:2:7  missing return in simulate of 's'"),
-    ("  s = simulate(delta_time: 0.0) {\n    return ()\n  }\n  return geometry",
+    ("  s = simulate(delta_time: 0.0) -> {\n    return ()\n  }\n  return geometry",
      "t.bn:2:16  'delta_time' is the elapsed time since previous step: choose another state name"),
-    ("  s = simulate(v: 0.0, u: 1.0) {\n    return v\n  }\n  return geometry",
+    ("  s = simulate(v: 0.0, u: 1.0) -> {\n    return v\n  }\n  return geometry",
      "t.bn:3:5  this simulate has multiple states: return (v: …, u: …)"),
-    ("  s = simulate(v: 0.0) {\n    return (w: v)\n  }\n  return geometry",
+    ("  s = simulate(v: 0.0) -> {\n    return (w: v)\n  }\n  return geometry",
      "t.bn:3:13  'w' is not a simulate state; states: v"),
-    ("  s = simulate(m: Shader) {\n    return ()\n  }\n  return geometry",
+    ("  s = simulate(m: Shader) -> {\n    return ()\n  }\n  return geometry",
      "t.bn:2:16  a simulate state cannot have type Shader"),
-    ("  e = foreach(geometry, domain: FACES) {\n    return ()\n  }\n  return e",
+    ("  e = foreach(geometry, domain: FACES) -> {\n    return ()\n  }\n  return e",
      "t.bn:2:25  domain expects one of POINT, EDGE, FACE, CORNER, CURVE, INSTANCE, LAYER"),
-    ("  e = foreach(geometry, index: 1.0) {\n    return ()\n  }\n  return e",
+    ("  e = foreach(geometry, index: 1.0) -> {\n    return ()\n  }\n  return e",
      "t.bn:2:25  'index' is the element's index: choose another item name"),
-    ("  e = foreach(geometry) {\n    return element\n  }\n  return e",
+    ("  e = foreach(geometry) -> {\n    return element\n  }\n  return e",
      "t.bn:3:5  foreach returns items by name: return (item: v, mesh: g, …)"),
-    ("  e = foreach(geometry) {\n    return (nom: \"a\")\n  }\n  return e",
+    ("  e = foreach(geometry) -> {\n    return (nom: \"a\")\n  }\n  return e",
      "t.bn:3:13  a foreach item cannot have type String"),
-    ("  e = foreach(geometry) {\n    d = index\n    return ()\n  }\n  return d",
+    ("  e = foreach(geometry) -> {\n    d = index\n    return ()\n  }\n  return d",
      "t.bn:6:10  unknown name 'd'"),
 ])
 def test_wrong_zones_are_reported(schema, body, message):
@@ -134,13 +134,26 @@ def test_wrong_zones_are_reported(schema, body, message):
 
 
 @pytest.mark.parametrize("body, message", [
-    ("  s = simulate(geometry) {\n    return ()\n  }\n  return s",
-     "t.bn:2:7  simulate expects named states: simulate(state: start, …)"),
-    ("  e = foreach(domain: FACE) {\n    return ()\n  }\n  return e",
+    ("  s = simulate(geometry) -> {\n    return ()\n  }\n  return s",
+     "t.bn:2:7  simulate expects named states: simulate(state: start, …) -> { … }"),
+    ("  e = foreach(domain: FACE) -> {\n    return ()\n  }\n  return e",
      "t.bn:2:7  foreach expects geometry first, then named items: "
-     "foreach(geometry, domain: FACE, item: field, …)"),
+     "foreach(geometry, domain: FACE, item: field, …) -> { … }"),
+    ("  e = foreach(geometry, a as b: 0.0) -> {\n    return ()\n  }\n  return e",
+     "t.bn:2:25  'a as b': 'as' only aliases an item of an item node"),
 ])
-def test_wrong_zone_syntax_is_reported(body, message):
-    with pytest.raises(BnError) as err:
-        parse(graph(body), "t.bn")
-    assert [str(d) for d in err.value.diagnostics] == [message]
+def test_the_shape_of_a_zone_is_the_checker_s(schema, body, message):
+    assert type(parse(graph(body), "t.bn").graphs[0].body[0].value).__name__ == "BodyCall"
+    assert errors(graph(body), schema) == [message]
+
+
+@pytest.mark.parametrize("body, message", [
+    ("  s = simulate(mesh: geometry) {\n    return (mesh: mesh)\n  }\n  return s",
+     "t.bn:2:7  simulate takes a body after '->': s = simulate(state: start) -> { … }"),
+    ("  e = foreach(geometry, domain: FACE) {\n    return (mesh: element)\n  }\n  return e",
+     "t.bn:2:7  foreach takes a body after '->': f = foreach(geometry, domain: FACE, item: field) -> { … }"),
+    ("  f = closure(x: Float) -> (y: Float) {\n    return (y: x * 2.0)\n  }\n  return geometry",
+     "t.bn:2:7  closure(…) is now written as a graph with no name: f = graph(x: Float) -> Float { … }"),
+])
+def test_the_spellings_of_before_say_what_to_write(schema, body, message):
+    assert errors(graph(body), schema)[0] == message

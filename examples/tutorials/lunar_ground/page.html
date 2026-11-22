@@ -129,7 +129,7 @@
     <h2 id="step-4"><span class="n">4.</span> Fade out before the border</h2>
     <p>
       A second Voronoi, with the same cells, gives the distance to the nearest border instead (<code>feature: DISTANCE_TO_EDGE</code>): 0 on a border, more inside.
-      <code>Clamp(edge.distance * 6.0)</code> rises from 0 on the border to 1 one sixth of a cell inside. Multiplied into the height, it brings every crater down to the plain at its border.
+      <code>Clamp(value: edge.distance * 6.0)</code> rises from 0 on the border to 1 one sixth of a cell inside. Multiplied into the height, it brings every crater down to the plain at its border.
       Both sides of a border are then at height 0: nothing left to jump.
     </p>
     {{code step4_fade.bn crater_field}}

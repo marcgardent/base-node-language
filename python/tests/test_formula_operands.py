@@ -3,7 +3,7 @@ that may not take a function's name."""
 
 import pytest
 
-from base_node import BnError, compile_source
+from base_node_blender import BnError, compile_source
 
 
 def compile_one(source, schema):

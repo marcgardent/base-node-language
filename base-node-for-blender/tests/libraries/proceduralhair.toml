@@ -10,3 +10,8 @@ version = "Blender 5.3.0"
 bundled = "assets/nodes/procedural_hair_node_assets.blend"
 sha256 = "60112b3022238b9a6571ef6e117a677d9c722f90b26e32fe02742f3c0328e2c4"
 trees = ["geometry"]
+
+# Blender 5.2 LTS ships another file: its own hash, and its own record (proceduralhair.baseline-5.2.json)
+[blender."5.2"]
+version = "Blender 5.2.4"
+sha256 = "b69d8bd8975b9db7f89693f8f19dd7fcb241f5a3786d2edfb0a243e91c1109bb"

@@ -14,6 +14,12 @@ the original itself does not give twice the same geometry.
 What happens to each group is kept in `tests/libraries/<name>.baseline.json`: its status, the first
 error, the warnings and a hash of its text. The test fails when that changes, for better or worse.
 
+Each promised version of Blender runs the libraries. The baseline is that of the Blender it names
+(`"blender"`); where another version reads a library otherwise, its own record is beside it,
+`<name>.baseline-<x.y>.json`, and that Blender is compared with it. A manifest may say what differs
+for one version in a `[blender."<x.y>"]` table (the `sha256` of a file Blender ships), and the oldest
+Blender that opens the library, `blender_min = "5.3"`: an older one skips it, and says so.
+
 Run in Blender via:
     blender --background --factory-startup --python-exit-code 1 \
       --python base-node-for-blender/tests/test_libraries.py [-- <name> ...]
@@ -247,11 +253,15 @@ class Stage:
 
         self.mesh.materials.clear()
         self.mesh.materials.append(material)
-        effects = self.scene.compositor_effects
-        for effect in list(effects):
-            effects.remove(effect)
-        if compositor is not None:
-            effects.new(name=compositor.name).node_group = compositor
+        # The scene's stack of effects since Blender 5.3, its one compositing group before
+        effects = getattr(self.scene, "compositor_effects", None)
+        if effects is None:
+            self.scene.compositing_node_group = compositor
+        else:
+            for effect in list(effects):
+                effects.remove(effect)
+            if compositor is not None:
+                effects.new(name=compositor.name).node_group = compositor
         path = self.dir / "render.exr"
         self.scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True, scene=self.scene.name)
@@ -355,7 +365,7 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
     unknown = set(trees) - set(TREES)
     assert not unknown, f"unknown trees {sorted(unknown)}; trees: {TREES}"
     from base_node.host import build_source, export_tree
-    from base_node.lang.schema import key
+    from base_node.blender.schema import key
 
     for g in list(bpy.data.node_groups):
         bpy.data.node_groups.remove(g)
@@ -461,7 +471,7 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
 
 def keep_texts(name, texts):
     """The texts of this run in the cache, those of the run before beside them."""
-    from base_node.lang.schema import key
+    from base_node.blender.schema import key
 
     here = CACHE / "texts" / name
     previous = here.with_name(f"{name}.previous")
@@ -503,20 +513,56 @@ def summary(records):
     return ", ".join(f"{n} {s}" for s, n in sorted(counts.items(), key=lambda x: -x[1]))
 
 
-def test_library(manifest):
+class Skipped(Exception):
+    """A library the Blender that runs is too old for: its manifest says so."""
+
+
+def read_manifest(manifest):
+    """The manifest as the Blender that runs reads it: its `[blender."<x.y>"]` table, if any, over
+    the rest."""
     lib = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    lib.update(lib.pop("blender", {}).get(T.BLENDER_VERSION, {}))
+    return lib
+
+
+def baseline_file(manifest):
+    """(the baseline this Blender is compared with, the one it writes).
+
+    `<name>.baseline.json` is the record of one Blender, which it names. Another version is compared
+    with `<name>.baseline-<x.y>.json` when there is one, with that same record otherwise; it writes
+    its own file only, never the record of the other Blender."""
+    main = manifest.with_suffix(".baseline.json")
+    own = manifest.with_name(f"{manifest.stem}.baseline-{T.BLENDER_VERSION}.json")
+    if main.exists():
+        made_with = ".".join(json.loads(main.read_text(encoding="utf-8")).get("blender", "").split(".")[:2])
+        if made_with != T.BLENDER_VERSION:
+            return (own if own.exists() else main), own
+    return main, main
+
+
+def test_library(manifest):
+    lib = read_manifest(manifest)
     name = manifest.stem
     print(f"-> {lib['name']} {lib.get('version', '')} ({lib['license']})")
+    oldest = lib.get("blender_min")
+    if oldest and bpy.app.version[:2] < tuple(int(x) for x in oldest.split(".")):
+        raise Skipped(f"{lib['name']} needs Blender {oldest}, this is {bpy.app.version_string}")
     records, texts = round_trip(fetch(lib), lib.get("nondeterministic"), lib.get("trees", ("geometry",)),
                                 lib.get("blender_quirks"))
     kept = keep_texts(name, texts)
     print(f"   {len(records)} groups: {summary(records)}; texts in {kept}")
-    baseline_path = manifest.with_suffix(".baseline.json")
+    baseline_path, written = baseline_file(manifest)
     if os.environ.get("BASE_NODE_UPDATE_FIXTURES") or not baseline_path.exists():
+        main = manifest.with_suffix(".baseline.json")
+        if written != main and json.loads(main.read_text(encoding="utf-8"))["groups"] == records:
+            # This Blender reads the library as the other does: one record for both
+            written.unlink(missing_ok=True)
+            print(f"   ✓ as in {main.name}: no {written.name}")
+            return
         baseline = {"library": lib["name"], "version": lib.get("version"), "sha256": lib["sha256"],
                     "blender": bpy.app.version_string, "summary": summary(records), "groups": records}
-        baseline_path.write_text(json.dumps(baseline, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-        print(f"   baseline written: {baseline_path.name}")
+        written.write_text(json.dumps(baseline, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"   baseline written: {written.name}")
         return
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     if baseline.get("blender") != bpy.app.version_string:
@@ -536,10 +582,13 @@ def main():
         assert manifests, f"no library named {names} in {LIBRARIES}"
     print("=== Base Node non-regression on third-party libraries ===")
     T.base_node.register()
-    failed = 0
+    failed, skipped = 0, 0
     for m in manifests:
         try:
             test_library(m)
+        except Skipped as e:
+            skipped += 1
+            print(f"   - skipped: {e}")
         except Exception:
             failed += 1
             traceback.print_exc()
@@ -549,7 +598,8 @@ def main():
     if failed:
         print(f"\n❌ FAILED: {failed}/{len(manifests)} libraries changed")
         sys.exit(1)
-    print(f"\n✅ SUCCESS: {len(manifests)} libraries as in their baselines")
+    print(f"\n✅ SUCCESS: {len(manifests) - skipped} libraries as in their baselines"
+          + (f", {skipped} skipped on Blender {bpy.app.version_string}" if skipped else ""))
     sys.exit(0)
 
 

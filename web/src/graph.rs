@@ -350,10 +350,8 @@ impl<'a> Builder<'a> {
         match self.scopes.last().and_then(|s| s.get(name)) {
             Some(Bind::Lazy(v, _, _, _)) => match v {
                 AssignValue::Expr(e) => e.line(),
-                AssignValue::Repeat(z) => z.line,
-                AssignValue::Simulate(z) => z.line,
-                AssignValue::Foreach(z) => z.line,
-                AssignValue::Closure(z) => z.line,
+                AssignValue::BodyCall(z) => z.line,
+                AssignValue::NamelessGraph(z) => z.line,
             },
             _ => 0,
         }
@@ -403,37 +401,39 @@ impl<'a> Builder<'a> {
     fn assigned(&mut self, value: &'a AssignValue) -> Val {
         match value {
             AssignValue::Expr(e) => self.expr(e),
-            AssignValue::Repeat(z) => {
-                let mut ins = vec![("Iterations".to_owned(), self.expr(&z.count))];
-                ins.extend(self.state_args(&z.states));
-                let states = arg_names(&z.states);
-                let mut inner = vec!["iteration".to_owned()];
+            // A call with a body is one of Blender's zones by its name; its first argument, when
+            // it has no name, is what the zone runs on: the count of a repeat, what a foreach walks
+            AssignValue::BodyCall(z) => {
+                let (head, title, own) = match z.name.as_str() {
+                    "repeat" => ("Iterations", "Repeat", "iteration"),
+                    "simulate" => ("", "Simulation", "delta_time"),
+                    "foreach" => ("Geometry", "For Each Element", "Element"),
+                    name => ("", name, ""),
+                };
+                let first = z
+                    .args
+                    .first()
+                    .filter(|a| a.name.is_none() && !head.is_empty());
+                let items = &z.args[usize::from(first.is_some())..];
+                let mut ins = Vec::new();
+                if let Some(a) = first {
+                    ins.push((head.to_owned(), self.expr(&a.value)));
+                }
+                ins.extend(self.state_args(items));
+                let states = arg_names(items);
+                let mut inner = Vec::new();
+                if !own.is_empty() {
+                    inner.push(own.to_owned());
+                }
                 inner.extend(states.iter().cloned());
-                self.zone("Repeat", (z.line, z.end), ins, &inner, &states, &z.body)
+                let outs = if z.name == "foreach" {
+                    vec!["Geometry".to_owned()]
+                } else {
+                    states
+                };
+                self.zone(title, (z.line, z.end), ins, &inner, &outs, &z.body)
             }
-            AssignValue::Simulate(z) => {
-                let ins = self.state_args(&z.states);
-                let states = arg_names(&z.states);
-                let mut inner = vec!["delta_time".to_owned()];
-                inner.extend(states.iter().cloned());
-                self.zone("Simulation", (z.line, z.end), ins, &inner, &states, &z.body)
-            }
-            AssignValue::Foreach(z) => {
-                let mut ins = vec![("Geometry".to_owned(), self.expr(&z.geometry))];
-                ins.extend(self.state_args(&z.args));
-                let mut inner = vec!["Element".to_owned()];
-                inner.extend(arg_names(&z.args));
-                let outs = vec!["Geometry".to_owned()];
-                self.zone(
-                    "For Each Element",
-                    (z.line, z.end),
-                    ins,
-                    &inner,
-                    &outs,
-                    &z.body,
-                )
-            }
-            AssignValue::Closure(z) => {
+            AssignValue::NamelessGraph(z) => {
                 let params: Vec<String> = z.params.iter().map(|p| p.name.clone()).collect();
                 let outs: Vec<String> = z.outputs.iter().map(|p| p.name.clone()).collect();
                 self.zone(

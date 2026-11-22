@@ -51,7 +51,13 @@ geometry graph smart_crate() -> Geometry {
   return body + lid
     |> dents(size: 0.25, depth: 0.015, density: 0.4, seed: 7)
     |> rivets(spacing: 0.07, inset: 0.035, radius: 0.009, height: 0.6, angle: 1.2)
-    |> chip_edges(depth: 0.006, wear: 0.45, width: 0.015, selection: rivet < 0.5, size: 0.04, seed: 4)
+    |> chip_edges(
+      depth: 0.006,
+      wear: 0.45,
+      width: 0.015,
+      selection: rivet < 0.5,
+      size: 0.04,
+      seed: 4)
     |> mesh_maps(radius: 0.04, strength: 1.5, ao_distance: 0.6, ao_samples: 24, sky_distance: 0.6)
     |> SetMaterial(material: CrateSteel)
 }

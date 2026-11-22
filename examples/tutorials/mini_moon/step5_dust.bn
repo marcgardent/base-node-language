@@ -56,8 +56,8 @@ geometry graph crater_layer(
   across = v - n * (v ⋅ n)
   wobble = NoiseTexture(vector: p / radius, scale: 1.5).factor
   x = length(across) / radius * (1.0 + wobble * 0.3)
-  height = crater_profile(x).height * radius * depth * (1.0 - age * 0.7)
-  return (height: height, young: (1.0 - age) * (1.0 - age) * Clamp(1.5 - x))
+  height = crater_profile(x: x).height * radius * depth * (1.0 - age * 0.7)
+  return (height: height, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x))
 }
 
 shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
@@ -77,7 +77,9 @@ shader(material: true) graph Regolith() -> (surface: Shader) {
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
   // Heights in metres, as the geometry's: Bump at distance 1.0 and strength 1.0 lights them as relief
-  relief = (grain - 0.5) * 0.004 + pits(p, 40.0).height + pits(p + (7.1, 3.3, 0.0), 110.0).height
+  relief = (grain - 0.5) * 0.004
+    + pits(p: p, scale: 40.0).height
+    + pits(p: p + (7.1, 3.3, 0.0), scale: 110.0).height
   grey = 0.07 + patches * 0.08 + young * 0.2
   dust = PrincipledBSDF(
     base_color: CombineColor(red: grey, green: grey, blue: grey * 0.94),
@@ -95,8 +97,8 @@ geometry graph mini_moon(
   "A small moon: a sphere, craters of every size dug along its normals, grey dust"
   sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
   p = Position()
-  field = repeat(layers, height: 0.0, young: 0.0, size: largest) {
-    c = crater_layer(p, crater_sites(sphere, size: size, seed: iteration))
+  field = repeat(layers, height: 0.0, young: 0.0, size: largest) -> {
+    c = crater_layer(p: p, sites: crater_sites(sphere, size: size, seed: iteration))
     return (height: height + c.height, young: max(young, c.young), size: size * 0.5)
   }
   return sphere

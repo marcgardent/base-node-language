@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "base_node"
-version = "0.13.1"
+version = "1.0.0-rc.1"
 name = "Base Node"
 tagline = "Nodes as Text (.bn) — Read and write node trees as functions"
 maintainer = "Marc Gardent"
@@ -24,5 +24,10 @@ paths_exclude_pattern = [
   "*.pyc",
   "listing.md",
   "build.sh",
-  "/lang/_targets/backends/",
+  "/blender/_targets/backends/",
+  # The extension holds Blender's targets only: not those of other destinations
+  "/blender/_targets/blade.json",
+  "/blender/_targets/blade/",
+  "/blender/_targets/materialx.json",
+  "/blender/_targets/materialx/",
 ]

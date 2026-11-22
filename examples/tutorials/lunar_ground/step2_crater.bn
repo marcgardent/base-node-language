@@ -31,7 +31,7 @@ geometry graph lunar_ground(
   flat = CombineXYZ(x: p.x, y: p.y)
   plain = (NoiseTexture(vector: flat, scale: 0.4, detail: 3.0).factor - 0.5) * 0.3
   x = length(flat) / radius
-  crater = crater_profile(x).height * radius * depth
-  return Grid(size, size, resolution, resolution)
+  crater = crater_profile(x: x).height * radius * depth
+  return Grid(size_x: size, size_y: size, vertices_x: resolution, vertices_y: resolution)
     |> SetPosition(offset: CombineXYZ(z: plain + crater))
 }

@@ -2,8 +2,8 @@
 
 import pytest
 
-from base_node import BnError, compile_source, format_source, parse
-from base_node.schema import NodeSpec, Prop
+from base_node_blender import BnError, compile_source, format_source, parse
+from base_node_blender.schema import NodeSpec, Prop
 from fake_schema import FakeSchema, S
 
 SWITCH_TYPES = {"FLOAT": "Float", "INT": "Int", "BOOLEAN": "Bool", "VECTOR": "Vector", "RGBA": "Color",

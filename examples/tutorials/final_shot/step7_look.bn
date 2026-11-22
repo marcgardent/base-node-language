@@ -2,7 +2,7 @@
 // @title The final shot, step 7: the look
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use grade
@@ -16,8 +16,8 @@ compositor graph final_shot() -> Color {
   "The render rebuilt from its passes, the sphere painted blue, a warm light added, a haze, the light spilling over the edges, graded, film grain"
   l = RenderLayers()
   // The sphere, found in the world by the Position pass; its colour changed, its light kept
-  sphere = p_matte(l.position, (-1.2, 2.2, 0.9), 0.9, 0.05).matte
-  paint = keymix((0.04, 0.16, 0.45, 1.0), l.diffuse_color, sphere)
+  sphere = p_matte(position: l.position, center: (-1.2, 2.2, 0.9), radius: 0.9, falloff: 0.05).matte
+  paint = keymix(a: (0.04, 0.16, 0.45, 1.0), b: l.diffuse_color, mask: sphere)
   beauty = rebuild_beauty(
     diffuse_direct: l.diffuse_direct,
     diffuse_indirect: l.diffuse_indirect,
@@ -34,35 +34,40 @@ compositor graph final_shot() -> Color {
   // A point light at the bulb of the lamp post, on the colours of the diffuse surfaces
   lit = beauty
     |> relight(
-      paint,
-      l.normal,
-      l.position,
+      albedo: paint,
+      normal: l.normal,
+      position: l.position,
       light_position: (1.7, 1.2, 3.05),
       light_color: (1.0, 0.6, 0.3, 1.0),
       intensity: 12.0)
   // A haze, thicker with the distance; the sky has no depth, and a matte of the first
   // kilometre keeps the haze off it
-  solid = depth_slice(l.depth, 0.0, 1000.0, 1.0).matte
+  solid = depth_slice(depth: l.depth, near: 0.0, far: 1000.0, softness: 1.0).matte
   hazy = lit
-    |> depth_fog(l.depth, (0.09, 0.06, 0.06, 1.0), near: 5.0, far: 1000.0, density: 0.005)
-  shot = keymix(hazy, lit, solid)
+    |> depth_fog(
+      depth: l.depth,
+      color: (0.09, 0.06, 0.06, 1.0),
+      near: 5.0,
+      far: 1000.0,
+      density: 0.005)
+  shot = keymix(hazy, b: lit, mask: solid)
   // The sky bleeds over the edges of what stands in front of it: the solid things cut out by
   // their matte, the sky alone from the Environment pass
-  front = with_alpha(shot * solid, solid)
-  wrapped = over(light_wrap(front, l.environment, 15.0, 2.0), shot)
+  front = with_alpha(shot * solid, alpha: solid)
+  wrapped = over(light_wrap(front, bg: l.environment, diffuse: 15.0, intensity: 2.0), b: shot)
   // What is brighter than white blooms: the bulbs, the windows. Then the look: deeper blacks,
   // cool shadows, warm highlights, a little more colour, and darker corners
   look = wrapped
-    |> glow(1.0, 0.6, 0.9, 3.0)
+    |> glow(tolerance: 1.0, brightness: 0.6, saturation: 0.9, width: 3.0)
     |> grade(
       blackpoint: (0.008, 0.008, 0.008),
       lift: (0.0, 0.003, 0.01),
       gain: (1.1, 1.0, 0.88),
       gamma: (0.85, 0.85, 0.85))
-    |> saturation(1.15)
-  corners = 1.0 - circle_mask(look, 0.9, 0.9).mask
+    |> saturation(s: 1.15)
+  corners = 1.0 - circle_mask(look, radius: 0.9, feather: 0.9).mask
   // The grain comes last: it is on the film, under the light, not graded with it
   return look
-    |> exposure_stops(-1.0, mask: corners)
-    |> grain_5279(1.5, 7.0)
+    |> exposure_stops(stops: -1.0, mask: corners)
+    |> grain_5279(amount: 1.5, seed: 7.0)
 }

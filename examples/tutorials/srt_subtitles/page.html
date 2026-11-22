@@ -34,8 +34,8 @@
     <h2 id="use">Use it</h2>
     <ol class="steps">
       <li><strong>Get it into Blender.</strong> Drag the card below onto empty space in the 3D Viewport and keep <em>Instantiate the Example</em>, or paste the code in a Geometry Node editor with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>. You need Blender 5 and the <a href="../index.html#blender">Base Node add-on</a>.</li>
-      <li><strong>Give it a file.</strong> On the modifier, <code>file</code> takes the path of an <code>.srt</code>. <a href="https://github.com/marcgardent/base-node-language/blob/main/examples/tutorials/srt_subtitles/sample.srt"><code>sample.srt</code></a> holds three cues to start with.</li>
-      <li><strong>Play.</strong> The text changes with the scene time. <code>offset</code> moves every subtitle later, in seconds, <code>size</code> scales the text, and <code>fill</code> gives a mesh, or curves when it is off.</li>
+      <li><strong>Give it a file.</strong> On the modifier, <code>file</code> takes the path of the subtitles, an <code>.srt</code>, not of <code>srt_subtitles.bn</code>: the group reads any text it is given, and a <code>.bn</code> draws its own code. <a href="https://github.com/marcgardent/base-node-language/blob/main/examples/tutorials/srt_subtitles/sample.srt"><code>sample.srt</code></a> holds three cues to start with.</li>
+      <li><strong>Play.</strong> The text changes with the scene time. <code>offset</code> moves every subtitle later, in seconds, <code>size</code> scales the text, and <code>fill</code> gives a mesh, or curves when it is off. <code>material</code> paints the text and <code>font</code> draws it in another font, Blender's own by default.</li>
     </ol>
     {{file srt_subtitles.bn}}
     <p>
@@ -84,7 +84,7 @@ one cue at a time.</code></pre>
       <li>Every frame walks the file from the first block, so the work grows with the number of cues.</li>
     </ul>
     <p class="muted">
-      The file, <code>sample.srt</code> and the script that renders this page's picture are in <a href="https://github.com/marcgardent/base-node-language/tree/main/examples/tutorials/srt_subtitles"><code>examples/tutorials/srt_subtitles/</code></a>. <code>make srt-check</code> builds the file in Blender and checks its cues against an <code>.srt</code> written with Unix line ends and one written with Windows line ends.
+      The file, <code>sample.srt</code> and the script that renders this page's picture are in <a href="https://github.com/marcgardent/base-node-language/tree/main/examples/tutorials/srt_subtitles"><code>examples/tutorials/srt_subtitles/</code></a>. <code>make srt-check</code> builds the file in Blender and checks its cues against an <code>.srt</code> written with Unix line ends and one written with Windows line ends, then that the text takes its material and its font.
     </p>
     <footer>
       Base Node Language — MIT OR Apache-2.0 (Blender host binding: GPL-3.0-or-later) · Hosted and sponsored by <a href="https://ludopant.com/">Ludopant Creative Studio</a>

@@ -135,11 +135,11 @@
     {{code step3_shade.bn cross_hatching shade ruling engrave engraved_map}}
     <p>
       <code>hatch_cross</code> is an engraver's tool: at a point and for a shade, it says whether the point is ink, 1, or paper, 0. Its lines lie on whole steps of <code>(x cos a − y sin a) / spacing</code>, and thicken with the shade: half the spacing wide at shade 0.5.
-      <code>ruling</code> draws those lines, as the ruling machine of an engraver did: parallel, <code>spacing</code> apart, at <code>angle</code>. <code>engrave</code> then reads <code>hatch_cross</code> along each line: it cuts the line where it is paper. Elsewhere the amount it is given sets the width, here <code>Clamp(s * 2.0)</code>, which grows with the shade as the lines of <code>hatch_cross</code> do.
+      <code>ruling</code> draws those lines, as the ruling machine of an engraver did: parallel, <code>spacing</code> apart, at <code>angle</code>. <code>engrave</code> then reads <code>hatch_cross</code> along each line: it cuts the line where it is paper. Elsewhere the amount it is given sets the width, here <code>Clamp(value: s * 2.0)</code>, which grows with the shade as the lines of <code>hatch_cross</code> do.
     </p>
     <ul>
       <li><strong>Why cut a mesh, not a curve?</strong> Deleting points from the middle of a curve joins the points around the gap. The lines are meshes of edges until they are cut; <code>MeshToCurve</code> then makes one curve per piece.</li>
-      <li><strong>Two passes.</strong> The first pass covers all the shade. The second, at 90°, gets <code>s * 2.0 - 1.0</code>: nothing below half shade, then its lines thicken in turn, by <code>Clamp(s * 4.0 - 2.0)</code>. <code>cross_angle: 0.0</code> keeps each call of <code>hatch_cross</code> to its own family of lines, since we draw the crossing ones ourselves.</li>
+      <li><strong>Two passes.</strong> The first pass covers all the shade. The second, at 90°, gets <code>s * 2.0 - 1.0</code>: nothing below half shade, then its lines thicken in turn, by <code>Clamp(value: s * 4.0 - 2.0)</code>. <code>cross_angle: 0.0</code> keeps each call of <code>hatch_cross</code> to its own family of lines, since we draw the crossing ones ourselves.</li>
     </ul>
     <figure>
       <img src="../images/tutorials/engraved-map-step3.png" width="1000" height="750" loading="lazy" alt="The map with oblique hatching over the north bank and the east side of the southern summit, crossed in the darkest places">

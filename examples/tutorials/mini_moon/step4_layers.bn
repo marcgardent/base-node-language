@@ -56,7 +56,7 @@ geometry graph crater_layer(
   across = v - n * (v ⋅ n)
   wobble = NoiseTexture(vector: p / radius, scale: 1.5).factor
   x = length(across) / radius * (1.0 + wobble * 0.3)
-  height = crater_profile(x).height * radius * depth * (1.0 - age * 0.7)
+  height = crater_profile(x: x).height * radius * depth * (1.0 - age * 0.7)
   return (height: height)
 }
 
@@ -69,8 +69,8 @@ geometry graph mini_moon(
   "A sphere and craters of every size, dug along its normals"
   sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
   p = Position()
-  field = repeat(layers, height: 0.0, size: largest) {
-    c = crater_layer(p, crater_sites(sphere, size: size, seed: iteration))
+  field = repeat(layers, height: 0.0, size: largest) -> {
+    c = crater_layer(p: p, sites: crater_sites(sphere, size: size, seed: iteration))
     return (height: height + c.height, size: size * 0.5)
   }
   return sphere

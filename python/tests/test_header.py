@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from base_node import BnError, header
+from base_node import STDLIB_VERSION
+from base_node_blender import BnError, header
 from base_node.header import directives
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,16 +23,16 @@ def errors(source):
 
 def test_the_stdlib_head_is_read():
     h = header((ROOT / "stdlib" / "curves2d.bn").read_text(encoding="utf-8"), "curves2d.bn")
-    assert (h.module, h.version, h.edition) == ("curves2d", "0.13.1", "2026")
-    assert h.target == ["blender-geometry", "blender-gp"]
+    assert (h.module, h.version, h.edition) == ("curves2d", STDLIB_VERSION, "2026")
+    assert h.target == ["blender"]
     # A module offers itself as a library; its graphs are helpers, and a modifier or two
     assert h.offer[:2] == ["library", "groups"]
 
 
 def test_text_directives_and_quotes():
-    h = header('// @title "Waves"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target "blender-gp", gltf\n\n'
+    h = header('// @title "Waves"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target "blender@5.3  gltf", blade\n\n'
                + MAKER)
-    assert (h.title, h.author, h.license, h.target) == ("Waves", "Marc G.", "MIT OR Apache-2.0", ["blender-gp", "gltf"])
+    assert (h.title, h.author, h.license, h.target) == ("Waves", "Marc G.", "MIT OR Apache-2.0", ["blender@5.3 gltf", "blade"])
     assert h.module is None and h.mesh == "cube"
 
 
@@ -124,6 +125,44 @@ def test_a_malformed_module_name():
 def test_a_directive_twice_or_empty():
     assert errors("// @title A\n// @title B\n" + MAKER) == [(2, 11, "@title is already set on line 1")]
     assert errors("// @author\n" + MAKER) == [(1, 11, "@author needs a value")]
+
+
+UNKNOWN_EDITION = "@edition '2028': not an edition this reader knows (2026)"
+
+
+def test_an_edition_this_reader_does_not_know():
+    """rust/tests/header.rs holds the same cases."""
+    from base_node import EDITION, EDITIONS, format_source, parse
+    from base_node import header as core_header
+
+    assert EDITIONS == ("2026",) and EDITION == "2026"
+    source = "// A text of later\n// @edition 2028\n" + MAKER
+    for read in (core_header, header, parse, format_source):
+        with pytest.raises(BnError) as e:
+            read(source, "f.bn")
+        assert [(d.file, d.line, d.col, d.message) for d in e.value.diagnostics] == [("f.bn", 2, 13, UNKNOWN_EDITION)]
+    assert errors('// @edition "2028"\n' + MAKER) == [(1, 13, UNKNOWN_EDITION)]
+    # The one it knows, quoted or not, and none at all: the latest
+    for head in ("// @edition 2026\n", '// @edition "2026"\n', ""):
+        assert parse(head + MAKER, "f.bn").graphs and format_source(head + MAKER, "f.bn") == head + MAKER
+    assert header("// @edition 2026\n" + MAKER).edition == "2026" and header(MAKER).edition is None
+    # Only the head names the edition: a comment under the first graph is a comment
+    assert parse(MAKER + "// @edition 2028\n", "f.bn").graphs
+    # Written twice, the first is the file's; with no value, the head says so
+    assert errors("// @edition 2026\n// @edition 2028\n" + MAKER) == [(2, 13, "@edition is already set on line 1")]
+    assert parse("// @edition\n" + MAKER, "f.bn").graphs
+
+
+def test_the_command_line_refuses_an_unknown_edition(tmp_path, capsys):
+    from base_node_cli.cli import main
+
+    path = tmp_path / "later.bn"
+    source = "// @edition 2028\n" + MAKER
+    path.write_text(source, encoding="utf-8")
+    for command in (["check"], ["fmt"], ["fmt", "--check"], ["parse"], ["ast"]):
+        assert main(command + [str(path)]) == 1
+        assert f"later.bn:1:13  {UNKNOWN_EDITION}" in capsys.readouterr().err, command
+    assert path.read_text(encoding="utf-8") == source, "fmt leaves it as written"
 
 
 def test_a_syntax_error_is_the_parser_s():

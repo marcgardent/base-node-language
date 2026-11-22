@@ -2,7 +2,7 @@
 // @title The promo cut, step 3: clock, iris and radial wipes
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use mask2d (circle_mask)
@@ -12,8 +12,8 @@ use transitions
 compositor graph title_card() -> Color {
   "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
   title = Image(image: "promo-cut-plate-c.png").image
-  heart = circle_mask(title, 0.1, 1.1).mask
-  return over(title, keymix((0.35, 0.02, 0.25, 1.0), (0.01, 0.01, 0.06, 1.0), heart))
+  heart = circle_mask(title, radius: 0.1, feather: 1.1).mask
+  return over(title, b: keymix(a: (0.35, 0.02, 0.25, 1.0), b: (0.01, 0.01, 0.06, 1.0), mask: heart))
 }
 
 compositor graph promo_cut() -> Color {
@@ -21,7 +21,20 @@ compositor graph promo_cut() -> Color {
   a = Image(image: "promo-cut-plate-a.png").image
   b = Image(image: "promo-cut-plate-b.png").image
   c = title_card()
-  ab = clock_wipe(a, b, frame_progress(7.0, 16.0, true), softness: 0.02).image
-  bc = iris_wipe(ab, c, frame_progress(31.0, 16.0, true), softness: 0.03).image
-  return radial_wipe(bc, a, frame_progress(55.0, 16.0, true), direction: Both, softness: 0.02).image
+  ab = clock_wipe(
+    a,
+    b: b,
+    progress: frame_progress(start: 7.0, length: 16.0, ease: true),
+    softness: 0.02).image
+  bc = iris_wipe(
+    ab,
+    b: c,
+    progress: frame_progress(start: 31.0, length: 16.0, ease: true),
+    softness: 0.03).image
+  return radial_wipe(
+    bc,
+    b: a,
+    progress: frame_progress(start: 55.0, length: 16.0, ease: true),
+    direction: Both,
+    softness: 0.02).image
 }

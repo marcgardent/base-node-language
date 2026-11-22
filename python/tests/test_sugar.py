@@ -1,8 +1,8 @@
 import pytest
 
-from base_node import BnError, compile_source, ir
-from base_node.sugar import EPSILON, choose
-from base_node.typecheck import math_condition
+from base_node_blender import BnError, compile_source, ir
+from base_node_blender.sugar import EPSILON, choose
+from base_node_blender.typecheck import math_condition
 from fake_schema import FakeSchema
 
 
@@ -281,7 +281,7 @@ def test_a_condition_is_a_comparison_written_with_math():
 
 
 def test_is_condition_follows_names(monkeypatch):
-    from base_node import typecheck
+    from base_node_blender import typecheck
 
     checkers = []
     init = typecheck.GraphChecker.__init__

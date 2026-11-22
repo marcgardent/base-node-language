@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const RESERVED: &[&str] = &[
-    "graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross", "repeat",
+    "graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross",
 ];
 
 pub fn is_reserved(s: &str) -> bool {
@@ -318,18 +318,23 @@ pub struct Frame {
     pub continued: bool,
 }
 
+/// `name(arguments) -> { … return … }`: a call that takes a body, written only as the value of
+/// an assignment. The name may be qualified, as any call's. Which names take a body, what their
+/// arguments are, what the body sees and what it returns, the host says.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Repeat {
-    pub count: Expr,
-    pub states: Vec<Arg>,
+pub struct BodyCall {
+    pub name: String,
+    pub args: Vec<Arg>,
     pub body: Vec<Stmt>,
     pub line: usize,
     pub col: usize,
     pub end: usize,
 }
 
+/// `graph(x: Float, …) -> Float { … return … }`: a graph with no name, a value, written only as
+/// the value of an assignment. It writes no kind: it has the kind of the graph that holds it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Closure {
+pub struct NamelessGraph {
     pub params: Vec<Param>,
     pub outputs: Vec<Param>,
     pub single_output: bool,
@@ -340,31 +345,30 @@ pub struct Closure {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Simulate {
-    pub states: Vec<Arg>,
-    pub body: Vec<Stmt>,
-    pub line: usize,
-    pub col: usize,
-    pub end: usize,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Foreach {
-    pub geometry: Expr,
-    pub args: Vec<Arg>,
-    pub body: Vec<Stmt>,
-    pub line: usize,
-    pub col: usize,
-    pub end: usize,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AssignValue {
     Expr(Expr),
-    Repeat(Repeat),
-    Closure(Closure),
-    Simulate(Simulate),
-    Foreach(Foreach),
+    BodyCall(BodyCall),
+    NamelessGraph(NamelessGraph),
+}
+
+impl AssignValue {
+    /// The statements of a call with a body or of a graph with no name, and the line of the
+    /// brace that closes them.
+    pub fn body(&self) -> Option<(&[Stmt], usize)> {
+        match self {
+            AssignValue::Expr(_) => None,
+            AssignValue::BodyCall(c) => Some((&c.body, c.end)),
+            AssignValue::NamelessGraph(g) => Some((&g.body, g.end)),
+        }
+    }
+
+    pub fn body_mut(&mut self) -> Option<&mut Vec<Stmt>> {
+        match self {
+            AssignValue::Expr(_) => None,
+            AssignValue::BodyCall(c) => Some(&mut c.body),
+            AssignValue::NamelessGraph(g) => Some(&mut g.body),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

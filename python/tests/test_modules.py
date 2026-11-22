@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from base_node import BnError, compile_source, parse
+from base_node_blender import BnError, compile_source, parse
 from base_node.format import format_source
 from base_node.printer import to_source
-from base_node.schema import GroupSpec
+from base_node_blender.schema import GroupSpec
 
 MATHS = """\
 geometry graph double(x: Float) -> Float {

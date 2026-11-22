@@ -1,7 +1,7 @@
 // Base Node Standard Library — Module fillet2d
 // @module fillet2d
-// @version 0.13.1
-// @target blender-geometry, blender-gp
+// @version 1.0.0-rc.1
+// @target blender
 // @edition 2026
 // @description Fillets, chamfers, and bevels for 2D polygonal curves and corners
 

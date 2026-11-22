@@ -35,7 +35,7 @@ jobs:
       - name: Write the reference pages
         env:
           PYTHONPATH: ${{ github.workspace }}/python
-        run: python3 -m base_node.cli docs
+        run: python3 -m base_node_cli.cli docs
       - name: Prepare site
         run: touch site/.nojekyll
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0

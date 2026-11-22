@@ -64,6 +64,38 @@ A file Blender ships is named by its path under Blender's `datafiles` (`bundled 
 
 A `.blend` inside a `.zip` is read by HTTP ranges: only the zip's directory and that file are downloaded.
 
+## Each promised version of Blender
+
+The libraries run with each version of Blender Base Node promises (`make test-libraries BLENDER=…`,
+`make test-promised`; a job per version in the CI). `<name>.baseline.json` is the record of the Blender
+it names (`"blender"`), the latest. Another version is compared with that same record, and has a record
+of its own only where it reads the library otherwise:
+
+- `<name>.baseline-<x.y>.json` beside the baseline is what Blender x.y gives, and what it is compared
+  with. `BASE_NODE_UPDATE_FIXTURES=1` run with that Blender writes it when it differs from the baseline
+  and takes it away when it no longer does; it never writes the record of the other Blender.
+- `[blender."<x.y>"]` in a manifest holds what differs for that version, over the rest of the manifest:
+  the `sha256` and `version` of a file Blender ships, which is another file in each version.
+- `blender_min = "5.3"` in a manifest names the oldest Blender that opens the library: an older one
+  skips it and says so.
+
+```toml
+bundled = "assets/nodes/geometry_nodes_essentials.blend"
+sha256 = "4271…"                 # Blender 5.3.0's file
+
+[blender."5.2"]
+version = "Blender 5.2.4"
+sha256 = "4592…"                 # Blender 5.2.4's file: geometryessentials.baseline-5.2.json
+```
+
+With Blender 5.2.4 LTS, 13 of the 17 libraries read as their baseline does, two files Blender ships
+unchanged among them (Principal Components, Shading Nodes Essentials). Three files Blender ships are
+others in 5.2.4 and have their record: Compositing Nodes Essentials (24 groups, no Bloom), Geometry
+Nodes Essentials (33) and Procedural Hair Node Assets (32), every group `ok`. Geometry Nodes Dynamics
+Assets is the same file, but its Sample Surface Deformation does not evaluate twice the same in 5.2.4:
+that kind is not compared there (`[blender."5.2".nondeterministic]`), which its record says.
+No library needs `blender_min` today. The badges count the baselines of the latest.
+
 ## Shader groups and materials
 
 A manifest reads only Geometry Nodes groups unless it names the trees it wants:

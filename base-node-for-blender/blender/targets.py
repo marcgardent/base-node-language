@@ -1,0 +1,1 @@
+../../python/base_node_blender/targets.py

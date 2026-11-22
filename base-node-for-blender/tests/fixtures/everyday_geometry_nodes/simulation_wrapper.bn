@@ -12,7 +12,7 @@ geometry graph ".Evaluate Nested Bundle Closures"(Geometry: Geometry, Bundle: Bu
     data_type: Closure)
   repeat_output = repeat(
     ListLength(list: get_nested_bundle_paths, data_type: STRING),
-    Geometry: Geometry) {
+    Geometry: Geometry) -> {
     return EvaluateClosure(
       GetBundleItem(
         bundle: Bundle,
@@ -55,7 +55,7 @@ geometry(is_modifier: false) graph "Simulation Wrapper"(
     }
 ) -> Geometry {
   simulation_output = simulate(
-    Geometry: evaluate_nested_bundle_closures(Geometry, bundle: before_simulation)) {
+    Geometry: evaluate_nested_bundle_closures(Geometry, bundle: before_simulation)) -> {
     math_2 = time_mutliplier * delta_time @ hide
     math = math_2 / Substep @ hide
     "frame dt" {
@@ -69,7 +69,7 @@ geometry(is_modifier: false) graph "Simulation Wrapper"(
     }
     repeat_output = repeat(
       Substep,
-      Geometry: evaluate_nested_bundle_closures(set_geometry_bundle, bundle: before_substeps)) {
+      Geometry: evaluate_nested_bundle_closures(set_geometry_bundle, bundle: before_substeps)) -> {
       "substep dt" {
         get_geometry_bundle_2 = GetGeometryBundle(Geometry) @ hide
         set_geometry_bundle_2 = SetGeometryBundle(

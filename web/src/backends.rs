@@ -1,16 +1,19 @@
 //! Which backends run a text: the Blender add-on Base Node (a tag per
-//! tree kind of the text: its graphs of that kind within `blender-geometry`,
-//! `blender-shader` or `blender-compositor`; none of another kind), Blade's
+//! tree kind of the text, `blender-geometry`, `blender-shader` or
+//! `blender-compositor`: its graphs of that kind within the target `blender`,
+//! which checks each against the nodes of its kind of tree; none of another
+//! kind. The ids are the tags', a host and a tree, not targets), Blade's
 //! Pixel Nodes (a `pixel graph`, alone in its text, importing only what `blade`
 //! follows: its bridges and the stdlib; within `blade`, callees included), and
 //! the targets it fits (spec/targets.md). What is checked is
-//! what base-node knows: a graph's kind, its nodes; a host may still refuse
-//! a socket it does not have. A graph that calls a graph of a stdlib module
-//! the text uses brings that graph's issues (the stdlib is base-node's, built
-//! in); a module outside the stdlib is not read.
+//! what base-node-blender knows: a graph's kind, its nodes; a host may still
+//! refuse a socket it does not have. A graph that calls a graph of a stdlib
+//! module the text uses brings that graph's issues (the stdlib is
+//! base-node-blender's, built in); a module outside the stdlib is not read.
 
-use base_node::targets::follows;
-use base_node::{check_target, infer, load_target, File};
+use base_node::File;
+use base_node_blender::targets::follows;
+use base_node_blender::{check_target, infer, load_target};
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
@@ -58,7 +61,7 @@ pub fn backends(file: &File) -> Vec<Backend> {
         out.push(backend("blender", "Blender", "Nodes", Some(why)));
     }
     for (kind, id, label) in present {
-        let why = foreign(&blender_kinds).or_else(|| first_error(&only(file, kind), id));
+        let why = foreign(&blender_kinds).or_else(|| first_error(&only(file, kind), "blender"));
         out.push(backend(id, "Blender", label, why));
     }
 
@@ -188,14 +191,12 @@ mod tests {
         )
         .unwrap();
         let names: Vec<String> = targets(&f).into_iter().map(|f| f.name).collect();
+        assert_eq!(names, ["blender"]);
+        // A shader graph of math fits the shader variants too
+        let shader = "shader graph g(x: Float) -> Float {\n  return x * 2.0\n}\n";
         assert_eq!(
-            names,
-            [
-                "blender-compositor",
-                "blender-geometry",
-                "blender-gp",
-                "blender-shader"
-            ]
+            fits(shader)[..3],
+            ["blender", "blender cycles", "blender eevee"]
         );
     }
 
@@ -214,8 +215,11 @@ mod tests {
             [("blender-geometry", false), ("blade-pixel", false)]
         );
         let names = fits(geometry);
-        assert!(names.contains(&"blender-compositor".to_owned()));
-        assert!(!names.contains(&"blender-geometry".to_owned()));
+        assert!(!names.contains(&"blender".to_owned()), "{names:?}");
+        assert!(
+            fits(&geometry.replace("geometry graph", "compositor graph"))
+                .contains(&"blender".to_owned())
+        );
         let compositor = "use merge (with_alpha)\ncompositor graph g(c: Color) -> Color {\n  return with_alpha(c, 0.5)\n}\n";
         assert_eq!(
             tags(compositor),
@@ -239,9 +243,7 @@ mod tests {
         );
         let names =
             fits("use math (bias)\ngeometry graph g(x: Float) -> Float {\n  return bias(x)\n}\n");
-        for t in ["blender-geometry", "blender-shader", "blender-compositor"] {
-            assert!(names.contains(&t.to_owned()), "{t}: {names:?}");
-        }
+        assert_eq!(names, ["blender"]);
     }
 
     #[test]
@@ -257,7 +259,7 @@ mod tests {
             "p.bn",
         )
         .unwrap();
-        let out = base_node::translate(&f, "blender-compositor", "blade").unwrap();
+        let out = base_node_blender::translate(&f, "blender", "blade").unwrap();
         let text = base_node::format_file(&out);
         assert!(text.starts_with("use blender_interop\n"), "{text}");
         assert_eq!(tags(&text), [("blender", false), ("blade-pixel", true)]);
@@ -293,12 +295,12 @@ mod tests {
             targets(&f),
             [
                 Fit {
-                    name: "blender-compositor".to_owned(),
+                    name: "blender".to_owned(),
                     from: None
                 },
                 Fit {
                     name: "blade".to_owned(),
-                    from: Some("blender-compositor".to_owned())
+                    from: Some("blender".to_owned())
                 }
             ]
         );

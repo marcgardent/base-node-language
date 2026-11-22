@@ -323,7 +323,7 @@ geometry graph "Particle Simulation Basic"(
         data_type: FLOAT_VECTOR)
       |> StoreNamedAttribute(name: "lifetime", value: new_particles_lifetime)
   }
-  simulation_output = simulate(Geometry: set_id) {
+  simulation_output = simulate(Geometry: set_id) -> {
     "time" {
       math_3 = time_multiplier * delta_time @ hide
       math_2 = math_3 / Substeps @ hide
@@ -331,7 +331,7 @@ geometry graph "Particle Simulation Basic"(
     }
     repeat_output = repeat(
       Substeps,
-      Geometry: EvaluateClosure(First, Geometry: Geometry, "Delta Time": math_3) -> Geometry) {
+      Geometry: EvaluateClosure(First, Geometry: Geometry, "Delta Time": math_3) -> Geometry) -> {
       "time" .. {
         store_named_attribute = EvaluateClosure(
             simulation_per_substep_first,

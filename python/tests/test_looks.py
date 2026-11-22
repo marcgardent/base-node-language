@@ -2,7 +2,7 @@
 
 import pytest
 
-from base_node import BnError, compile_source, parse
+from base_node_blender import BnError, compile_source, parse
 from base_node.format import format_source
 from base_node.printer import to_source
 
@@ -76,10 +76,10 @@ def test_an_empty_look_is_an_error():
 
 ZONES = """geometry graph z(geometry: Geometry, t: Float, b: Bundle) -> (Geometry: Geometry, Total: Float) {
   s = SeparateBundle(b) -> (a: Float) @ hide
-  c = simulate(total: 0.0) {
+  c = simulate(total: 0.0) -> {
     return total + t @ "Pas" mute
   }
-  e = foreach(geometry, centre: Position()) {
+  e = foreach(geometry, centre: Position()) -> {
     p = CombineXYZ(z: t) @ #teal
     return (v: p) @ hide
   }

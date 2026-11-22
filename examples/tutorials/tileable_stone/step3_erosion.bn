@@ -2,7 +2,7 @@
 // @title Tileable stone, step 3: warp and slope blur
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use texture_atoms

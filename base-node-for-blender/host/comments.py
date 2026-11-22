@@ -24,7 +24,8 @@ from collections import defaultdict
 
 import blf
 
-from ..lang import ast, ir, printer
+from ..blender import ir
+from ..lang import ast, printer
 from ..lang.lexer import tokenize
 from ..lang.parser import parse
 
@@ -71,7 +72,7 @@ def events(file):
                 out.append(Event(s.line, "open", (s, "", g)))
                 walk(s.body, g, zone)
                 out.append(Event(s.end, "close", (s, "", g)))
-            elif isinstance(s, ast.Assign) and isinstance(s.value, ast.ZONES):
+            elif isinstance(s, ast.Assign) and isinstance(s.value, ast.BODIES):
                 out.append(Event(s.line, "open", (s, "", g)))
                 walk(s.value.body, g, s)
                 out.append(Event(s.value.end, "close", (s, "", g)))
@@ -309,7 +310,7 @@ def write(text, file, holders):
         if prefix:
             return  # the return of a zone: its block is the zone's
         end = b.end if isinstance(b, (ast.Frame, ast.Graph)) else b.value.end \
-            if isinstance(b, ast.Assign) and isinstance(b.value, ast.ZONES) else None
+            if isinstance(b, ast.Assign) and isinstance(b.value, ast.BODIES) else None
         if end is None:
             return
         inside, closing = notes.get("end", []), notes.get("end_after", [])
@@ -328,7 +329,7 @@ def write(text, file, holders):
             place(a, b)
             if isinstance(a, ast.Frame):
                 walk(a.body, b.body)
-            elif isinstance(a, ast.Assign) and isinstance(a.value, ast.ZONES):
+            elif isinstance(a, ast.Assign) and isinstance(a.value, ast.BODIES):
                 walk(a.value.body, b.value.body)
 
     for ga, gb in zip(file.graphs, parsed.graphs):

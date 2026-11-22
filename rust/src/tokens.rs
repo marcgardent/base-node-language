@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const KEYWORDS: &[&str] = &[
-    "graph", "return", "true", "false", "and", "or", "xor", "not", "repeat",
+    "graph", "return", "true", "false", "and", "or", "xor", "not",
 ];
 
 pub const PUNCT: &[&str] = &[

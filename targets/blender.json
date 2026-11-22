@@ -1,0 +1,16 @@
+{
+  "name": "blender",
+  "description": "Blender's node trees, Geometry Nodes, shaders and the compositor: a catalog per version of Blender in blender/<x.y>.json, written from what that Blender reports. `promised` lists the versions a text that says `blender` fits; `lts` the versions Blender names LTS; `variants` the files of blender/ that narrow it to what one consumer accepts",
+  "lts": [
+    "5.2"
+  ],
+  "promised": [
+    "5.2",
+    "5.3"
+  ],
+  "variants": [
+    "cycles",
+    "eevee",
+    "gltf"
+  ]
+}

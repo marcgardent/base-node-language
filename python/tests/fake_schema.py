@@ -1,6 +1,6 @@
 """A few Geometry Nodes, shaped like what host/schema.py reads from Blender."""
 
-from base_node.schema import NodeSpec, Prop, Socket
+from base_node_blender.schema import NodeSpec, Prop, Socket
 
 MATH_OPS = ("ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "POWER", "MINIMUM", "MAXIMUM", "ARCTAN2",
             "SMOOTH_MIN", "SMOOTH_MAX", "GREATER_THAN", "LESS_THAN", "COMPARE",

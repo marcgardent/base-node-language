@@ -1,0 +1,122 @@
+{
+ "color times": {
+  "geometry": "'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "frame": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "half extent": {
+  "geometry": "ImageInfo.image expects Image, receives Color (image)",
+  "shader": "unknown node 'ImageInfo' in a shader tree; did you mean VolumeInfo?",
+  "compositor": "ok"
+ },
+ "pixel of": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "soft edge": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "clamp01": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "constant": {
+  "geometry": "'frame' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'frame' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "color bars": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "color wheel": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "ramp": {
+  "geometry": "unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "radial": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "rectangle": {
+  "geometry": "'shape_space' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'shape_space' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "grid": {
+  "geometry": "'pixel_of' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'pixel_of' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "checkerboard": {
+  "geometry": "'pixel_of' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'pixel_of' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "is nan": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "is infinite": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "luma gray": {
+  "geometry": "ok",
+  "shader": "'gray_of' is a compositor graph that cannot be built in a shader tree: CombineColor has no input 'alpha'; inputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "false color": {
+  "geometry": "'constant' is a compositor graph that cannot be built in a geometry tree: 'frame' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'constant' is a compositor graph that cannot be built in a shader tree: 'frame' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "clip check": {
+  "geometry": "'keymix' is a compositor graph that cannot be built in a geometry tree: 'weighted_sum' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'luma_gray' is a compositor graph that cannot be built in a shader tree: 'gray_of' is a compositor graph that cannot be built in a shader tree: CombineColor has no input 'alpha'; inputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "nan inf check": {
+  "geometry": "'keymix' is a compositor graph that cannot be built in a geometry tree: 'weighted_sum' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "zebra": {
+  "geometry": "'pixel_of' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'pixel_of' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "alpha check": {
+  "geometry": "'checkerboard' is a compositor graph that cannot be built in a geometry tree: 'pixel_of' is a compositor graph that cannot be built in a geometry tree: unknown node 'ImageCoordinates' in a geometry tree",
+  "shader": "'checkerboard' is a compositor graph that cannot be built in a shader tree: 'pixel_of' is a compositor graph that cannot be built in a shader tree: unknown node 'ImageCoordinates' in a shader tree; did you mean TextureCoordinate?",
+  "compositor": "ok"
+ },
+ "heat": {
+  "geometry": "ok",
+  "shader": "CombineColor takes 3 input(s): red, green, blue",
+  "compositor": "ok"
+ },
+ "diff view": {
+  "geometry": "ok",
+  "shader": "SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ }
+}

@@ -26,7 +26,7 @@ fn shape(name: &str, n: usize) -> String {
         ),
         "zones" => format!(
             "geometry graph g(a: Float) -> Float {{\n{}{}return a\n}}\n",
-            "x = repeat(2, a: a) {\n".repeat(n),
+            "x = repeat(2, a: a) -> {\n".repeat(n),
             "return a\n}\n".repeat(n)
         ),
         "panels" => format!(
@@ -177,7 +177,7 @@ fn read(source: &str) {
 
 #[test]
 fn text_cut_anywhere_never_panics() {
-    // A look ahead must not read past the end of file: `x = closure() ->` and nothing after
+    // A look ahead must not read past the end of file: `x = graph() ->` and nothing after
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for name in [
         "conformance/all_features.bn",
@@ -190,8 +190,8 @@ fn text_cut_anywhere_never_panics() {
         }
     }
     for tail in [
-        "x = closure() ->",
-        "x = closure() -> (a: Float)",
+        "x = graph() ->",
+        "x = graph() -> (a: Float)",
         "x = closure(",
         "x = simulate()",
         "x = f(a()",

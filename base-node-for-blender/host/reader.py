@@ -15,19 +15,20 @@ from collections import Counter
 
 import bpy
 
-from ..lang import ast, sugar
+from ..blender import sugar
+from ..lang import ast
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..lang.typecheck import (MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type, switch_value_type,
-                              type_setting)
-from ..lang.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
+from ..blender.typecheck import (MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type,
+                                switch_value_type, type_setting)
+from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
-from ..lang.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
-                           CURVE, CURVES, MATERIAL, MATERIAL_OUTPUTS, RAMP, RESERVED, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
+from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
+                           CURVE, CURVES, DEPRECATED, MATERIAL, MATERIAL_OUTPUTS, RAMP, RESERVED, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
                            SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
-from .schema import (PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema, data_value, fresh_item,
+from .schema import (DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema, data_value, fresh_item,
                      fresh_item_options, fresh_item_value, fresh_options, item_option_names, option_names, root_panel,
                      prop_value, rounded, same_option, snapshot, socket_keys, text_name, ui_name)
 
@@ -43,7 +44,7 @@ FIRST_OPTIONS = {"is_panel_toggle": 0, "dimensions": 1, "subtype": 2, "descripti
 STATE_INPUTS = {REPEAT_INPUT, SIMULATION_INPUT}
 
 # Values of an assignment that hold a body of statements
-ZONE_VALUES = (ast.Repeat, ast.Simulate, ast.Foreach, ast.Closure)
+ZONE_VALUES = ast.BODIES
 
 # Kept for statements even when they hold their default
 ALWAYS = {"operation"}
@@ -228,8 +229,7 @@ class GraphReader:
                 self.separates[n.name] = vector[0]
                 src = vector[0][0].name
                 uses[src] = uses.get(src, 0) + uses.get(n.name, 0) - 1
-        # A name `closure` would read as a closure zone when called
-        taken = set(self.param_keys) | {"closure"}
+        taken = set(self.param_keys)
         for rout, rin in self.pairs.items():
             if rout in self.zone_of or any(n.name == rout for n in reached):
                 taken.update(self.body_names(rin))
@@ -322,8 +322,14 @@ class GraphReader:
         geometry_first = all(next((i.socket_type for i in sockets if i.in_out == io), None) == "NodeSocketGeometry"
                              for io in ("INPUT", "OUTPUT"))
         fresh = dict(TREE_FLAGS, is_modifier=geometry_first and not self.called)
-        return [ast.Arg(f, ast.Bool(getattr(tree, f), 0, 0), 0, 0) for f in TREE_FLAGS
-                if hasattr(tree, f) and getattr(tree, f) != fresh[f]]
+        flags = [ast.Arg(f, ast.Bool(getattr(tree, f), 0, 0), 0, 0) for f in TREE_FLAGS
+                 if hasattr(tree, f) and getattr(tree, f) != fresh[f]]
+        # What the text said of the group's leaving, kept on it by the builder
+        said = tree.get(DEPRECATION)
+        if isinstance(said, str):
+            value = ast.String(said, 0, 0) if said else ast.Bool(True, 0, 0)
+            flags.append(ast.Arg(DEPRECATED, value, 0, 0))
+        return flags
 
     def interface(self, written):
         """(inputs, outputs) as the header writes them: Params, and Panels around them.
@@ -752,8 +758,9 @@ class GraphReader:
         return self.exprs[node.name]
 
     def state_zone(self, zout):
-        """`repeat(count, state: start, …) { … return (state: next, …) }` for a Repeat zone,
-        `simulate(state: start, …) { … return (state: next, …, skip: c) }` for a Simulation zone."""
+        """`repeat(count, state: start, …) -> { … return (state: next, …) }` for a Repeat zone,
+        `simulate(state: start, …) -> { … return (state: next, …, skip: c) }` for a Simulation zone:
+        calls that take a body, in the tree of the text."""
         zin = self.pairs[zout.name]
         repeat = zout.bl_idname == REPEAT_OUTPUT
         word = "repeat" if repeat else "simulate"
@@ -806,11 +813,11 @@ class GraphReader:
             ret = ast.Return(ast.Record(fields, 0, 0), 0, 0, self.looked(zout))
         body = self.framed(statements + [(zout, ret)], base=frame_path(zout), notes=False)
         if repeat:
-            return ast.Repeat(values[0].value, states, body, 0, 0)
-        return ast.Simulate(states, body, 0, 0)
+            return ast.BodyCall("repeat", [ast.Arg(None, values[0].value, 0, 0)] + states, body, 0, 0)
+        return ast.BodyCall("simulate", states, body, 0, 0)
 
     def foreach(self, zout):
-        """`foreach(geometry, domain: FACE, item: field, …) { … return (main: v, …, mesh: g, attribute: a) }`."""
+        """`foreach(geometry, domain: FACE, item: field, …) -> { … return (main: v, …, mesh: g, attribute: a) }`."""
         zin = self.pairs[zout.name]
         incoming = self.incoming.get(zin.name, {})
         sockets = self.items(zin.inputs)
@@ -845,7 +852,7 @@ class GraphReader:
             self.warn(f"foreach '{zout.name}': duplicate item names, not yet supported in text")
         ret = ast.Return(ast.Record([f for f in fields if f.value is not None], 0, 0), 0, 0, self.looked(zout))
         body = self.framed(statements + [(zout, ret)], base=frame_path(zout), notes=False)
-        return ast.Foreach(geometry, args, body, 0, 0)
+        return ast.BodyCall("foreach", [ast.Arg(None, geometry, 0, 0)] + args, body, 0, 0)
 
     def zone_item(self, word, zout, node, sock, incoming, outside=False):
         """`name: value` for an item of a zone or a node the text declares: its link or its value,
@@ -922,7 +929,7 @@ class GraphReader:
         return {self.param_keys[self.items(src.outputs).index(sock)] for src, sock in gin}
 
     def closure(self, cout):
-        """`closure(x: Float, …) -> (r: Float, …) { … return … }` for a Closure zone."""
+        """`graph(x: Float, …) -> (r: Float, …) { … return … }`, a graph with no name, for a Closure zone."""
         cin = self.pairs[cout.name]
         params = self.declared(cout, "items")
         outputs = self.declared(cout, "out_items")
@@ -948,7 +955,7 @@ class GraphReader:
         else:
             ret = ast.Return(ast.Record([ast.Arg(n, v, 0, 0) for n, v in fields], 0, 0), 0, 0, self.looked(cout))
         body = self.framed(statements + [(cout, ret)], base=frame_path(cout), notes=False)
-        return ast.Closure(params, outputs, single, body, 0, 0)
+        return ast.NamelessGraph(params, outputs, single, body, 0, 0)
 
     def declared(self, node, attr):
         """`name: Type(structure_type: …)` for each item of a list a node declares: a closure's, `-> (…)`."""
@@ -1503,7 +1510,8 @@ class GraphReader:
         if SOCKET_TYPES.get(t) == "Material" and value not in self.taken:
             # A material by its name, as a graph is called: in quotes when it makes no identifier
             return bare_name(value)
-        if t in ("STRING",) or SOCKET_TYPES.get(t) in ("Object", "Collection", "Material", "Image", "Texture"):
+        if t in ("STRING",) or SOCKET_TYPES.get(t) in ("Object", "Collection", "Material", "Image", "Texture", "Font",
+                                                                 "Sound", "Scene", "Mask", "Text"):
             return self.string(value, node, sock)
         self.warn(f"value of '{node.name}.{sock.name}' ({t}) not exported")
         return None
@@ -1876,13 +1884,8 @@ def refs(e):
     elif isinstance(e, ast.Cond):
         for x in (e.cond, e.then, e.orelse):
             yield from refs(x)
-    elif isinstance(e, ast.ZONES):
-        if isinstance(e, ast.Repeat):
-            yield from refs(e.count)
-        if isinstance(e, ast.Foreach):
-            yield from refs(e.geometry)
-        heads = e.args if isinstance(e, ast.Foreach) else [] if isinstance(e, ast.Closure) else e.states
-        for a in heads:
+    elif isinstance(e, ast.BODIES):
+        for a in e.args if isinstance(e, ast.BodyCall) else []:
             yield from refs(a.value)
         for s in e.body:
             yield from statement_refs(s)

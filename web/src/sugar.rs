@@ -1,4 +1,5 @@
-//! Formulas as the nodes they write, after the add-on's `lang/sugar.py`:
+//! Formulas as the nodes they write, after the add-on's `blender/sugar.py`
+//! (python/base_node_blender/sugar.py):
 //! `a * 2`, `sin(t)` are Math nodes, Vector Math when an operand is a
 //! vector (`v * 2.0` scales it), `<` `==` are Compare (its data type from
 //! its operands; Math in a shader tree, which has no Compare), `and` `not`

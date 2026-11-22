@@ -109,7 +109,7 @@ geometry graph refuge() -> Geometry {
     cutter = Cylinder(vertices: 48, radius: 0.32, depth: 0.3).mesh
       |> TransformGeometry(translation: (1.5, 0.42, 1.88), rotation: (0.0, 1.5707964, 0.0))
     holed = roofed
-      |> boolean_cut(cutter)
+      |> boolean_cut(cutter: cutter)
   }
   "Grooves" #yellow {
     // Along the seam of the hatch; around the door, the edges between its faces and the others;

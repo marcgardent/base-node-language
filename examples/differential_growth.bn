@@ -112,7 +112,7 @@ geometry graph "differential growth"(
 ) -> Geometry {
   "Grows a closed curve in the XY plane, `iterations` steps at once"
   // The points of a Bézier or NURBS curve are its control points: it grows as a poly curve
-  grown = repeat(iterations, c: SetSplineType(curve, spline_type: POLY)) {
+  grown = repeat(iterations, c: SetSplineType(curve, spline_type: POLY)) -> {
     return (
       c: growth_step(c, max_length, radius, attraction, repulsion, alignment, step, max_points))
   }
@@ -133,8 +133,8 @@ geometry graph "growing differential growth"(
     }
 ) -> Geometry {
   "The same curve growing frame after frame: `steps per frame` steps in each"
-  grown = simulate(c: SetSplineType(curve, spline_type: POLY)) {
-    stepped = repeat(steps_per_frame, h: c) {
+  grown = simulate(c: SetSplineType(curve, spline_type: POLY)) -> {
+    stepped = repeat(steps_per_frame, h: c) -> {
       return (
         h: growth_step(h, max_length, radius, attraction, repulsion, alignment, step, max_points))
     }

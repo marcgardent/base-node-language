@@ -33,7 +33,7 @@ geometry graph crater_field(
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  height = crater_profile(x).height * radius / scale * depth * (1.0 - age * 0.7)
+  height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * here)
 }
 
@@ -47,7 +47,7 @@ geometry graph lunar_ground(
   p = Position()
   flat = CombineXYZ(x: p.x, y: p.y)
   plain = (NoiseTexture(vector: flat, scale: 0.4, detail: 3.0).factor - 0.5) * 0.3
-  c = crater_field(flat, scale: craters, seed: 0.0, density: density)
-  return Grid(size, size, resolution, resolution)
+  c = crater_field(p: flat, scale: craters, seed: 0.0, density: density)
+  return Grid(size_x: size, size_y: size, vertices_x: resolution, vertices_y: resolution)
     |> SetPosition(offset: CombineXYZ(z: plain + c.height))
 }

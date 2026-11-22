@@ -9,9 +9,9 @@ shader graph haze(surface: Shader) -> Shader {
   "surface faded into the pale air of the horizon with its distance from the camera: 60 % of the way at 330 m, all of it from 1 km on, where the sky takes over"
   far = distance(TextureCoordinate().object, (-64.0, -17.0, 12.0))
   return MixShader(
-    Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
-    surface,
-    Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
+    factor: Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
+    a: surface,
+    b: Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
 }
 
 shader(material: true) graph Ground() -> (surface: Shader) {
@@ -25,7 +25,7 @@ shader(material: true) graph Ground() -> (surface: Shader) {
     b: (0.2, 0.3, 0.05),
     data_type: RGBA)
   grass = tufts * (0.6 + Clamp(value: (meadows - 0.35) * 2.0) * 0.6)
-  return (surface: haze(PrincipledBSDF(base_color: grass, roughness: 0.92)))
+  return (surface: haze(surface: PrincipledBSDF(base_color: grass, roughness: 0.92)))
 }
 
 geometry graph game_level() -> Geometry {

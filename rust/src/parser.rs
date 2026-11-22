@@ -29,6 +29,11 @@ pub fn parse(source: &str, filename: &str) -> Result<File, BnError> {
             ),
         ));
     }
+    // The edition says which language the text is written in: one this reader does not know is
+    // not read
+    if let Some(d) = crate::header::edition_error(source, filename) {
+        return Err(BnError::from_diagnostics(vec![d]));
+    }
     let tokens = tokenize(source, filename, true)?;
     let mut parser = Parser::new(&tokens, filename);
     parser.parse_file()
@@ -245,7 +250,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_graph(&mut self) -> Result<Graph, BnError> {
-        let kind = self.expect("IDENT", Some("tree kind (geometry, shader, compositor)"))?;
+        let kind = self.expect("IDENT", Some("tree kind"))?;
         let settings = if self.accept("(").is_some() {
             self.args(true)?
         } else {
@@ -398,7 +403,10 @@ impl<'a> Parser<'a> {
         while self.accept(close).is_none() {
             if self.at("STRING") && (self.peek(1).is("{") || self.peek(1).is("(")) {
                 if !header {
-                    return Err(self.fail("panels are only allowed in graph headers", None));
+                    return Err(self.fail(
+                        "panels are only allowed in the header of a named graph",
+                        None,
+                    ));
                 }
                 items.push(ParamTreeItem::Panel(self.panel()?));
                 if self.accept(",").is_none() {
@@ -415,7 +423,9 @@ impl<'a> Parser<'a> {
             let mut alias = None;
             if self.at_text("IDENT", "as") && self.peek(1).is("IDENT") {
                 if !header {
-                    return Err(self.fail("'as' is only allowed in graph headers", None));
+                    return Err(
+                        self.fail("'as' is only allowed in the header of a named graph", None)
+                    );
                 }
                 self.advance();
                 alias = Some(self.advance().text);
@@ -542,12 +552,10 @@ impl<'a> Parser<'a> {
             }
             self.advance(); // IDENT
             self.advance(); // =
-            let value = if self.at_text("KEYWORD", "repeat") {
-                AssignValue::Repeat(self.repeat()?)
-            } else if self.at_closure() {
-                AssignValue::Closure(self.closure()?)
-            } else if self.at_zone() {
-                self.zone()?
+            let value = if self.at_text("KEYWORD", "graph") {
+                AssignValue::NamelessGraph(self.nameless()?)
+            } else if self.at_body_call() {
+                AssignValue::BodyCall(self.body_call()?)
             } else {
                 let e = self.expr()?;
                 let look = self.look()?;
@@ -651,104 +659,46 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn repeat(&mut self) -> Result<Repeat, BnError> {
+    /// `name(…) -> {`, the name qualified or not: a call that takes a body. The arrow tells it
+    /// from `x = f(a)` followed by a frame with no title.
+    fn at_body_call(&self) -> bool {
+        if !self.at("IDENT") {
+            return false;
+        }
+        let mut i = self.i + 1;
+        while self.token(i).is("::")
+            && (self.token(i + 1).is("IDENT") || self.token(i + 1).is("STRING"))
+        {
+            i += 2;
+        }
+        if !self.token(i).is("(") {
+            return false;
+        }
+        match self.matching(i) {
+            Some(j) => self.token(j + 1).is("->") && self.token(j + 2).is("{"),
+            None => false,
+        }
+    }
+
+    fn body_call(&mut self) -> Result<BodyCall, BnError> {
         let t = self.advance();
-        self.expect("(", Some("'(' after repeat"))?;
+        let mut name = t.text.clone();
+        while self.accept("::").is_some() {
+            name = format!("{}::{}", name, self.advance().text);
+        }
+        self.advance(); // "("
         let args = self.args(false)?;
-        if args.is_empty() || args[0].name.is_some() {
-            return Err(self.fail(
-                "repeat expects iteration count first: repeat(10, state: init, ...)",
-                Some(&t),
-            ));
-        }
-        if args.len() < 2 {
-            return Err(self.fail(
-                "repeat expects at least one state: repeat(10, state: init)",
-                Some(&t),
-            ));
-        }
-        if args.iter().any(|a| !a.options.is_empty()) {
-            return Err(self.fail("repeat state does not accept options", Some(&t)));
-        }
-        self.expect("{", Some("'{' after repeat(...)"))?;
+        self.advance(); // "->"
+        self.advance(); // "{"
         let (body, end) = self.block()?;
-        Ok(Repeat {
-            count: args[0].value.clone(),
-            states: args[1..].to_vec(),
+        Ok(BodyCall {
+            name,
+            args,
             body,
             line: t.line,
             col: t.col,
             end: end.line,
         })
-    }
-
-    fn at_zone(&self) -> bool {
-        if !(self.at("IDENT")
-            && (self.tok().text == "simulate" || self.tok().text == "foreach")
-            && self.peek(1).is("("))
-        {
-            return false;
-        }
-        let mut depth = 0;
-        let mut j = self.i + 1;
-        while !self.tokens[j].is("EOF") {
-            if self.tokens[j].is("(") {
-                depth += 1;
-            } else if self.tokens[j].is(")") {
-                depth -= 1;
-                if depth == 0 {
-                    return self.token(j + 1).is("{");
-                }
-            }
-            j += 1;
-        }
-        false
-    }
-
-    fn zone(&mut self) -> Result<AssignValue, BnError> {
-        let t = self.advance();
-        self.advance(); // "("
-        let args = self.args(false)?;
-        if t.text != "simulate" {
-            // A state of repeat or simulate may take a key of its own; a foreach item not yet
-            self.no_alias(&args)?;
-        }
-        if t.text == "simulate" {
-            if args.iter().any(|a| a.name.is_none()) {
-                return Err(self.fail(
-                    "simulate expects named states: simulate(state: init, ...)",
-                    Some(&t),
-                ));
-            }
-        } else if args.is_empty()
-            || args[0].name.is_some()
-            || args[1..].iter().any(|a| a.name.is_none())
-        {
-            return Err(self.fail(
-                "foreach expects geometry first, then named arguments: foreach(geometry, domain: FACE, value: field, ...)",
-                Some(&t),
-            ));
-        }
-        self.expect("{", None)?;
-        let (body, end) = self.block()?;
-        if t.text == "simulate" {
-            Ok(AssignValue::Simulate(Simulate {
-                states: args,
-                body,
-                line: t.line,
-                col: t.col,
-                end: end.line,
-            }))
-        } else {
-            Ok(AssignValue::Foreach(Foreach {
-                geometry: args[0].value.clone(),
-                args: args[1..].to_vec(),
-                body,
-                line: t.line,
-                col: t.col,
-                end: end.line,
-            }))
-        }
     }
 
     fn block(&mut self) -> Result<(Vec<Stmt>, Token), BnError> {
@@ -763,25 +713,6 @@ impl<'a> Parser<'a> {
         self.leave();
         let end = self.advance();
         Ok((body, end))
-    }
-
-    fn at_closure(&self) -> bool {
-        if !(self.at_text("IDENT", "closure") && self.peek(1).is("(")) {
-            return false;
-        }
-        if let Some(mut idx) = self.matching(self.i + 1) {
-            if self.token(idx + 1).is("->") {
-                idx += 2;
-                if self.token(idx).is("(") {
-                    if let Some(c_idx) = self.matching(idx) {
-                        return self.token(c_idx + 1).is("{");
-                    }
-                } else {
-                    return self.token(idx + 1).is("{");
-                }
-            }
-        }
-        false
     }
 
     fn matching(&self, i: usize) -> Option<usize> {
@@ -801,15 +732,19 @@ impl<'a> Parser<'a> {
         None
     }
 
-    fn closure(&mut self) -> Result<Closure, BnError> {
+    /// `graph(x: Float, …) -> Float { … }`: `graph` followed by `(` has no name.
+    fn nameless(&mut self) -> Result<NamelessGraph, BnError> {
         let t = self.advance();
-        self.expect("(", None)?;
+        self.expect(
+            "(",
+            Some("'(' after graph: a graph with no name is written graph(x: Float) -> Float { … }"),
+        )?;
         let params = flatten(&self.typed_list(")", false)?);
         self.expect("->", None)?;
         let (outputs, single) = self.outputs()?;
-        self.expect("{", Some("'{' after closure(...) -> ..."))?;
+        self.expect("{", Some("'{' after graph(…) -> …"))?;
         let (body, end) = self.block()?;
-        Ok(Closure {
+        Ok(NamelessGraph {
             params,
             outputs,
             single_output: single,
@@ -1048,6 +983,20 @@ impl<'a> Parser<'a> {
         let mut node = self.primary()?;
         if let Expr::Call(ref mut c) = node {
             if self.at("->") {
+                if self.peek(1).is("{") {
+                    let at = Token {
+                        line: c.line,
+                        col: c.col,
+                        ..self.tok().clone()
+                    };
+                    return Err(self.fail(
+                        format!(
+                            "a call with a body is the value of an assignment: r = {}(…) -> {{ … }}",
+                            c.name
+                        ),
+                        Some(&at),
+                    ));
+                }
                 self.advance();
                 let (outs, single) = self.outputs()?;
                 c.outputs = Some(outs);
@@ -1119,9 +1068,9 @@ impl<'a> Parser<'a> {
                 col: t.col,
             }));
         }
-        if self.at_text("KEYWORD", "repeat") {
+        if self.at_text("KEYWORD", "graph") {
             return Err(self.fail(
-                "repeat can only be assigned to a variable: r = repeat(10, state: init) { ... }",
+                "a graph with no name is the value of an assignment: f = graph(x: Float) -> Float { … }",
                 Some(&t),
             ));
         }
@@ -1278,24 +1227,6 @@ impl<'a> Parser<'a> {
         self.leave();
         self.height = height;
         Ok(args)
-    }
-
-    fn no_alias(&self, args: &[Arg]) -> Result<(), BnError> {
-        for a in args {
-            if let Some(ref alias) = a.alias {
-                let name_str = a.name.as_deref().unwrap_or("");
-                return Err(BnError::new(
-                    self.filename,
-                    a.line,
-                    a.col,
-                    format!(
-                        "'{} as {}': 'as' is only allowed for items in itemized node calls",
-                        name_str, alias
-                    ),
-                ));
-            }
-        }
-        Ok(())
     }
 
     fn at_item_options(&self) -> bool {

@@ -143,6 +143,20 @@ its checks on the render of the passes scene: as it is, its false colour by stop
 
 `BLENDER=/path/to/blender make test-blender` runs another Blender.
 
+**Testing on the promised versions.** `blender` is Blender 5.2 LTS and Blender 5.3
+(`promised` in [`targets/blender.json`](targets/blender.json)), and the Blender tests run on each:
+
+```bash
+make test-blender BLENDER=/path/to/blender-5.2/blender     # the add-on's tests, with that Blender
+make test-libraries BLENDER=/path/to/blender-5.2/blender   # the third-party libraries, with that Blender
+make test-promised BLENDERS="/path/to/blender-5.2/blender /path/to/blender-5.3/blender"   # both, with each
+```
+
+A test that needs what the Blender that runs has not is skipped and says why (a stdlib module that
+promises `blender@5.3` is not built by Blender 5.2); the checks against a file written from Blender
+read the file of the Blender that runs (`targets/backends/blender-<x.y>.json`). The CI runs both.
+
+
 ## Layout
 
 | Path | Description | License |
@@ -151,11 +165,12 @@ its checks on the render of the passes scene: as it is, its false colour by stop
 | [`spec/versioning.md`](spec/versioning.md) | Language editions, stdlib, targets, and SemVer lifecycle | MIT OR Apache-2.0 |
 | [`spec/targets.md`](spec/targets.md) | Targets: what a destination accepts, translators, `@target` | MIT OR Apache-2.0 |
 | [`spec/idioms.md`](spec/idioms.md) | Idioms: ways of writing a graph, each with an example | MIT OR Apache-2.0 |
-| [`targets/`](targets/) | Targets (`blender-geometry`, `blender-gp`, `blender-shader`, `blender-compositor`, `gltf`, `blade`), and in `backends/` the nodes of each kind of tree read from Blender | MIT OR Apache-2.0 |
+| [`targets/`](targets/) | Targets (`blender`, with in `blender/` the catalog of each version of Blender and its variants `gltf`, `eevee`, `cycles`; `blade`), and in `backends/` the nodes of each kind of tree read from Blender | MIT OR Apache-2.0 |
 | [`stdlib/`](stdlib/) | Standard `.bn` modules and manifest (`math`, `sdf2d`, `curves2d`, `patterns2d`, `fillet2d`, `planar2d`, `mask2d`, `merge`, `grade`, `stmap`, `qc`) | MIT OR Apache-2.0 |
 | [`conformance/`](conformance/) | Shared `.bn` test corpus and expected ASTs | MIT OR Apache-2.0 |
-| [`python/`](python/) | Zero-dependency Python parser, formatter, and CLI (`base_node`) | MIT OR Apache-2.0 |
-| [`rust/`](rust/) | `wasm32`-compatible Rust parser, formatter, and target checker (`base-node`) | MIT OR Apache-2.0 |
+| [`python/`](python/) | Zero-dependency Python: the core of the language (`base_node`: parser, formatter), what is Blender's (`base_node_blender`: nodes, checker, targets) and the CLI (`base_node_cli`) | MIT OR Apache-2.0 |
+| [`rust/`](rust/) | `wasm32`-compatible Rust core of the language (`base-node`: parser, formatter, head of a file) | MIT OR Apache-2.0 |
+| [`rust-blender/`](rust-blender/) | What is Blender's in Rust (`base-node-blender`: target checker and translators, the targets and the stdlib built in, what a file offers the add-on), `wasm32`-compatible | MIT OR Apache-2.0 |
 | [`web/`](web/) | `<bn-view>` Web Component: a `.bn` text read-only, its code and node graph (Rust → wasm), copy, enlarge, backend tags | MIT OR Apache-2.0 |
 | [`base-node-for-blender/`](base-node-for-blender/) | Blender 5.2+ extension *Base Node* (node tree ⇄ `.bn` text, stdlib bundled) | GPL-3.0-or-later |
 
@@ -165,16 +180,20 @@ A target is what one destination accepts; there is one file per target in [`targ
 none is defined from another ([spec](spec/targets.md)):
 
 ```text
-blender-geometry    every Geometry Nodes node
-blender-gp          every Geometry Nodes node, on a Grease Pencil object
-blender-shader      every shader node
-blender-compositor  every compositor node
-gltf                the shader nodes Blender's glTF exporter turns into a material
-blade               Blade's Pixel Nodes, with a translator from blender-compositor
+blender             every node of Blender, by kind of tree, in every version this Base Node promises
+blender@5.3         the same in one version of Blender; an LTS says so: blender@5.2-lts
+blender gltf        a variant: the shader nodes Blender's glTF exporter turns into a material
+blender eevee       a variant, experimental: the shader nodes EEVEE takes (blender cycles: Cycles)
+blade               Blade's Pixel Nodes, with a translator from blender
 ```
 
-The language speaks Blender: a destination that is not Blender declares translators from a Blender
-target. A text needs no target: the tool tells which ones accept it. `// @target gltf` at its head is a
+The kind of tree is the first word of a graph (`geometry graph`, `shader graph`, `compositor graph`):
+`blender` checks each graph against the nodes of its kind. A variant follows the target or one of its
+versions (`blender@5.3 gltf`). On a command line, `blender@latest` and `blender@lts` name a version;
+a text does not promise them.
+
+The language speaks Blender: a destination that is not Blender declares translators from Blender's
+target. A text needs no target: the tool tells which ones accept it. `// @target blender gltf` at its head is a
 promise the editor and `base-node check` hold it to.
 
 ## Reference pages
@@ -186,10 +205,24 @@ and the kinds of tree each stdlib graph builds in, are read from Blender into
 The CI checks them against Blender: after a change of the stdlib, of the checker or of Blender, write them
 again (`make backend`) and commit them.
 
+`make backend` names what it writes after the Blender it runs, and writes that version's catalog,
+`targets/blender/<x.y>.json`, from it. A version of Blender enters the `blender` target in two steps:
+
+1. `make backend BLENDER=/path/to/blender-5.2/blender` writes `targets/backends/blender-5.2.json`,
+   `targets/backends/blender-5.2/<module>.json` and `targets/blender/5.2.json`: `blender@5.2-lts` exists
+   (Blender 5.2 is in the `lts` of [`targets/blender.json`](targets/blender.json)).
+2. Add `"5.2"` to `promised` in `targets/blender.json`: a text that says `blender` now has to fit it too,
+   and `make test` holds every module of `stdlib/` to it.
+
+Blender 5.2 LTS and 5.3 are both in: after a change of the stdlib, run `make backend` with each
+(`make backend BLENDER=/path/to/blender-5.2/blender`, then `make backend`). A module that uses what
+5.2 has not promises `blender@5.3`
+([what 5.3 has that 5.2 has not](spec/targets.md#what-blender-53-has-that-blender-52-lts-has-not)).
+
 ```bash
 blender --background --factory-startup --python-exit-code 1 \
   --python base-node-for-blender/tests/export_backend.py
-PYTHONPATH=python python3 -m base_node.cli docs && python3 -m http.server -d site
+PYTHONPATH=python python3 -m base_node_cli.cli docs && python3 -m http.server -d site
 ```
 
 ## Python (`python/`)
@@ -218,7 +251,8 @@ CLI:
 base-node fmt file.bn
 base-node fmt --check file.bn
 base-node check stdlib/curves2d.bn          # held to its @target
-base-node check --target gltf material.bn   # or to the targets given
+base-node check --target "blender gltf" material.bn   # or to the targets given
+base-node check --target blender@latest file.bn      # the newest Blender this version knows (blender@lts: its LTS)
 base-node check sketch.bn                   # no @target: the targets it fits
 base-node ast file.bn
 base-node docs                 # the reference pages, into site/reference/
@@ -227,12 +261,13 @@ base-node docs                 # the reference pages, into site/reference/
 Library API:
 
 ```python
-import base_node as bn
+import base_node as bn              # the core: the text, knowing no destination
+import base_node_blender as blender  # Blender's nodes, the checker, the targets
 
 ast = bn.parse(source)
 formatted = bn.format_source(source)
-issues = bn.check_target(ast, "gltf")     # [] when it fits
-print(bn.infer(ast).lines())               # Compatible: …, Outside …: …
+issues = blender.check_target(ast, "blender gltf")  # [] when it fits
+print(blender.infer(ast).lines())           # Compatible: …, Outside …: …
 ```
 
 Run tests:
@@ -241,42 +276,47 @@ Run tests:
 PYTHONPATH=python pytest python/tests
 ```
 
-## Rust (`rust/`)
+## Rust (`rust/`, `rust-blender/`)
 
-Add to `Cargo.toml` (Cargo discovers `rust/Cargo.toml` in the repository automatically):
+Two crates: `base-node` (`rust/`) is the core of the language, which names no destination; `base-node-blender` (`rust-blender/`) checks a text against a target and holds the targets and the stdlib.
+
+Add to `Cargo.toml` (Cargo discovers each crate's `Cargo.toml` in the repository by its name):
 
 ```toml
 [dependencies]
 # From GitHub
 base-node = { git = "https://github.com/marcgardent/base-node-language.git", branch = "main" }
+base-node-blender = { git = "https://github.com/marcgardent/base-node-language.git", branch = "main" }
 
 # Or from a local checkout
 # base-node = { path = "../base-node-language/rust" }
+# base-node-blender = { path = "../base-node-language/rust-blender" }
 ```
 
 Or via `cargo add`:
 
 ```bash
-cargo add --git https://github.com/marcgardent/base-node-language.git base-node
+cargo add --git https://github.com/marcgardent/base-node-language.git base-node base-node-blender
 ```
 
 Library API:
 
 ```rust
-use base_node::{check_target, format_source, infer, parse};
+use base_node::{format_source, parse};
+use base_node_blender::{check_target, infer};
 
 let file = parse(src, "example.bn")?;
 let formatted = format_source(src, "example.bn")?;
-let issues = check_target(&file, "gltf"); // empty when it fits
+let issues = check_target(&file, "blender gltf"); // empty when it fits
 let fits = infer(&file).fits; // target -> None, or the target it translates from
 ```
 
 Run tests and check WebAssembly target:
 
 ```bash
-cd rust
-cargo test
-cargo check --target wasm32-unknown-unknown
+make test-rust
+(cd rust && cargo check --target wasm32-unknown-unknown)
+(cd rust-blender && cargo check --target wasm32-unknown-unknown)
 ```
 
 ## Blender Extension (`base-node-for-blender/`)
@@ -340,8 +380,8 @@ A `.bn` file dropped on Blender from a file manager (or opened by *File > Import
 A `use name` without `from` finds its module in this order: the text `name.bn` of the .blend, `name.bn` next to the imported file, `name.bn` in the *Module Folder* of the add-on preferences, then the standard library bundled with the add-on (`base-node-for-blender/stdlib` is a link to `stdlib/`).
 
 Build the package and install it in a local Blender. In the repository, `base-node-for-blender/stdlib`,
-`lang/_targets` and the modules of `lang/` that are `python/base_node`'s are symbolic links to their one
-source; Blender's `extension build` skips links, so `build.sh` builds a copy with the links resolved
+`blender/_targets` and the modules of `lang/` (the core, `python/base_node`) and of `blender/` (what is
+Blender's, `python/base_node_blender`) are symbolic links to their one source; Blender's `extension build` skips links, so `build.sh` builds a copy with the links resolved
 into files (`BLENDER=` names the blender to run):
 
 ```bash
@@ -349,7 +389,7 @@ base-node-for-blender/build.sh dist
 ```
 
 ```bash
-blender --command extension install-file -r user_default -e dist/base_node-0.13.1.zip
+blender --command extension install-file -r user_default -e dist/base_node-1.0.0-rc.1.zip
 ```
 
 Run headless Blender tests:
@@ -361,7 +401,7 @@ blender --background --factory-startup --python-exit-code 1 \
 
 ## License
 
-- `spec/`, `targets/`, `stdlib/`, `conformance/`, `python/`, `rust/`: [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
+- `spec/`, `targets/`, `stdlib/`, `conformance/`, `python/`, `rust/`, `rust-blender/`: [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
 - `base-node-for-blender/`: GPL-3.0-or-later.
 - `base-node-for-blender/tests/fixtures/everyday_geometry_nodes.blend`: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), node groups by Cartesian Caramel, from [blender-remote-asset-library-test-v1](https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1) and its `.bn` text in `everyday_geometry_nodes/` (see [their README](base-node-for-blender/tests/fixtures/README.md)).
 

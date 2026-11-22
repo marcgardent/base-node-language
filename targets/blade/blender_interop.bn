@@ -4,7 +4,7 @@
 // @edition 2026
 
 // The compositor nodes Blade has no node for, made of Blade's nodes. Blade's translator from
-// blender-compositor calls them: `Kuwahara(image, size: 6.0)` becomes
+// blender calls them in a compositor graph: `Kuwahara(image, size: 6.0)` becomes
 // `blender_interop::kuwahara(image, size: 6.0)`, and the text uses this module.
 //
 // The inputs of Blade's nodes are those of blenderFramework, crates/bf-raster/src/filters/types.rs:

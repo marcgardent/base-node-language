@@ -2,11 +2,11 @@
 
 import pytest
 
-from base_node import BnError, compile_source, parse
-from base_node.complete import complete
+from base_node_blender import BnError, compile_source, parse
+from base_node_blender.complete import complete
 from base_node.format import format_source
 from base_node.printer import to_source
-from base_node.schema import GroupSpec, interface_keys
+from base_node_blender.schema import GroupSpec, interface_keys
 
 
 def errors(source, schema):
@@ -182,7 +182,7 @@ def test_completion_reads_headers_with_panels_settings_and_keys(schema):
 
 def test_panels_and_keys_belong_to_a_graph_header():
     head = "geometry graph g(geometry: Geometry) -> Geometry {\n"
-    with pytest.raises(BnError, match="panels can only be defined in a graph header"):
-        parse(head + '  f = closure("P" { x: Float }) -> Float {\n    return x\n  }\n  return geometry\n}\n')
-    with pytest.raises(BnError, match="'as' can only be used in a graph header"):
-        parse(head + "  f = closure(x as y: Float) -> Float {\n    return y\n  }\n  return geometry\n}\n")
+    with pytest.raises(BnError, match="panels can only be defined in the header of a named graph"):
+        parse(head + '  f = graph("P" { x: Float }) -> Float {\n    return x\n  }\n  return geometry\n}\n')
+    with pytest.raises(BnError, match="'as' can only be used in the header of a named graph"):
+        parse(head + "  f = graph(x as y: Float) -> Float {\n    return y\n  }\n  return geometry\n}\n")

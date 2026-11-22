@@ -7,9 +7,12 @@ class Diagnostic:
     line: int
     col: int
     message: str
+    # "error", or "warning": the text is read all the same, and something in it should change
+    severity: str = "error"
 
     def __str__(self):
-        return f"{self.file}:{self.line}:{self.col}  {self.message}"
+        mark = "" if self.severity == "error" else f"{self.severity}: "
+        return f"{self.file}:{self.line}:{self.col}  {mark}{self.message}"
 
 
 class BnError(Exception):

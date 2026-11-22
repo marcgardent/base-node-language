@@ -18,7 +18,7 @@ the Material Output's inputs: none of this applies to it.
 
 import bpy
 
-from ..lang.schema import is_material
+from ..blender.schema import is_material
 
 # On a material the builder made: the shader group it shows
 MATERIAL_GROUP = "base_node_group"

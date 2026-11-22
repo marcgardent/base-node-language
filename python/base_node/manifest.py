@@ -4,11 +4,11 @@
 each module says the rest in the head of its `.bn`:
 
     // @module keying
-    // @version 0.13.1
-    // @target blender-compositor
+    // @version 1.0.0-rc.1
+    // @target <target>, <target>
     // @edition 2026
     // @pack compositing-pro
-    // @description Compositor keying tools after Nuke: ...
+    // @description Keying tools after Nuke: ...
 
 A module with a `@pack` is pro and in that paid pack, one without is free; its dependencies are
 the modules its `use` lines name. So adding a module adds its file and edits no shared list.

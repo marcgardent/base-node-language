@@ -103,7 +103,7 @@ geometry graph "reaction diffusion"(
   "Grows a Gray-Scott pattern on a square Grid, `iterations` steps at once"
   n = floor(sqrt(DomainSize(grid).point_count) + 0.5)
   r = gray_scott_rates(preset, feed, kill, du, dv, dt)
-  grown = repeat(iterations, g: gray_scott_seed(grid, seed)) {
+  grown = repeat(iterations, g: gray_scott_seed(grid, seed)) -> {
     return (g: gray_scott_step(g, n, r.rates, du, dv, r.dt))
   }
   return gray_scott_relief(grown.g, height)
@@ -126,8 +126,8 @@ geometry graph "growing reaction diffusion"(
   "The same pattern growing frame after frame: `steps per frame` steps in each"
   n = floor(sqrt(DomainSize(grid).point_count) + 0.5)
   r = gray_scott_rates(preset, feed, kill, du, dv, dt)
-  grown = simulate(g: gray_scott_seed(grid, seed)) {
-    stepped = repeat(steps_per_frame, h: g) {
+  grown = simulate(g: gray_scott_seed(grid, seed)) -> {
+    stepped = repeat(steps_per_frame, h: g) -> {
       return (h: gray_scott_step(h, n, r.rates, du, dv, r.dt))
     }
     return (g: stepped.h)

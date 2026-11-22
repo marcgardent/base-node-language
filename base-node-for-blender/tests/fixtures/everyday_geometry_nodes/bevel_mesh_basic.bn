@@ -388,7 +388,7 @@ geometry graph "Bevel Mesh Basic"(
       edge_vertices = EdgeVertices()
       position = Position() @ hide
       index_2 = Index() @ hide
-      closure_output = closure("Sort Index": Int) -> (Value: Float) {
+      closure_output = graph("Sort Index": Int) -> (Value: Float) {
         edges_of_vertex = EdgesOfVertex(sort_index: sort_index)
         evaluate_at_index = EvaluateAtIndex(
           value: edge_vertices.vertex_index_1,

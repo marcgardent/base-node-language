@@ -34,8 +34,8 @@
     <h2 id="use">Use it</h2>
     <ol class="steps">
       <li><strong>Get it into Blender.</strong> Drag the card below onto empty space in the 3D Viewport and keep <em>Instantiate the Example</em>, or paste the code in a Geometry Node editor with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>. You need Blender 5 and the <a href="../index.html#blender">Base Node add-on</a>.</li>
-      <li><strong>Give it a file.</strong> On the modifier, <code>file</code> takes the path of an <code>.srt</code>. <a href="https://github.com/marcgardent/base-node-language/blob/main/examples/tutorials/srt_subtitles/sample.srt"><code>sample.srt</code></a> holds three cues to start with.</li>
-      <li><strong>Play.</strong> The text changes with the scene time. <code>offset</code> moves every subtitle later, in seconds, <code>size</code> scales the text, and <code>fill</code> gives a mesh, or curves when it is off.</li>
+      <li><strong>Give it a file.</strong> On the modifier, <code>file</code> takes the path of the subtitles, an <code>.srt</code>, not of <code>srt_subtitles.bn</code>: the group reads any text it is given, and a <code>.bn</code> draws its own code. <a href="https://github.com/marcgardent/base-node-language/blob/main/examples/tutorials/srt_subtitles/sample.srt"><code>sample.srt</code></a> holds three cues to start with.</li>
+      <li><strong>Play.</strong> The text changes with the scene time. <code>offset</code> moves every subtitle later, in seconds, <code>size</code> scales the text, and <code>fill</code> gives a mesh, or curves when it is off. <code>material</code> paints the text and <code>font</code> draws it in another font, Blender's own by default.</li>
     </ol>
     <bn-file><script type="text/bn">
 // SubRip subtitles (.srt): the cue of the scene time, read from the file and drawn as text
@@ -74,7 +74,7 @@ geometry graph srt_cue(srt: String, time: Float) -> (text: String, start: Float,
   }
   "Blocks" #teal {
     blocks = FindInString(string: text, search: blank).count + 1.0
-    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) {
+    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) -> {
       gap = FindInString(string: rest, search: blank)
       size = gap.count > 0 ? gap.first_found : StringLength(string: rest)
       block = SliceString(string: rest, length: size)
@@ -104,7 +104,9 @@ geometry graph "srt subtitles"(
     file: String(subtype: FILE_PATH),
     offset: Float,
     size: Float = 0.5 in 0.0..,
-    fill: Bool = true
+    fill: Bool = true,
+    material: Material,
+    font: Font = "Bfont Regular"
 ) -> (geometry: Geometry, text: String) {
   "The subtitle of the scene time, from an .srt file; offset shifts the subtitles, in seconds"
   cue = srt_cue(srt: ImportText(path: file), time: SceneTime().seconds - offset)
@@ -121,10 +123,11 @@ geometry graph "srt subtitles"(
   curves = StringToCurves(
       string: shown,
       size: size,
+      font: font,
       align_x: Center,
       align_y: "Bottom Baseline").curve_instances
     |> RealizeInstances()
-  return (geometry: fill ? FillCurve(curves) : curves, text: shown)
+  return (geometry: (fill ? FillCurve(curves) : curves) |> SetMaterial(material: material), text: shown)
 }
 </script></bn-file>
     <p>
@@ -185,7 +188,7 @@ geometry graph srt_cue(srt: String, time: Float) -> (text: String, start: Float,
   }
   "Blocks" #teal {
     blocks = FindInString(string: text, search: blank).count + 1.0
-    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) {
+    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) -> {
       gap = FindInString(string: rest, search: blank)
       size = gap.count > 0 ? gap.first_found : StringLength(string: rest)
       block = SliceString(string: rest, length: size)
@@ -215,7 +218,9 @@ geometry graph "srt subtitles"(
     file: String(subtype: FILE_PATH),
     offset: Float,
     size: Float = 0.5 in 0.0..,
-    fill: Bool = true
+    fill: Bool = true,
+    material: Material,
+    font: Font = "Bfont Regular"
 ) -> (geometry: Geometry, text: String) {
   "The subtitle of the scene time, from an .srt file; offset shifts the subtitles, in seconds"
   cue = srt_cue(srt: ImportText(path: file), time: SceneTime().seconds - offset)
@@ -232,10 +237,11 @@ geometry graph "srt subtitles"(
   curves = StringToCurves(
       string: shown,
       size: size,
+      font: font,
       align_x: Center,
       align_y: "Bottom Baseline").curve_instances
     |> RealizeInstances()
-  return (geometry: fill ? FillCurve(curves) : curves, text: shown)
+  return (geometry: (fill ? FillCurve(curves) : curves) |> SetMaterial(material: material), text: shown)
 }
 </script></bn-view>
 
@@ -263,7 +269,7 @@ geometry graph "srt subtitles"(
       <li>Every frame walks the file from the first block, so the work grows with the number of cues.</li>
     </ul>
     <p class="muted">
-      The file, <code>sample.srt</code> and the script that renders this page's picture are in <a href="https://github.com/marcgardent/base-node-language/tree/main/examples/tutorials/srt_subtitles"><code>examples/tutorials/srt_subtitles/</code></a>. <code>make srt-check</code> builds the file in Blender and checks its cues against an <code>.srt</code> written with Unix line ends and one written with Windows line ends.
+      The file, <code>sample.srt</code> and the script that renders this page's picture are in <a href="https://github.com/marcgardent/base-node-language/tree/main/examples/tutorials/srt_subtitles"><code>examples/tutorials/srt_subtitles/</code></a>. <code>make srt-check</code> builds the file in Blender and checks its cues against an <code>.srt</code> written with Unix line ends and one written with Windows line ends, then that the text takes its material and its font.
     </p>
     <footer>
       Base Node Language — MIT OR Apache-2.0 (Blender host binding: GPL-3.0-or-later) · Hosted and sponsored by <a href="https://ludopant.com/">Ludopant Creative Studio</a>

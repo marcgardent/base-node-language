@@ -21,25 +21,25 @@ geometry graph river_course(x: Float) -> Float {
 geometry graph valley_height(p: Vector = Position()) -> Float {
   "Height of the ground at p: a gorge between two shoulders, two summits, a side stream, some noise"
   // d: how far north of the river; the gorge is steep, the shoulders above it gentle
-  d = p.y - river_course(p.x)
+  d = p.y - river_course(x: p.x)
   gorge = 0.6 * (1.0 - exp(-d * d * 8.0)) + 0.2 * max(abs(d) - 0.4, 0.0)
-  north = summit(p, (-0.75, 0.85, 0.0), 0.85, 0.45)
-  south = summit(p, (1.0, -0.8, 0.0), 0.65, 0.4)
-  stream = sdf_segment_2d(p, a: (1.0, 1.4, 0.0), b: (0.35, 0.15, 0.0), thickness: 0.0)
+  north = summit(p: p, centre: (-0.75, 0.85, 0.0), height: 0.85, width: 0.45)
+  south = summit(p: p, centre: (1.0, -0.8, 0.0), height: 0.65, width: 0.4)
+  stream = sdf_segment_2d(p: p, a: (1.0, 1.4, 0.0), b: (0.35, 0.15, 0.0), thickness: 0.0)
   side = 0.3 * exp(-stream * stream * 30.0)
   // Rough ground, but not on the floor of the gorge: the river keeps it smooth
   noise = NoiseTexture(vector: p, scale: 1.4, detail: 3.0).factor - 0.5
-  rough = noise * 0.3 * Clamp(abs(d) * 4.0)
+  rough = noise * 0.3 * Clamp(value: abs(d) * 4.0)
   return gorge + north + south - side + rough
 }
 
 geometry graph valley_slope(p: Vector = Position()) -> Vector {
   "The gradient of valley_height: it points uphill, and its length is the slope"
   e = 0.005
-  h = valley_height(p)
-  dx = valley_height(p + CombineXYZ(x: e)) - h
-  dy = valley_height(p + CombineXYZ(y: e)) - h
-  return CombineXYZ(dx / e, dy / e, 0.0)
+  h = valley_height(p: p)
+  dx = valley_height(p: p + CombineXYZ(x: e)) - h
+  dy = valley_height(p: p + CombineXYZ(y: e)) - h
+  return CombineXYZ(x: dx / e, y: dy / e, z: 0.0)
 }
 
 geometry graph contours(
@@ -50,15 +50,15 @@ geometry graph contours(
     radius: Float = 0.004 in 0.0..
 ) -> Geometry {
   "One curve per level of valley_height, every interval; every fifth one twice as thick"
-  ground = Grid(width, height, 361, 261).mesh
-  r = repeat(levels, lines: JoinGeometry()) {
+  ground = Grid(size_x: width, size_y: height, vertices_x: 361, vertices_y: 261).mesh
+  r = repeat(levels, lines: JoinGeometry()) -> {
     level = interval * (iteration + 1)
     // The faces above the level; their edge, but not the edge of the map, is the contour
     p = Position()
     inside = abs(p.x) < width * 0.5 - 0.001 and abs(p.y) < height * 0.5 - 0.001
     above = ground
-      |> DeleteGeometry(valley_height() < level, domain: FACE)
-      |> MeshToCurve(EdgeNeighbors().face_count == 1 and inside)
+      |> DeleteGeometry(selection: valley_height() < level, domain: FACE)
+      |> MeshToCurve(selection: EdgeNeighbors().face_count == 1 and inside)
     // Each point moves onto the level, along the slope: one step of Newton's method
     g = valley_slope()
     onto = p - g * ((valley_height() - level) / max(g ⋅ g, 0.0001))

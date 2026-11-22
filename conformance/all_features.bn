@@ -69,13 +69,13 @@ geometry graph nodes(geometry: Geometry, density: Float) -> Geometry {
 
 // Zones and items: nested repeat, Capture Attribute, Index Switch, Menu Switch, empty item
 geometry graph zones(geometry: Geometry, n: Int, i: Int) -> (Geometry: Geometry, Sum: Float) {
-  r = repeat(n, mesh: geometry, sum: 0.0) {
+  r = repeat(n, mesh: geometry, sum: 0.0) -> {
     top = Position().z >= sum
     extruded = ExtrudeMesh(mesh, top, offset_scale: 0.1)
     return (mesh: extruded.mesh, sum: sum + 0.1)
   }
-  table = repeat(n, total: 0.0) {
-    columns = repeat(n, s: total) {
+  table = repeat(n, total: 0.0) -> {
+    columns = repeat(n, s: total) -> {
       return s + iteration
     }
     return columns

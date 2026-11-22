@@ -72,28 +72,12 @@ pub fn format_source(source: &str, filename: &str) -> Result<String, BnError> {
                     }
                 }
                 Stmt::Assign(a) => match &a.value {
-                    AssignValue::Repeat(_)
-                    | AssignValue::Closure(_)
-                    | AssignValue::Simulate(_)
-                    | AssignValue::Foreach(_) => {
-                        let head_lines = zone_head(&a.name, &a.value, pad, a.line);
+                    AssignValue::BodyCall(_) | AssignValue::NamelessGraph(_) => {
+                        let head_lines = body_head(&a.name, &a.value, pad, a.line);
                         for (k, (o, t)) in head_lines.into_iter().enumerate() {
                             printed.push((o, t, k == 0));
                         }
-                        let inner_body = match &a.value {
-                            AssignValue::Repeat(r) => &r.body,
-                            AssignValue::Closure(c) => &c.body,
-                            AssignValue::Simulate(s) => &s.body,
-                            AssignValue::Foreach(f) => &f.body,
-                            _ => unreachable!(),
-                        };
-                        let end = match &a.value {
-                            AssignValue::Repeat(r) => r.end,
-                            AssignValue::Closure(c) => c.end,
-                            AssignValue::Simulate(s) => s.end,
-                            AssignValue::Foreach(f) => f.end,
-                            _ => unreachable!(),
-                        };
+                        let (inner_body, end) = a.value.body().unwrap();
                         let inner_pad = format!("{}{}", pad, INDENT);
                         walk(inner_body, &inner_pad, alone, printed);
                         printed.push((end, format!("{}}}", pad), false));
@@ -545,25 +529,9 @@ pub fn format_statement(s: &Stmt, pad: &str) -> Vec<(usize, String)> {
             lines
         }
         Stmt::Assign(a) => match &a.value {
-            AssignValue::Repeat(_)
-            | AssignValue::Closure(_)
-            | AssignValue::Simulate(_)
-            | AssignValue::Foreach(_) => {
-                let mut lines = zone_head(&a.name, &a.value, pad, a.line);
-                let inner_body = match &a.value {
-                    AssignValue::Repeat(r) => &r.body,
-                    AssignValue::Closure(c) => &c.body,
-                    AssignValue::Simulate(s) => &s.body,
-                    AssignValue::Foreach(f) => &f.body,
-                    _ => unreachable!(),
-                };
-                let end = match &a.value {
-                    AssignValue::Repeat(r) => r.end,
-                    AssignValue::Closure(c) => c.end,
-                    AssignValue::Simulate(s) => s.end,
-                    AssignValue::Foreach(f) => f.end,
-                    _ => unreachable!(),
-                };
+            AssignValue::BodyCall(_) | AssignValue::NamelessGraph(_) => {
+                let mut lines = body_head(&a.name, &a.value, pad, a.line);
+                let (inner_body, end) = a.value.body().unwrap();
                 let inner_pad = format!("{}{}", pad, INDENT);
                 for inner in inner_body {
                     lines.extend(format_statement(inner, &inner_pad));
@@ -617,73 +585,40 @@ fn look_text(look: &Look) -> String {
     parts.join(" ")
 }
 
-fn zone_head(name: &str, z: &AssignValue, pad: &str, _assign_line: usize) -> Vec<(usize, String)> {
+/// `name = call(argument, item: value, …) -> {`, one argument per line when too long.
+fn body_head(name: &str, z: &AssignValue, pad: &str, assign_line: usize) -> Vec<(usize, String)> {
     match z {
-        AssignValue::Closure(c) => closure_head(name, c, pad),
-        AssignValue::Repeat(r) => {
-            let mut items = vec![Arg {
-                name: None,
-                value: r.count.clone(),
-                line: r.line,
-                col: r.col,
-                options: Vec::new(),
-                type_decl: None,
-                alias: None,
-            }];
-            items.extend(r.states.clone());
-            let line = format!("{}{} = repeat({}) {{", pad, name, format_args(&items));
-            if char_len(&line) <= WIDTH || items.is_empty() {
-                return vec![(r.line, line)];
+        AssignValue::NamelessGraph(g) => nameless_head(name, g, pad, assign_line),
+        AssignValue::BodyCall(c) => {
+            let line = format!(
+                "{}{} = {}({}) -> {{",
+                pad,
+                name,
+                c.name,
+                format_args(&c.args)
+            );
+            if char_len(&line) <= WIDTH || c.args.is_empty() {
+                return vec![(assign_line, line)];
             }
             spread(
-                &format!("{}{} = repeat(", pad, name),
-                &items,
-                r.line,
+                &format!("{}{} = {}(", pad, name, c.name),
+                &c.args,
+                assign_line,
                 pad,
-                ") {",
-            )
-        }
-        AssignValue::Simulate(s) => {
-            let line = format!("{}{} = simulate({}) {{", pad, name, format_args(&s.states));
-            if char_len(&line) <= WIDTH || s.states.is_empty() {
-                return vec![(s.line, line)];
-            }
-            spread(
-                &format!("{}{} = simulate(", pad, name),
-                &s.states,
-                s.line,
-                pad,
-                ") {",
-            )
-        }
-        AssignValue::Foreach(f) => {
-            let mut items = vec![Arg {
-                name: None,
-                value: f.geometry.clone(),
-                line: f.line,
-                col: f.col,
-                options: Vec::new(),
-                type_decl: None,
-                alias: None,
-            }];
-            items.extend(f.args.clone());
-            let line = format!("{}{} = foreach({}) {{", pad, name, format_args(&items));
-            if char_len(&line) <= WIDTH || items.is_empty() {
-                return vec![(f.line, line)];
-            }
-            spread(
-                &format!("{}{} = foreach(", pad, name),
-                &items,
-                f.line,
-                pad,
-                ") {",
+                ") -> {",
             )
         }
         AssignValue::Expr(_) => unreachable!(),
     }
 }
 
-fn closure_head(name: &str, c: &Closure, pad: &str) -> Vec<(usize, String)> {
+/// `name = graph(x: Float, …) -> Float {`, one input per line when too long.
+fn nameless_head(
+    name: &str,
+    c: &NamelessGraph,
+    pad: &str,
+    assign_line: usize,
+) -> Vec<(usize, String)> {
     let outs = signature_outputs(&c.outputs, c.single_output);
     let params_str = c
         .params
@@ -691,11 +626,11 @@ fn closure_head(name: &str, c: &Closure, pad: &str) -> Vec<(usize, String)> {
         .map(format_param)
         .collect::<Vec<_>>()
         .join(", ");
-    let line = format!("{}{} = closure({}) -> {} {{", pad, name, params_str, outs);
+    let line = format!("{}{} = graph({}) -> {} {{", pad, name, params_str, outs);
     if char_len(&line) <= WIDTH || c.params.is_empty() {
-        return vec![(c.line, line)];
+        return vec![(assign_line, line)];
     }
-    let mut lines = vec![(c.line, format!("{}{} = closure(", pad, name))];
+    let mut lines = vec![(assign_line, format!("{}{} = graph(", pad, name))];
     let inner = format!("{}{}", pad, INDENT);
     for p in &c.params {
         lines.extend(param_lines(p, &inner, ","));

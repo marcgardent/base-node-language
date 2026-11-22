@@ -2,7 +2,7 @@
 // @title The promo cut, step 4: dissolves
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use mask2d (circle_mask)
@@ -12,8 +12,8 @@ use transitions
 compositor graph title_card() -> Color {
   "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
   title = Image(image: "promo-cut-plate-c.png").image
-  heart = circle_mask(title, 0.1, 1.1).mask
-  return over(title, keymix((0.35, 0.02, 0.25, 1.0), (0.01, 0.01, 0.06, 1.0), heart))
+  heart = circle_mask(title, radius: 0.1, feather: 1.1).mask
+  return over(title, b: keymix(a: (0.35, 0.02, 0.25, 1.0), b: (0.01, 0.01, 0.06, 1.0), mask: heart))
 }
 
 compositor graph promo_cut() -> Color {
@@ -23,11 +23,15 @@ compositor graph promo_cut() -> Color {
   c = title_card()
   ab = noise_dissolve(
     a,
-    b,
-    frame_progress(7.0, 16.0, true),
+    b: b,
+    progress: frame_progress(start: 7.0, length: 16.0, ease: true),
     size: 12.0,
     softness: 0.1,
     seed: 3.0).image
-  bc = dip_to_color(ab, c, frame_progress(31.0, 16.0), color: (1.0, 0.3, 0.02, 1.0)).image
-  return dissolve(bc, a, frame_progress(55.0, 16.0, true)).image
+  bc = dip_to_color(
+    ab,
+    b: c,
+    progress: frame_progress(start: 31.0, length: 16.0),
+    color: (1.0, 0.3, 0.02, 1.0)).image
+  return dissolve(bc, b: a, progress: frame_progress(start: 55.0, length: 16.0, ease: true)).image
 }

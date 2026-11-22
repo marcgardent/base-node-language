@@ -1,0 +1,183 @@
+{
+ "library": "Geometry Nodes Essentials",
+ "version": "Blender 5.2.4",
+ "sha256": "4592ec2a51b1adbd87467812979ddebb09f6606a49aa75549fdd2b40b7ffac86",
+ "blender": "5.2.4 LTS",
+ "summary": "33 ok",
+ "groups": {
+  ".UV_sphere_corrected": {
+   "status": "ok",
+   "text": "543bcb21478fb014"
+  },
+  ".average_face_corners_for_edge": {
+   "status": "ok",
+   "text": "e22defffd3b387b2"
+  },
+  ".curve_UV": {
+   "status": "ok",
+   "text": "6f919b4ef0752bd6"
+  },
+  ".curve_UV_factor_propagate": {
+   "status": "ok",
+   "text": "09f87614889750d7"
+  },
+  ".half_spheres": {
+   "status": "ok",
+   "text": "3d42200b55d1d2dd"
+  },
+  "3D to Screen Space": {
+   "status": "ok",
+   "text": "c0a7f0a700e041e2"
+  },
+  "Array": {
+   "status": "ok",
+   "text": "9138261ed296b8e6",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Box Selection": {
+   "status": "ok",
+   "text": "aed4354f899971f5",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Capture Rest Geometry": {
+   "status": "ok",
+   "text": "9898cf019f727bef"
+  },
+  "Combine Cylindrical": {
+   "status": "ok",
+   "text": "3b913b64fed7bf67"
+  },
+  "Combine Spherical": {
+   "status": "ok",
+   "text": "267b35613589ab19"
+  },
+  "Curve to Tube": {
+   "status": "ok",
+   "text": "ba74737e37ab8745",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Displace Geometry": {
+   "status": "ok",
+   "text": "924c1e437700aa73",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Edge Length": {
+   "status": "ok",
+   "text": "0cf97f34c568af5a"
+  },
+  "Face Corner Angle": {
+   "status": "ok",
+   "text": "cdf13217d3cb617f"
+  },
+  "Geometry Input": {
+   "status": "ok",
+   "text": "15a56d1fade931e9",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Instance on Elements": {
+   "status": "ok",
+   "text": "db35209d3bdf236c",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Is Edge Boundary": {
+   "status": "ok",
+   "text": "59624f5d63727ed8"
+  },
+  "Is Edge Loose": {
+   "status": "ok",
+   "text": "93c07b60b57fecd9"
+  },
+  "Is Edge Manifold": {
+   "status": "ok",
+   "text": "ef3caf9da0b45333"
+  },
+  "Is UV Split": {
+   "status": "ok",
+   "text": "e82176e21d412a03",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Normal Selection": {
+   "status": "ok",
+   "text": "41ca1bbaa26bd808",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Project with Depth": {
+   "status": "ok",
+   "text": "f76a156bf3f2c548"
+  },
+  "Random Rotation": {
+   "status": "ok",
+   "text": "fe0de27773f01276",
+   "warnings": [
+    "appearance of Group Input not exported: label (2), color"
+   ]
+  },
+  "Randomize Transforms": {
+   "status": "ok",
+   "text": "d56aa95b538c8557",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Scatter on Surface": {
+   "status": "ok",
+   "text": "4f9480218389de6e",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Screen to 3D Space": {
+   "status": "ok",
+   "text": "7e82557c7cc7267d"
+  },
+  "Separate Cylindrical": {
+   "status": "ok",
+   "text": "0441796c0297cad8"
+  },
+  "Separate Spherical": {
+   "status": "ok",
+   "text": "bad88417313dcf52"
+  },
+  "Smooth Geometry": {
+   "status": "ok",
+   "text": "58d9553aecf9adc0",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Smooth by Angle": {
+   "status": "ok",
+   "text": "63e7d3ae30363bb2",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Sphere Selection": {
+   "status": "ok",
+   "text": "77f3006fdd68eca2",
+   "warnings": [
+    "appearance of Group Input not exported: color"
+   ]
+  },
+  "Transform and Project": {
+   "status": "ok",
+   "text": "5981e827afad2171"
+  }
+ }
+}

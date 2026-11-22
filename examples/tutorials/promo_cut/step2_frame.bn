@@ -2,7 +2,7 @@
 // @title The promo cut, step 2: a wipe on the timeline
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use transitions (frame_progress, linear_wipe)
@@ -12,5 +12,5 @@ compositor graph promo_cut() -> Color {
   a = Image(image: "promo-cut-plate-a.png").image
   b = Image(image: "promo-cut-plate-b.png").image
   t = frame_progress(start: 13.0, length: 24.0, ease: true)
-  return linear_wipe(a, b, t, angle: 0.5235988, softness: 0.04).image
+  return linear_wipe(a, b: b, progress: t, angle: 0.5235988, softness: 0.04).image
 }

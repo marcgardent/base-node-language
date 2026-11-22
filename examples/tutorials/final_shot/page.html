@@ -146,7 +146,7 @@
     </p>
     {{code step5_glow.bn final_shot}}
     <ul>
-      <li><strong>Light wrap.</strong> <code>light_wrap</code> takes a foreground with its alpha, and a background. <code>with_alpha(shot * solid, solid)</code> makes the foreground: what stands in front of the sky, cut out by <code>solid</code>. The Environment pass is the sky alone. The sky, blurred over 15 pixels, is added on the foreground's edges, where its blurred alpha falls; <code>over</code> lays it back on the shot.</li>
+      <li><strong>Light wrap.</strong> <code>light_wrap</code> takes a foreground with its alpha, and a background. <code>with_alpha(shot * solid, alpha: solid)</code> makes the foreground: what stands in front of the sky, cut out by <code>solid</code>. The Environment pass is the sky alone. The sky, blurred over 15 pixels, is added on the foreground's edges, where its blurred alpha falls; <code>over</code> lays it back on the shot.</li>
       <li><strong>Glow.</strong> <code>glow</code> keeps what is brighter than white (<code>tolerance</code> 1.0, on its luma): the bulbs, the windows. It blurs that at five sizes, 3 to 48 pixels, averages them, and adds the result, times 0.6, to the image.</li>
       <li><strong>The order.</strong> The glow comes after the haze and the wrap: a lamp in fog glows over the fog, not under it.</li>
     </ul>
@@ -167,7 +167,7 @@
       <li><strong>The seed</strong> picks another grain; <code>animated: true</code> makes it change every frame, as film does.</li>
     </ul>
     <p>
-      To match the grain of a filmed plate rather than a stock, <code>regrain(clean, plate)</code> takes the grain from the plate itself: its fine detail, added to the clean image.
+      To match the grain of a filmed plate rather than a stock, <code>regrain(clean, grain_source: plate)</code> takes the grain from the plate itself: its fine detail, added to the clean image.
     </p>
     <figure>
       <img src="../images/tutorials/final-shot-step6.png" width="1000" height="750" loading="lazy" alt="The same shot with a fine film grain over the whole frame, most visible in the sky">

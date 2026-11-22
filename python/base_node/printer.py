@@ -5,7 +5,7 @@ not in the AST: `format.py` puts them back.
 """
 
 from . import ast, colors
-from .schema import RESERVED, key
+from .names import RESERVED, key
 
 INDENT = "  "
 WIDTH = 100
@@ -169,8 +169,8 @@ def statement(s, pad=INDENT):
         for inner in s.body:
             lines += statement(inner, pad + INDENT)
         return lines + [(s.end, pad + "}")]
-    if isinstance(s, ast.Assign) and isinstance(s.value, ast.ZONES):
-        lines = zone_head(s, pad)
+    if isinstance(s, ast.Assign) and isinstance(s.value, ast.BODIES):
+        lines = body_head(s, pad)
         for inner in s.value.body:
             lines += statement(inner, pad + INDENT)
         return lines + [(s.value.end, pad + "}")]
@@ -192,31 +192,25 @@ def look_text(look):
                     + look.flags)
 
 
-def zone_head(s, pad):
-    """`name = repeat(count, state: start, …) {`, one argument per line when too long."""
+def body_head(s, pad):
+    """`name = call(argument, item: value, …) -> {`, one argument per line when too long."""
     z = s.value
-    if isinstance(z, ast.Closure):
-        return closure_head(s, pad)
-    if isinstance(z, ast.Repeat):
-        word, items = "repeat", [ast.Arg(None, z.count, z.line, z.col)] + z.states
-    elif isinstance(z, ast.Simulate):
-        word, items = "simulate", z.states
-    else:
-        word, items = "foreach", [ast.Arg(None, z.geometry, z.line, z.col)] + z.args
-    line = f"{pad}{s.name} = {word}({args(items)}) {{"
-    if len(line) <= WIDTH or not items:
+    if isinstance(z, ast.NamelessGraph):
+        return nameless_head(s, pad)
+    line = f"{pad}{s.name} = {z.name}({args(z.args)}) -> {{"
+    if len(line) <= WIDTH or not z.args:
         return [(s.line, line)]
-    return spread(f"{pad}{s.name} = {word}(", items, s.line, pad, ") {")
+    return spread(f"{pad}{s.name} = {z.name}(", z.args, s.line, pad, ") -> {")
 
 
-def closure_head(s, pad):
-    """`name = closure(x: Float, …) -> Float {`, one input per line when too long."""
+def nameless_head(s, pad):
+    """`name = graph(x: Float, …) -> Float {`, one input per line when too long."""
     c = s.value
     outs = signature_outputs(c.outputs, c.single_output)
-    line = f"{pad}{s.name} = closure({', '.join(param(p) for p in c.params)}) -> {outs} {{"
+    line = f"{pad}{s.name} = graph({', '.join(param(p) for p in c.params)}) -> {outs} {{"
     if len(line) <= WIDTH or not c.params:
         return [(s.line, line)]
-    lines = [(s.line, f"{pad}{s.name} = closure(")]
+    lines = [(s.line, f"{pad}{s.name} = graph(")]
     for p in c.params:
         lines += param_lines(p, pad + INDENT, ",")
     lines[-1] = (lines[-1][0], lines[-1][1][:-1])

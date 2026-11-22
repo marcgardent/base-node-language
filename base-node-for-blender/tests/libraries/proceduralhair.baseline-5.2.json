@@ -1,0 +1,153 @@
+{
+ "library": "Procedural Hair Node Assets",
+ "version": "Blender 5.2.4",
+ "sha256": "b69d8bd8975b9db7f89693f8f19dd7fcb241f5a3786d2edfb0a243e91c1109bb",
+ "blender": "5.2.4 LTS",
+ "summary": "32 ok",
+ "groups": {
+  ".shape_range": {
+   "status": "ok",
+   "text": "56439bd16db7a789"
+  },
+  "Attach Hair Curves to Surface": {
+   "status": "ok",
+   "text": "8f6914810bb76da6"
+  },
+  "Attachment Info": {
+   "status": "ok",
+   "text": "95904c9a7d85b542"
+  },
+  "Blend Hair Curves": {
+   "status": "ok",
+   "text": "664475bbe1e1b040"
+  },
+  "Braid Hair Curves": {
+   "status": "ok",
+   "text": "5940fd3baff9a249"
+  },
+  "Clump Hair Curves": {
+   "status": "ok",
+   "text": "2d4bc3ed9b937e3d"
+  },
+  "Create Guide Index Map": {
+   "status": "ok",
+   "text": "0f9d9743c4c2aee8"
+  },
+  "Curl Hair Curves": {
+   "status": "ok",
+   "text": "99a2bb808c8d369f"
+  },
+  "Curve Info": {
+   "status": "ok",
+   "text": "6ee45ae98057bff6"
+  },
+  "Curve Root": {
+   "status": "ok",
+   "text": "2f6b104dcafe93df"
+  },
+  "Curve Segment": {
+   "status": "ok",
+   "text": "0aad77a038e2171d"
+  },
+  "Curve Tip": {
+   "status": "ok",
+   "text": "c57cf40f298d3d4d"
+  },
+  "Displace Hair Curves": {
+   "status": "ok",
+   "text": "7c02f270c17a8764"
+  },
+  "Duplicate Hair Curves": {
+   "status": "ok",
+   "text": "d3ff1d38ad2b833c"
+  },
+  "Frizz Hair Curves": {
+   "status": "ok",
+   "text": "c6a87223290fce80"
+  },
+  "Generate Hair Curves": {
+   "status": "ok",
+   "text": "77929ff98c93de8b"
+  },
+  "Get Attachment Surface": {
+   "status": "ok",
+   "text": "962ae349364289b6"
+  },
+  "Get Hair Surface Geometry": {
+   "status": "ok",
+   "text": "6eddad18709a3df6"
+  },
+  "Get Rest Geometry": {
+   "status": "ok",
+   "text": "d84728ee53496f4f"
+  },
+  "Hair Curves Noise": {
+   "status": "ok",
+   "text": "04a640b2a9d2f33a"
+  },
+  "Interpolate Hair Curves": {
+   "status": "ok",
+   "text": "65201c1196ff7159",
+   "warnings": [
+    "frame 'Frame.002' is split: its nodes depend on nodes of another frame that depend on them"
+   ]
+  },
+  "Redistribute Curve Points": {
+   "status": "ok",
+   "text": "bc8a64c8b79b7ab3"
+  },
+  "Rest Surface": {
+   "status": "ok",
+   "text": "65c4050394db5adc"
+  },
+  "Restore Curve Segment Length": {
+   "status": "ok",
+   "text": "c22752c2a5c5187f"
+  },
+  "Roll Hair Curves": {
+   "status": "ok",
+   "text": "144678c797db28fc",
+   "warnings": [
+    "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
+   ]
+  },
+  "Rotate Hair Curves": {
+   "status": "ok",
+   "text": "711666956cc533b7"
+  },
+  "Set Attachment Surface": {
+   "status": "ok",
+   "text": "291b403a49e1706e"
+  },
+  "Set Hair Curve Profile": {
+   "status": "ok",
+   "text": "97461fc35e783bf7"
+  },
+  "Shrinkwrap Hair Curves": {
+   "status": "ok",
+   "text": "17baab7902fb9657",
+   "warnings": [
+    "frame 'Frame.003' is split: its nodes depend on nodes of another frame that depend on them",
+    "frame 'Frame.004' is split: its nodes depend on nodes of another frame that depend on them"
+   ]
+  },
+  "Smooth Hair Curves": {
+   "status": "ok",
+   "text": "4ff8b78f332443c0",
+   "warnings": [
+    "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
+   ]
+  },
+  "Straighten Hair Curves": {
+   "status": "ok",
+   "text": "4ef25d78569ede6f",
+   "warnings": [
+    "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
+   ]
+  },
+  "Trim Hair Curves": {
+   "status": "ok",
+   "text": "51fdf34a67b45075"
+  }
+ }
+}

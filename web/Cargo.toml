@@ -1,6 +1,6 @@
 [package]
 name = "base-node-web"
-version = "0.13.1"
+version = "1.0.0-rc.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Read-only view of a .bn text in the browser: its highlighted code, its node graph, and the backends it runs on"
@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base-node = { path = "../rust" }
+base-node-blender = { path = "../rust-blender" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 wasm-bindgen = "=0.2.130"

@@ -23,25 +23,25 @@ geometry graph river_course(x: Float) -> Float {
 geometry graph valley_height(p: Vector = Position()) -> Float {
   "Height of the ground at p: a gorge between two shoulders, two summits, a side stream, some noise"
   // d: how far north of the river; the gorge is steep, the shoulders above it gentle
-  d = p.y - river_course(p.x)
+  d = p.y - river_course(x: p.x)
   gorge = 0.6 * (1.0 - exp(-d * d * 8.0)) + 0.2 * max(abs(d) - 0.4, 0.0)
-  north = summit(p, (-0.75, 0.85, 0.0), 0.85, 0.45)
-  south = summit(p, (1.0, -0.8, 0.0), 0.65, 0.4)
-  stream = sdf_segment_2d(p, a: (1.0, 1.4, 0.0), b: (0.35, 0.15, 0.0), thickness: 0.0)
+  north = summit(p: p, centre: (-0.75, 0.85, 0.0), height: 0.85, width: 0.45)
+  south = summit(p: p, centre: (1.0, -0.8, 0.0), height: 0.65, width: 0.4)
+  stream = sdf_segment_2d(p: p, a: (1.0, 1.4, 0.0), b: (0.35, 0.15, 0.0), thickness: 0.0)
   side = 0.3 * exp(-stream * stream * 30.0)
   // Rough ground, but not on the floor of the gorge: the river keeps it smooth
   noise = NoiseTexture(vector: p, scale: 1.4, detail: 3.0).factor - 0.5
-  rough = noise * 0.3 * Clamp(abs(d) * 4.0)
+  rough = noise * 0.3 * Clamp(value: abs(d) * 4.0)
   return gorge + north + south - side + rough
 }
 
 geometry graph valley_slope(p: Vector = Position()) -> Vector {
   "The gradient of valley_height: it points uphill, and its length is the slope"
   e = 0.005
-  h = valley_height(p)
-  dx = valley_height(p + CombineXYZ(x: e)) - h
-  dy = valley_height(p + CombineXYZ(y: e)) - h
-  return CombineXYZ(dx / e, dy / e, 0.0)
+  h = valley_height(p: p)
+  dx = valley_height(p: p + CombineXYZ(x: e)) - h
+  dy = valley_height(p: p + CombineXYZ(y: e)) - h
+  return CombineXYZ(x: dx / e, y: dy / e, z: 0.0)
 }
 
 geometry graph contours(
@@ -52,15 +52,15 @@ geometry graph contours(
     radius: Float = 0.004 in 0.0..
 ) -> Geometry {
   "One curve per level of valley_height, every interval; every fifth one twice as thick"
-  ground = Grid(width, height, 361, 261).mesh
-  r = repeat(levels, lines: JoinGeometry()) {
+  ground = Grid(size_x: width, size_y: height, vertices_x: 361, vertices_y: 261).mesh
+  r = repeat(levels, lines: JoinGeometry()) -> {
     level = interval * (iteration + 1)
     // The faces above the level; their edge, but not the edge of the map, is the contour
     p = Position()
     inside = abs(p.x) < width * 0.5 - 0.001 and abs(p.y) < height * 0.5 - 0.001
     above = ground
-      |> DeleteGeometry(valley_height() < level, domain: FACE)
-      |> MeshToCurve(EdgeNeighbors().face_count == 1 and inside)
+      |> DeleteGeometry(selection: valley_height() < level, domain: FACE)
+      |> MeshToCurve(selection: EdgeNeighbors().face_count == 1 and inside)
     // Each point moves onto the level, along the slope: one step of Newton's method
     g = valley_slope()
     onto = p - g * ((valley_height() - level) / max(g ⋅ g, 0.0001))
@@ -106,7 +106,7 @@ geometry graph hachures(
       selection: steep > flat and abs(tip.x) < 1.8 and abs(tip.y) < 1.3,
       instance: stroke,
       rotation: CombineXYZ(z: atan2(-g.y, -g.x)),
-      scale: CombineXYZ(reach, min(steep / steepest, 1.0), 1.0))
+      scale: CombineXYZ(x: reach, y: min(steep / steepest, 1.0), z: 1.0))
     |> RealizeInstances()
     |> SetMaterial(material: Ink)
 }
@@ -117,9 +117,9 @@ geometry graph shade(
     flat: Float = 0.55
 ) -> Float {
   "How much the ground at p turns away from a light from the north-west: 0 on the flat, 1 in deep shade"
-  g = valley_slope(p)
-  facing = normalize(CombineXYZ(-g.x, -g.y, 1.0)) ⋅ normalize(light)
-  return Clamp((flat - facing) * 2.0, 0.0, 1.0)
+  g = valley_slope(p: p)
+  facing = normalize(CombineXYZ(x: -g.x, y: -g.y, z: 1.0)) ⋅ normalize(light)
+  return Clamp(value: (flat - facing) * 2.0, min: 0.0, max: 1.0)
 }
 
 geometry graph ruling(
@@ -155,7 +155,7 @@ geometry graph engrave(
   p = Position()
   off = amount < 0.05 or abs(p.x) > width * 0.5 or abs(p.y) > height * 0.5
   return lines
-    |> DeleteGeometry(off)
+    |> DeleteGeometry(selection: off)
     |> MeshToCurve()
     |> SetCurveRadius(radius: amount * weight)
 }
@@ -164,13 +164,14 @@ geometry graph cross_hatching(spacing: Float = 0.03 in 0.001.., angle: Float = 3
   "Engraved lines over the slopes in shade, and a second pass across them where the shade is deepest"
   s = shade()
   first = engrave(
-    ruling(angle, spacing),
-    hatch_cross(angle: angle, spacing: spacing, cross_angle: 0.0, shade: s) * Clamp(s * 2.0))
+    ruling(angle: angle, spacing: spacing),
+    amount: hatch_cross(angle: angle, spacing: spacing, cross_angle: 0.0, shade: s)
+      * Clamp(value: s * 2.0))
   across = angle + 90.0
   second = engrave(
-    ruling(across, spacing),
-    hatch_cross(angle: across, spacing: spacing, cross_angle: 0.0, shade: s * 2.0 - 1.0)
-      * Clamp(s * 4.0 - 2.0))
+    ruling(angle: across, spacing: spacing),
+    amount: hatch_cross(angle: across, spacing: spacing, cross_angle: 0.0, shade: s * 2.0 - 1.0)
+      * Clamp(value: s * 4.0 - 2.0))
   return first + second
 }
 
@@ -182,10 +183,10 @@ geometry graph frame(
     radius: Float = 0.003 in 0.0..
 ) -> Geometry {
   "The neat line around the map, a guilloché band, and a thick outer line"
-  inner = Quadrilateral(width, height).curve
-  outer = Quadrilateral(width + band * 2.0, height + band * 2.0).curve
+  inner = Quadrilateral(width: width, height: height).curve
+  outer = Quadrilateral(width: width + band * 2.0, height: height + band * 2.0).curve
   // Three waves along the middle of the band, a third of a wave apart, braid into a guilloché
-  middle = Quadrilateral(width + band, height + band).curve
+  middle = Quadrilateral(width: width + band, height: height + band).curve
     |> FilletCurve(radius: band * 0.5, mode: "Poly", count: 8)
   braid = wave_curve_2d(middle, amplitude: band * 0.3, periods: waves, resolution: 2048)
     + wave_curve_2d(middle, amplitude: band * 0.3, periods: waves, phase: 0.333, resolution: 2048)
@@ -199,11 +200,11 @@ geometry graph rosette(
     waves: Float = 16.0 in 1.0..
 ) -> Geometry {
   "A guilloché rosette: four of the curves guilloche traces, one inside the other"
-  r = repeat(4, curves: JoinGeometry()) {
+  r = repeat(4, curves: JoinGeometry()) -> {
     t = SplineParameter().factor
     k = iteration / 3.0
     // r2 at 0 keeps the loops round; r1 and p change from one curve to the next
-    shape = guilloche(t, r1: 0.95 - k * 0.45, r2: 0.0, p: 0.12 + k * 0.06, waves: waves)
+    shape = guilloche(t: t, r1: 0.95 - k * 0.45, r2: 0.0, p: 0.12 + k * 0.06, waves: waves)
     ring = CurveCircle(resolution: 900).curve
       |> SetPosition(position: centre + shape * size)
     return (curves: curves + ring)
@@ -219,20 +220,24 @@ geometry graph cartouche(
     radius: Float = 0.003 in 0.0..
 ) -> Geometry {
   "A framed label in a corner of the map: a rosette and the title"
-  box = Quadrilateral(width, height).curve
+  box = Quadrilateral(width: width, height: height).curve
     |> FilletCurve(radius: 0.05, mode: "Poly", count: 6)
     |> TransformGeometry(translation: centre)
-  inner = Quadrilateral(width - 0.05, height - 0.05).curve
+  inner = Quadrilateral(width: width - 0.05, height: height - 0.05).curve
     |> FilletCurve(radius: 0.03, mode: "Poly", count: 6)
     |> TransformGeometry(translation: centre)
-  rose = rosette(centre + CombineXYZ(x: width * -0.31), size: height * 0.34)
-  words = StringToCurves(title, size: 0.07, align_x: "Center", align_y: "Middle").curve_instances
+  rose = rosette(centre: centre + CombineXYZ(x: width * -0.31), size: height * 0.34)
+  words = StringToCurves(
+      string: title,
+      size: 0.07,
+      align_x: "Center",
+      align_y: "Middle").curve_instances
     |> RealizeInstances()
     |> FillCurve()
     |> TransformGeometry(translation: centre + CombineXYZ(x: width * 0.15, y: 0.04))
     |> SetMaterial(material: Ink)
   subtitle = StringToCurves(
-      "engraved relief",
+      string: "engraved relief",
       size: 0.05,
       align_x: "Center",
       align_y: "Middle").curve_instances
@@ -252,10 +257,10 @@ geometry graph clear(strokes: Geometry, under: Bool) -> Geometry {
   curves = parts.curve
     |> StoreNamedAttribute(name: "width", value: Radius())
     |> CurveToMesh()
-    |> DeleteGeometry(under)
+    |> DeleteGeometry(selection: under)
     |> MeshToCurve()
     |> SetCurveRadius(radius: NamedAttribute(name: "width", data_type: FLOAT))
-  return curves + DeleteGeometry(parts.mesh, under, domain: FACE)
+  return curves + DeleteGeometry(parts.mesh, selection: under, domain: FACE)
 }
 
 geometry graph engraved_map() -> Geometry {
@@ -265,6 +270,6 @@ geometry graph engraved_map() -> Geometry {
   // The relief stops a little before the cartouche's box
   p = Position() - label
   under = abs(p.x) < 0.63 and abs(p.y) < 0.29
-  strokes = clear(lines + cross_hatching(), under)
-  return ink(strokes + frame()) + clear(hachures(lines), under) + cartouche(label)
+  strokes = clear(lines + cross_hatching(), under: under)
+  return ink(strokes + frame()) + clear(hachures(lines), under: under) + cartouche(centre: label)
 }

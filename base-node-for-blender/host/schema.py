@@ -7,7 +7,7 @@ are read on demand with the properties set, and memoized.
 
 import bpy
 
-from ..lang.schema import (ITEM_NODES, ITEM_TYPES, MAPPING_OPTIONS, RAMP_OPTIONS, TYPES, GroupSpec, NodeSpec, Prop,
+from ..blender.schema import (ITEM_NODES, ITEM_TYPES, MAPPING_OPTIONS, RAMP_OPTIONS, TYPES, GroupSpec, NodeSpec, Prop,
                            Socket, input_key, interface_keys, key, node_name)
 
 TREE_TYPES = {
@@ -36,7 +36,8 @@ SOCKET_TYPES = {
     "VALUE": "Float", "INT": "Int", "BOOLEAN": "Bool", "VECTOR": "Vector", "RGBA": "Color",
     "ROTATION": "Rotation", "MATRIX": "Matrix", "STRING": "String", "MENU": "Menu",
     "GEOMETRY": "Geometry", "SHADER": "Shader", "OBJECT": "Object", "COLLECTION": "Collection",
-    "MATERIAL": "Material", "IMAGE": "Image", "TEXTURE": "Texture", "BUNDLE": "Bundle",
+    "MATERIAL": "Material", "IMAGE": "Image", "TEXTURE": "Texture", "FONT": "Font", "SOUND": "Sound",
+    "SCENE": "Scene", "MASK": "Mask", "TEXT": "Text", "BUNDLE": "Bundle",
     "CLOSURE": "Closure",
 }
 
@@ -90,7 +91,7 @@ def channels(bl_idname, count):
 
 
 def data_value(data):
-    """What a ramp or a curve mapping holds, as ir.Node.data has it: see lang.ir.Node.data.
+    """What a ramp or a curve mapping holds, as ir.Node.data has it: see blender.ir.Node.data.
     A ramp's stops in the order of their positions, as Blender evaluates them."""
     if isinstance(data, bpy.types.ColorRamp):
         stops = sorted(((e.position, tuple(e.color)) for e in data.elements), key=lambda s: s[0])
@@ -343,6 +344,8 @@ def root_panel(tree):
 
 # On a built group: {socket identifier: {"name", "key"}} for the sockets the text named with `as`
 ALIASES = "base_node_aliases"
+# On a built group: what the text says of its leaving (`deprecated: "use curl2"`, "" for `true`)
+DEPRECATION = "base_node_deprecated"
 
 
 def socket_keys(tree, io):
@@ -517,6 +520,10 @@ def same_option(name, a, b):
 def snapshot(sock):
     """A socket's default_value as plain Python: tuples for vectors, names for datablocks."""
     value = getattr(sock, "default_value", None)
+    if isinstance(value, bpy.types.VectorFont) and value.filepath == "<builtin>":
+        # Blender's own font is what a socket with no font draws with: it is no font chosen. A new
+        # node holds it on one machine and nothing on another, so it is never a value to write
+        return None
     if isinstance(value, bpy.types.ID):
         return value.name
     if hasattr(value, "__len__") and not isinstance(value, str):

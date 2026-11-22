@@ -10,21 +10,24 @@ import json
 
 import bpy
 
-from .. import lang
-from ..lang import ir
+from .. import blender
+from ..blender import ir
 from ..lang.errors import BnError, Diagnostic
-from ..lang.layout import layout
-from ..lang.schema import (ITEM_NODES, MATERIAL, SIGNATURE_NODES, TYPES, is_material, key, option_key,
+from ..blender.layout import layout
+from ..blender.schema import (ITEM_NODES, MATERIAL, SIGNATURE_NODES, TYPES, is_material, key, option_key,
                            signature_items, snake)
-from ..lang.typecheck import REPEAT_ITEMS
+from ..blender.typecheck import REPEAT_ITEMS
 from . import comments, modules, outputs
 from .arrange import arrange_nodes
-from .schema import (ALIASES, PANEL_OPTIONS, TREE_FLAGS, TREE_TYPES, BlenderSchema, fresh_item, fresh_options,
+from .schema import (ALIASES, DEPRECATION, PANEL_OPTIONS, TREE_FLAGS, TREE_TYPES, BlenderSchema, fresh_item, fresh_options,
                      datablocks, id_type, item_option_names, new_item, root_panel, same_option, socket_keys,
                      socket_types, text_name, ui_name)
 
 DATABLOCKS = {"OBJECT": "objects", "COLLECTION": "collections", "MATERIAL": "materials",
-              "IMAGE": "images", "TEXTURE": "textures"}
+              "IMAGE": "images", "TEXTURE": "textures", "FONT": "fonts",
+              "SOUND": "sounds", "SCENE": "scenes", "MASK": "masks", "TEXT": "texts"}
+# The name of Blender's own font, loaded when a text names it: font: Font = "Bfont Regular"
+BUILTIN_FONT = "Bfont Regular"
 
 # Item options set after the links: a Viewer's auto_remove drops an item nothing feeds yet
 LATE_OPTIONS = {"auto_remove"}
@@ -45,14 +48,15 @@ ZONE_WORDS = {ir.REPEAT_INPUT: "repeat", ir.REPEAT_OUTPUT: "repeat", ir.SIMULATI
 ZONE_ITEMS = {ir.REPEAT_OUTPUT: "repeat_items", ir.SIMULATION_OUTPUT: "state_items"}
 
 
-def build_source(source, filename="<text>", load=None):
+def build_source(source, filename="<text>", load=None, warnings=None):
     """Compile a .bn source and build its graphs, and those its `use` lines bring.
 
-    `load(name, source)` finds the modules, `modules.load` by default.
+    `load(name, source)` finds the modules, `modules.load` by default; `warnings` is a list the
+    warnings of the source are added to: they stop nothing.
     Returns the node groups of the source's own graphs, raises BnError.
     """
     with BlenderSchema() as schema:
-        graphs = lang.compile_source(source, schema, filename, load or modules.load)
+        graphs = blender.compile_source(source, schema, filename, load or modules.load, warnings)
     builder = Builder(filename, graphs)
 
     scratch = {}
@@ -173,7 +177,11 @@ class Builder:
         """The datablock `name` of `collection` (bpy.data.materials…), a material the text defines first."""
         if kind.upper() == "MATERIAL" and name in self.materials:
             return self.materials[name]
-        return collection.get(name)
+        found = collection.get(name)
+        if found is None and kind.upper() == "FONT" and name == BUILTIN_FONT:
+            # Blender's own font is in every file once loaded: a String to Curves new in the editor loads it
+            found = bpy.data.fonts.load("<builtin>", check_existing=True)
+        return found
 
     def fail(self, node, message):
         raise BnError([Diagnostic(self.filename, node.line, node.col, message)])
@@ -219,6 +227,11 @@ class Builder:
         self.settings(tree, g)
         self.fill(tree, g, built, kept)
         tree.description = g.description or ""
+        # Kept on the group for Tree → Text to write it back: Blender has no word for it
+        if g.deprecated is None:
+            tree.pop(DEPRECATION, None)
+        else:
+            tree[DEPRECATION] = g.deprecated
         # The subtype first: it makes the socket again, with its own defaults
         self.options(tree, g)
         # After the links: a menu input only has its items once it feeds a menu

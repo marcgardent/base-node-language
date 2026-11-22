@@ -3,9 +3,10 @@ geometry tree, a Mix by a condition where a Switch takes one value for a whole i
 
 import pytest
 
-from base_node import BnError, ast, compile_source, format_source, parse
+from base_node import ast
+from base_node_blender import BnError, compile_source, format_source, parse
 from base_node.printer import to_source
-from base_node.typecheck import branches_type
+from base_node_blender.typecheck import branches_type
 from fake_schema import FakeSchema
 
 SIG = "geometry graph g(geometry: Geometry, a: Float, b: Float, i: Int, v: Vector, on: Bool) -> Geometry"

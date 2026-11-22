@@ -2,10 +2,10 @@
 
 import pytest
 
-from base_node import BnError, compile_source, ir, parse
+from base_node_blender import BnError, compile_source, ir, parse
 from base_node.format import format_source
 from base_node.printer import to_source
-from base_node.schema import CLOSURE_INPUT, CLOSURE_OUTPUT
+from base_node_blender.schema import CLOSURE_INPUT, CLOSURE_OUTPUT
 
 
 def compile_all(source, schema):
@@ -43,7 +43,7 @@ def test_the_fixture_checks(fixture_text, schema):
 
 
 def test_a_closure_is_a_zone_that_captures_outer_names(schema):
-    (g,) = compile_all(graph("  f = closure(x: Float, \"Point Count\": Int(structure_type: SINGLE)) -> (r: Float) {\n"
+    (g,) = compile_all(graph("  f = graph(x: Float, \"Point Count\": Int(structure_type: SINGLE)) -> (r: Float) {\n"
                              "    return x * t + point_count\n  }\n  return f(x: 1.0)"), schema)
     (cin,), (cout,) = nodes(g, CLOSURE_INPUT), nodes(g, CLOSURE_OUTPUT)
     assert cin.pair == cout.id and cout.name == "f"
@@ -57,7 +57,7 @@ def test_a_closure_is_a_zone_that_captures_outer_names(schema):
 
 
 def test_an_evaluation_takes_the_items_of_the_closure_it_is_given(schema):
-    (g,) = compile_all(graph("  f = closure(x: Float, v: Vector) -> Float {\n    return x\n  }\n"
+    (g,) = compile_all(graph("  f = graph(x: Float, v: Vector) -> Float {\n    return x\n  }\n"
                              "  return f(v: Position())"), schema)
     (e,) = nodes(g, "NodeEvaluateClosure")
     assert e.items == [("x", "Float"), ("v", "Vector")] and e.out_items == [("Float", "Float")]
@@ -95,7 +95,7 @@ def test_bundles_take_the_types_of_their_values(schema):
 
 
 def test_a_repeat_state_may_start_empty_or_typed(schema):
-    (g,) = compile_all(graph("  r = repeat(3, w: Bundle, k: Float = 1, v: Bundle = _) {\n    return (w: b)\n  }\n"
+    (g,) = compile_all(graph("  r = repeat(3, w: Bundle, k: Float = 1, v: Bundle = _) -> {\n    return (w: b)\n  }\n"
                              "  return r.k"), schema)
     (rin,) = nodes(g, ir.REPEAT_INPUT)
     assert rin.items == [("w", "Bundle"), ("k", "Float"), ("v", "Bundle")]
@@ -146,13 +146,13 @@ def test_picking_a_declared_output_takes_parentheses():
     ("  return SetPosition(geometry, offset: Vector = Position())",
      "'offset: Vector = …' gives an item type: for item nodes, zones, or EvaluateClosure"),
     ("  return Position() -> Vector", "'->' declares items of SeparateBundle or EvaluateClosure, not Position"),
-    ("  f = closure(x: Float) -> (r: Float) {\n    return (s: x)\n  }\n  return f(x: t)",
+    ("  f = graph(x: Float) -> (r: Float) {\n    return (s: x)\n  }\n  return f(x: t)",
      "'s' is not a closure output; outputs: r"),
-    ("  f = closure(x: Float = 1.0) -> Float {\n    return x\n  }\n  return f()",
+    ("  f = graph(x: Float = 1.0) -> Float {\n    return x\n  }\n  return f()",
      "a closure item has no default value or range"),
-    ("  f = closure() -> Float {\n    return 1.0\n  }\n  return f(y: 1.0)",
+    ("  f = graph() -> Float {\n    return 1.0\n  }\n  return f(y: 1.0)",
      "closure has no input 'y'; inputs: none"),
-    ("  f = closure(x: Float) -> Float {\n    d = x\n  }\n  return f(x: t)", "missing return in closure of 'f'"),
+    ("  f = graph(x: Float) -> Float {\n    d = x\n  }\n  return f(x: t)", "missing return in closure of 'f'"),
     ("  return ClosureToList(c)", "ClosureToList declares items: ClosureToList(count, closure) -> (name: Type, …)"),
     ("  return ClosureToList(10, c, x: Float)",
      "ClosureToList declares items after '->': ClosureToList(count, closure) -> (name: Type, …)"),
@@ -193,5 +193,5 @@ def test_closure_to_list_named_args(schema):
 
 
 def test_names_of_a_closure_body_stay_inside(schema):
-    msgs = errors(graph("  f = closure(x: Float) -> Float {\n    d = x * 2.0\n    return d\n  }\n  return d"), schema)
+    msgs = errors(graph("  f = graph(x: Float) -> Float {\n    d = x * 2.0\n    return d\n  }\n  return d"), schema)
     assert msgs == ["unknown name 'd'"]

@@ -1,6 +1,6 @@
 import pytest
 
-from base_node.complete import complete, product_sign, signature
+from base_node_blender.complete import complete, product_sign, signature
 
 from fake_schema import MATH_OPS
 
@@ -136,7 +136,7 @@ def test_product_words_swap_after_an_operand(typed, expected):
 
 
 def test_graphs_of_a_use_and_groups_of_the_file(schema):
-    from base_node.schema import GroupSpec
+    from base_node_blender.schema import GroupSpec
     schema.existing = {"lift_up": GroupSpec("Lift Up", (("z", "Float"),), (("Vector", "Vector"),))}
     maths = "geometry graph bosse(x: Float, centre: Float) -> Float {\n  return x\n}\n" \
             "geometry graph pic(x: Float) -> Float {\n  return x\n}\n"
@@ -192,11 +192,12 @@ def test_signature_of_the_call_the_cursor_is_in(schema):
 
 def test_a_comment_line_offers_the_targets(schema):
     start, items = at_end("//", schema)
-    assert [i.label for i in items][:2] == ["@target blade", "@target blender-compositor"]
+    assert [i.label for i in items][:2] == ["@target blade", "@target blender"]
     assert (start, items[0].insert) == (3, " @target blade")  # right after `//`
-    start, items = at_end("  // @target gl", schema)
-    assert [i.insert for i in items] == [" @target gltf"] and start == 5
-    assert "@target blender-gp" in labels("// @tar", schema)
+    start, items = at_end("  // @target blender g", schema)
+    assert [i.insert for i in items] == [" @target blender gltf"] and start == 5
+    assert "@target blender@5.3 eevee" in labels("// @tar", schema)
+    assert not [label for label in labels("// @tar", schema) if "@latest" in label or "@lts" in label]
 
 
 def test_an_ordinary_comment_offers_nothing(schema):
@@ -206,7 +207,7 @@ def test_an_ordinary_comment_offers_nothing(schema):
 
 def test_search_as_blenders_add_menu():
     """As Shift+A: each piece is the start of a word of the label, in any order, one typo forgiven."""
-    from base_node.complete import Item, matching
+    from base_node_blender.complete import Item, matching
 
     names = ["CurveCircle", "MeshCircle", "NoiseTexture", "VoronoiTexture", "WhiteNoiseTexture",
              "InstanceOnPoints", "SetHandlePositions", "SetPosition"]

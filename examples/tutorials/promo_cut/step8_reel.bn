@@ -2,7 +2,7 @@
 // @title The promo cut, step 8: the reel
 // @author Base Node tutorials
 // @license MIT OR Apache-2.0
-// @target blender-compositor
+// @target blender
 // @offer groups
 
 use grade (exposure_stops, grade)
@@ -14,8 +14,8 @@ use transitions
 compositor graph title_card() -> Color {
   "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
   title = Image(image: "promo-cut-plate-c.png").image
-  heart = circle_mask(title, 0.1, 1.1).mask
-  return over(title, keymix((0.35, 0.02, 0.25, 1.0), (0.01, 0.01, 0.06, 1.0), heart))
+  heart = circle_mask(title, radius: 0.1, feather: 1.1).mask
+  return over(title, b: keymix(a: (0.35, 0.02, 0.25, 1.0), b: (0.01, 0.01, 0.06, 1.0), mask: heart))
 }
 
 compositor graph comic(image: Color) -> Color {
@@ -23,10 +23,10 @@ compositor graph comic(image: Color) -> Color {
   ink = (0.03, 0.01, 0.06, 1.0)
   seen = grade(image, gamma: (2.2, 2.2, 2.2))
   flat = seen
-    |> posterize(4)
+    |> posterize(levels: 4)
     |> grade(gamma: (0.4545, 0.4545, 0.4545))
-  dots = halftone(exposure_stops(seen, 1.0), cell: 7.0, ink: ink).mask
-  return keymix(ink, flat, dots * 0.85)
+  dots = halftone(exposure_stops(seen, stops: 1.0), cell: 7.0, ink: ink).mask
+  return keymix(ink, b: flat, mask: dots * 0.85)
 }
 
 compositor graph burst(at: Float, width: Float = 6.0 in 1.0..) -> Float {
@@ -40,10 +40,14 @@ compositor graph promo_cut() -> Color {
   b = Image(image: "promo-cut-plate-b.png").image
   title = Image(image: "promo-cut-plate-c.png").image
   // The hills come in printed, and a wipe develops them
-  hills = linear_wipe(comic(b), b, frame_progress(31.0, 14.0, true), softness: 0.05).image
+  hills = linear_wipe(
+    comic(b),
+    b: b,
+    progress: frame_progress(start: 31.0, length: 14.0, ease: true),
+    softness: 0.05).image
   // The title in a tube of light that comes on, flickers off and on again
   f = SceneTime().frame
-  on = frame_progress(57.0, 3.0) * (1.0 - 0.9 * (f > 61.0) * (f < 64.0))
+  on = frame_progress(start: 57.0, length: 3.0) * (1.0 - 0.9 * (f > 61.0) * (f < 64.0))
   card = neon_outline(
     title_card(),
     matte: alpha_of(title),
@@ -52,11 +56,23 @@ compositor graph promo_cut() -> Color {
     glow: 16.0,
     intensity: 1.6 * on).image
   // The cut
-  ab = push(a, hills, frame_progress(19.0, 8.0, true), direction: Left).image
-  bc = iris_wipe(ab, card, frame_progress(47.0, 10.0, true), softness: 0.03).image
-  ca = dip_to_color(bc, a, frame_progress(79.0, 14.0), color: (0.6, 0.02, 0.3, 1.0)).image
+  ab = push(
+    a,
+    b: hills,
+    progress: frame_progress(start: 19.0, length: 8.0, ease: true),
+    direction: Left).image
+  bc = iris_wipe(
+    ab,
+    b: card,
+    progress: frame_progress(start: 47.0, length: 10.0, ease: true),
+    softness: 0.03).image
+  ca = dip_to_color(
+    bc,
+    b: a,
+    progress: frame_progress(start: 79.0, length: 14.0),
+    color: (0.6, 0.02, 0.3, 1.0)).image
   // Torn at the cuts, on a screen, through a lens
-  g = burst(23.0) + burst(52.0, 4.0)
+  g = burst(at: 23.0) + burst(at: 52.0, width: 4.0)
   return ca
     |> glitch_blocks(
       block: (64.0, 10.0),

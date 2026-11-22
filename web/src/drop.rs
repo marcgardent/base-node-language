@@ -1,8 +1,9 @@
 //! What the text gives when it is dragged out of the page as a `.bn` file:
 //! its file name, and what its head offers the host it is dropped on (the
-//! Blender add-on reads the same head, `base_node::header`).
+//! Blender add-on reads the same head, `base_node_blender::header`).
 
-use base_node::{ast::key, header_of, File};
+use base_node::{ast::key, File};
+use base_node_blender::header_of;
 use serde::Serialize;
 
 use crate::Problem;

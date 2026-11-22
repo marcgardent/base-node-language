@@ -46,8 +46,12 @@ geometry graph rounded_cube(
   // Every point of a dense cube pulled to radius from the core, a smaller cube inside it
   h = size * 0.5 - radius
   p = Position()
-  core = min(max(p, CombineXYZ(-h, -h, -h)), CombineXYZ(h, h, h))
-  return Cube(size: CombineXYZ(size, size, size), vertices_x: 9, vertices_y: 9, vertices_z: 9)
+  core = min(max(p, CombineXYZ(x: -h, y: -h, z: -h)), CombineXYZ(x: h, y: h, z: h))
+  return Cube(
+      size: CombineXYZ(x: size, y: size, z: size),
+      vertices_x: 9,
+      vertices_y: 9,
+      vertices_z: 9)
     |> SetPosition(position: core + normalize(p - core) * radius)
     |> SetShadeSmooth()
 }
@@ -62,8 +66,8 @@ geometry graph clone_wall(
   // A band: up a ramp to the front, down an inverted ramp behind it; their minimum is a tent
   rise = linear_falloff(origin: CombineXYZ(x: front - 0.5), direction: across, length: 0.5)
   fall = invert_falloff(
-    linear_falloff(origin: CombineXYZ(x: front), direction: across, length: 0.5))
-  w = combine_falloffs(rise, fall, mode: Minimum)
+    weight: linear_falloff(origin: CombineXYZ(x: front), direction: across, length: 0.5))
+  w = combine_falloffs(a: rise, b: fall, mode: Minimum)
   // The collection to pick from: a rounded cube, a ball (the same, fully rounded), a puck
   shapes = GeometryToInstance(
     rounded_cube() |> SetMaterial(material: Cream),

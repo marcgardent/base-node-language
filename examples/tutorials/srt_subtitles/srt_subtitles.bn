@@ -34,7 +34,7 @@ geometry graph srt_cue(srt: String, time: Float) -> (text: String, start: Float,
   }
   "Blocks" #teal {
     blocks = FindInString(string: text, search: blank).count + 1.0
-    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) {
+    cues = repeat(blocks, rest: text, shown: "", start: 0.0, end: 0.0) -> {
       gap = FindInString(string: rest, search: blank)
       size = gap.count > 0 ? gap.first_found : StringLength(string: rest)
       block = SliceString(string: rest, length: size)
@@ -64,7 +64,9 @@ geometry graph "srt subtitles"(
     file: String(subtype: FILE_PATH),
     offset: Float,
     size: Float = 0.5 in 0.0..,
-    fill: Bool = true
+    fill: Bool = true,
+    material: Material,
+    font: Font = "Bfont Regular"
 ) -> (geometry: Geometry, text: String) {
   "The subtitle of the scene time, from an .srt file; offset shifts the subtitles, in seconds"
   cue = srt_cue(srt: ImportText(path: file), time: SceneTime().seconds - offset)
@@ -81,8 +83,9 @@ geometry graph "srt subtitles"(
   curves = StringToCurves(
       string: shown,
       size: size,
+      font: font,
       align_x: Center,
       align_y: "Bottom Baseline").curve_instances
     |> RealizeInstances()
-  return (geometry: fill ? FillCurve(curves) : curves, text: shown)
+  return (geometry: (fill ? FillCurve(curves) : curves) |> SetMaterial(material: material), text: shown)
 }

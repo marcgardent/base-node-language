@@ -75,7 +75,7 @@ geometry graph hill_path() -> Geometry {
     |> ResampleCurve(count: 300)
   p = Position()
   xy = CombineXYZ(x: p.x + sin(p.y * 0.06) * 9.0, y: p.y)
-  return SetPosition(line, position: xy + CombineXYZ(z: hill_height(xy)))
+  return SetPosition(line, position: xy + CombineXYZ(z: hill_height(p: xy)))
 }
 
 geometry graph trunk(height: Float = 3.0, radius: Float = 0.25) -> Geometry {

@@ -16,3 +16,10 @@ trees = ["geometry"]
 # Fed, its Sample UV Surface nodes get Position as "UV Map" and "Sample UV": the ico sphere's "UVs"
 # overlap, and which face a sample lands on changes from one evaluation to the next (as "UV Deform" of T3D).
 "Sample Surface Transform" = ["mesh caller fed"]
+
+# With Blender 5.2.4 the original "Sample Surface Deformation" does not give twice the same geometry
+# either, fed the same way (4 evaluations of 12 differ from the first; none of 12 with Blender 5.3.0):
+# its record is geometrydynamics.baseline-5.2.json. A table here replaces the one above.
+[blender."5.2".nondeterministic]
+"Sample Surface Transform" = ["mesh caller fed"]
+"Sample Surface Deformation" = ["mesh caller fed"]

@@ -9,12 +9,13 @@ import math
 
 from . import ast
 from .errors import BnError, Diagnostic
+from .header import edition_error
 from .lexer import tokenize
-from .sugar import COMPARE, WORDS
 
-# Zones whose keyword is one only before `(…) {`
-ZONE_WORDS = ("simulate", "foreach")
-
+# How the comparisons are spelled, and the products of two vectors: AZERTY has neither sign of
+# these, `dot` and `cross` are written in their place (the editor swaps them as you type), `·` too
+COMPARE = ("<", "<=", ">", ">=", "==", "!=")
+WORDS = {"dot": "⋅", "cross": "×", "·": "⋅"}
 
 # The words of a node's look after `@`, in the order they are printed
 LOOK_FLAGS = ("hide", "mute")
@@ -38,6 +39,10 @@ def too_deep(filename, line=1, col=1, limit=MAX_NESTING):
 def parse(source, filename="<text>"):
     if len(source) > MAX_SOURCE_BYTES or len(source.encode("utf-8", "surrogatepass")) > MAX_SOURCE_BYTES:
         raise BnError([Diagnostic(filename, 1, 1, f"source too large: at most {MAX_SOURCE_BYTES // 2 ** 20} MiB")])
+    # The edition says which language the text is written in: one this reader does not know is not read
+    edition = edition_error(source, filename)
+    if edition is not None:
+        raise BnError([edition])
     try:
         return Parser(tokenize(source, filename), filename).file()
     except RecursionError:
@@ -145,7 +150,7 @@ class Parser:
         return ast.Use(name.text, names, source, t.line, t.col, alias=alias)
 
     def graph(self):
-        kind = self.expect("IDENT", what="tree kind (geometry, shader, compositor)")
+        kind = self.expect("IDENT", what="tree kind")
         settings = self.args(named_only=True) if self.accept("(") else []
         self.expect("KEYWORD", "graph")
         name = self.accept("STRING") or self.expect("IDENT", what="graph name")
@@ -221,7 +226,7 @@ class Parser:
         while not self.accept(close):
             if self.at("STRING") and self.peek().kind in ("{", "("):
                 if not header:
-                    self.fail("panels can only be defined in a graph header")
+                    self.fail("panels can only be defined in the header of a named graph")
                 items.append(self.panel())
                 if not self.accept(","):
                     self.expect(close)
@@ -231,7 +236,7 @@ class Parser:
             alias = None
             if self.at("IDENT", "as") and self.peek().kind == "IDENT":
                 if not header:
-                    self.fail("'as' can only be used in a graph header")
+                    self.fail("'as' can only be used in the header of a named graph")
                 self.advance()
                 alias = self.advance().text
             self.expect(":")
@@ -284,15 +289,13 @@ class Parser:
                           "choose another name")
             self.advance()
             self.advance()
-            if self.at("KEYWORD", "repeat"):
-                value = self.repeat()
-            elif self.at_closure():
-                value = self.closure()
-            elif self.at_zone():
-                value = self.zone()
+            if self.at("KEYWORD", "graph"):
+                value = self.nameless()
+            elif self.at_body_call():
+                value = self.body_call()
             else:
-                # A zone's output shows its look on the return of its body
                 return ast.Assign(t.text, self.expr(), t.line, t.col, self.look())
+            # What a body makes shows its look on the return of that body
             return ast.Assign(t.text, value, t.line, t.col)
         self.fail(f"statement expected (name = …, return, or a frame \"title\" {{ … }}), found {describe(t)}")
 
@@ -326,46 +329,30 @@ class Parser:
         body, end = self.block()
         return ast.Frame(label and label.text, color and color.text, body, t.line, t.col, end.line, continued)
 
-    def repeat(self):
-        t = self.advance()
-        self.expect("(", what="'(' after repeat")
-        args = self.args()
-        if not args or args[0].name is not None:
-            self.fail("repeat expects iteration count first: repeat(10, state: start, …)", t)
-        if len(args) < 2:
-            self.fail("repeat expects at least one state: repeat(10, state: start)", t)
-        if any(a.options for a in args):
-            self.fail("repeat state does not take options", t)
-        self.expect("{", what="'{' after repeat(…)")
-        body, end = self.block()
-        return ast.Repeat(args[0].value, args[1:], body, t.line, t.col, end.line)
-
-    def at_zone(self):
-        """`simulate(…) {` or `foreach(…) {`: contextual keywords, so that a name or a group
-        may still be called simulate; only a block right after the parenthesis makes a zone."""
-        if not (self.at("IDENT") and self.tok.text in ZONE_WORDS and self.peek().kind == "("):
+    def at_body_call(self):
+        """`name(…) -> {`, the name qualified or not: a call that takes a body. The arrow tells it
+        from `x = f(a)` followed by a frame with no title."""
+        if not self.at("IDENT"):
             return False
-        j = self.matching(self.i + 1)
-        return j is not None and self.tokens[j + 1].kind == "{"
+        i = self.i + 1
+        while self.tokens[i].kind == "::" and self.tokens[i + 1].kind in ("IDENT", "STRING"):
+            i += 2
+        if self.tokens[i].kind != "(":
+            return False
+        j = self.matching(i)
+        return j is not None and self.tokens[j + 1].kind == "->" and self.tokens[j + 2].kind == "{"
 
-    def zone(self):
+    def body_call(self):
         t = self.advance()
+        name = t.text
+        while self.accept("::"):
+            name = f"{name}::{self.advance().text}"
         self.advance()
         args = self.args()
-        if t.text != "simulate":
-            # A state of repeat or simulate may take a key of its own; a foreach item not yet
-            self.no_alias(args)
-        if t.text == "simulate":
-            if any(a.name is None for a in args):
-                self.fail("simulate expects named states: simulate(state: start, …)", t)
-        elif not args or args[0].name is not None or any(a.name is None for a in args[1:]):
-            self.fail("foreach expects geometry first, then named items: "
-                      "foreach(geometry, domain: FACE, item: field, …)", t)
-        self.expect("{")
+        self.advance()
+        self.advance()
         body, end = self.block()
-        if t.text == "simulate":
-            return ast.Simulate(args, body, t.line, t.col, end.line)
-        return ast.Foreach(args[0].value, args[1:], body, t.line, t.col, end.line)
+        return ast.BodyCall(name, args, body, t.line, t.col, end.line)
 
     def block(self):
         """Statements up to `}`, which is consumed: (body, the closing token)."""
@@ -377,22 +364,6 @@ class Parser:
             body.append(self.statement())
         self.leave()
         return body, self.advance()
-
-    def at_closure(self):
-        # `closure` is a keyword only as `closure(…) -> … {`, so that a name, a socket
-        # or a graph may still be called closure
-        if not (self.at("IDENT", "closure") and self.peek().kind == "("):
-            return False
-        i = self.matching(self.i + 1)
-        if i is None or self.tokens[i + 1].kind != "->":
-            return False
-        i += 2
-        if self.tokens[i].kind == "(":
-            i = self.matching(i)
-            if i is None:
-                return False
-        # The text may end at the type: there is no token after the end of file
-        return self.tokens[i].kind != "EOF" and self.tokens[i + 1].kind == "{"
 
     def matching(self, i):
         """Index of the `)` closing the `(` at token i, or None.
@@ -408,15 +379,16 @@ class Parser:
                     self.closing[opened.pop()] = j
         return self.closing.get(i)
 
-    def closure(self):
+    def nameless(self):
+        """`graph(x: Float, …) -> Float { … }`: `graph` followed by `(` has no name."""
         t = self.advance()
-        self.expect("(")
+        self.expect("(", what="'(' after graph: a graph with no name is written graph(x: Float) -> Float { … }")
         params = self.typed_list(")")
         self.expect("->")
         outputs, single = self.outputs()
-        self.expect("{", what="'{' after closure(…) -> …")
+        self.expect("{", what="'{' after graph(…) -> …")
         body, end = self.block()
-        return ast.Closure(params, outputs, single, body, t.line, t.col, end.line)
+        return ast.NamelessGraph(params, outputs, single, body, t.line, t.col, end.line)
 
     def outputs(self):
         """After `->`: `(name: Type, …)`, or one Type named as itself."""
@@ -529,6 +501,8 @@ class Parser:
     def postfix(self):
         node = self.primary()
         if isinstance(node, ast.Call) and self.at("->"):
+            if self.peek().kind == "{":
+                self.fail(f"a call with a body is the value of an assignment: r = {node.name}(…) -> {{ … }}", node)
             # The outputs a node declares end it: `(… -> (a: Float)).a` takes parentheses
             self.advance()
             node.outputs, node.single_output = self.outputs()
@@ -555,8 +529,8 @@ class Parser:
             return ast.String(t.text, t.line, t.col)
         if self.accept("KEYWORD", "true") or self.accept("KEYWORD", "false"):
             return ast.Bool(t.text == "true", t.line, t.col)
-        if self.at("KEYWORD", "repeat"):
-            self.fail("repeat must be assigned to a name: r = repeat(10, state: start) { … }")
+        if self.at("KEYWORD", "graph"):
+            self.fail("a graph with no name is the value of an assignment: f = graph(x: Float) -> Float { … }")
         if self.at("KEYWORD", "xor") and self.peek().kind == "(":
             # The function form, kept from before `xor` was an operator
             self.advance()
@@ -644,11 +618,6 @@ class Parser:
         self.leave()
         self.height = height
         return args
-
-    def no_alias(self, args):
-        for a in args:
-            if a.alias:
-                self.fail(f"'{a.name} as {a.alias}': 'as' only aliases an item of an item node", a)
 
     def at_item_options(self):
         """`name(` … `):` ahead: an item with options, not a call given as a value."""

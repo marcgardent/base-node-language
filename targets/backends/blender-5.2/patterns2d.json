@@ -1,0 +1,27 @@
+{
+ "hexagonal grid 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'Index' in a shader tree",
+  "compositor": "unknown node 'Index' in a compositor tree; did you mean IndexSwitch?"
+ },
+ "triangular grid 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'Grid' in a shader tree",
+  "compositor": "unknown node 'Grid' in a compositor tree"
+ },
+ "phyllotaxis spiral 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'Index' in a shader tree",
+  "compositor": "unknown node 'Index' in a compositor tree; did you mean IndexSwitch?"
+ },
+ "jitter points 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'Index' in a shader tree",
+  "compositor": "unknown node 'Index' in a compositor tree; did you mean IndexSwitch?"
+ },
+ "hatching 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'CurveLine' in a shader tree; did you mean CurvesInfo?",
+  "compositor": "unknown node 'CurveLine' in a compositor tree"
+ }
+}

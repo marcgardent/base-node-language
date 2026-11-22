@@ -18,7 +18,7 @@ import bmesh
 import bpy
 
 from ..host import modules
-from ..lang import BnError, header
+from ..blender import BnError, header
 from . import actions, prefs
 
 ACTIONS = (

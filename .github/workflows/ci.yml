@@ -33,11 +33,11 @@ jobs:
           python-version: "3.11"
       - name: Install pytest
         run: pip install pytest
-      - name: Build the wheel (base_node/_targets, a link to targets/, as files)
+      - name: Build the wheel (base_node_blender/_targets, a link to targets/, as files)
         run: |
           pip install build
           python -m build --wheel --outdir "$RUNNER_TEMP/dist" python
-          unzip -Z1 "$RUNNER_TEMP"/dist/base_node-*.whl | grep -qx base_node/_targets/gltf.json
+          unzip -Z1 "$RUNNER_TEMP"/dist/base_node-*.whl | grep -qx base_node_blender/_targets/blender/gltf.json
       - name: Run Python test suite & conformance
         env:
           PYTHONPATH: ${{ github.workspace }}/python
@@ -62,14 +62,23 @@ jobs:
           toolchain: stable
           targets: wasm32-unknown-unknown
           components: clippy
-      - name: Run cargo test (stdlib, conformance, fixtures, targets)
+      - name: "Run cargo test (the core: conformance, fixtures, limits, no destination named)"
         working-directory: rust
         run: cargo test
-      - name: Run cargo clippy
+      - name: Run cargo clippy (the core)
         working-directory: rust
         run: cargo clippy --all-targets -- -D warnings
-      - name: Check wasm32-unknown-unknown target
+      - name: Check wasm32-unknown-unknown target (the core)
         working-directory: rust
+        run: cargo check --target wasm32-unknown-unknown
+      - name: "Run cargo test (the Blender library: stdlib, targets, head of a file)"
+        working-directory: rust-blender
+        run: cargo test
+      - name: Run cargo clippy (the Blender library)
+        working-directory: rust-blender
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Check wasm32-unknown-unknown target (the Blender library)
+        working-directory: rust-blender
         run: cargo check --target wasm32-unknown-unknown
       - name: Run cargo test (bn-view web component)
         working-directory: web
@@ -82,12 +91,23 @@ jobs:
         run: cargo build --release --target wasm32-unknown-unknown
 
   blender:
-    name: Blender Extension & Third-Party Libraries
+    name: Blender ${{ matrix.blender }} Extension & Third-Party Libraries
     runs-on: ubuntu-latest
+    # The versions of Blender promised (`promised` in targets/blender.json): the LTS and the latest.
+    # One does not stop the other: each says what it finds.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Of blender-5.2.4-linux-x64.tar.xz, from download.blender.org/release/Blender5.2/blender-5.2.4.sha256
+          - blender: "5.2.4"
+            sha256: 2fd14c50987426897ba60237ee996edf2b4151f4b1a72a460ca20be58c1d2d86
+          # Of blender-5.3.0-linux-x64.tar.xz, from download.blender.org/release/Blender5.3/blender-5.3.0.sha256
+          - blender: "5.3.0"
+            sha256: dacb8264197a3f7fda6001285a5a506fc97ee943881261c2c3bd63c882f22e05
     env:
-      BLENDER_VERSION: "5.3.0"
-      # Of blender-5.3.0-linux-x64.tar.xz, from download.blender.org/release/Blender5.3/blender-5.3.0.sha256
-      BLENDER_SHA256: dacb8264197a3f7fda6001285a5a506fc97ee943881261c2c3bd63c882f22e05
+      BLENDER_VERSION: ${{ matrix.blender }}
+      BLENDER_SHA256: ${{ matrix.sha256 }}
     steps:
       # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
       - name: Set git's default branch name
@@ -118,12 +138,13 @@ jobs:
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/base-node/libraries
-          key: libraries-${{ hashFiles('base-node-for-blender/tests/libraries/*.toml') }}
+          # Per Blender: the groups an add-on's Python builds are made by the Blender that runs
+          key: libraries-${{ matrix.blender }}-${{ hashFiles('base-node-for-blender/tests/libraries/*.toml') }}
       - name: Build the extension .zip (its links resolved into files)
         run: |
           BLENDER=~/blender/blender base-node-for-blender/build.sh "$RUNNER_TEMP/dist"
           files=$(unzip -Z1 "$RUNNER_TEMP"/dist/base_node-*.zip)
-          for f in lang/targets.py lang/_targets/gltf.json stdlib/manifest.json stdlib/math.bn; do
+          for f in lang/parser.py blender/targets.py blender/_targets/blender.json blender/_targets/blender/gltf.json stdlib/manifest.json stdlib/math.bn; do
             echo "$files" | grep -qx "$f" || { echo "the .zip lacks $f"; exit 1; }
           done
       # The runner has no GPU: OpenGL (Mesa's software one) at once, rather than Vulkan tried and failed first

@@ -14,7 +14,7 @@ geometry(is_modifier: false) graph "Relax Points"(
   position = Position() @ hide
   capture_attribute_2 = CaptureAttribute(Points, Value: Radius)
   position_2 = Position() @ hide
-  repeat_output = repeat(Iterations, Geometry: capture_attribute_2.geometry) {
+  repeat_output = repeat(Iterations, Geometry: capture_attribute_2.geometry) -> {
     capture_attribute = CaptureAttribute(Geometry, Value: IndexOfNearest().index) @ hide
     vector_math = position_2
       - EvaluateAtIndex(

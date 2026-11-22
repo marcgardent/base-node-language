@@ -27,12 +27,12 @@ shader graph hull_paint(
   surface = normalize(VectorTransform(vector: rounded, vector_type: NORMAL))
   "Paint" #orange {
     // A 2D texture, as an image would be: it reads x and y of the coordinates it is given
-    smears = closure(vector: Vector) -> (color: Color) {
+    smears = graph(vector: Vector) -> (color: Color) {
       return (color: NoiseTexture(vector: vector * (1.0, 2.5, 0.0), scale: 3.0, detail: 8.0).color)
     }
     tone = triplanar(texture: smears, sharpness: 8.0).color.x
     // Seams every 40 cm both ways, as a normal map stores the slopes of a groove
-    seams = closure(vector: Vector) -> (color: Color) {
+    seams = graph(vector: Vector) -> (color: Color) {
       return (
         color: CombineColor(
           red: seam(t: vector.x * 2.5),

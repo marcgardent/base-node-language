@@ -11,7 +11,10 @@ shader(material: true) graph Title() -> (surface: Shader) {
   "Warm white letters that give their own light, as opaque as their opacity"
   shown = Attribute(attribute_name: "opacity").factor
   return (
-    surface: MixShader(shown, TransparentBSDF(), Emission(color: (1.0, 0.86, 0.62), strength: 2.5)))
+    surface: MixShader(
+      factor: shown,
+      a: TransparentBSDF(),
+      b: Emission(color: (1.0, 0.86, 0.62), strength: 2.5)))
 }
 
 geometry graph centred(geometry: Geometry) -> Geometry {

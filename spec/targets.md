@@ -1,27 +1,33 @@
 # Targets
 
 A **target** is what one destination accepts: the kinds of tree, the types, the zones and the nodes
-a text may use there. Blender's Geometry Nodes is a target, so is the part of Blender's shaders that
-survives a glTF export, so is Blade. There is one file per target, [`targets/<name>.json`](../targets/),
-and no target is defined from another: no `extends`, no hierarchy.
+a text may use there. Blender is a target, with a catalog per version and variants (the part of its
+shaders that survives a glTF export is one); so is Blade. There is one file per target,
+[`targets/<name>.json`](../targets/), and no target is defined from another: no `extends`, no
+hierarchy.
 
 The language speaks Blender. Its node names are Blender's (the UI name in one word,
 [reference](reference.md)), and its formulas (`a + b`, `n ⋅ up`, `h > 0.5`) are Math, Vector Math,
 Compare and Boolean Math nodes. A destination that is not Blender does not get a dialect of its
-own: it declares **translators** from a Blender target to itself.
+own: it declares **translators** from Blender's target to itself.
 
 ## What a text says, what the tool says
 
-- `// @target gltf` at the head of a text is a promise, and it is optional. The editor points at
+- `// @target blender gltf` at the head of a text is a promise, and it is optional. Several targets
+  are separated by commas (`// @target blender gltf, blade`): each graph then fits one of them. The editor points at
   everything the text uses outside that target, and `base-node check` fails on it.
 - Without `@target` there is nothing to respect. The tool **infers** the targets that accept the
   text and shows them:
 
   ```text
-  Compatible: blender-compositor
-              blade (translated from blender-compositor)
-  Outside:    gltf — Glare (line 12)
+  Compatible: blender, blender cycles, blender eevee
+  Outside blade: kind shader (line 1) and 3 more
+  Outside blender gltf: node NoiseTexture (line 2) and 1 more
   ```
+
+  A variant of `blender` is about shaders: it is tried for a text that holds a shader graph, and
+  not shown for another (a compositor text says `Compatible: blender, blade (translated from blender)`
+  and nothing of `gltf`).
 
   An inference holds the targets the text fits (by name, with the target each translated one comes
   from), those it does not with their issues (by name), and for each graph, in the order of the
@@ -29,7 +35,7 @@ own: it declares **translators** from a Blender target to itself.
 
 A text fits a target when every graph it holds fits it: its kind is one of the target's kinds, the
 types of its sockets, its zones and every node it calls are the target's. A formula counts as the
-node it writes (`+` is Math or Vector Math, `<` is Compare, or Math in a target that has no Compare,
+node it writes (`+` is Math or Vector Math, `<` is Compare, or Math in a tree that has no Compare,
 `and` is Boolean Math). A call to a
 graph of the text or of a module it uses is not a node: the graph it calls must fit the target too,
 and its first issue is one of the text, of kind `graph` (`with_alpha (node SetAlpha)`). The module
@@ -37,8 +43,13 @@ of a `use` is found among the target's [bridges](#the-file-of-a-target), then in
 library (`stdlib/`). A module found nowhere is not followed: its calls are taken on trust, and a
 `use` of every graph of it (`use mine`) lets any call be one of its graphs.
 
-A target is named by its name only. A name that is not a target's is an error: Python raises
-`ValueError`, Rust returns `Err(UnknownTarget)`, with the same message.
+A target is written as a name, an optional version after `@`, and optional words after a space:
+`blade`, `blender@5.3`, `blender gltf`, `blender@5.2-lts gltf`. What a version and a word mean is
+the target's to say; only [`blender`](#blender-by-version) has them. A name that is not a target's
+is an error: Python raises `ValueError`, Rust returns `Err(UnknownTarget)`, with the same message,
+`unknown target 'nope'; targets: blade, blender, blender@5.3; variants of blender, written after
+it: cycles, eevee, gltf`. A name of before the one `blender` target gets what to write:
+`…; 'gltf' is now 'blender gltf'`.
 
 ## The file of a target
 
@@ -51,7 +62,7 @@ A target is named by its name only. A name that is not a target's is an error: P
   "zones": [],
   "nodes": ["Math", "Mix", "Blur", "Flatten", "Classifier"],
   "translators": {
-    "blender-compositor": {
+    "blender": {
       "kinds": {"compositor": "pixel"},
       "nodes": {
         "Blur": "Blur",
@@ -69,9 +80,9 @@ A target is named by its name only. A name that is not a target's is an error: P
 |---|---|
 | `kinds` | The words a graph may start with: `geometry`, `shader`, `compositor`, `pixel`… |
 | `types` | The socket types its graphs may have |
-| `zones` | `repeat`, `foreach`, `simulate`, `closure` |
+| `zones` | `repeat`, `foreach`, `simulate`, the calls that take a body, and `closure`, a nameless graph ([reference, 6](reference.md#6-calls-with-a-body-and-nameless-graphs)) |
 | `nodes` | The node names it accepts, implicit inputs (`Position`, `Index`…) among them |
-| `translators` | For each target it translates from: its kinds, and for each node of that target the node it becomes, or the graph of a bridge (`module::graph`) |
+| `translators` | For each target it translates from, by its name without a version: its kinds, and for each node of that target the node it becomes, or the graph of a bridge (`module::graph`) |
 | `bridges` | Modules shipped with the target, whose graphs stand for the nodes it has no node for: `.bn` files, by their path relative to the target's file; the module is the file's name (`blade/blender_interop.bn` is `blender_interop`) |
 | `rules` | For an input of a node, what may feed it (see [Rules](#rules)) |
 | `inputs` | The inputs of the nodes the rules name, in order: a positional argument takes the input of its place. For a pattern, its placeholders |
@@ -111,19 +122,156 @@ it (`"Blur": "Blur"`) is the promise that the two are the same.
 
 | Target | Kinds | Nodes |
 |---|---|---|
-| `blender-geometry` | geometry | Every Geometry Nodes node of Blender |
-| `blender-gp` | geometry | Every Geometry Nodes node of Blender, on a Grease Pencil object |
-| `blender-shader` | shader | Every shader node of Blender |
-| `blender-compositor` | compositor | Every compositor node of Blender |
-| `gltf` | shader | The shader nodes Blender's glTF exporter reads: Principled BSDF, Emission, image textures and their channels, normal maps, UVs, unlit, alpha clip, anisotropy, and [rules](#rules) on what feeds what, checked against the exporter |
-| `blade` | pixel | Blade's Pixel Nodes, a translator from `blender-compositor`, and a bridge, `blender_interop` |
+| `blender` | geometry, shader, compositor | Every node of Blender, by kind of tree, in every version promised ([below](#blender-by-version)) |
+| `blender@5.3` | geometry, shader, compositor | The same in one version of Blender |
+| `blender gltf`, `blender@5.3 gltf` | shader | A variant: the shader nodes Blender's glTF exporter reads: Principled BSDF, Emission, image textures and their channels, normal maps, UVs, unlit, alpha clip, anisotropy, and [rules](#rules) on what feeds what, checked against the exporter |
+| `blender eevee`, `blender cycles` | shader | Variants, **experimental**: the shader nodes but those Blender says the engine does not take |
+| `blade` | pixel | Blade's Pixel Nodes, a translator from `blender`, and a bridge, `blender_interop` |
 
-The node lists of `blender-geometry`, `blender-gp`, `blender-shader` and `blender-compositor` are
-written from `targets/backends/blender-<x.y>.json`, the nodes Blender reports for each kind of tree
-(`python -m base_node.targets` rewrites them; a test checks they agree). A graph of math only fits
-all of them: Blender builds it in any kind of tree. `blender-gp` is what Blender accepts in Geometry
-Nodes on a Grease Pencil object, which is every Geometry Nodes node: Grease Pencil is not 2D only,
-and the target does not filter what Blender takes. The others are written by hand.
+The others are written by hand.
+
+## `blender`, by version
+
+Blender's target is a picture of Blender's catalog, so it is named by Blender's version.
+
+| Name | Means |
+|---|---|
+| `blender@5.3` | The catalog of Blender 5.3 |
+| `blender@5.2-lts` | The catalog of Blender 5.2 LTS. An LTS of Blender says so in its name, as a reminder: `blender@5.2` is refused, with what to write |
+| `blender` | Every version this version of Base Node promises: a text fits `blender` when it fits each of them. The modules of `stdlib/` promise it |
+| `blender@lts`, `blender@latest` | Aliases for a command line and a CI (`base-node check --target blender@latest`): the newest LTS, and the newest version there is a catalog of. A `// @target` that names one is an error, which says why (the promise would change with each release of Blender) and the version to write |
+| `blender@5.3 gltf`, `blender eevee` | A variant, a word after the target, a space apart: the shader nodes one consumer accepts. Without a version it is every promised version with that variant. One variant at most |
+
+**The files.** [`targets/blender.json`](../targets/blender.json) is the declaration, the one place
+that lists the versions:
+
+```json
+{
+  "name": "blender",
+  "lts": ["5.2"],
+  "promised": ["5.2", "5.3"],
+  "variants": ["cycles", "eevee", "gltf"]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `promised` | The versions a text that says `blender` has to fit. Each has a catalog (a test checks it) |
+| `lts` | The versions Blender names LTS: their name ends in `-lts`, and `blender@lts` is the newest |
+| `variants` | The files of `targets/blender/` that are variants |
+
+`targets/blender/<x.y>.json` is the catalog of one version: `"blender"`, the version as Blender
+says it, and `"trees"`, for each kind of tree (`geometry`, `shader`, `compositor`) its `types`,
+`zones`, `implicit` inputs and `nodes`. It is written from `targets/backends/blender-<x.y>.json`,
+the nodes that Blender reports (`make backend`, run with that Blender, writes both; a test checks
+they agree). Every catalog found is a version: `blender@latest` is the newest.
+
+The policy is Blender's LTS and its latest version. This version of Base Node has the catalogs of
+Blender 5.2 LTS and of Blender 5.3, and promises both: `blender` means the two, `blender@lts` is
+`blender@5.2-lts` and `blender@latest` is `blender@5.3`. A version without a catalog is the error
+`target 'blender@4.5-lts': no catalog for Blender 4.5 in this version of Base Node (catalogs: 5.2, 5.3)`.
+Adding a version is its catalog (`make backend`, run with that Blender) and its number in
+`promised`; the tests of the add-on and the third-party libraries then run with that Blender too
+(`make test-promised`).
+
+**The kind of tree** is the first word of a graph, so the target does not repeat it. A graph is
+checked against the tree of its kind: a `geometry graph` against the Geometry Nodes, their types
+and zones, a `shader graph` against the shader nodes. A graph it calls is checked against that same
+tree, whatever its own kind: Blender builds it there (a `geometry graph` of math called from a
+`compositor graph` is built in the compositor). A text whose graphs are of several kinds fits
+`blender` when each fits its tree. A graph of another kind (`pixel graph`) is outside, by its kind.
+Geometry Nodes on a Grease Pencil object take every Geometry Nodes node: there is no target of
+their own.
+
+**Against several versions**, an issue every promised version has is `blender`'s; one that some
+have names the version: `node 'Kuwahara' outside target 'blender@5.2-lts'`.
+
+**A variant** is a file `targets/blender/<variant>.json`, of one of two shapes:
+
+- A list of its own, with [rules](#rules): `gltf` has the `kinds`, `types`, `nodes` and rules of a
+  target. In a version it keeps the nodes of its list that version has.
+- The catalog less some nodes: `eevee` and `cycles` have `kinds` (`shader`) and `without`, the
+  nodes the variant does not take, each with where Blender says so. The rest is the catalog's.
+
+A variant takes the graphs of its `kinds` only: a `geometry graph` is outside `blender eevee`. In
+`eevee` and `cycles`, a graph of another kind that a shader graph calls is built in the shader
+tree, as in `blender`; in `gltf`, a called graph is of its kinds too.
+
+### What Blender 5.3 has that Blender 5.2 LTS has not
+
+The two catalogs, compared (`targets/blender/5.2.json` is Blender 5.2.4 LTS, `5.3.json` Blender
+5.3.0). Blender 5.2 has no node, type, zone or implicit input that 5.3 has not: a text that fits
+`blender@5.2-lts` fits `blender`. The zones and the implicit inputs are the same in both. What 5.3
+adds is outside `blender`, and a text that uses it promises `blender@5.3`:
+
+| Tree | Nodes of 5.3 alone | Types of 5.3 alone |
+|---|---|---|
+| `geometry` | `CombineList`, `Comment`, `ConstructCurves`, `DeactivateVoxels`, `GeometryMaterials`, `GetGridNames`, `GetVectorComponent`, `GreasePencilColor`, `GreasePencilDrawTime`, `GreasePencilFillID`, `GreasePencilOpacity`, `GreasePencilStrokeSoftness`, `GreasePencilStrokeVisibility`, `GridSolvePoisson`, `GridTopologyBoolean`, `ImportSPZ`, `NURBSOrder`, `NURBSWeight`, `RasterizePoints`, `SetPointCloudType` | |
+| `shader` | `BooleanMath`, `Comment`, `EnableOutput`, `FindInString`, `FormatString`, `GetVectorComponent`, `IndexSwitch`, `IntegerMath`, `LightAccumulation`, `LightEvaluation`, `LightInfo`, `LightIterInternalInput`, `LightIterInternalOutput`, `MatchString`, `ReplaceString`, `ReverseString`, `SetStringCase`, `ShadowRaycast`, `SliceString`, `SpecialCharacters`, `String`, `StringLength`, `StringToValue`, `Switch`, `TrimString`, `ValueToString`, `Warning` | |
+| `compositor` | `BitMath`, `BoneInfo`, `BooleanMath`, `CombineBundle`, `CombineTransform`, `Comment`, `Compare`, `FloatToInteger`, `GetBundleItem`, `GetVectorComponent`, `HashValue`, `ImportText`, `IntegerMath`, `IsViewport`, `MatrixSVD`, `RandomValue`, `SeparateBundle`, `SeparateTransform`, `StoreBundleItem` | `Bundle` |
+
+Two of them reach further than their name:
+
+- **`Compare` in the compositor.** A comparison (`a > b`, `==`, …) writes a Compare node where the
+  tree has one, and a logical operator (`and`, `or`, `not`) a Boolean Math: the compositor of
+  Blender 5.2 has neither. There a comparison of numbers is Math nodes that give a Float, 0 or 1,
+  as in a shader tree ([reference, 5](reference.md#5-expressions)), and the same text builds in
+  both versions; a comparison of vectors, colors or strings, and a logical operator, are outside
+  `blender@5.2-lts`, and so is a graph of `math` that has one, called from a compositor graph
+  (built in the compositor tree).
+- **`Switch` in a shader tree**, and with it `IndexSwitch`: Blender 5.2 has `MenuSwitch` there alone.
+  A ternary (`c ? a : b`) is no Switch there but a Mix, which both versions have.
+
+The catalog lists the nodes by name; a node both versions have may still differ (the backends,
+`targets/backends/blender-<x.y>.json`, say how). In 5.3 and not in 5.2:
+
+| Tree | Node | In 5.3 alone |
+|---|---|---|
+| `geometry` | `BoneInfo` | outputs `envelope_distance`, `radius_head`, `radius_tail` |
+| `geometry` | `CurveToMesh` | inputs `miter_scale`, `miter_scale_limit` |
+| `geometry` | `ImportPLY` | its output is `geometry` (`mesh` in 5.2) |
+| `geometry` | `MergeLayers` | inputs `mode`, `group_id` |
+| `geometry` | `RealizeInstances` | input `preserve_normals` |
+| `geometry` | `SetGreasePencilColor` | input `mode`, and its value `BOTH` |
+| `geometry` | `SetGreasePencilDepth` | input `depth_order` |
+| `shader` | `Attribute` | `attribute_type: LIGHT` |
+| `shader` | `GlassBSDF` | inputs `anisotropy`, `rotation`, `tangent` |
+| `shader` | `PrincipledBSDF` | inputs `transmission_dispersion_scale`, `transmission_dispersion_abbe_number` |
+| `shader` | `VectorTransform` | `convert_from` and `convert_to`: `LIGHT` |
+| `compositor` | `ConvertColorspace` | settings `from_interop_id`, `to_interop_id`; the color space `Rec.709-A` |
+| `compositor` | `Switch` | a new one is a Color switch (`input_type: RGBA`); a Float one in 5.2 |
+
+The `types` of a catalog are those of the sockets of its nodes. The interface of a shader group
+is narrower in Blender 5.2: a `shader graph` takes no `String` input or output there, though a
+shader node has one.
+
+The target does not check these: a text that fits `blender` and writes one of them is refused by
+Blender 5.2 when it is built ([a target and its destination](#a-target-and-its-destination)).
+
+A module that is used is checked whole by the add-on: a `use` of a module one graph of which
+writes a Switch in a shader tree is refused by Blender 5.2, whichever graph the text calls. The
+modules of `stdlib/` that Blender 5.2 does not build promise `blender@5.3`, and so do the texts
+that use them.
+
+### `eevee` and `cycles` (experimental)
+
+Blender does not report which engine renders a node. The two lists hold what Blender itself says,
+and nothing else. They are one list for every version: Blender 5.2.4 and 5.3.0 say the same of the
+nodes both have, and the four nodes of `cycles` that 5.2 has not (`LightAccumulation`,
+`LightEvaluation`, `LightInfo`, `ShadowRaycast`) are out of its catalog already. The add-on's
+tests read the list against the Blender that runs:
+
+| Variant | Leaves out | Said by |
+|---|---|---|
+| `eevee` | `HairBSDF`, `PrincipledHairBSDF`, `RayPortalBSDF`, `SheenBSDF`, `ToonBSDF`, `LightOutput` | The Add menu, `scripts/startup/bl_ui/node_add_menu_shader.py`: offered when the engine is not EEVEE |
+| `eevee` | `Script` | The same menu: offered only when the engine is Cycles |
+| `eevee` | `Bevel` | Its tooltip: "only supported in Cycles" |
+| `cycles` | `LightAccumulation`, `LightEvaluation`, `LightInfo`, `ShadowRaycast`, `SpecularBSDF`, `ShaderToRGB` | The same menu: offered only when the engine is EEVEE; and the tooltip of `ShaderToRGB`: "only supported in EEVEE" |
+
+They are experimental: a node an engine ignores without Blender saying so in its menu or its
+tooltip (an input, a setting or an output one engine does not read) is not in them, the manual has
+not been read into them. A text that fits
+`blender eevee` uses no node Blender says is not EEVEE's; it may still render differently.
 
 ## A target and its destination
 
@@ -217,7 +365,7 @@ Mix(ImageTexture, ImageTexture)`, a setting by its value: `ImageTexture.extensio
 refused as a whole by itself: `MixShader(ImageTexture, TransparentBSDF, PrincipledBSDF)`. A target
 without `rules` refuses no link.
 
-### What `gltf` accepts
+### What the variant `gltf` accepts
 
 Read from the exporter (`io_scene_gltf2/blender/exp/material`) of Blender 5.3, and checked against
 it: `base-node-for-blender/tests/test_gltf_export.py` builds each case of

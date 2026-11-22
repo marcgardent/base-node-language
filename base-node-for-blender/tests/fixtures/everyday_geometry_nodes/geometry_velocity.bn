@@ -43,7 +43,7 @@ geometry graph "Geometry Velocity"(
       simulation_output = simulate(
         Geometry: store_named_attribute,
         "Geometry.001": Geometry = _,
-        "Delta Time" as delta_time_2: 0.0) {
+        "Delta Time" as delta_time_2: 0.0) -> {
         return (Geometry: store_named_attribute, "Geometry.001": Geometry, delta_time_2: delta_time)
       }
       transfer_attributes = TransferAttributes(
@@ -96,7 +96,7 @@ geometry graph "Geometry Velocity"(
         simulation_output_2 = simulate(
           Geometry: instances_to_points,
           "Geometry.001": Geometry = _,
-          "Delta Time" as delta_time_2: 0.0) {
+          "Delta Time" as delta_time_2: 0.0) -> {
           return (Geometry: instances_to_points, "Geometry.001": Geometry, delta_time_2: delta_time)
         }
       }
@@ -145,7 +145,7 @@ geometry graph "Geometry Velocity"(
         Transform: InstanceTransform(),
         Attribute: NamedAttribute(
           name: old_instance_transform_attribute,
-          data_type: FLOAT4X4).attribute) {
+          data_type: FLOAT4X4).attribute) -> {
         transform_point = TransformPoint(vector: position_3, transform: Transform) @ hide
         transform_point_2 = TransformPoint(vector: position_3, transform: Attribute) @ hide
         vector_math_5 = transform_point - transform_point_2 @ hide

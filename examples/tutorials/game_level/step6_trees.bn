@@ -13,9 +13,9 @@ shader graph haze(surface: Shader) -> Shader {
   "surface faded into the pale air of the horizon with its distance from the camera: 60 % of the way at 330 m, all of it from 1 km on, where the sky takes over"
   far = distance(TextureCoordinate().object, (-64.0, -17.0, 12.0))
   return MixShader(
-    Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
-    surface,
-    Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
+    factor: Clamp(value: (far - 70.0) / 260.0) * 0.6 + Clamp(value: (far - 330.0) / 700.0) * 0.4,
+    a: surface,
+    b: Emission(color: (0.95, 0.94, 0.94), strength: 1.0))
 }
 
 shader(material: true) graph Ground() -> (surface: Shader) {
@@ -37,7 +37,7 @@ shader(material: true) graph Ground() -> (surface: Shader) {
   verge = Clamp(value: worn * 1.6 + (fine - 0.5) * 0.8)
   color = Mix(factor: verge, a: grass, b: dirt, data_type: RGBA)
   muddy = Mix(factor: Clamp(value: wet * 0.8), a: color, b: (0.16, 0.13, 0.09), data_type: RGBA)
-  return (surface: haze(PrincipledBSDF(base_color: muddy, roughness: 0.92 - wet * 0.4)))
+  return (surface: haze(surface: PrincipledBSDF(base_color: muddy, roughness: 0.92 - wet * 0.4)))
 }
 
 shader(material: true) graph Asphalt() -> (surface: Shader) {
@@ -70,7 +70,7 @@ shader(material: true) graph Stream() -> (surface: Shader) {
   m = flowmap_read()
   uv = UVMap(uv_map: "UVMap").uv
   // The texture to pan, as a closure: flow_texture reads it at the two phases of the blend
-  streaks = closure(vector: Vector) -> (color: Color) {
+  streaks = graph(vector: Vector) -> (color: Color) {
     return (
       color: NoiseTexture(
         vector: vector * CombineXYZ(x: 9.0, y: 0.7, z: 1.0),
@@ -169,7 +169,7 @@ shader(material: true) graph Foliage() -> (surface: Shader) {
   "Leaves, each tree a shade between two greens"
   tint = Attribute(attribute_type: INSTANCER, attribute_name: "tree_tint").factor
   color = Mix(factor: tint, a: (0.035, 0.1, 0.03), b: (0.12, 0.2, 0.05), data_type: RGBA)
-  return (surface: haze(PrincipledBSDF(base_color: color, roughness: 0.8)))
+  return (surface: haze(surface: PrincipledBSDF(base_color: color, roughness: 0.8)))
 }
 
 shader(material: true) graph Bark() -> (surface: Shader) {
@@ -216,7 +216,7 @@ geometry graph game_level() -> Geometry {
     |> MeshToCurve()
   made = road(
     path,
-    rough,
+    terrain: rough,
     width: 7.0,
     lanes: 2,
     shoulder: 1.2,
@@ -229,8 +229,8 @@ geometry graph game_level() -> Geometry {
   // The ground under the road laid 12 cm below it, eased back to its own height over 5 m; its
   // road_mask, which the material wears to dirt, fading over 1.5 m past the shoulders
   levelled = rough
-    |> flatten_terrain(made, depth: 0.12, falloff: 5.0)
-    |> road_mask_on_terrain(made, falloff: 1.5)
+    |> flatten_terrain(road: made, depth: 0.12, falloff: 5.0)
+    |> road_mask_on_terrain(road: made, falloff: 1.5)
   // Six houses along the road, turned to face it, each on a pad levelled into the slope
   a = house(
     at: (-22.2, 4.0, 0.0),
@@ -282,7 +282,7 @@ geometry graph game_level() -> Geometry {
     terrain: levelled)
   pads = a.pad + b.pad + c.pad + d.pad + e.pad + f.pad
   ground = levelled
-    |> flatten_terrain(pads, depth: 0.05, falloff: 3.5)
+    |> flatten_terrain(road: pads, depth: 0.05, falloff: 3.5)
   // Each wall face to the row of a sheet 6 m across that its width calls for: walls (3 m) take
   // the first row, plinths and rooftop units (1.1 m, 0.9 m) the third, ledges (0.3 m) the fourth
   town = a.house + b.house + c.house + d.house + e.house + f.house
@@ -315,7 +315,7 @@ geometry graph game_level() -> Geometry {
     |> MeshToCurve()
   water = road(
       bed,
-      ground,
+      terrain: ground,
       width: 3.2,
       lanes: 1,
       shoulder: 0.0,
@@ -328,7 +328,7 @@ geometry graph game_level() -> Geometry {
   // the ground over 1.4 m: they bury the edges of the water. The banks wet for 1.5 m
   channel = road(
     bed,
-    ground,
+    terrain: ground,
     width: 1.2,
     lanes: 1,
     shoulder: 0.0,
@@ -336,12 +336,12 @@ geometry graph game_level() -> Geometry {
     smooth: 30,
     lift: -0.25)
   carved = ground
-    |> flatten_terrain(channel, depth: 0.5, falloff: 1.4)
-    |> road_mask_on_terrain(water, falloff: 1.5, name: "wet")
+    |> flatten_terrain(road: channel, depth: 0.5, falloff: 1.4)
+    |> road_mask_on_terrain(road: water, falloff: 1.5, name: "wet")
   // Trees in groves, kept off the road, the pads and the stream by a road mask of their own,
   // 6 m wide, and 25 m clear of the camera
   cleared = carved
-    |> road_mask_on_terrain(made + pads + water, falloff: 6.0, name: "clear")
+    |> road_mask_on_terrain(road: made + pads + water, falloff: 6.0, name: "clear")
   groves = NoiseTexture(vector: Position() * 0.04, scale: 1.0).factor
   spots = cleared
     |> DistributePointsOnFaces(

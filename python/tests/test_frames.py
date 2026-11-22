@@ -1,6 +1,6 @@
 import pytest
 
-from base_node import BnError, compile_source, parse
+from base_node_blender import BnError, compile_source, parse
 from base_node.colors import rgb, spell
 from base_node.format import format_source
 from base_node.printer import to_source

@@ -1,11 +1,14 @@
 # make help lists the targets. BLENDER names the blender to run (default: blender on the PATH).
 
 BLENDER ?= blender
+# The Blenders of the promised versions (`promised` in targets/blender.json), a space apart, for
+# make test-promised: BLENDERS="/path/to/blender-5.2/blender /path/to/blender-5.3/blender"
+BLENDERS ?= $(BLENDER)
 PYTEST ?= pytest
 BLENDER_RUN = $(BLENDER) --background --factory-startup --python-exit-code 1 --python
 
 .DEFAULT_GOAL := help
-.PHONY: help test python-min test-python test-rust test-web test-blender test-libraries extension backend docs srt-check
+.PHONY: help test python-min test-python test-rust test-web test-blender test-promised test-libraries extension backend docs srt-check
 
 help: ## List the targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -22,8 +25,9 @@ python-min: ## Every tracked .py parses with the oldest Python pyproject.toml ac
 test-python: ## Python parser, formatter, targets (pytest)
 	PYTHONPATH=python $(PYTEST) -q python/tests
 
-test-rust: ## Rust parser: format, clippy, tests
+test-rust: ## Rust core (rust/) and Blender library (rust-blender/): format, clippy, tests
 	cd rust && cargo fmt --check && cargo clippy -q --all-targets -- -D warnings && cargo test -q
+	cd rust-blender && cargo fmt --check && cargo clippy -q --all-targets -- -D warnings && cargo test -q
 
 test-web: ## bn-view web component: clippy, tests
 	cd web && cargo clippy -q --all-targets -- -D warnings && cargo test -q
@@ -31,6 +35,11 @@ test-web: ## bn-view web component: clippy, tests
 test-blender: ## Blender add-on tests, and the backend the reference reads checked against Blender
 	$(BLENDER_RUN) base-node-for-blender/tests/test_extension.py
 	$(BLENDER_RUN) base-node-for-blender/tests/export_backend.py -- --check
+
+test-promised: ## make test-blender and make test-libraries with each Blender of BLENDERS (the promised versions)
+	@for b in $(BLENDERS); do \
+	  echo "== $$b"; $(MAKE) --no-print-directory test-blender test-libraries BLENDER=$$b || exit 1; \
+	done
 
 test-libraries: ## Third-party node group libraries, round-tripped (non-regression)
 	$(BLENDER_RUN) base-node-for-blender/tests/test_libraries.py
@@ -41,8 +50,9 @@ srt-check: ## Build examples/tutorials/srt_subtitles/srt_subtitles.bn in Blender
 extension: ## Build the add-on .zip into dist/
 	BLENDER=$(BLENDER) base-node-for-blender/build.sh dist
 
-backend: ## Write targets/backends/blender-<version>.json and blender-<version>/<module>.json again from Blender
+backend: ## Write targets/backends/blender-<x.y>.json and blender-<x.y>/<module>.json from the Blender it runs (BLENDER=…), then its catalog targets/blender/<x.y>.json
 	$(BLENDER_RUN) base-node-for-blender/tests/export_backend.py
+	PYTHONPATH=python python3 -m base_node_blender.targets
 
 docs: ## Write the reference pages into site/reference/
-	PYTHONPATH=python python3 -m base_node.cli docs
+	PYTHONPATH=python python3 -m base_node_cli.cli docs

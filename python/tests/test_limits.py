@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from base_node import MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, BnError, compile_source, format_source, parse
+from base_node_blender import MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, BnError, compile_source, format_source, parse
 from base_node.lexer import tokenize
 from base_node.printer import quote
 
@@ -24,7 +24,7 @@ SHAPES = {
     "calls": lambda n: HEAD + "Math(" * n + "a" + ")" * n + TAIL,
     "options": lambda n: HEAD + "Math(" + "x(" * (n - 1) + ")" * n + TAIL,
     "frames": lambda n: "geometry graph g(a: Float) -> Float {\n" + "{\n" * n + "}\n" * n + "  return a\n}\n",
-    "zones": lambda n: ("geometry graph g(a: Float) -> Float {\n" + "x = repeat(2, a: a) {\n" * n
+    "zones": lambda n: ("geometry graph g(a: Float) -> Float {\n" + "x = repeat(2, a: a) -> {\n" * n
                         + "return a\n}\n" * n + "return a\n}\n"),
     "panels": lambda n: 'geometry graph g(' + '"P" { ' * n + "a: Float" + " }" * n + ") -> Float {\n  return a\n}\n",
 }
@@ -135,7 +135,7 @@ def mutated(source, rng):
 
 
 def test_text_cut_anywhere_only_raises_bn_errors():
-    # A look ahead must not read past the end of file: `x = closure() ->` and nothing after
+    # A look ahead must not read past the end of file: `x = graph() ->` and nothing after
     for name in ("conformance/all_features.bn", "python/tests/fixtures/zones.bn", "python/tests/fixtures/bundles.bn"):
         source = (ROOT / name).read_text(encoding="utf-8")
         for end in range(len(source)):
@@ -143,7 +143,7 @@ def test_text_cut_anywhere_only_raises_bn_errors():
                 parse(source[:end])
             except BnError:
                 pass
-    for tail in ("x = closure() ->", "x = closure() -> (a: Float)", "x = closure(", "x = simulate()", "x = f(a()"):
+    for tail in ("x = graph() ->", "x = graph() -> (a: Float)", "x = closure(", "x = simulate()", "x = f(a()"):
         with pytest.raises(BnError):
             parse("geometry graph g() -> Float {\n  " + tail)
 

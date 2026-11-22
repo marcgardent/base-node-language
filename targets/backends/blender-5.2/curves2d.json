@@ -1,0 +1,37 @@
+{
+ "morph curves 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "parallel contour 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "contour noise 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "wave curve 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "ribbon 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "arrow 2d": {
+  "geometry": "ok",
+  "shader": "an input of type Geometry",
+  "compositor": "an input of type Geometry"
+ },
+ "ring 2d": {
+  "geometry": "ok",
+  "shader": "unknown node 'CurveCircle' in a shader tree",
+  "compositor": "unknown node 'CurveCircle' in a compositor tree"
+ }
+}

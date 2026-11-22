@@ -268,7 +268,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1><a href="index.html" style="color:inherit">base-node</a> <span>(.bn) v0.13.1</span></h1>
+      <h1><a href="index.html" style="color:inherit">base-node</a> <span>(.bn) v1.0.0-rc.1</span></h1>
       <nav>
         <a href="index.html">Home</a>
         <a href="#examples">Examples</a>
@@ -547,7 +547,7 @@ geometry graph fbm(
     persistence: Float = 0.5 in 0.0..1.0
 ) -> Float {
   "Fractal noise: octave layers of increasing frequency and decreasing amplitude"
-  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) {
+  r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
     noise = NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0
     return (
       sum: sum + noise * amplitude,
@@ -564,8 +564,8 @@ geometry graph fbm(
     <h2 id="targets">Targets</h2>
     <p>
       A target is what one destination accepts: one file per target in <a href="https://github.com/marcgardent/base-node-language/tree/main/targets"><code>targets/*.json</code></a>,
-      none defined from another. The language speaks Blender; a destination that is not Blender declares translators from a Blender target.
-      A text needs no target: the tool tells which ones accept it, and <code>// @target gltf</code> at its head is a promise the editor holds it to.
+      none defined from another. The language speaks Blender; a destination that is not Blender declares translators from Blender's target.
+      A text needs no target: the tool tells which ones accept it, and <code>// @target blender gltf</code> at its head is a promise the editor holds it to.
       <a href="reference/targets.html">Specification</a>.
     </p>
     <table>
@@ -578,37 +578,36 @@ geometry graph fbm(
       </thead>
       <tbody>
         <tr>
-          <td><code>blender-geometry</code></td>
-          <td>Every Geometry Nodes node</td>
-          <td>Blender 5.2+, <code>curves2d.bn</code>, <code>patterns2d.bn</code>, <code>planar2d.bn</code>…</td>
+          <td><code>blender</code></td>
+          <td>Every node of Blender, for each kind of tree: a <code>geometry graph</code> the Geometry Nodes, a <code>shader graph</code> the shader nodes, a <code>compositor graph</code> the compositor's. In every version of Blender this version of Base Node promises</td>
+          <td>Blender, every module of the standard library</td>
         </tr>
         <tr>
-          <td><code>blender-gp</code></td>
-          <td>Every Geometry Nodes node, on a Grease Pencil object</td>
-          <td><code>math.bn</code>, <code>curves2d.bn</code>, <code>fillet2d.bn</code>…</td>
+          <td><code>blender@5.3</code></td>
+          <td>The same, in one version of Blender: its catalog, as that Blender reports it. An LTS says so in its name (<code>blender@5.2-lts</code>)</td>
+          <td>A text that uses a node of one version</td>
         </tr>
         <tr>
-          <td><code>blender-shader</code></td>
-          <td>Every shader node</td>
-          <td>Materials, and the shader groups of the Smart Materials pack</td>
-        </tr>
-        <tr>
-          <td><code>blender-compositor</code></td>
-          <td>Every compositor node</td>
-          <td><code>mask2d.bn</code>, <code>merge.bn</code>, <code>grade.bn</code>, <code>stmap.bn</code>, <code>qc.bn</code></td>
-        </tr>
-        <tr>
-          <td><code>gltf</code></td>
-          <td>The shader nodes Blender's glTF exporter turns into a material</td>
+          <td><code>blender gltf</code></td>
+          <td>A variant, after the target or one of its versions: the shader nodes Blender's glTF exporter turns into a material</td>
           <td>Unity, Godot, Unreal, anything that reads glTF</td>
         </tr>
         <tr>
+          <td><code>blender eevee</code>, <code>blender cycles</code></td>
+          <td>Variants, experimental: the shader nodes Blender says each render engine takes</td>
+          <td>A material for one engine</td>
+        </tr>
+        <tr>
           <td><code>blade</code></td>
-          <td>Blade's Pixel Nodes, with a translator from <code>blender-compositor</code></td>
+          <td>Blade's Pixel Nodes, with a translator from the compositor graphs of <code>blender</code></td>
           <td>Blade</td>
         </tr>
       </tbody>
     </table>
+    <p>
+      <code>blender@latest</code> and <code>blender@lts</code> name a version on a command line (<code>base-node check --target blender@latest</code>);
+      a text does not promise them: what they name changes with each release of Blender.
+    </p>
 
     <h2 id="view">Web component (<code>&lt;bn-view&gt;</code>)</h2>
     <p>
@@ -627,7 +626,7 @@ geometry graph fbm(
     <h2 id="packages">Subprojects (Python &amp; Rust)</h2>
     <div class="grid">
       <div class="box">
-        <h3>1. Python (<code>python/base_node</code>)</h3>
+        <h3>1. Python (<code>python/</code>)</h3>
         <p>Zero-dependency lexer, parser, canonical formatter, typechecker, target checker, and CLI.</p>
         <pre><code># Install from GitHub
 pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"
@@ -636,25 +635,25 @@ pip install "base-node @ git+https://github.com/marcgardent/base-node-language.g
 base-node fmt file.bn
 base-node check file.bn</code></pre>
         <pre><code>import base_node as bn
+import base_node_blender as blender
 
 ast = bn.parse(source)
 code = bn.format_source(source)
-issues = bn.check_target(ast, "gltf")</code></pre>
+issues = blender.check_target(ast, "blender gltf")</code></pre>
         <p>License: <code>MIT OR Apache-2.0</code></p>
       </div>
       <div class="box">
-        <h3>2. Rust / WASM (<code>rust/</code>)</h3>
-        <p><code>wasm32-unknown-unknown</code> compatible crate with byte-for-byte identical canonical formatting and embedded JSON targets.</p>
+        <h3>2. Rust / WASM (<code>rust/</code>, <code>rust-blender/</code>)</h3>
+        <p><code>wasm32-unknown-unknown</code> compatible crates: <code>base-node</code>, the core, with byte-for-byte identical canonical formatting, and <code>base-node-blender</code>, with the embedded JSON targets.</p>
         <pre><code># Cargo.toml
 [dependencies]
-base-node = { git = "https://github.com/marcgardent/base-node-language.git" }</code></pre>
-        <pre><code>use base_node::{
-  parse, format_source,
-  check_target, infer
-};
+base-node = { git = "https://github.com/marcgardent/base-node-language.git" }
+base-node-blender = { git = "https://github.com/marcgardent/base-node-language.git" }</code></pre>
+        <pre><code>use base_node::{parse, format_source};
+use base_node_blender::{check_target, infer};
 let f = parse(src, "a.bn")?;
 let code = format_source(src, "a.bn")?;
-let issues = check_target(&amp;f, "gltf");
+let issues = check_target(&amp;f, "blender gltf");
 let fits = infer(&amp;f).fits;</code></pre>
         <p>License: <code>MIT OR Apache-2.0</code></p>
       </div>
@@ -665,7 +664,7 @@ let fits = infer(&amp;f).fits;</code></pre>
       <thead>
         <tr>
           <th>Module</th>
-          <th>Targets</th>
+          <th>Trees</th>
           <th>Graphs</th>
           <th>Contents</th>
         </tr>
@@ -673,67 +672,67 @@ let fits = infer(&amp;f).fits;</code></pre>
       <tbody>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/math.bn"><code>math.bn</code></a></td>
-          <td><code>blender-compositor</code>, <code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code>, <code>compositor</code></td>
           <td>47</td>
           <td>Inigo Quilez curves, easing, bounce, elastic, fbm, Fibonacci, R2 low-discrepancy sequence, analytic SDFs</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/sdf2d.bn"><code>sdf2d.bn</code></a></td>
-          <td><code>blender-compositor</code>, <code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code>, <code>compositor</code></td>
           <td>17</td>
           <td>2D segment, rounded box, rhombus, equilateral triangle, hexagon, regular polygon, star, arc, sector, cross, chamfer booleans, polar/grid repetition, isolines</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/curves2d.bn"><code>curves2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code></td>
           <td>7</td>
           <td>2D curve morphing, parallel offset contour, fractal contour noise, sine wave contour, tapered ribbon, 2D arrow, 2D ring</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/patterns2d.bn"><code>patterns2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code></td>
           <td>5</td>
           <td>Hexagonal honeycomb grid, equilateral triangular grid, Vogel phyllotaxis spiral, R2 stratified jitter points, 2D hatching</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/planar2d.bn"><code>planar2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code></td>
           <td>4</td>
           <td>Planar map of overlapping curves: faces, split at intersections, shape builder pick, outer boundary contour</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/fillet2d.bn"><code>fillet2d.bn</code></a></td>
-          <td><code>blender-geometry</code>, <code>blender-gp</code></td>
+          <td><code>geometry</code></td>
           <td>4</td>
           <td>Fillet of a corner and of a polygon, chamfer of a polygon, fillet as Bezier handles</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/mask2d.bn"><code>mask2d.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
+          <td><code>compositor</code></td>
           <td>9</td>
           <td>Compositor masks drawn by the SDFs of <code>math</code> and <code>sdf2d</code>: circle, box, polygon, star, outline, letterbox</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/merge.bn"><code>merge.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
+          <td><code>compositor</code></td>
           <td>32</td>
           <td>The Merge operations of compositing on premultiplied images: over, under, in, out, atop, xor, stencil, mask, plus, screen, multiply, difference…; premult, unpremult, keymix</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/grade.bn"><code>grade.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
+          <td><code>compositor</code></td>
           <td>20</td>
           <td>The colour tools of compositing: grade, color correct by shadows / midtones / highlights, saturation, hue shift, exposure, soft clip, log2lin / lin2log</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/stmap.bn"><code>stmap.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
+          <td><code>compositor</code></td>
           <td>12</td>
           <td>Image remapping by STMaps, as Nuke's STMap: UV ramp, STMap apply, tile, mirror, reformat by fit / fill / distort, each as its STMap and its image</td>
         </tr>
         <tr>
           <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/qc.bn"><code>qc.bn</code></a></td>
-          <td><code>blender-compositor</code></td>
+          <td><code>compositor</code></td>
           <td>24</td>
           <td>Quality control after Nuke: test patterns (SMPTE colour bars, colour wheel, ramp, radial, rectangle, grid, checkerboard, constant) and checks (false colour by stops, clip check, NaN and infinity check, zebra, alpha check, difference as heat)</td>
         </tr>

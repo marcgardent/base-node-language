@@ -1,4 +1,4 @@
-"""The gltf target against Blender's glTF exporter.
+"""The gltf variant of the blender target against Blender's glTF exporter.
 
 Each case of conformance/gltf-cases.json is built into a material with the add-on, exported to a
 .glb with `bpy.ops.export_scene.gltf`, and its glTF read back: what the rules accept must reach
@@ -126,10 +126,10 @@ def holds(check, gltf, material, attributes):
 
 def test_gltf_export():
     """Every case of conformance/gltf-cases.json: the rules' verdict, and what the exporter writes."""
-    print("-> Test: the gltf target against Blender's glTF exporter...")
+    print("-> Test: the gltf variant of blender against Blender's glTF exporter...")
     from base_node.host import build_source
     from base_node.lang import parse
-    from base_node.lang.targets import check_target
+    from base_node.blender.targets import check_target
 
     corpus = json.loads(CASES.read_text(encoding="utf-8"))
     for name in corpus["images"]:
@@ -141,7 +141,7 @@ def test_gltf_export():
     with tempfile.TemporaryDirectory() as folder:
         for case in corpus["cases"]:
             text = case_text(case)
-            issues = [i.name for i in check_target(parse(text, f"{case['name']}.bn"), "gltf")]
+            issues = [i.name for i in check_target(parse(text, f"{case['name']}.bn"), "blender gltf")]
             if issues != case["issues"]:
                 wrong.append(f"{case['name']}: the rules say {issues}, the case {case['issues']}")
             if not case.get("gltf"):

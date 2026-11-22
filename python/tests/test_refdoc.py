@@ -4,9 +4,9 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 
-from base_node.cli import main
+from base_node_cli.cli import main
 from base_node.manifest import manifest
-from base_node.refdoc import cells, highlight, markdown, slug
+from base_node_cli.refdoc import cells, highlight, markdown, slug
 
 ROOT = Path(__file__).resolve().parents[2]
 

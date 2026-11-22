@@ -68,7 +68,7 @@
     {{code step1_hillside.bn forest_edge hill_height hill_path meadow}}
     <ul>
       <li><code>hill_height</code> adds three things: a hill whose crest is 40 m away, a bank that rises 5 m in 6 m across it, and hummocks of noise. The bank is there for the rules of step 3: it is too steep for trees.</li>
-      <li><code>hill_path</code> is a curve, not a mesh: the scatter keeps away from curves (step 4). Its points take their height from <code>hill_height(xy)</code>, the same graph as the ground, so it lies on it. <code>CurveToMesh</code> only gives it a body to render.</li>
+      <li><code>hill_path</code> is a curve, not a mesh: the scatter keeps away from curves (step 4). Its points take their height from <code>hill_height(p: xy)</code>, the same graph as the ground, so it lies on it. <code>CurveToMesh</code> only gives it a body to render.</li>
       <li>The material shows bare earth where the ground is steeper than about 32°: the bank.</li>
     </ul>
     <figure>

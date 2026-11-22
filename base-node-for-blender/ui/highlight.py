@@ -8,13 +8,14 @@ import bpy
 
 from ..lang.colors import rgb
 from ..lang.lexer import span_at, tokenize, width
-from ..lang.schema import TREE_KINDS, TYPES
-from ..lang.sugar import FUNCS
+from ..blender.schema import TREE_KINDS, TYPES
+from ..blender.sugar import FUNCS
 from . import actions, draw, prefs, targets
 
 ALPHA = 0.22
 SWATCH = 0.6  # a frame color shows itself, more opaque
 ERROR = (1.0, 0.25, 0.25, 0.95)  # the bar under an error
+WARNING = (1.0, 0.7, 0.2, 0.95)  # the bar under a warning: the text is valid with it
 
 COLORS = {
     "keyword": (0.65, 0.40, 0.95),
@@ -35,7 +36,8 @@ SOCKETS = {
     "Matrix": (0.72, 0.20, 0.52), "String": (0.44, 0.70, 1.00), "Menu": (0.40, 0.40, 0.40),
     "Geometry": (0.00, 0.84, 0.64), "Shader": (0.39, 0.78, 0.39), "Object": (0.93, 0.62, 0.36),
     "Collection": (0.96, 0.96, 0.96), "Material": (0.92, 0.46, 0.51), "Image": (0.39, 0.22, 0.39),
-    "Texture": (0.62, 0.31, 0.64), "Bundle": (0.50, 0.50, 0.50), "Closure": (0.50, 0.50, 0.50),
+    "Texture": (0.62, 0.31, 0.64), "Font": (0.82, 0.71, 0.55), "Sound": (0.55, 0.71, 0.82),
+    "Scene": (0.80, 0.80, 0.80), "Mask": (0.60, 0.60, 0.30), "Text": (0.70, 0.70, 0.70), "Bundle": (0.50, 0.50, 0.50), "Closure": (0.50, 0.50, 0.50),
 }
 
 
@@ -164,14 +166,13 @@ def draw_highlight():
     allowed_nodes = allowed_types = None
     promised = targets.promised(text)
     if promised:
-        from ..lang.schema import key
-        from ..lang.targets import load_target
+        from ..blender.schema import key
+        from ..blender.targets import accepted
 
         allowed_nodes, allowed_types = set(FUNCS), set()
         for name in promised:
-            t = load_target(name)
-            allowed_nodes.update(t.nodes)
-            allowed_types.update(t.types)
+            allowed_nodes.update(accepted(name, "node"))
+            allowed_types.update(accepted(name, "type"))
         # The graphs a text calls by their key are not nodes
         allowed_nodes.update(key(g) for g in declared)
 
@@ -209,6 +210,9 @@ def draw_errors():
     diagnostics = actions.DIAGNOSTICS.get(text.name) if actions.is_bn(text) else None
     if diagnostics:
         draw.rects(underlines(space, bpy.context.region, diagnostics), ERROR)
+    warnings = actions.LINT.get(text.name) if actions.is_bn(text) else None
+    if warnings:
+        draw.rects(underlines(space, bpy.context.region, warnings), WARNING)
 
 
 def draw_overlay():

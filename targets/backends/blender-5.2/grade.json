@@ -1,0 +1,102 @@
+{
+ "signed pow": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "rec709 luma": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "gray of": {
+  "geometry": "ok",
+  "shader": "CombineColor has no input 'alpha'; inputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "graded image": {
+  "geometry": "'premult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'premult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "grade channel": {
+  "geometry": "ok",
+  "shader": "unknown node 'Switch' in a shader tree; did you mean MenuSwitch?",
+  "compositor": "ok"
+ },
+ "grade": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "correct channel": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "correct range": {
+  "geometry": "ok",
+  "shader": "SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "color correct": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "saturation": {
+  "geometry": "an input of type Menu",
+  "shader": "an input of type Menu",
+  "compositor": "ok"
+ },
+ "hue shift": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "exposure stops": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "soft clip channel": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "soft clip": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "clamp channels": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "cineon offset": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "log2lin channel": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "lin2log channel": {
+  "geometry": "ok",
+  "shader": "ok",
+  "compositor": "ok"
+ },
+ "log2lin": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ },
+ "lin2log": {
+  "geometry": "'unpremult' is a compositor graph that cannot be built in a geometry tree: 'with_alpha' is a compositor graph that cannot be built in a geometry tree: unknown node 'SetAlpha' in a geometry tree",
+  "shader": "'unpremult' is a compositor graph that cannot be built in a shader tree: 'alpha_of' is a compositor graph that cannot be built in a shader tree: SeparateColor has no output 'alpha'; outputs: red, green, blue",
+  "compositor": "ok"
+ }
+}
