@@ -5,7 +5,7 @@ not in the AST: `format.py` puts them back.
 """
 
 from . import ast, colors
-from .names import RESERVED, key
+from .names import is_bare
 
 INDENT = "  "
 WIDTH = 100
@@ -40,13 +40,14 @@ def render(lines):
 
 
 def name(n):
-    """A declared name: bare when it is its own key, else quoted."""
-    return n if key(n) == n else quote(n)
+    """A declared name: bare when the lexer reads it back as that name (then it is its own key),
+    else quoted."""
+    return n if is_bare(n) else quote(n)
 
 
 def label(n):
-    """An argument or socket name: bare when the lexer reads it as one identifier."""
-    return n if n.isidentifier() and n not in RESERVED else quote(n)
+    """An argument or socket name: bare when the lexer reads it back as that name, else quoted."""
+    return n if is_bare(n) else quote(n)
 
 
 def quote(s):
@@ -61,7 +62,7 @@ ESCAPED = {'"': '\\"', "\\": "\\\\", "\n": "\\n", "\t": "\\t", "\r": "\\r"}
 def call_name(n):
     """A call's name: `m::"Big Blend"` when what follows the module is not a chain of identifiers."""
     module, sep, rest = n.partition("::")
-    if not sep or all(part.isidentifier() and part not in RESERVED for part in rest.split("::")):
+    if not sep or all(is_bare(part) for part in rest.split("::")):
         return n
     return f"{module}::{quote(rest)}"
 

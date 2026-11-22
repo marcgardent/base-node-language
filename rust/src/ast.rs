@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::identifiers::{CONTINUE, START};
+
 pub const RESERVED: &[&str] = &[
     "graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross", "inf", "nan",
 ];
@@ -8,33 +10,72 @@ pub fn is_reserved(s: &str) -> bool {
     RESERVED.contains(&s)
 }
 
+/// Whether an identifier may start with the character `c`: `_`, an ASCII letter, or past ASCII a
+/// character of XID_Start. One rule for the lexer, which reads a name, and the printer, which
+/// writes one bare or quoted, from the tables python/base_node/names.py reads too.
+pub fn starts_name(c: char) -> bool {
+    if c.is_ascii() {
+        return c.is_ascii_alphabetic() || c == '_';
+    }
+    in_table(START, c)
+}
+
+/// Whether an identifier may go on with the character `c`: `_`, an ASCII letter or digit, or past
+/// ASCII a character of XID_Continue, but `·` (the dot product).
+pub fn goes_on_name(c: char) -> bool {
+    if c.is_ascii() {
+        return c.is_ascii_alphanumeric() || c == '_';
+    }
+    in_table(CONTINUE, c)
+}
+
+/// Whether `c` is in a table of sorted bounds, each range from an even index to the odd one after
+/// it, excluded.
+fn in_table(table: &[u32], c: char) -> bool {
+    table.partition_point(|&b| b <= c as u32) % 2 == 1
+}
+
+/// What the lexer reads as one name: `height`, `_2`, `ρ_θ_φ`; not `2d`, `a b`, `a·b`, `x²`.
 pub fn is_identifier(s: &str) -> bool {
     let mut chars = s.chars();
     match chars.next() {
-        Some(c) if c.is_alphabetic() || c == '_' => chars.all(|c| c.is_alphanumeric() || c == '_'),
+        Some(c) if starts_name(c) => chars.all(goes_on_name),
         _ => false,
     }
 }
 
+/// A name the printer writes as it is: an identifier, not a reserved word. Any other is quoted
+/// where the grammar takes a quoted name, or written by its key.
+pub fn is_bare(s: &str) -> bool {
+    !is_reserved(s) && is_identifier(s)
+}
+
+/// A name written bare where a value goes, an enum value or a material: bare, and not `_`, which
+/// is no value there. Any other is a string.
+pub fn is_word(s: &str) -> bool {
+    s != "_" && is_bare(s)
+}
+
+/// A name as written in text: `Base Color` -> `base_color`. Lowercase, each run of characters an
+/// identifier does not hold one `_`, a `_` before a first character no identifier starts with,
+/// and after a reserved word: always a bare identifier.
 pub fn snake(name: &str) -> String {
-    let lower = name.to_lowercase();
-    let mut res = String::new();
-    let mut in_non_word = false;
-    for c in lower.chars() {
-        if c.is_alphanumeric() || c == '_' {
-            if in_non_word && !res.is_empty() {
-                res.push('_');
+    let mut words = String::new();
+    let mut gap = false;
+    for c in name.to_lowercase().chars() {
+        if goes_on_name(c) {
+            if gap && !words.is_empty() {
+                words.push('_');
             }
-            in_non_word = false;
-            res.push(c);
+            words.push(c);
+            gap = false;
         } else {
-            in_non_word = true;
+            gap = true;
         }
     }
-    let trimmed = res.trim_matches('_');
-    let mut s = trimmed.to_string();
-    if s.is_empty() || s.chars().next().unwrap().is_ascii_digit() {
-        s = format!("_{}", s);
+    let mut s = words.trim_matches('_').to_string();
+    if !s.chars().next().is_some_and(starts_name) {
+        s.insert(0, '_');
     }
     if is_reserved(&s) {
         s.push('_');
@@ -43,23 +84,25 @@ pub fn snake(name: &str) -> String {
 }
 
 pub fn key(name: &str) -> String {
-    if is_identifier(name) && !is_reserved(name) {
+    if is_bare(name) {
         name.to_string()
     } else {
         snake(name)
     }
 }
 
+/// A declared name: bare when the lexer reads it back as that name, else quoted.
 pub fn name_display(n: &str) -> String {
-    if is_identifier(n) && !is_reserved(n) {
+    if is_bare(n) {
         n.to_string()
     } else {
         quote(n)
     }
 }
 
+/// An argument or socket name: bare when the lexer reads it back as that name, else quoted.
 pub fn label_display(n: &str) -> String {
-    if is_identifier(n) && !is_reserved(n) {
+    if is_bare(n) {
         n.to_string()
     } else {
         quote(n)
@@ -89,11 +132,7 @@ pub fn quote(s: &str) -> String {
 /// A call's name: `m::"Big Blend"` when what follows the module is not a chain of identifiers.
 pub fn call_name(n: &str) -> String {
     match n.split_once("::") {
-        Some((module, rest))
-            if !rest
-                .split("::")
-                .all(|part| is_identifier(part) && !is_reserved(part)) =>
-        {
+        Some((module, rest)) if !rest.split("::").all(is_bare) => {
             format!("{}::{}", module, quote(rest))
         }
         _ => n.to_string(),

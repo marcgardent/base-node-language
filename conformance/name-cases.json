@@ -1,0 +1,2202 @@
+{
+ "about": "The key of a name and whether it is written bare (an identifier, no reserved word) or as a word where a value goes (bare, not `_`), as the Python and the Rust cores say alike (spec/reference.md, 2). Read by python/tests/test_names.py and rust/tests/names.rs.",
+ "unicode": "16.0.0",
+ "cases": [
+  {
+   "name": "",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " ",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_",
+   "key": "_",
+   "bare": true,
+   "word": false
+  },
+  {
+   "name": "__",
+   "key": "__",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "_1",
+   "key": "_1",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "a",
+   "key": "a",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "a_",
+   "key": "a_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "A",
+   "key": "A",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "1",
+   "key": "_1",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "1abc",
+   "key": "_1abc",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "2D",
+   "key": "_2d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "abc1",
+   "key": "abc1",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "a b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " a",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a ",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a-b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a.b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a::b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "::",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "m::a",
+   "key": "m_a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a::",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "::a",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a::b c",
+   "key": "a_b_c",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\"b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\\",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\\b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\n",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\nb",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\t",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\r",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0000",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u001b",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u007f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u2028",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00a0",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200b",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200d",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ufeff",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "and",
+   "key": "and_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "cross",
+   "key": "cross_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "dot",
+   "key": "dot_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "false",
+   "key": "false_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "graph",
+   "key": "graph_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "inf",
+   "key": "inf_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "nan",
+   "key": "nan_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "not",
+   "key": "not_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "or",
+   "key": "or_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "return",
+   "key": "return_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "true",
+   "key": "true_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "xor",
+   "key": "xor_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "and_",
+   "key": "and_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "cross_",
+   "key": "cross_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "dot_",
+   "key": "dot_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "false_",
+   "key": "false_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "graph_",
+   "key": "graph_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "inf_",
+   "key": "inf_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "nan_",
+   "key": "nan_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "not_",
+   "key": "not_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "or_",
+   "key": "or_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "return_",
+   "key": "return_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "true_",
+   "key": "true_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "xor_",
+   "key": "xor_",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "Inf",
+   "key": "Inf",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "NaN",
+   "key": "NaN",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "True",
+   "key": "True",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "INF",
+   "key": "INF",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "use",
+   "key": "use",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "from",
+   "key": "from",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "as",
+   "key": "as",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "in",
+   "key": "in",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "hide",
+   "key": "hide",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "mute",
+   "key": "mute",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "repeat",
+   "key": "repeat",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "simulate",
+   "key": "simulate",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "foreach",
+   "key": "foreach",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "iteration",
+   "key": "iteration",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "delta_time",
+   "key": "delta_time",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "index",
+   "key": "index",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "element",
+   "key": "element",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u00e9",
+   "key": "\u00e9",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "e\u0301",
+   "key": "e\u0301",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u00c9",
+   "key": "\u00c9",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "Gr\u00f6\u00dfe",
+   "key": "Gr\u00f6\u00dfe",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u0130",
+   "key": "\u0130",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u01c5",
+   "key": "\u01c5",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\ufb01",
+   "key": "\ufb01",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u1e9e",
+   "key": "\u1e9e",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u03a3",
+   "key": "\u03a3",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u0391\u03a3",
+   "key": "\u0391\u03a3",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u03c1, \u03b8, \u03c6",
+   "key": "\u03c1_\u03b8_\u03c6",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u03b8",
+   "key": "\u03b8",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u216b",
+   "key": "\u216b",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u217b",
+   "key": "\u217b",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "x\u00b2",
+   "key": "x",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00bd",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "x\u0663",
+   "key": "x\u0663",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u0663x",
+   "key": "_\u0663x",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0967\u0968",
+   "key": "_\u0967\u0968",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0915\u094d\u0937",
+   "key": "\u0915\u094d\u0937",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u0995\u09cd\u09b7",
+   "key": "\u0995\u09cd\u09b7",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u65e5\u672c\u8a9e",
+   "key": "\u65e5\u672c\u8a9e",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\ud55c\uad6d\uc5b4",
+   "key": "\ud55c\uad6d\uc5b4",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\ud83d\ude4f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\ud83d\ude4f",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud835\udd18\ud835\udd2b\ud835\udd26",
+   "key": "\ud835\udd18\ud835\udd2b\ud835\udd26",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "a\u00b7b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u22c5b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u00d7b",
+   "key": "a_b",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b0",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Rotation \u00b0",
+   "key": "rotation",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "BA\u27c2(BC)",
+   "key": "ba_bc",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u0387b",
+   "key": "a\u0387b",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u203f",
+   "key": "_\u203f",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u203fb",
+   "key": "a\u203fb",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "_\u203f",
+   "key": "_\u203f",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u24b6",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00aa",
+   "key": "\u00aa",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u00ba",
+   "key": "\u00ba",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u00b5",
+   "key": "\u00b5",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\u0149",
+   "key": "\u0149",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\ufdfa",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\udb40\udd00",
+   "key": "a\udb40\udd00",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "#ff0000",
+   "key": "ff0000",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "#",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "@",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "$",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a$",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Value_001",
+   "key": "Value_001",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "Value.001",
+   "key": "value_001",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Shader_001",
+   "key": "Shader_001",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "Tessera \u00b7 Region",
+   "key": "tessera_region",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Input Image \u03b3=log ",
+   "key": "input_image_\u03b3_log",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udae8\ude64\ud854\udd65",
+   "key": "\ud854\udd65",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\u00e9__\u03a3\u0301",
+   "key": "\u00e9__\u03c3\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83e\udec6",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z\ud81f\udd9a99",
+   "key": "Z\ud81f\udd9a99",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\"\u65e5\u0301-",
+   "key": "\u65e5\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\u200d",
+   "key": "_\u200d",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\udb79\ude35\u00b2.",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ".\"\\\uda0d\udec9\ud855\udfa9\u00d7",
+   "key": "\ud855\udfa9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8f7\udd0e",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u65e5\u03a3\\",
+   "key": "\u65e5\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbb9\udcc2\u00b2",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\u65e5\"\udb50\udeb0\u22c5\uda86\udeaa",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200dZ\"",
+   "key": "_\u200dz",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udaee\udf93",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbb8\udf62\u00b2:",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9fa\udcd3",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\udacb\udc93\ud8f5\udc589.",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud935\uddc0a\u03a3",
+   "key": "a\u03c2",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda4c\ude11\udbdf\udee7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud82e\ude4f\u65e5\udae3\ude5e\u22c5",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83f\uddef-0",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud891\udeb19",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\ud850\udc06\udac2\ude12:",
+   "key": "\ud850\udc06",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb8b\udc3f\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"0\ud9de\udce3",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud90a\ude81-\udbf9\udf7c",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u03a3\udbf9\ude45",
+   "key": "\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud87a\udd8e\ud9d6\udf0e",
+   "key": "\ud87a\udd8e",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " .\u00e9.",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud94f\udea2\udaf4\ude68\ud990\udd73\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ue4dc\udb87\udc97",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200d\udb53\udfb0",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda8b\udf43\udaaa\udf180-\u0663\u0fa2",
+   "key": "_0_\u0663\u0fa2",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda80\ude1a\ud86d\ude81\ud8b5\ude40",
+   "key": "\ud86d\ude81",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud958\udcd3 \ud83d\ude4f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u22c5_",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9\u0301\ud8eb\udd75\udb8b\uddee\uda8d\ude89",
+   "key": "_9\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud892\udde89-\ud970\udcdb-.",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":9\u00b7\udbe2\udd4e\u00e99",
+   "key": "_9_\u00e99",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\u2037\ud8f2\udf2e\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83e\udde6\u00e9\u0663\ud899\udd3f",
+   "key": "\u00e9\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-0\u03a3_",
+   "key": "_0\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e9\ud958\udd82\udb5e\udd9d",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0663.\ud9d3\ude94\ud95e\udf9a",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7\u00b2\u65e5_\"\ud8fc\udd3a",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udaad\udfc69\ud981\udedd\ud880\udf13\u0663",
+   "key": "_9_\ud880\udf13\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud98a\udca6",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbdf\udfd6",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-_\u9f9a",
+   "key": "\u9f9a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\udad3\udc8c",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"_",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "0: 9\ud9d1\ude86\u03a3",
+   "key": "_0_9_\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\\Z\ud937\uddf4_",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud875\udd88\ud86b\ude04",
+   "key": "\ud875\udd88\ud86b\ude04",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "\ud848\uddc50\\\udb17\ude4a",
+   "key": "\ud848\uddc50",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud818\uddf0.",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda30\ude9a",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda11\udf5b\u65e5\u00b7\ud9c0\udfad",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-.\ud899\udea8\udb35\udc66\udae5\udc29",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-\uda7d\udf6f\ud83d\ude4f\u00b7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\ud9cb\uddd3Z\u22c5\uda01\udd98\"",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "::\\",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z\uda39\udfd1 \u22c5",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\u00e9\ud87a\udc41",
+   "key": "\u00e9\ud87a\udc41",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8e6\ude8bZ",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"\ud86d\udc15\u00e9",
+   "key": "\ud86d\udc15\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udadd\udeeb\udbb4\udc69\u200d\ud819\udeb6\udbda\ude57\udbcb\udd64",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbc8\udfce",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u83b9\ud996\udfacZ\u00b7",
+   "key": "\u83b9_z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud827\udffe\ud9b4\udf6ea",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbc6\udc56\ud87c\udd30\ud847\udd15",
+   "key": "\ud847\udd15",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9c4\uddf8\ud9df\udf73-\ud83d\ude4f\udbb3\ude6d",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0663\uda0c\uddb7\ud956\udc649\ud83d\ude4f\uda2f\uddc9",
+   "key": "_\u0663_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u0663\u65e5-",
+   "key": "a\u0663\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e9\u00b20\ud958\udc41_",
+   "key": "\u00e9_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\u00e9\udb58\udde6",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-_",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9d8\udcbd",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f0",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0663\udba3\ude76 \u0663\udafe\udd31",
+   "key": "_\u0663_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb14\udd5b\\",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\\\udaef\ude8a-\uda11\ude4f_\u0301",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9f3\ude12\ud9fe\udefb",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8f0\udfe8:\\\u00b7\udb2c\udc1b\udaf3\udd24",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\u00d79\uda0a\udc9e",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u03a3\u0663\"",
+   "key": "\u03c3\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\ud83d\ude4f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " \ud859\udfcc\u0663\u00b2\udb59\ude13",
+   "key": "\ud859\udfcc\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "- _",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\ud95d\udff2",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udad0\udc35\u00e9:Z\u0301",
+   "key": "\u00e9_z\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e9-",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udad3\ude52\u00b2",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ub2ab\u00d7\udb89\udd03",
+   "key": "\ub2ab",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\u00e9\udb57\uddcd0",
+   "key": "\u00e9_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\udb68\ude68Z9Z",
+   "key": "z9z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8c6\udc4d\udbf9\udf73\ud8a5\ude97\"\u0301",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ".",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u55b3\u00b2\\\ud9b0\udd64.a",
+   "key": "\u55b3_a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda35\ude33-\u65e5",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\u00d7\ud990\uddd4\\\udaa6\udc1f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\udbc9\udff6\u0663\uda3e\udd93\ud94d\udcb3",
+   "key": "a_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud89f\udcfe\udbb7\udd4d\ud989\udd78\u65e5\u200d\u22c5",
+   "key": "\u65e5\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z",
+   "key": "Z",
+   "bare": true,
+   "word": true
+  },
+  {
+   "name": "_\uda62\udd28\ud83d\ude4f\udb7d\udeb5\u65e5",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\udb4a\udc6da_0",
+   "key": "a_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud968\udf0a\"\udb35\ude9f\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\ud813\udd00\u00b2Z_",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\u200d\\\uda21\udc59",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud845\udf33.\u00b2\udad7\ude54\udb30\ude0d",
+   "key": "\ud845\udf33",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0663\"\ud8f5\udf93\uda5f\udd56\udb6f\udeb8\u200d",
+   "key": "_\u0663_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " _\udb9a\ude00\\",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud897\uddf9",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud96a\udeba\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud922\udec9\u00d7\u65e5\u03a3\ud8b8\udc94",
+   "key": "\u65e5\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda19\udea9::..\u0301",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u22c5",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbcf\udc00\ud83d\ude4f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\ud891\ude4e.\udabd\udecb\"Z",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud94d\ude92",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " :",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u33ee\u200d\uda8c\udcbd\u00b7Z:",
+   "key": "_\u200d_z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud960\ude98\uda5e\udcd3\u00b7\"",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7\u22c5\ud8fc\ude17\ud87a\udeb8",
+   "key": "\ud87a\udeb8",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\"\udb17\udefd\uda3f\udede\uda9b\ude08",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\udae0\udcde\ud961\udc71",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb23\udf66_\u00b7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8ca\udcc1\u03a3\u22c5",
+   "key": "\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udab7\uddf3\ud91f\ude72\" ",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-Z\udb9c\ude93",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\u200d",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud908\udcfb\ud986\udf3d\ud951\ude8e\ud936\udedaZ",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud900\udde00-",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud80e\udc59\uda57\udfde\u200d\ud83d\ude4f",
+   "key": "\ud80e\udc59_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7.\u65e5\u00e9a\u0663",
+   "key": "\u65e5\u00e9a\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200d\udb6a\ude4d\udb89\udc9b",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9\u00b7\u00b2",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z9\\\udbd7\ude0e",
+   "key": "z9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u22c5\ud8d6\udfa2_\ud8a0\uddbe\u0663 ",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud984\udf78\u00b7\ud9c4\ude31\u200d\u00b2",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7 \ud83d\ude4f\uda5f\udd89",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\u00e9\u00b7",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e90\u03a3\udae7\uddbf\udab8\udf0d\u00b7",
+   "key": "\u00e90\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\\\udb49\udf2b\u200d\ud822\udf9a",
+   "key": "_\u200d\ud822\udf9a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9c7\uddeb\u0301",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0eab\ud985\udfa7\u200d\udb17\uddb1Z",
+   "key": "\u0eab_\u200d_z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z\u00b7\u00e9.\"",
+   "key": "z_\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\udb8c\ude65a\ud9b2\udf79",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "09\ud9e8\udde0:\ud832\udfd2",
+   "key": "_09",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda8d\uddec\u0301\u00e9\ud9bc\udfb0a",
+   "key": "_\u0301\u00e9_a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": " Z\ud896\udf7c\u03a3",
+   "key": "z_\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud8e3\udd72\u00e9\udbce\udceb\udb12\uddae\ud925\udea5",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"\udb92\udf29\u3403\u00d7",
+   "key": "\u3403",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud864\udf47\udb5e\udec60\ud83d\ude4f\\",
+   "key": "\ud864\udf47_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud9db\udcf1\ud9e0\udef8\udb3d\udc24\udbef\ude6b\uda1d\uddb1",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud97c\udda0\u00e9:\ud95f\udd24\uda5d\uddbb",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda60\udf83",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\udb81\ude16\u00e9a",
+   "key": "\u00e9a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud99e\udf85\"\udae1\udfaf",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0301\ud8e8\udc850 ",
+   "key": "_\u0301_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ueb609",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud817\udd5b\ud81f\ude7a\u0301\ud958\udcc3\ud847\udc3f",
+   "key": "\ud81f\ude7a\u0301_\ud847\udc3f",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udad2\udc70-Z\ud83d\ude4f\ud83d\ude4f\udb91\udc87",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\"\u00b7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbc7\ude9d\"",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb0d\udea5\u00e9\uda86\udcd5Z",
+   "key": "\u00e9_z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\"a\"",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud82e\ude13\u0663 \uda87\udc25\udbdf\udc07 ",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud99a\udcac0",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbac\udc78\ud896\udc89\uda98\udd37\u22c5\ud870\udded",
+   "key": "\ud870\udded",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uce39\"\u03a3",
+   "key": "\uce39_\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\u00b2\u200d\ud805\udd94",
+   "key": "_\u200d\ud805\udd94",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e9\u00b2",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\\\u00b2\ud9ce\udf169\ud83d\ude4f",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-\u200d9\uda5c\udf33\uda89\udffe",
+   "key": "_\u200d9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "-",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud890\uddff\u65e5",
+   "key": "\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\"-0\u22c5a\u00d7",
+   "key": "_0_a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4fa\u200d\u2d33\udb30\udeca",
+   "key": "a\u200d\u2d33",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f.\ud994\udcbd\ud8be\udd92\\",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud888\uddb9\ud9b0\uddb5",
+   "key": "\ud888\uddb9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\u00d7a\udb06\udd59\u65e5\ud936\udfa4",
+   "key": "a_\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "a\u0663\ud899\udf77\u03a3-",
+   "key": "a\u0663_\u03c3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u0301-\udbd8\udfde\u00b7",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\u65e5\u00e9\ud8ba\udea8",
+   "key": "\u65e5\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda98\udc08\ud9c5\udc22\u22c5_\u00d7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda91\udc9b0\u22c5\udbf7\uddcf\udae2\udef5",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9\ud84d\udc63\ud94b\ude77",
+   "key": "_9\ud84d\udc63",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud98e\udf48\ud8eb\ude30\ud83d\ude4f",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb0e\udda4\"\ud8c0\udd5c\udb81\udd56.\u22c5",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7\udb9a\udd03:\ud83d\ude4f\u0663",
+   "key": "_\u0663",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\u00b7\"",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "_\uda58\udff3\ud8df\ude2b\u00b7\u7ac3\ud96d\ude44",
+   "key": "\u7ac3",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200d9\ud93c\udcf4\uda85\ude11\ud96b\udc5d",
+   "key": "_\u200d9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud917\udf8a\ud879\udc9a\uda20\udd61",
+   "key": "\ud879\udc9a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\ud8af\ude4e:9",
+   "key": "_9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z9\ud9b8\udfdf",
+   "key": "z9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u200d\u361f\\",
+   "key": "_\u200d\u361f",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbbb\udc64\udb79\udf85\u00d7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83d\ude4f\ud83d\ude4f\u200d\\\ud880\uddd9",
+   "key": "_\u200d_\ud880\uddd9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9\u00d7\uda75\udddd\u65e5",
+   "key": "_9_\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7Z",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\udafa\udf5a:\uda82\udcaf\udbb0\udc0b\uda65\udeb3",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udaf0\udf9c\udaff\ude30Z0-\udb8c\udfa2",
+   "key": "z0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83b\udcbd\udac2\udc8d\ud869\udff6\u65e5",
+   "key": "\ud869\udff6\u65e5",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "  \udb1f\udd83\u6dfd9",
+   "key": "\u6dfd9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\ud93a\uddb0\\\u0301\ud82f\udf6d\u00e9",
+   "key": "_\u0301_\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00d7\u22c5a\ud8fe\udc2f\u00d7_",
+   "key": "a",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "9\udb2a\uddfb\u65e5\ud874\ude090",
+   "key": "_9_\u65e5\ud874\ude090",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\ud93f\udf43\udaad\udd3c\ud8e8\ude32\ud86c\ude80",
+   "key": "\ud86c\ude80",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbbc\udc68:",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "Z\ud83d\ude4f\ud863\udcbe\"\ud913\udfd9",
+   "key": "z_\ud863\udcbe",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\ud83a\uddb5\u0301\udb82\udc9e\ud8e8\udf13\ud8af\udc0c\ud83d\ude4f",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udb17\udff7",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b2\uda6b\udf30Z",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\uda68\udc12\u7efb\uda38\udc08.",
+   "key": "\u7efb",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u22c5\ud99f\udfd2\uda04\udcde",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ": Z9\ud8ed\udc37",
+   "key": "z9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbbf\udfcd_",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u22c5.Z\udb78\udfec",
+   "key": "z",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":a\udb6d\ude01\u03a3\ud840\udd13",
+   "key": "a_\u03c3\ud840\udd13",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udbec\udf10\u00e9",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "- \uda11\ude03\u0301",
+   "key": "_\u0301",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00e9\ud9b8\uddba",
+   "key": "\u00e9",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "0\u00b2\ud8ff\udf38",
+   "key": "_0",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\u00b7\u200d",
+   "key": "_\u200d",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": "\udba3\udfe5",
+   "key": "_",
+   "bare": false,
+   "word": false
+  },
+  {
+   "name": ":\ud9fd\udc52\u00b2\ud8cc\udc5d",
+   "key": "_",
+   "bare": false,
+   "word": false
+  }
+ ]
+}

@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::ast::is_identifier;
+use crate::ast::is_bare;
 use crate::errors::{BnError, Diagnostic};
 use crate::lexer::string_literal;
 
@@ -100,7 +100,9 @@ fn directive(text: &str) -> Option<(String, String, usize)> {
     {
         return None;
     }
-    while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_' || chars[i] == '-') {
+    while i < chars.len()
+        && (chars[i].is_ascii_alphanumeric() || chars[i] == '_' || chars[i] == '-')
+    {
         i += 1;
     }
     let name: String = chars[start..i].iter().collect();
@@ -121,7 +123,7 @@ pub fn unquote(value: &str) -> Option<String> {
     if value.starts_with('"') {
         return string_literal(value).filter(|s| !s.is_empty());
     }
-    is_identifier(value).then(|| value.to_owned())
+    is_bare(value).then(|| value.to_owned())
 }
 
 /// A directive's free text: the string it is, its escapes read, when it is one, else as written.
@@ -266,7 +268,7 @@ pub fn read_head_by(
         }
     }
     if let Some(d) = get("module") {
-        match unquote(&d.value).filter(|n| is_identifier(n)) {
+        match unquote(&d.value).filter(|n| is_bare(n)) {
             Some(name) => h.module = Some(name),
             None => error(
                 &mut diags,

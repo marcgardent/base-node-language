@@ -21,6 +21,25 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   with a `"` is named in `// @example` and `// @modifier` (`@modifier "the \"lift\""`), and so are
   `@title`, `@author`, `@license`, `@target`, `@module`, `@edition` and `@mesh` read. The quotes were
   cut off as written, and a name holding a `"` was refused.
+- Changed, a text may need an edit: an identifier is Unicode's (UAX #31, XID_Start then
+  XID_Continue, of Unicode 16.0), but for `·`, the dot product: one rule, from one table
+  (`python/base_node/identifiers.py`, `rust/src/identifiers.rs`), for the lexers and the printers of
+  Python and Rust, which each followed rules of their own. A name the printer wrote bare is now one
+  every lexer reads back as that name: `é` written with a combining accent, a Devanagari or Bengali
+  word, `a‿b` were printed bare and refused by the Python lexer; `Ⅻ`, `Ⓐ` were read by Rust and not
+  by Python; `x²` and `½` are no names (written `"x²"`, key `x`). The digits of a number are ASCII's:
+  `²` stopped the Python parser with a crash and `٣` read as the number 3, both are now refused as
+  Rust refused them (`unexpected character '²'`). A key is always a bare identifier, the same in
+  both languages (`conformance/name-cases.json`); a directive's name, `@module` and `@example`,
+  follows the same rule.
+
+### Blender add-on
+
+- Fixed: Tree → Text writes an enum value, a menu's item or a material that is no bare name as a
+  string: `inf`, `nan`, `true` were written bare and read back as a number or a boolean, `_` as no
+  value. An enum value named like a name that holds a value in the text is a string too
+  (`AlignEulerToVector["X"](…)` beside an input `X`), which the parser refused bare. The editor's
+  suggestions quote such a value, its escapes written, and take a word of any script.
 
 ## [1.0.0-rc.5] - 2026-11-22
 

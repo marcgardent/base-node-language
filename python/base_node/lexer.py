@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from .errors import BnError, Diagnostic
+from .names import ASCII_CONTINUE, goes_on_name, starts_name
 
 KEYWORDS = {"graph", "return", "true", "false", "and", "or", "xor", "not"}
 # The numbers written as words: floats no digits write
@@ -53,31 +54,33 @@ def tokenize(source, filename="<text>", strict=True):
             continue
 
         start = i
-        if c.isalpha() or c == "_":
-            while i < n and (source[i].isalnum() or source[i] == "_"):
+        if starts_name(c):
+            # One rule with the printer's: names.is_identifier
+            while i < n and (source[i] in ASCII_CONTINUE or source[i] >= "\x80" and goes_on_name(source[i])):
                 i += 1
             text = source[start:i]
             kind = "KEYWORD" if text in KEYWORDS else "NUMBER" if text in WORD_NUMBERS else "IDENT"
-        elif c.isdigit():
-            while i < n and source[i].isdigit():
+        elif c in DIGITS:
+            # The digits of a number are ASCII's: `٣` and `²` are no number
+            while i < n and source[i] in DIGITS:
                 i += 1
-            if i + 1 < n and source[i] == "." and source[i + 1].isdigit():
+            if i + 1 < n and source[i] == "." and source[i + 1] in DIGITS:
                 i += 1
-                while i < n and source[i].isdigit():
+                while i < n and source[i] in DIGITS:
                     i += 1
             if i < n and source[i] in "eE":
                 j = i + 1
                 if j < n and source[j] in "+-":
                     j += 1
-                if j < n and source[j].isdigit():
+                if j < n and source[j] in DIGITS:
                     i = j
-                    while i < n and source[i].isdigit():
+                    while i < n and source[i] in DIGITS:
                         i += 1
             text, kind = source[start:i], "NUMBER"
         elif c == "#":
             # A frame color, its text with the `#`: checked later, so `#nope` gets a clear error
             i += 1
-            while i < n and (source[i].isalnum() or source[i] == "_"):
+            while i < n and goes_on_name(source[i]):
                 i += 1
             text, kind = source[start:i], "COLOR"
         elif c == '"':
@@ -157,6 +160,7 @@ def escape(source, i):
 
 
 HEX = set("0123456789abcdefABCDEF")
+DIGITS = frozenset("0123456789")
 
 
 def width(t):

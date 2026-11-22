@@ -21,13 +21,14 @@ from dataclasses import dataclass, field
 
 from .errors import BnError, Diagnostic
 from .lexer import string_literal
+from .names import is_bare
 
 TEXT = ("title", "author", "license", "version", "edition")
 KNOWN = {"module", "target", *TEXT}
 # The editions of the language this reader knows, the latest last: a text that names none is of the latest
 EDITIONS = ("2026",)
 
-DIRECTIVE = re.compile(r"//\s*@(?P<name>[A-Za-z_][\w-]*)(?P<space>\s*)(?P<value>.*)$")
+DIRECTIVE = re.compile(r"//\s*@(?P<name>[A-Za-z_][A-Za-z0-9_-]*)(?P<space>\s*)(?P<value>.*)$")
 
 
 @dataclass
@@ -65,7 +66,7 @@ def unquote(value):
     (`"say \"hi\""` is `say "hi"`), or a bare one as written. None when it is neither, or empty."""
     if value.startswith('"'):
         return string_literal(value) or None
-    return value if value.isidentifier() else None
+    return value if is_bare(value) else None
 
 
 def unquoted(value):
@@ -146,7 +147,7 @@ def read_head(source, filename="<text>", targets=(), extra=()):
     value, line, col = get("module")
     if value is not None:
         name = unquote(value)
-        if name is None or not name.isidentifier():
+        if name is None or not is_bare(name):
             error(line, col, f"@module '{value}': a module is named by an identifier "
                              "(letters, digits, _), its file being <name>.bn")
         else:

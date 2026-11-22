@@ -1,5 +1,5 @@
 {
-  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings, a color as its tuple (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings, a color as its tuple, the characters of a name (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
   "cases": [
     {
       "name": "string_escapes",
@@ -216,6 +216,38 @@
       "about": "The tuple a color is written as",
       "text": "geometry graph g(c: Color = (1.0, 0.5, 0.0, 1.0)) -> Color {\n  return c\n}\n",
       "formatted": "geometry graph g(c: Color = (1.0, 0.5, 0.0, 1.0)) -> Color {\n  return c\n}\n"
+    },
+    {
+      "name": "digits_are_ascii",
+      "about": "A number's digits are ASCII's: a superscript two is neither a number nor a name",
+      "text": "geometry graph g() -> Float {\n  return ²\n}\n",
+      "error": "2:10",
+      "message": "unexpected character '²'"
+    },
+    {
+      "name": "arabic_digit_is_no_number",
+      "about": "Nor does an Arabic-Indic digit start a number or a name",
+      "text": "geometry graph g() -> Float {\n  return ٣\n}\n",
+      "error": "2:10",
+      "message": "unexpected character '٣'"
+    },
+    {
+      "name": "names_of_letters",
+      "about": "Letters of every script make names, a digit of another script among them; a name holding a sign no identifier holds is quoted, and used by its key",
+      "text": "geometry graph g(\"x²\": Float, ρ_θ_φ: Float, Größe: Float, x٣: Float) -> Float {\n  return x * ρ_θ_φ * Größe * x٣\n}\n",
+      "formatted": "geometry graph g(\"x²\": Float, ρ_θ_φ: Float, Größe: Float, x٣: Float) -> Float {\n  return x * ρ_θ_φ * Größe * x٣\n}\n"
+    },
+    {
+      "name": "middle_dot_is_the_product",
+      "about": "The middle dot is the dot product, never a character of a name",
+      "text": "geometry graph g(a: Vector, b: Vector) -> Float {\n  return a·b\n}\n",
+      "formatted": "geometry graph g(a: Vector, b: Vector) -> Float {\n  return a ⋅ b\n}\n"
+    },
+    {
+      "name": "combining_mark_in_a_name",
+      "about": "A combining mark goes on a name, as Unicode's identifiers say",
+      "text": "geometry graph g(café: Float) -> Float {\n  return café\n}\n",
+      "formatted": "geometry graph g(café: Float) -> Float {\n  return café\n}\n"
     }
   ]
 }

@@ -1,3 +1,4 @@
+use crate::ast::{goes_on_name, starts_name};
 use crate::errors::BnError;
 use crate::tokens::{Token, TokenKind, KEYWORDS, PUNCT, WORD_NUMBERS};
 
@@ -53,8 +54,9 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
 
         let start = i;
         let (kind, text);
-        if c.is_alphabetic() || c == '_' {
-            while i < n && (chars[i].is_alphanumeric() || chars[i] == '_') {
+        if starts_name(c) {
+            // One rule with the printer's: ast::is_identifier
+            while i < n && goes_on_name(chars[i]) {
                 i += 1;
             }
             let s: String = chars[start..i].iter().collect();
@@ -93,7 +95,7 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
             kind = TokenKind::Number;
         } else if c == '#' {
             i += 1;
-            while i < n && (chars[i].is_alphanumeric() || chars[i] == '_') {
+            while i < n && goes_on_name(chars[i]) {
                 i += 1;
             }
             text = chars[start..i].iter().collect();
