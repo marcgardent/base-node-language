@@ -20,6 +20,7 @@ pip install "base-node @ git+https://github.com/marcgardent/base-node-language.g
 ```bash
 base-node fmt file.bn
 base-node fmt --check file.bn
+base-node fmt --names file.bn          # and the inputs of Blender's nodes by name, without Blender
 base-node check file.bn                # its @target, or the targets it fits
 base-node check --target "blender gltf" file.bn
 base-node check --target blender@latest file.bn   # the newest Blender this version knows

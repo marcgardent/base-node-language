@@ -205,3 +205,67 @@ def test_the_pass_names_the_call_under_the_cursor_only(schema):
 def test_the_pass_refuses_a_text_that_does_not_parse(schema):
     with pytest.raises(BnError):
         name_inputs("geometry graph g( {\n", schema)
+
+
+# Without Blender: the backends Blender wrote
+
+def test_the_backend_gives_the_inputs_the_settings_make():
+    from base_node_blender.backend import BackendSchema
+    from base_node_blender.typecheck import socket_key
+
+    b = BackendSchema("5.3")
+
+    def keys(name, **props):
+        inputs = b.sockets("geometry", b.node("geometry", name), props)[0]
+        return [socket_key(inputs, i) for i in range(len(inputs))]
+
+    assert keys("Math") == ["Value", "Value_001"]
+    assert keys("Math", operation="SINE") == ["value"]
+    assert keys("Math", operation="MULTIPLY_ADD") == ["Value", "Value_001", "Value_002"]
+    assert keys("VectorMath", operation="SCALE") == ["vector", "scale"]
+    # A setting that changes them only with another: Compare's mode, for vectors
+    assert "angle" in keys("Compare", data_type="VECTOR", mode="DIRECTION")
+    assert "angle" not in keys("Compare", mode="DIRECTION")
+    mix = b.node("shader", "MixShader")
+    assert [s.key for s in b.sockets("shader", mix, {})[0]] == ["factor", "a", "b"]
+    assert BackendSchema().version == "5.3" and BackendSchema("5.2").version == "5.2"
+    with pytest.raises(ValueError):
+        BackendSchema("4.2")
+
+
+def test_the_command_line_names_the_inputs_without_blender(tmp_path, capsys):
+    from base_node_cli.cli import main
+
+    path = tmp_path / "lift.bn"
+    path.write_text("// @target blender@5.2-lts\n\n" + TEXT, encoding="utf-8")
+    assert main(["fmt", "--names", "--check", str(path)]) == 1
+    assert main(["fmt", "--names", str(path)]) == 0
+    assert path.read_text(encoding="utf-8") == "// @target blender@5.2-lts\n\n" + NAMED
+    assert main(["fmt", "--names", "--check", str(path)]) == 0
+    # A module beside the text, and the standard library, give their graphs
+    (tmp_path / "lifts.bn").write_text(NAMED.split("\n\n", 1)[1], encoding="utf-8")
+    used = tmp_path / "use.bn"
+    used.write_text("use lifts (on_top)\nuse math (bump)\n\n"
+                    "geometry graph u(geometry: Geometry, a: Float) -> Geometry {\n"
+                    "  return SetPosition(geometry, on_top(bump(a, 0.5, 0.2)), offset: CombineXYZ(a))\n}\n",
+                    encoding="utf-8")
+    assert main(["fmt", "--names", str(used)]) == 0
+    assert "SetPosition(geometry, selection: on_top(bump(a, 0.5, 0.2)), offset: CombineXYZ(x: a))" in \
+        used.read_text(encoding="utf-8")
+
+
+def test_every_text_of_the_corpus_checks_without_blender():
+    """corpus/v1, as Blender 5.3 read its trees, checked against the backend of Blender 5.3: every
+    input the canonical form names is named, and the checker finds nothing else to say."""
+    from pathlib import Path
+
+    from base_node_blender.backend import BackendSchema
+
+    schema = BackendSchema("5.3")
+    wrong = []
+    for path in sorted((Path(__file__).resolve().parents[2] / "corpus" / "v1").glob("*/*.bn")):
+        try:
+            compile_source(path.read_text(encoding="utf-8"), schema, path.name)
+        except BnError as e:
+            wrong += [f"{path.parent.name}/{d}" for d in e.diagnostics]
+    assert not wrong, "\n".join(wrong[:20])

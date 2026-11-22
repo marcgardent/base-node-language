@@ -2025,7 +2025,9 @@ class GraphChecker:
         given = set()
         i = 0
         # A node's inputs go by name, but those the canonical form leaves unnamed: see unnamed
-        node_call = spec is not None and group is None and c.name not in self.graphs
+        # A module's graph built again for another kind of tree was written for its own: its values are
+        # where that tree's canonical form puts them
+        node_call = spec is not None and group is None and c.name not in self.graphs and not self.variant
         free = self.unnamed(spec, inputs) if node_call else None
         args_of = {id(a.value): a for a in c.args if a.name is None}
         for k, (v, a) in enumerate(positional):

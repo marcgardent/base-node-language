@@ -33,6 +33,8 @@ base_node_blender = [
   "py.typed", "_targets/*.json", "_targets/*/*.bn",
   # The blender target: the catalog of each version of Blender, and its variants
   "_targets/blender/*.json",
+  # What each version of Blender reported of its nodes: their sockets, for base-node fmt --names
+  "_targets/backends/*.json",
 ]
 
 [tool.pytest.ini_options]

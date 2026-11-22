@@ -251,6 +251,7 @@ CLI:
 ```bash
 base-node fmt file.bn
 base-node fmt --check file.bn
+base-node fmt --names file.bn     # and the inputs of Blender's nodes by name, without Blender
 base-node check stdlib/curves2d.bn          # held to its @target
 base-node check --target "blender gltf" material.bn   # or to the targets given
 base-node check --target blender@latest file.bn      # the newest Blender this version knows (blender@lts: its LTS)

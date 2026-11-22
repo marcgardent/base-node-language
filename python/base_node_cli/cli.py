@@ -1,7 +1,7 @@
 """Command-line interface (CLI) for base-node.
 
 Supported commands:
-  base-node fmt [--check] <files.bn>
+  base-node fmt [--check] [--names] <files.bn>
   base-node parse <files.bn>
   base-node check [--target <name>[,<name>]] <files.bn>
   base-node ast <file.bn>
@@ -34,8 +34,42 @@ def _serialize_ast(obj: Any) -> Any:
     return obj
 
 
+def module_loader(folder: Path):
+    """load(name, source) of the modules a text in `folder` uses: a `from` path relative to it, else
+    `<name>.bn` beside it, else the standard library."""
+    from base_node_blender.targets import STDLIB_DIRS
+
+    def load(name: str, source: str | None) -> tuple[str, str]:
+        if source is not None:
+            found = [folder / source.removeprefix("//")]
+        else:
+            found = [folder / f"{name}.bn"] + [d / f"{name}.bn" for d in STDLIB_DIRS]
+        for path in found:
+            if path.is_file():
+                return path.read_text(encoding="utf-8"), str(path)
+        raise LookupError(f"no module '{name}'")
+    return load
+
+
+def blender_version(content: str, filename: str) -> str | None:
+    """The version of Blender a text promises in its `@target` (`blender@5.2-lts` is 5.2), else None."""
+    import re
+
+    from base_node_blender import header
+
+    for t in header(content, filename).target or ():
+        m = re.fullmatch(r"blender@(\d+\.\d+)(?:-lts)?(?: \S+)?", t)
+        if m:
+            return m.group(1)
+    return None
+
+
 def cmd_fmt(args: argparse.Namespace) -> int:
-    """Format .bn files or verify canonical formatting."""
+    """Format .bn files or verify canonical formatting.
+
+    --names writes the inputs of Blender's nodes by name, as the canonical form has them: each value by
+    position goes to the input Blender's sockets give it, read from the backend of the Blender the text
+    promises (`@target blender@5.2-lts`), else of the newest. No Blender is needed."""
     exit_code = 0
     for path_str in args.files:
         p = Path(path_str)
@@ -45,7 +79,15 @@ def cmd_fmt(args: argparse.Namespace) -> int:
             continue
         try:
             content = p.read_text(encoding="utf-8")
-            formatted = format_source(content, p.name)
+            if args.names:
+                from base_node_blender.backend import BackendSchema, versions
+                from base_node_blender.naming import name_inputs
+
+                version = blender_version(content, p.name)
+                schema = BackendSchema(version if version in versions() else None)
+                formatted = name_inputs(content, schema, p.name, module_loader(p.resolve().parent))
+            else:
+                formatted = format_source(content, p.name)
             if args.check:
                 if content != formatted:
                     print(f"Not formatted: {path_str}", file=sys.stderr)
@@ -196,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     # fmt
     parser_fmt = subparsers.add_parser("fmt", help="Format .bn files")
     parser_fmt.add_argument("--check", action="store_true", help="Check formatting without modifying files")
+    parser_fmt.add_argument("--names", action="store_true",
+                            help="Write the inputs of Blender's nodes by name, as Blender's sockets go (no Blender needed)")
     parser_fmt.add_argument("files", nargs="+", help=".bn files to format")
     parser_fmt.set_defaults(func=cmd_fmt)
 
