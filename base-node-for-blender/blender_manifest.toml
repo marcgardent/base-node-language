@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "base_node"
 version = "1.0.0-rc.1"
 name = "Base Node"
-tagline = "Nodes as Text (.bn) — Read and write node trees as functions"
+tagline = "Nodes as text (.bn): read and write node trees as functions"
 maintainer = "Marc Gardent"
 type = "add-on"
 website = "https://basenode.ludopant.com/"
@@ -12,10 +12,15 @@ tags = ["Node", "Geometry Nodes", "Material", "Compositing", "Text Editor", "Imp
 blender_version_min = "5.2.0"
 
 license = ["SPDX:GPL-3.0-or-later"]
-copyright = ["2026 Marc Gardent"]
+copyright = [
+  "2026 Marc Gardent",
+  # host/sugiyama.py and host/sockets.py follow Node Arrange (GPL-2.0-or-later)
+  "2024 Leonardo Pike-Excell",
+]
 
 [permissions]
 files = "Import .bn files and the modules they use from disk"
+clipboard = "Copy node trees as .bn text and paste .bn text as nodes"
 
 [build]
 paths_exclude_pattern = [
@@ -23,6 +28,7 @@ paths_exclude_pattern = [
   "__pycache__/",
   "*.pyc",
   "listing.md",
+  "listing/",
   "build.sh",
   "/blender/_targets/backends/",
   # The extension holds Blender's targets only: not those of other destinations
