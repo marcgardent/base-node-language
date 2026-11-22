@@ -21,6 +21,7 @@ import stat
 import bpy
 
 from ..lang import MAX_SOURCE_BYTES
+from ..lang.names import is_bare
 
 # Custom properties of a group built by a `use`, for Tree → Text to write the use back
 MODULE = "base_node_module"
@@ -184,7 +185,7 @@ def install_path(name, folder):
     `name` comes from the `// @module` line of a file anyone may have written: it must be an
     identifier, and the path it makes must stay in the folder, as `find` would read it.
     """
-    if not name or not name.isidentifier():
+    if not is_bare(name):
         raise LookupError(f"'{name}' is not a module name: an identifier (letters, digits, _)")
     if not folder:
         raise LookupError("no Module Folder: set one in Edit > Preferences > Add-ons > Base Node, "

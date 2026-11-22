@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 # The reserved words and the key of a name are the language's: a socket is named in text by `snake`
-from ._core import RESERVED, key, snake  # noqa: F401
+from ._core import RESERVED, goes_on_name, is_bare, is_word, key, snake, starts_name  # noqa: F401
 
 # Text type name -> interface socket type, for graph parameters and outputs
 TYPES = {

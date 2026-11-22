@@ -7,9 +7,9 @@ the parse tree: what comes just before the cursor says what may follow.
 import re
 from dataclasses import dataclass
 
-from ._core import colors, tokenize
+from ._core import colors, printer, tokenize
 from .targets import load_target, promise_names
-from .schema import ITEM_NODES, TREE_KINDS, TYPES, key, snake
+from .schema import ITEM_NODES, TREE_KINDS, TYPES, goes_on_name, is_word, key, snake
 from .sugar import COMPONENTS, FUNCS, VECTOR, WORDS
 from .typecheck import SUBJECTS
 
@@ -58,7 +58,11 @@ def complete(source, line, col, schema, load=None, asked=False):
     if not 1 <= line <= len(lines):
         return col, []
     typed = lines[line - 1][:col - 1]
-    prefix = typed[len(typed.rstrip("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")):]
+    # The word under the cursor, as the lexer reads a name
+    n = len(typed)
+    while n and goes_on_name(typed[n - 1]):
+        n -= 1
+    prefix = typed[n:]
     start = col - len(prefix)
     if prefix[:1].isdigit():
         if not asked:
@@ -79,6 +83,11 @@ def complete(source, line, col, schema, load=None, asked=False):
 # A comment line so far: `//`, `// @tar`, `// @target gl`
 # The name being typed may have a version and a variant: `blender@5.3 gltf`
 TARGET_LINE = re.compile(r'\s*//(\s*(?:@\w*(?:\s+"?[\w@.-]*(?: [\w-]*)?)?)?)')
+
+
+def enum_text(value):
+    """An enum value as the text writes it: bare when it reads back as that name, else a string."""
+    return value if is_word(value) else printer.quote(value)
 
 
 def targets_line(typed, col):
@@ -674,7 +683,7 @@ class Context:
         if spec is None:
             return []
         _props, given = self.written_settings(call, spec)
-        out = [Item(v, v if v.isidentifier() else f'"{v}"', p.name, "enum")
+        out = [Item(v, enum_text(v), p.name, "enum")
                for p in spec.props.values() if p.kind == "ENUM" and p.name not in given for v in p.items]
         out += [Item(p.name, p.name + ": ", p.kind.lower(), "setting")
                 for p in [*spec.props.values(), *spec.data.values()] if p.name not in given]
@@ -684,7 +693,7 @@ class Context:
         spec = self.schema.node(self.kind, self.t[call].text) if call is not None else None
         prop = spec.props.get(name) if spec else None
         if prop and prop.kind == "ENUM" and prop.items:
-            return [Item(v, v if v.isidentifier() else f'"{v}"', prop.name, "enum") for v in prop.items]
+            return [Item(v, enum_text(v), prop.name, "enum") for v in prop.items]
         if prop and prop.kind == "BOOLEAN":
             return [Item(b, b, kind="keyword") for b in ("true", "false")]
         return []

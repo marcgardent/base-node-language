@@ -7,7 +7,7 @@ are read on demand with the properties set, and memoized.
 
 import bpy
 
-from ..blender.schema import (ITEM_NODES, ITEM_TYPES, MAPPING_OPTIONS, RAMP_OPTIONS, TYPES, GroupSpec, NodeSpec, Prop,
+from ..blender.schema import (starts_name, ITEM_NODES, ITEM_TYPES, MAPPING_OPTIONS, RAMP_OPTIONS, TYPES, GroupSpec, NodeSpec, Prop,
                            Socket, input_key, interface_keys, key, node_name)
 
 TREE_TYPES = {
@@ -142,7 +142,7 @@ def ui_name(bl_idname):
     A label that starts with a digit (`3D Cursor`) makes no identifier: that node keeps its former name."""
     cls = getattr(bpy.types, bl_idname, None)
     name = node_name(cls.bl_rna.name) if cls is not None else ""
-    return name if name[:1].isalpha() else None
+    return name if starts_name(name[:1] or "0") else None
 
 
 def socket_info(sock):

@@ -14,6 +14,7 @@ import bpy
 
 from ..host import BlenderSchema, modules
 from ..blender.complete import OPENERS, complete, product_sign, signature
+from ..blender.schema import goes_on_name
 from . import actions, draw, prefs
 from .highlight import COLORS, SOCKETS, rgb
 
@@ -125,7 +126,7 @@ class BASE_NODE_OT_complete(bpy.types.Operator):
         if press and event.unicode == " " and text.current_character + 1 == Popup.start:
             # `, ` or `: ` before the word: the same suggestions follow the space
             return {"PASS_THROUGH"}
-        if press and event.unicode and not (event.unicode.isalnum() or event.unicode == "_"):
+        if press and event.unicode and not all(goes_on_name(c) for c in event.unicode):
             # The word is over; the watcher reopens after ( . :
             return self.finish(context, {"CANCELLED", "PASS_THROUGH"})
         if t == "TIMER":

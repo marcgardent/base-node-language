@@ -16,14 +16,14 @@ import bpy
 
 from ..blender import compile_source, sugar
 from ..lang import ast
-from ..lang.lexer import KEYWORDS
+from ..lang.names import is_bare, is_word
 from ..lang.printer import quote, to_source
 from ..blender.typecheck import (float32, MIX_TYPES, OUTPUT_PROPS, stored, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
                                 branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
 from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
-                           CURVE, CURVES, DEPRECATED, MATERIAL, MATERIAL_OUTPUTS, RAMP, RESERVED, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
+                           CURVE, CURVES, DEPRECATED, MATERIAL, MATERIAL_OUTPUTS, RAMP, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
                            SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
@@ -682,7 +682,7 @@ class GraphReader:
     # Names
 
     def hand_named(self, node):
-        if not node.name.isidentifier() or node.name in RESERVED:
+        if not is_bare(node.name) or node.name == NO_VALUE:
             return False
         # A node's name that is a node's or a function's would hide it: `ColorRamp`, Blender 2.8's
         # default name, is the call `ColorRamp(…)`
@@ -1278,9 +1278,9 @@ class GraphReader:
             holders = [p for p in spec.props.values() if p.kind == "ENUM" and value in p.items] \
                 if prop.kind == "ENUM" else []
             if holders == [prop]:
-                positional.append(ast.Setting(None, prop_literal(prop, value), 0, 0))
+                positional.append(ast.Setting(None, prop_literal(prop, value, self.taken), 0, 0))
             else:
-                named.append(ast.Setting(pname, prop_literal(prop, value), 0, 0))
+                named.append(ast.Setting(pname, prop_literal(prop, value, self.taken), 0, 0))
         if node.bl_idname in VALUE_PROPS:
             # The value of a Rotation, a 4D Vector, an Integer Vector: no literal makes those nodes
             pname, integers = VALUE_PROPS[node.bl_idname]
@@ -1893,24 +1893,26 @@ def number(v):
     return ast.Number(stored(float(v)), False, 0, 0)
 
 
-def enum_literal(value):
-    if value.isidentifier():
-        return ast.Ref(value, 0, 0)
-    return ast.String(value, 0, 0)
+def enum_literal(value, taken=()):
+    """An enum value, or a menu's item, bare when the text reads it back as that name (not `true`,
+    `inf`, `_`), else in quotes. In a setting, a name of the text (`taken`) holds a value, which the
+    parser refuses there: `AlignEulerToVector["X"](…)` beside an input `X`."""
+    return ast.String(value, 0, 0) if value in taken else bare_name(value)
 
 
 def bare_name(value):
-    """A name written bare when the text reads it back as that name, else in quotes."""
-    if value.isidentifier() and value not in KEYWORDS and value not in ("dot", "cross", NO_VALUE):
+    """A name written bare where a value goes when the text reads it back as that name, else in
+    quotes: a reserved word is no name, and `_` is no value there."""
+    if is_word(value):
         return ast.Ref(value, 0, 0)
     return ast.String(value, 0, 0)
 
 
-def prop_literal(prop, value):
+def prop_literal(prop, value, taken=()):
     if prop.kind == "ENUM":
-        return enum_literal(value)
+        return enum_literal(value, taken)
     if prop.kind == "ENUM_FLAG":
-        return ast.Tuple([enum_literal(v) for v in value], 0, 0)
+        return ast.Tuple([enum_literal(v, taken) for v in value], 0, 0)
     if prop.kind == "BOOLEAN":
         return ast.Bool(bool(value), 0, 0)
     if prop.kind == "INT":
