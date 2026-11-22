@@ -25,7 +25,7 @@ pub fn highlight(source: &str) -> String {
                 TokenKind::Comment => Some("c"),
                 TokenKind::Ident => {
                     let next = next_code(i);
-                    if next.is_some_and(|n| n.is("(")) {
+                    if next.is_some_and(|n| n.is("(") || n.is("[")) {
                         Some("f")
                     } else if next.is_some_and(|n| n.text == "graph") {
                         Some("k")

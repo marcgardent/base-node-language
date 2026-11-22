@@ -4,7 +4,7 @@
 //! vector (`v * 2.0` scales it), `<` `==` are Compare (its data type from
 //! its operands; Math in a shader tree, which has no Compare), `and` `not`
 //! are Boolean Math. So `a * b` and
-//! `Math(value: a, value_001: b, operation: MULTIPLY)` draw the same node:
+//! `Math[MULTIPLY](value: a, value_001: b)` draw the same node:
 //! its operation as its title and in its menu, its sockets as Blender
 //! names them.
 

@@ -7,7 +7,8 @@ graph when the text has several, and a band under it holds the view (Code, Both,
 overflows a line scrolls sideways, with the wheel too, as a Blender header.
 
 All the work is Rust compiled to wasm (this crate, over [`base-node`](../rust), the core of the language, and [`base-node-blender`](../rust-blender), its targets and stdlib): it parses the text,
-builds a graph per `graph` (a node per call or operator, a link per argument, a frame per frame, a
+builds a graph per `graph` (a node per call or operator, a link per argument, its settings in brackets
+shown as its menus and fields, `Math[MULTIPLY, use_clamp: true](a, b)` as Multiply and Clamp, a frame per frame, a
 zone's input and output nodes, the text's comments in boxes on the nodes and frames they go with, as the
 Base Node add-on shows them in Blender), lays it out in columns, with nothing over a frame and its title but what
 it holds, and draws it as SVG. The page only pans and zooms it, once the graph is clicked: until then the wheel and a finger scroll the page (Ctrl + wheel zooms; Esc or a click elsewhere lets the graph go). The code pane too scrolls only once clicked (or enlarged).

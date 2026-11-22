@@ -12,8 +12,9 @@ use std::collections::HashMap;
 
 use crate::sugar;
 use base_node::ast::{
-    flatten, Arg, AssignValue, Call, Expr, File, Graph, Param, ReturnValue, Stmt,
+    flatten, Arg, AssignValue, Call, Expr, File, Graph, Param, ReturnValue, Setting, Stmt,
 };
+use base_node_blender::targets::setting_of;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Category {
@@ -169,6 +170,8 @@ struct Builder<'a> {
     shader: bool,
     /// A geometry tree's Switch chooses for each element: a ternary is one there, a Mix elsewhere.
     geometry: bool,
+    /// The kind of the tree: where a setting written by position goes depends on its nodes.
+    kind: &'a str,
 }
 
 pub fn trees(file: &File) -> Vec<Tree> {
@@ -193,6 +196,7 @@ fn tree<'a>(graph: &'a Graph, graphs: &HashMap<String, &'a Graph>) -> Tree {
         assigned: HashMap::new(),
         shader: graph.kind == "shader",
         geometry: graph.kind == "geometry",
+        kind: &graph.kind,
     };
     let params = flatten(&graph.tree("INPUT"));
     if !params.is_empty() {
@@ -431,7 +435,17 @@ impl<'a> Builder<'a> {
                 } else {
                     states
                 };
-                self.zone(title, (z.line, z.end), ins, &inner, &outs, &z.body)
+                // `foreach[FACE](…)`: the domain on the zone's input, as its menu shows it
+                let settings = z.settings.iter().filter_map(setting_label).collect();
+                self.zone(
+                    title,
+                    (z.line, z.end),
+                    ins,
+                    settings,
+                    &inner,
+                    &outs,
+                    &z.body,
+                )
             }
             AssignValue::NamelessGraph(z) => {
                 let params: Vec<String> = z.params.iter().map(|p| p.name.clone()).collect();
@@ -439,6 +453,7 @@ impl<'a> Builder<'a> {
                 self.zone(
                     "Closure",
                     (z.line, z.end),
+                    Vec::new(),
                     Vec::new(),
                     &params,
                     &outs,
@@ -454,14 +469,17 @@ impl<'a> Builder<'a> {
             .collect()
     }
 
-    /// A zone: its input node (taking `ins`, giving `inner` to its body),
-    /// its body in a scope of its own, its output node (taking what the
-    /// body returns, giving `outs`), all in a frame of the zone's.
+    /// A zone: its input node (taking `ins`, giving `inner` to its body,
+    /// showing `settings`), its body in a scope of its own, its output node
+    /// (taking what the body returns, giving `outs`), all in a frame of the
+    /// zone's.
+    #[allow(clippy::too_many_arguments)]
     fn zone(
         &mut self,
         title: &str,
         (line, end): (usize, usize),
         ins: Vec<(String, Val)>,
+        settings: Vec<String>,
         inner: &[String],
         outs: &[String],
         body: &'a [Stmt],
@@ -477,6 +495,7 @@ impl<'a> Builder<'a> {
         });
         self.frame = Some(self.frames.len() - 1);
         let mut input = Node::new(format!("{title} Input"), Category::Zone, line);
+        input.settings = settings;
         input.outputs = inner
             .iter()
             .map(|n| Output {
@@ -779,21 +798,18 @@ impl<'a> Builder<'a> {
         Val::Out(n, 0)
     }
 
-    /// The value of an enum property (`operation: MULTIPLY`): an upper-case
-    /// name that is neither a variable nor a parameter.
-    fn enum_value(&self, e: &Expr) -> Option<String> {
-        let Expr::Ref(r) = e else { return None };
-        let upper = r
-            .name
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_uppercase())
-            && r.name
-                .chars()
-                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
-        let bound = self.scopes.iter().any(|s| s.contains_key(&r.name))
-            || self.params.contains_key(&r.name);
-        (upper && !bound).then(|| r.name.clone())
+    /// The setting of `node` a setting in brackets is: its name, or where
+    /// a positional one goes in a tree of this kind (in any of Blender's
+    /// trees for a kind that is not one of them).
+    fn setting_name(&self, node: &str, s: &Setting) -> Option<String> {
+        if let Some(n) = &s.name {
+            return Some(n.clone());
+        }
+        let Expr::Ref(r) = &s.value else { return None };
+        std::iter::once(self.kind)
+            .chain(["geometry", "shader", "compositor"])
+            .find_map(|k| setting_of(k, node, &r.name))
+            .map(str::to_owned)
     }
 
     fn call(&mut self, c: &'a Call, piped: Option<Val>) -> Val {
@@ -804,28 +820,38 @@ impl<'a> Builder<'a> {
             args.extend(c.args.iter().map(|a| self.expr(&a.value)));
             return self.formula(&c.name, c.line, args);
         }
-        // `Math(value: a, value_001: b, operation: MULTIPLY)`: the same node.
+        // `Math[MULTIPLY](value: a, value_001: b)`: the same node.
         if sugar::NODES.contains(&c.name.as_str()) {
             let mut operation = None;
             let mut data_type = None;
+            let mut others = Vec::new();
+            for s in &c.settings {
+                let word = match &s.value {
+                    Expr::Ref(r) => Some(r.name.clone()),
+                    _ => None,
+                };
+                match (self.setting_name(&c.name, s).as_deref(), word) {
+                    (Some("operation"), Some(v)) => operation = Some(v),
+                    (Some("data_type"), Some(v)) => data_type = Some(v),
+                    _ => others.extend(setting_label(s)),
+                }
+            }
             let mut args: Vec<(Option<String>, Val)> =
                 piped.into_iter().map(|v| (None, v)).collect();
             for a in &c.args {
-                match (a.name.as_deref(), self.enum_value(&a.value)) {
-                    (Some("operation"), Some(v)) => operation = Some(v),
-                    (Some("data_type"), Some(v)) => data_type = Some(v),
-                    _ => {
-                        let v = self.expr(&a.value);
-                        args.push((a.name.clone(), v));
-                    }
-                }
+                let v = self.expr(&a.value);
+                args.push((a.name.clone(), v));
             }
             if c.name == "Compare" && data_type.is_none() {
                 data_type = Some("FLOAT".to_owned());
             }
             let operation =
                 operation.unwrap_or_else(|| sugar::default_operation(&c.name).to_owned());
-            return self.math_node(&c.name, &operation, data_type, c.line, args);
+            let v = self.math_node(&c.name, &operation, data_type, c.line, args);
+            if let Val::Out(n, _) = v {
+                self.nodes[n].settings.extend(others);
+            }
+            return v;
         }
         let local = self.graphs.get(&c.name).copied();
         let category = match local {
@@ -856,6 +882,8 @@ impl<'a> Builder<'a> {
                 })
                 .collect();
         }
+        // Its settings, in brackets, as their menus show them; its arguments are its inputs
+        node.settings = c.settings.iter().filter_map(setting_label).collect();
         let n = self.push(node);
         let mut position = 0;
         if let Some(v) = piped {
@@ -864,12 +892,6 @@ impl<'a> Builder<'a> {
             position += 1;
         }
         for a in &c.args {
-            if local.is_none() && a.name.is_some() {
-                if let Some(value) = self.enum_value(&a.value) {
-                    self.nodes[n].settings.push(sugar::enum_label(&value));
-                    continue;
-                }
-            }
             let v = self.expr(&a.value);
             let name = match &a.name {
                 Some(name) => {
@@ -1038,6 +1060,34 @@ fn value_node(v: &Val) -> Option<usize> {
         Val::Out(n, _) | Val::Node(n) => Some(*n),
         Val::Lit(..) => None,
     }
+}
+
+/// A setting in brackets as the node shows it: an enum value as its menu
+/// (`Multiply`), a checkbox ticked by its name (`Clamp` for `use_clamp:
+/// true`), another value with its name (`Image: Bricks`). `_`, a box left
+/// unticked, a tuple, a ramp or curves are not drawn.
+fn setting_label(s: &Setting) -> Option<String> {
+    let value = match &s.value {
+        Expr::Ref(r) if r.name == "_" => return None,
+        Expr::Ref(r) => return Some(sugar::enum_label(&r.name)),
+        Expr::Bool(b) => {
+            let name = s.name.as_deref()?;
+            return b
+                .value
+                .then(|| humanize(name.strip_prefix("use_").unwrap_or(name)));
+        }
+        Expr::Number(n) => number(n.value, n.is_int),
+        Expr::String(t) => t.value.clone(),
+        Expr::Neg(n) => match &*n.value {
+            Expr::Number(n) => format!("-{}", number(n.value, n.is_int)),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    Some(match &s.name {
+        Some(name) => format!("{}: {value}", humanize(name)),
+        None => value,
+    })
 }
 
 fn arg_names(args: &[Arg]) -> Vec<String> {
@@ -1316,7 +1366,7 @@ mod tests {
         let sugar =
             &build("geometry graph g(a: Float, b: Float) -> Float {\n  return a * b\n}\n")[0];
         let explicit = &build(
-            "geometry graph g(a: Float, b: Float) -> Float {\n  return Math(value: a, value_001: b, operation: MULTIPLY)\n}\n",
+            "geometry graph g(a: Float, b: Float) -> Float {\n  return Math[MULTIPLY](value: a, value_001: b)\n}\n",
         )[0];
         assert_eq!(drawn(sugar), drawn(explicit));
         let math = &sugar.nodes[1];
@@ -1406,9 +1456,14 @@ mod tests {
         assert_eq!(names, ["A", "B"]);
         assert_eq!(cmp.outputs[0].name, "Result");
         let explicit = &build(
-            "geometry graph g(n: Int) -> Bool {\n  return Compare(a: n, b: 1, data_type: INT, operation: EQUAL)\n}\n",
+            "geometry graph g(n: Int) -> Bool {\n  return Compare[EQUAL, INT](a: n, b: 1)\n}\n",
         )[0];
         assert_eq!(drawn(t), drawn(explicit));
+        // By name, the same node
+        let named = &build(
+            "geometry graph g(n: Int) -> Bool {\n  return Compare[operation: EQUAL, data_type: INT](a: n, b: 1)\n}\n",
+        )[0];
+        assert_eq!(drawn(t), drawn(named));
     }
 
     #[test]
@@ -1428,7 +1483,7 @@ mod tests {
     #[test]
     fn enum_properties_are_menus() {
         let t = &build(
-            "geometry graph g() -> Geometry {\n  return MeshToPoints(MeshCube(), mode: FACES)\n}\n",
+            "geometry graph g() -> Geometry {\n  return MeshToPoints[FACES](MeshCube())\n}\n",
         )[0];
         let node = t
             .nodes
@@ -1437,6 +1492,45 @@ mod tests {
             .unwrap();
         assert_eq!(node.settings, ["Faces"]);
         assert!(node.inputs.iter().all(|i| i.name != "Mode"));
+    }
+
+    #[test]
+    fn settings_are_drawn_from_the_brackets_arguments_are_inputs() {
+        let t = &build(
+            "shader graph g(a: Float, b: Float) -> Float {\n  return Math[ADD, use_clamp: true](a, b)\n}\n",
+        )[0];
+        assert_eq!(t.nodes[1].title, "Add");
+        assert_eq!(t.nodes[1].settings, ["Add", "Clamp"]);
+        let t = &build(
+            "shader graph g() -> Color {\n  return ImageTexture[Closest, image: \"Bricks\"](vector: TextureCoordinate().uv).color\n}\n",
+        )[0];
+        let node = t.nodes.iter().find(|n| n.title == "Image Texture").unwrap();
+        assert_eq!(node.settings, ["Closest", "Image: Bricks"]);
+        // An upper-case name in parentheses is an input, not a menu
+        let t = &build(
+            "geometry graph g(FACES: Float) -> Geometry {\n  return MeshToPoints(MeshCube(), radius: FACES)\n}\n",
+        )[0];
+        let node = t
+            .nodes
+            .iter()
+            .find(|n| n.title == "Mesh To Points")
+            .unwrap();
+        assert!(node.settings.is_empty());
+        assert!(node.inputs.iter().any(|i| i.name == "Radius"));
+    }
+
+    #[test]
+    fn the_domain_of_a_foreach_is_on_its_input() {
+        let t = &build(
+            "geometry graph g(geometry: Geometry) -> Geometry {\n  r = foreach[FACE](geometry, item: 1.0) -> {\n    return (item: item)\n  }\n  return geometry\n}\n",
+        )[0];
+        let input = t
+            .nodes
+            .iter()
+            .find(|n| n.title == "For Each Element Input")
+            .unwrap();
+        assert_eq!(input.settings, ["Face"]);
+        assert!(input.inputs.iter().all(|i| i.name != "Domain"));
     }
 
     #[test]
