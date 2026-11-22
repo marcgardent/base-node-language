@@ -28,8 +28,8 @@ from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, EVALU
                            SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
-from .schema import (DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema,
-                     data_value, fresh_item, fresh_item_options, fresh_item_value, fresh_options,
+from .schema import (BUILTIN_FONT, DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema,
+                     builtin_font, data_value, fresh_item, fresh_item_options, fresh_item_value, fresh_options,
                      item_option_names, option_names, root_panel, prop_value, rounded, same_option, snapshot,
                      socket_keys, text_name, ui_name)
 
@@ -396,6 +396,13 @@ class GraphReader:
         for what, counts in looks.items():
             if +counts:
                 self.warn(f"appearance {what}not exported: " + ", ".join(f"{k} ({v})" for k, v in counts.items() if v))
+        # A font of the file named as Blender's own reads as Blender's own, which the text builds back
+        held = [getattr(n, "font", None) for n in self.tree.nodes] \
+            + [getattr(s, "default_value", None) for n in self.tree.nodes for s in n.inputs] \
+            + [getattr(i, "default_value", None) for i in self.tree.interface.items_tree if i.item_type == "SOCKET"]
+        if any(isinstance(f, bpy.types.VectorFont) and f.name == BUILTIN_FONT and not builtin_font(f) for f in held):
+            self.warn(f"the font '{BUILTIN_FONT}' of this file is not Blender's own, and reads as Blender's own: "
+                      "rename it")
 
     # Looks
 

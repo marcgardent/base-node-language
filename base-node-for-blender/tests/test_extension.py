@@ -315,7 +315,24 @@ geometry graph label(font: Font = "Bfont Regular") -> Geometry {
         if font.users == 0:
             bpy.data.fonts.remove(font)
 
-    print("   ✓ Bfont Regular.001 reads as Bfont Regular")
+    # A font of the file named "Bfont Regular" reads as Blender's own: the reader says so
+    impostor = bpy.data.fonts.load(str(Path(bpy.utils.system_resource("DATAFILES", path="fonts")) / "Inter.woff2"))
+    own = [f for f in bpy.data.fonts if f.filepath == "<builtin>"]
+    impostor.rename("Bfont Regular", mode="ALWAYS")  # Blender's own is "Bfont Regular.001" now
+    tree = hand_tree("impostor")
+    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    stc = tree.nodes.new("GeometryNodeStringToCurves")
+    stc.inputs["Font"].default_value = impostor
+    tree.links.new(stc.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
+    try:
+        warnings = export_tree(tree)[1]
+        assert any("is not Blender's own" in w for w in warnings), warnings
+    finally:
+        bpy.data.node_groups.remove(tree)
+        bpy.data.fonts.remove(impostor)
+        for f in own:
+            f.rename("Bfont Regular", mode="ALWAYS")
+    print("   ✓ Bfont Regular.001 reads as Bfont Regular; a font only named so is said")
 
 
 def test_font_everywhere():

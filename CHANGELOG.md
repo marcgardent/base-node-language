@@ -19,6 +19,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   in place or the input node: `font: "Bfont Regular", or name a Font node: t = Font(font: "Bfont
   Regular")`. Before rc.2 the input took its value and the String node stayed, linked to nothing. A
   Sound, which has no input node, comes from a graph input or its name in place.
+- Added: a font of the file named `Bfont Regular` that is not Blender's own reads with a warning: the
+  text names Blender's own so, and builds it back so.
 
 ## [1.0.0-rc.2] - 2026-11-22
 
