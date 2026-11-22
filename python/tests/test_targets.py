@@ -16,7 +16,6 @@ from base_node_blender.targets import (IMPLICIT, Blender, _bridge, _literal, acc
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = catalog(ROOT)
 # The targets shipped with the package and the extension: links in git to targets/
-# The targets of the free part; the studio has its own after them
 TARGETS = ["blade", "blender", "blender@5.2-lts", "blender@5.3"]
 # What an inference tries: `blender` as the versions promised, whole and by variant
 INFERRED = ["blade", "blender", "blender cycles", "blender eevee", "blender gltf"]

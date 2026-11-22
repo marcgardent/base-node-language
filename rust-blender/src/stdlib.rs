@@ -7,8 +7,8 @@ use base_node::ast::File;
 use std::sync::OnceLock;
 
 /// (name, text) of each module of `stdlib/`, by name: build.rs lists the `.bn` files there, so
-/// adding a module edits nothing here, and the public mirror, which has no pro module, builds
-/// with the free ones alone.
+/// adding a module edits nothing here, and a stdlib with no pro module, as here, builds with the
+/// free ones alone.
 pub const MODULES: &[(&str, &str)] = &include!(concat!(env!("OUT_DIR"), "/stdlib_modules.rs"));
 
 static PARSED: [OnceLock<Option<File>>; MODULES.len()] = [const { OnceLock::new() }; MODULES.len()];

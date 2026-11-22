@@ -520,10 +520,6 @@ def same_option(name, a, b):
 def snapshot(sock):
     """A socket's default_value as plain Python: tuples for vectors, names for datablocks."""
     value = getattr(sock, "default_value", None)
-    if isinstance(value, bpy.types.VectorFont) and value.filepath == "<builtin>":
-        # Blender's own font is what a socket with no font draws with: it is no font chosen. A new
-        # node holds it on one machine and nothing on another, so it is never a value to write
-        return None
     if isinstance(value, bpy.types.ID):
         return value.name
     if hasattr(value, "__len__") and not isinstance(value, str):

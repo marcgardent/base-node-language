@@ -190,8 +190,8 @@ def test_core_knows_no_destination():
 def test_stdlib_tiers():
     """Every module is free or pro; a pro module names its pack; a free module uses only free ones.
 
-    The public mirror (studio/export_public.py) keeps the free modules alone, so a free module that
-    used a pro one would not build there.
+    This repository holds the free modules alone, so a free module that used a pro one would not
+    build here.
     """
     modules = stdlib_manifest(STDLIB_DIR)["modules"]
     for name, entry in modules.items():

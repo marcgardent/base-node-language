@@ -3614,7 +3614,8 @@ def pack_tests():
     """The test_* functions of tests/packs/test_*.py, file by file, in the order they are written.
 
     A pack's tests are a file of their own, so that adding a pack edits no list here; they import
-    this file's helpers (`from test_extension import *`). The public mirror has no tests/packs/.
+    this file's helpers (`from test_extension import *`). This repository has no tests/packs/: the
+    packs bring theirs.
     """
     sys.modules.setdefault("test_extension", sys.modules[__name__])
     found = []

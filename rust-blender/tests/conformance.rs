@@ -16,13 +16,7 @@ fn read_stdlib_file(candidates: &[&str]) -> (String, String) {
     let mut last_err = String::new();
     for &name in candidates {
         let relative = format!("../stdlib/{}", name);
-        let content = fs::read_to_string(&relative).or_else(|_| {
-            fs::read_to_string(format!(
-                "/home/marcgardent/base-node-library/stdlib/{}",
-                name
-            ))
-        });
-        if let Ok(src) = content {
+        if let Ok(src) = fs::read_to_string(&relative) {
             if let Ok(file) = parse(&src, name) {
                 if !file.graphs.is_empty() {
                     return (name.to_string(), src);
@@ -37,8 +31,8 @@ fn read_stdlib_file(candidates: &[&str]) -> (String, String) {
     );
 }
 
-/// The `.bn` files of `stdlib/`, by name: every module, pro ones included where they are (the
-/// public mirror has the free ones alone).
+/// The `.bn` files of `stdlib/`, by name: every module, pro ones included where they are (this
+/// repository has the free ones alone).
 fn stdlib_names() -> Vec<String> {
     let mut names: Vec<String> = fs::read_dir("../stdlib")
         .unwrap()
@@ -522,16 +516,15 @@ fn what_inference_holds() {
         inf.graphs,
         [("soften".to_owned(), vec!["blender".to_owned()])]
     );
-    #[allow(unused_mut)]
-    let mut lines = vec!["Compatible: blender, blade (translated from blender)"];
-    assert_eq!(inf.lines(), lines);
+    assert_eq!(
+        inf.lines(),
+        ["Compatible: blender, blade (translated from blender)"]
+    );
 }
 
-/// The targets of the free part; the studio has its own after them.
+/// The targets of `targets/`.
 fn targets() -> Vec<&'static str> {
-    #[allow(unused_mut)]
-    let mut names = vec!["blade", "blender", "blender@5.2-lts", "blender@5.3"];
-    names
+    vec!["blade", "blender", "blender@5.2-lts", "blender@5.3"]
 }
 
 #[test]
@@ -651,9 +644,8 @@ fn test_versioning_and_manifest() {
     assert_eq!(base_node::VERSION, base_node::STDLIB_VERSION);
 
     let manifest_path = Path::new("../stdlib/manifest.json");
-    let manifest_content = fs::read_to_string(manifest_path)
-        .or_else(|_| fs::read_to_string("/home/marcgardent/base-node-library/stdlib/manifest.json"))
-        .expect("Failed to read stdlib/manifest.json");
+    let manifest_content =
+        fs::read_to_string(manifest_path).expect("Failed to read stdlib/manifest.json");
 
     let v: serde_json::Value =
         serde_json::from_str(&manifest_content).expect("Invalid JSON in manifest.json");

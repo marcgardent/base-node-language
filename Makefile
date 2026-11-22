@@ -5,10 +5,11 @@ BLENDER ?= blender
 # make test-promised: BLENDERS="/path/to/blender-5.2/blender /path/to/blender-5.3/blender"
 BLENDERS ?= $(BLENDER)
 PYTEST ?= pytest
+VERSION ?= $(shell python3 -c "import json; print(json.load(open('stdlib/manifest.json'))['stdlib_version'])")
 BLENDER_RUN = $(BLENDER) --background --factory-startup --python-exit-code 1 --python
 
 .DEFAULT_GOAL := help
-.PHONY: help test python-min test-python test-rust test-web test-blender test-promised test-libraries extension backend docs srt-check
+.PHONY: help test python-min test-python test-rust test-web test-blender test-promised test-libraries extension backend docs srt-check bump release ci
 
 help: ## List the targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -56,3 +57,14 @@ backend: ## Write targets/backends/blender-<x.y>.json and blender-<x.y>/<module>
 
 docs: ## Write the reference pages into site/reference/
 	PYTHONPATH=python python3 -m base_node_cli.cli docs
+
+bump: ## Write VERSION (x.y.z or x.y.z-rc.n) everywhere the version is written; ARCHIVE=1 builds site/extensions/ again
+	python3 tools/bump.py $(if $(filter command environment,$(firstword $(origin VERSION))),$(VERSION),$(error Say the version: make bump VERSION=x.y.z)) $(if $(ARCHIVE),--archive)
+
+release: ## Tag main's head vVERSION and push the tag: the CI runs on it
+	git fetch -q origin main
+	git tag -a v$(VERSION) origin/main -m "base-node-language $(VERSION)"
+	git push origin v$(VERSION)
+
+ci: ## Run the CI by hand on the pushed head of the current branch (BRANCH=…)
+	gh workflow run ci.yml --ref $(or $(BRANCH),$(shell git branch --show-current))

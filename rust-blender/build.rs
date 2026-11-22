@@ -1,6 +1,6 @@
 //! Lists the modules of `stdlib/` for `src/stdlib.rs`: one `(name, include_str!(…))` per `.bn`,
-//! by name, into `$OUT_DIR/stdlib_modules.rs`. Adding a module adds its file and edits no list; the
-//! public mirror, which has no pro module, lists only the free ones.
+//! by name, into `$OUT_DIR/stdlib_modules.rs`. Adding a module adds its file and edits no list; a
+//! stdlib with no pro module, as here, lists only the free ones.
 //!
 //! The same for the files of `targets/blender/` for `src/targets.rs`, one per `.json`, into
 //! `$OUT_DIR/blender_files.rs`: the catalog of each version of Blender and the variants. A new
