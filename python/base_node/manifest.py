@@ -4,7 +4,7 @@
 each module says the rest in the head of its `.bn`:
 
     // @module keying
-    // @version 1.0.0-rc.2
+    // @version 1.0.0-rc.3
     // @target <target>, <target>
     // @edition 2026
     // @pack compositing-pro

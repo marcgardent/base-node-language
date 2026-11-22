@@ -1,6 +1,6 @@
 [package]
 name = "base-node-web"
-version = "1.0.0-rc.2"
+version = "1.0.0-rc.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Read-only view of a .bn text in the browser: its highlighted code, its node graph, and the backends it runs on"

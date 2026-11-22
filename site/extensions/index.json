@@ -7,8 +7,8 @@
       "schema_version": "1.0.0",
       "id": "base_node",
       "name": "Base Node",
-      "tagline": "Nodes as Text (.bn) \u2014 Read and write node trees as functions",
-      "version": "1.0.0-rc.2",
+      "tagline": "Nodes as text (.bn): read and write node trees as functions",
+      "version": "1.0.0-rc.3",
       "type": "add-on",
       "maintainer": "Marc Gardent",
       "license": [
@@ -17,10 +17,12 @@
       "blender_version_min": "5.2.0",
       "website": "https://basenode.ludopant.com/",
       "copyright": [
-        "2026 Marc Gardent"
+        "2026 Marc Gardent",
+        "2024 Leonardo Pike-Excell (Node Arrange)"
       ],
       "permissions": {
-        "files": "Import .bn files and the modules they use from disk"
+        "files": "Import .bn files and the modules they use from disk",
+        "clipboard": "Copy node trees as .bn text and paste .bn text as nodes"
       },
       "tags": [
         "Node",
@@ -30,9 +32,9 @@
         "Text Editor",
         "Import-Export"
       ],
-      "archive_url": "./base_node-1.0.0-rc.2.zip",
-      "archive_size": 251982,
-      "archive_hash": "sha256:9cad279909321addedeed4f7160565bc58b5608366073b2acf6219ae91d97503"
+      "archive_url": "./base_node-1.0.0-rc.3.zip",
+      "archive_size": 251845,
+      "archive_hash": "sha256:a583a38711777255c569991706fce4d8b8b4e423bd71cfa14eb8103bf54fdb56"
     }
   ]
 }

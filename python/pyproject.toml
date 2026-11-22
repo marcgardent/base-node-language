@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "base-node"
-version = "1.0.0rc2"
+version = "1.0.0rc3"
 description = "Base Node (.bn) parser, formatter, and target checker"
 readme = "README.md"
 authors = [{ name = "Marc Gardent" }]

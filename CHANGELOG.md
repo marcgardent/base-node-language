@@ -7,6 +7,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] - 2026-11-22
+
 ### Blender add-on
 
 - Changed, a text of 1.0.0-rc.2 may need an edit: a datablock's input node is a call, linked or
