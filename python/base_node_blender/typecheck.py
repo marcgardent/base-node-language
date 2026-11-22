@@ -15,11 +15,9 @@ from . import ir, sugar, zones
 from ._core import BnError, Diagnostic, ast, colors, parse
 from .schema import (CLOSURE_INPUT, CLOSURE_OUTPUT, CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, DEPRECATED, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT,
                      ITEM_NODES, ITEM_TYPES, NO_DEFAULT, NO_VALUE, RANGED, SEPARATE_BUNDLE, SIGNATURE_NODES, STRICT,
-                     TREE_KINDS, TYPES, CURVE, CURVES, HANDLES, MAPPING_OPTIONS, MATERIAL, MATERIAL_OUTPUTS, RAMP,
+                     TREE_KINDS, TYPES, CURVE, CURVES, EMPTY_GROUP, HANDLES, MAPPING_OPTIONS, MATERIAL, MATERIAL_OUTPUTS, RAMP,
                      RAMP_OPTIONS, Socket, can_link, is_material, key, loose, snake)
 
-# `Group()`: a Group node that calls no tree (its group is missing from the file)
-EMPTY_GROUP = "Group"
 
 GROUP_NODES = {
     "geometry": "GeometryNodeGroup",

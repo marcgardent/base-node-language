@@ -32,7 +32,7 @@ from pathlib import Path
 
 from ._core import ast
 from .schema import IMPLICIT as SCHEMA_IMPLICIT
-from .schema import CURVE, CURVES, RAMP, is_material, key
+from .schema import CURVE, CURVES, EMPTY_GROUP, RAMP, is_material, key
 from .sugar import BINOPS, BOOL_FUNCS, EPSILON, MATH_COMPARE, MATH_FUNCS, VECTOR_FUNCS
 from .zones import word as zone_word
 
@@ -60,6 +60,7 @@ ZONES = {"geometry": ["repeat", "foreach", "simulate", "closure"], "shader": ["r
 IMPLICIT = sorted(SCHEMA_IMPLICIT)
 # A ramp and curves are the value of a node's property (`ColorRamp[color_ramp: Ramp(…)]`), not nodes
 DATA_CALLS = {RAMP, CURVE, CURVES}
+# `Group()` is the Group node of the tree it is in, which calls no tree: a call of a graph, not a node
 
 
 @dataclass(frozen=True)
@@ -499,7 +500,7 @@ def uses(graph, local=frozenset(), modules=frozenset(), every=False, tree=None):
                 out.append(Use("node", (name,), line, col))
         elif name in bound and name not in local:
             out.append(Use("node", ("EvaluateClosure",), line, col))
-        elif name in local or every or name in DATA_CALLS:
+        elif name in local or every or name in DATA_CALLS or name == EMPTY_GROUP:
             continue
         elif name in BOOL_FUNCS:
             out.append(Use("node", ("BooleanMath",), line, col))

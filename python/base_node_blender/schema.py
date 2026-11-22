@@ -63,6 +63,8 @@ DEPRECATED = "deprecated"
 #   mapping: Curve((0.0, 0.0), (0.5, 0.8, VECTOR), (1.0, 1.0))      one curve: a point is (x, y[, handle])
 #   mapping: Curves(c: Curve((0.0, 0.0), (1.0, 0.9)), tone: FILMLIKE)  a curve per channel, by name
 RAMP, CURVE, CURVES = "Ramp", "Curve", "Curves"
+# `Group()`: a Group node that calls no tree (its group is missing from the file). Every kind of tree has one
+EMPTY_GROUP = "Group"
 RAMP_OPTIONS = {"interpolation": ("EASE", "CARDINAL", "LINEAR", "B_SPLINE", "CONSTANT"),
                 "color_mode": ("RGB", "HSV", "HSL"), "hue_interpolation": ("NEAR", "FAR", "CW", "CCW")}
 HANDLES = ("AUTO", "AUTO_CLAMPED", "VECTOR")

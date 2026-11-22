@@ -147,6 +147,20 @@ const SHADER: &str =
 ";
 
 #[test]
+fn a_group_node_with_no_tree_fits_every_tree() {
+    // `Group()` is what the reader writes of a Group node whose group is missing (as in Python)
+    for (kind, ret) in [
+        ("geometry", "Geometry"),
+        ("shader", "Shader"),
+        ("compositor", "Color"),
+    ] {
+        let src = format!("{kind} graph g() -> {ret} {{\n  empty = Group()\n  return _\n}}\n");
+        let f = parse(&src, "t.bn").unwrap();
+        assert_eq!(check_target(&f, "blender"), vec![], "{kind}");
+    }
+}
+
+#[test]
 fn a_principled_bsdf_fits_gltf_a_noise_does_not() {
     let f = parse(SHADER, "s.bn").unwrap();
     assert!(check_target(&f, "blender gltf").is_empty());

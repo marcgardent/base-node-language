@@ -65,6 +65,10 @@ const BRIDGES: [(&str, &str); 1] = [(
 /// A ramp and curves are the value of a node's property (`ColorRamp[color_ramp: Ramp(…)]`), not nodes.
 const DATA_CALLS: [&str; 3] = ["Ramp", "Curve", "Curves"];
 
+/// `Group()`: the Group node of the tree it is in, which calls no tree (its group is missing from
+/// the file). A call of a graph, not a node: every kind of tree has one.
+const EMPTY_GROUP: &str = "Group";
+
 /// Implicit inputs (`p: Vector = Position()`): a setting of the group's interface, not a node.
 pub const IMPLICIT: [&str; 6] = [
     "ID",
@@ -1121,7 +1125,11 @@ fn uses_of(graph: &Graph, local: &Local, tree: &str) -> Vec<Use> {
                     }
                 } else if bound.contains(n) && !local.names.contains(n) {
                     out.push(Use::new("node", &["EvaluateClosure"], line, col));
-                } else if local.names.contains(n) || local.every || DATA_CALLS.contains(&n) {
+                } else if local.names.contains(n)
+                    || local.every
+                    || DATA_CALLS.contains(&n)
+                    || n == EMPTY_GROUP
+                {
                     continue;
                 } else if BOOL_FUNCS.contains(&n) {
                     out.push(Use::new("node", &["BooleanMath"], line, col));

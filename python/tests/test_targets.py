@@ -196,6 +196,13 @@ def test_an_engine_variant_takes_shader_graphs_and_the_graphs_they_call():
     assert infer_.fits["blender cycles"] is None and "blender eevee" in infer_.outside
 
 
+def test_a_group_node_with_no_tree_fits_every_tree():
+    # `Group()` is what the reader writes of a Group node whose group is missing (Bioxel Nodes has some)
+    for kind, ret in (("geometry", "Geometry"), ("shader", "Shader"), ("compositor", "Color")):
+        f = parse(f"{kind} graph g() -> {ret} {{\n  empty = Group()\n  return _\n}}\n")
+        assert check_target(f, "blender") == [], kind
+
+
 def test_what_an_editor_colors_is_what_every_tree_and_version_accepts():
     assert {"Blur", "Cube", "PrincipledBSDF"} <= accepted("blender", "node")
     assert "Geometry" in accepted("blender", "type") and "Shader" in accepted("blender@5.3", "type")
