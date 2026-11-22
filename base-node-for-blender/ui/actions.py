@@ -192,8 +192,9 @@ def format_text(text):
     return True
 
 
-def import_file(path):
+def import_file(path, warnings=None):
     """Build every graph of a .bn file into the trees of the same names. Returns them; raises BnError, OSError.
+    `warnings` is a list the warnings of the build are added to (a datablock the file does not have).
 
     Its `use` lines find their modules in the .blend's texts, next to the file, then in the module folders.
     """
@@ -209,7 +210,7 @@ def import_file(path):
                 modules.pick(found)
         return modules.load(name, src, [here, *modules.FOLDERS])
 
-    trees = build_source(source, os.path.basename(path), load)
+    trees = build_source(source, os.path.basename(path), load, warnings)
     # A module found next to the file keeps its path, so that the text view of a tree finds it again
     for g in bpy.data.node_groups:
         name = g.get(modules.MODULE)

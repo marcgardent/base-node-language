@@ -29,6 +29,10 @@ DATABLOCKS = {"OBJECT": "objects", "COLLECTION": "collections", "MATERIAL": "mat
 
 # The item a Menu node picks: it has items only once linked to the menu it feeds, and the tree updated
 MENU_VALUE = ("FunctionNodeInputMenu", "value")
+# The warning of a datablock the text names and the file does not have
+MISSING = "missing datablock:"
+# A datablock's type as a warning names it: a socket's type (FONT) or a property's Blender type (VectorFont)
+DATABLOCK_NAMES = {"VECTORFONT": "Font", "MOVIECLIP": "MovieClip", "NODETREE": "NodeTree"}
 
 # Item options set after the links: a Viewer's auto_remove drops an item nothing feeds yet
 LATE_OPTIONS = {"auto_remove"}
@@ -58,7 +62,7 @@ def build_source(source, filename="<text>", load=None, warnings=None):
     """
     with BlenderSchema() as schema:
         graphs = blender.compile_source(source, schema, filename, load or modules.load, warnings)
-    builder = Builder(filename, graphs)
+    builder = Builder(filename, graphs, warnings)
 
     scratch = {}
     made = []  # the scratch datablocks: groups, and the materials owning their own trees
@@ -164,8 +168,11 @@ def material_target(g):
 
 
 class Builder:
-    def __init__(self, filename, graphs):
+    def __init__(self, filename, graphs, warnings=None):
         self.filename = filename
+        # The warnings of the build: a missing datablock, said once (missed)
+        self.warnings = warnings if warnings is not None else []
+        self.missed = set()
         self.graphs = {g.name: g for g in graphs}
         # Only the graphs nobody calls are offered as modifiers
         self.called = {n.group for g in graphs for n in g.nodes if n.group}
@@ -184,6 +191,16 @@ class Builder:
             return next((f for f in bpy.data.fonts if builtin_font(f)), None) \
                 or bpy.data.fonts.load(BUILTIN_PATH, check_existing=True)
         return collection.get(name)
+
+    def missing(self, at, kind, name):
+        """A datablock the text names and the file does not have: the build goes on, the socket or the
+        setting left empty, and a warning says so, once per datablock."""
+        kind = DATABLOCK_NAMES.get(kind.upper(), kind[:1].upper() + kind[1:].lower() if kind.isupper() else kind)
+        if (kind, name) in self.missed:
+            return
+        self.missed.add((kind, name))
+        self.warnings.append(Diagnostic(self.filename, at.line, at.col, f'{MISSING} {kind} "{name}"',
+                                        "warning"))
 
     def fail(self, node, message):
         raise BnError([Diagnostic(self.filename, node.line, node.col, message)])
@@ -325,7 +342,7 @@ class Builder:
                 kind = item.socket_type.removeprefix("NodeSocket").upper()
                 found = self.datablock(kind, getattr(bpy.data, DATABLOCKS[kind]), value)
                 if found is None:
-                    self.fail(g, f"'{name}': {_type} '{value}' not found in file")
+                    self.missing(g, _type, value)
                 value = found
             elif item.socket_type == "NodeSocketVector" and hasattr(item, "dimensions"):
                 if item.dimensions != len(value):
@@ -401,7 +418,7 @@ class Builder:
                 if datablock and isinstance(value, str):
                     found = self.datablock(datablock, datablocks(datablock), value)
                     if found is None:
-                        self.fail(n, f"{prop}: {datablock} '{value}' not found in file")
+                        self.missing(n, datablock, value)
                     value = found
                 try:
                     setattr(node, prop, value)
@@ -629,7 +646,7 @@ class Builder:
         if sock.type in DATABLOCKS and isinstance(value, str):
             found = self.datablock(sock.type, getattr(bpy.data, DATABLOCKS[sock.type]), value)
             if found is None:
-                self.fail(n, f"{sock.type.title()} '{value}' not found in file")
+                self.missing(n, sock.type, value)
             return found
         return coerce(sock, value)
 

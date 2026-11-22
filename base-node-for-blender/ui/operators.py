@@ -5,6 +5,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from ..host import comments
 from ..host.arrange import arrange_nodes
+from ..host.builder import MISSING
 from ..host import outputs
 from ..host.schema import TREE_TYPES
 from ..lang import BnError
@@ -267,17 +268,22 @@ class BASE_NODE_OT_import(bpy.types.Operator, ImportHelper):
     def execute(self, context):
         names = [f.name for f in self.files if f.name] or [os.path.basename(self.filepath)]
         folder = self.directory or os.path.dirname(self.filepath)
-        built, errors = [], {}
+        built, errors, warned = {}, {}, {}
         pending = names
         while pending:
-            # A file may set a material another file defines: those that failed go again after the
-            # others, as long as a round builds something
+            # A file may set a material another file defines: those that failed, or missed a
+            # datablock, go again after the others, as long as a round builds something
             failing = []
             for name in pending:
                 path = os.path.join(folder, name)
                 try:
-                    built += actions.import_file(path)
+                    warnings = []
+                    built.update((id(t), t) for t in actions.import_file(path, warnings))
                     errors.pop(name, None)
+                    warned.pop(name, None)
+                    if any(d.message.startswith(MISSING) for d in warnings):
+                        failing.append(name)
+                        warned[name] = warnings
                 except BnError as e:
                     failing.append(name)
                     n = len(e.diagnostics)
@@ -291,6 +297,9 @@ class BASE_NODE_OT_import(bpy.types.Operator, ImportHelper):
         failed = [name for name in names if name in errors]
         for name in failed:
             self.report({"ERROR"}, errors[name])
+        for name in names:
+            for d in warned.get(name, ()):
+                self.report({"WARNING"}, str(d))
         if not built:
             return {"CANCELLED"}
         message = f"{len(built)} tree(s) imported from {len(names) - len(failed)} file(s)"

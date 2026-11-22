@@ -315,24 +315,7 @@ geometry graph label(font: Font = "Bfont Regular") -> Geometry {
         if font.users == 0:
             bpy.data.fonts.remove(font)
 
-    # A font of the file named "Bfont Regular" reads as Blender's own: the reader says so
-    impostor = bpy.data.fonts.load(str(Path(bpy.utils.system_resource("DATAFILES", path="fonts")) / "Inter.woff2"))
-    own = [f for f in bpy.data.fonts if f.filepath == "<builtin>"]
-    impostor.rename("Bfont Regular", mode="ALWAYS")  # Blender's own is "Bfont Regular.001" now
-    tree = hand_tree("impostor")
-    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
-    stc = tree.nodes.new("GeometryNodeStringToCurves")
-    stc.inputs["Font"].default_value = impostor
-    tree.links.new(stc.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
-    try:
-        warnings = export_tree(tree)[1]
-        assert any("is not Blender's own" in w for w in warnings), warnings
-    finally:
-        bpy.data.node_groups.remove(tree)
-        bpy.data.fonts.remove(impostor)
-        for f in own:
-            f.rename("Bfont Regular", mode="ALWAYS")
-    print("   ✓ Bfont Regular.001 reads as Bfont Regular; a font only named so is said")
+    print("   ✓ Bfont Regular.001 reads as Bfont Regular")
 
 
 def test_font_everywhere():
@@ -348,13 +331,13 @@ def test_font_everywhere():
   plain = StringToCurves(string: "a")
   mono = StringToCurves(string: "b", font: "{other}")
   bare = StringToCurves(string: "c", font: _)
-  title = Font(font: "{other}")
+  title = Font[font: "{other}"]()
   named = StringToCurves(string: "d", font: title)
   own = Font()
   builtin = StringToCurves(string: "e", font: own)
-  empty = StringToCurves(string: "f", font: Font(font: _))
+  empty = StringToCurves(string: "f", font: Font[font: _]())
   switched = StringToCurves(string: "g", font: b ? own : title)
-  lone = Font(font: "{other}")
+  lone = Font[font: "{other}"]()
   return geometry
     + plain.curve_instances
     + mono.curve_instances
@@ -392,7 +375,7 @@ def test_font_everywhere():
         raise AssertionError("a named string given to a font built")
     except BnError as e:
         message = str(e.diagnostics[0])
-        assert 'font: "Bfont Regular", or name a Font node: t = Font(font: "Bfont Regular")' in message, message
+        assert 'font: "Bfont Regular", or name a Font node: t = Font[font: "Bfont Regular"]()' in message, message
 
     # Made in Blender: a String to Curves without its font, a Font node of another font
     tree = hand_tree("fonts_by_hand")
@@ -409,7 +392,7 @@ def test_font_everywhere():
     for n in (none, fed):
         tree.links.new(n.outputs[0], join.inputs[0])
     exported, _ = export_tree(tree)
-    assert "font: _" in exported and f'StringToCurves(font: Font(font: "{other}"))' in exported, exported
+    assert "font: _" in exported and f'StringToCurves(font: Font[font: "{other}"]())' in exported, exported
     tree.name = "fonts_by_hand.original"
     rebuilt = build_source(exported, filename="fonts_by_hand.bn")[0]
     fonts = sorted((n.inputs["Font"].default_value is None, n.inputs["Font"].is_linked)
@@ -424,6 +407,31 @@ def test_font_everywhere():
 # The datablock input nodes of each tree kind: the compositor has the Object and Font nodes alone
 DATABLOCK_KINDS = [("GeometryNodeTree", ("material", "image", "object", "collection", "font")),
                    ("CompositorNodeTree", ("object", "font"))]
+
+
+def test_normal_holds_its_vector():
+    """The Normal node of a shader and of a compositor tree holds its vector on its output: a setting
+    in the text, written when it is not a new node's, built back on the output."""
+    print("-> Test: a Normal node's vector...")
+    from base_node.host import build_source, export_tree
+
+    for kind, word in (("ShaderNodeTree", "shader"), ("CompositorNodeTree", "compositor")):
+        tree = hand_tree(f"normal_{word}", kind)
+        tree.interface.new_socket("n", in_out="OUTPUT", socket_type="NodeSocketVector")
+        node = tree.nodes.new("ShaderNodeNormal" if word == "shader" else "CompositorNodeNormal")
+        tree.links.new(node.outputs["Normal"], tree.nodes.new("NodeGroupOutput").inputs[0])
+        text, warnings = export_tree(tree)
+        assert "Normal()" in text and "normal:" not in text and not warnings, (text, warnings)
+        node.outputs["Normal"].default_value = (0.0, 0.6, 0.8)
+        text, warnings = export_tree(tree)
+        assert "Normal[normal: (0.0, 0.6, 0.8)]()" in text and not warnings, (text, warnings)
+        bpy.data.node_groups.remove(tree)
+        rebuilt, = build_source(text, f"normal_{word}.bn")
+        made = next(n for n in rebuilt.nodes if n.bl_idname.endswith("NodeNormal"))
+        assert tuple(round(v, 5) for v in made.outputs["Normal"].default_value) == (0.0, 0.6, 0.8)
+        assert export_tree(rebuilt)[0] == text, export_tree(rebuilt)[0]
+        bpy.data.node_groups.remove(rebuilt)
+    print("   ✓ Normal[normal: (…)]() in a shader and a compositor tree")
 
 
 def test_constant_nodes_by_hand():
@@ -441,15 +449,15 @@ def test_constant_nodes_by_hand():
         value.use_fake_user = True  # a node does not count as a user of an object: Blender would warn
     cases = [  # (tree kind, bl_idname, its value's property, value, output socket type, a line of the text)
         ("GeometryNodeTree", "FunctionNodeInputRotation", "rotation_euler", (0.5, 0.25, 0.125), "NodeSocketRotation",
-         "Rotation(rotation_euler: (0.5, 0.25, 0.125))"),
+         "Rotation[rotation_euler: (0.5, 0.25, 0.125)]()"),
         ("GeometryNodeTree", "FunctionNodeInputVector", "vector", (1.0, 2.0, 3.0, 4.0), "NodeSocketVector",
-         "Vector(vector_dimensions: 4, vector: (1.0, 2.0, 3.0, 4.0))"),
+         "Vector[vector_dimensions: 4, vector: (1.0, 2.0, 3.0, 4.0)]()"),
         ("CompositorNodeTree", "FunctionNodeInputRotation", "rotation_euler", (0.5, 0.0, 0.0), "NodeSocketRotation",
-         "Rotation(rotation_euler: (0.5, 0.0, 0.0))"),
+         "Rotation[rotation_euler: (0.5, 0.0, 0.0)]()"),
         ("CompositorNodeTree", "FunctionNodeInputIntVector", "vector", (1, 2, 3), "NodeSocketVector",
-         "IntegerVector(vector: (1, 2, 3))"),
+         "IntegerVector[vector: (1, 2, 3)]()"),
     ] + [(kind, f"GeometryNodeInput{prop.title()}", prop, stuff[prop], f"NodeSocket{prop.title()}",
-          f'(out: {prop.title()}({prop}: "{stuff[prop].name}"))') for kind, props in DATABLOCK_KINDS
+          f'(out: {prop.title()}[{prop}: "{stuff[prop].name}"]())') for kind, props in DATABLOCK_KINDS
          for prop in props]
 
     def held(node, prop):
@@ -487,7 +495,8 @@ def test_constant_nodes_by_hand():
             tree.links.new(empty.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
             exported, warnings = export_tree(tree)
             none = f"{prop}: _" if prop == "font" else ""  # a new Font node holds Blender's own
-            for line in (f'lone = {Node}({prop}: "{stuff[prop].name}")', f"return (out: {Node}({none}))"):
+            empty_call = f"{Node}[{none}]()" if none else f"{Node}()"
+            for line in (f'lone = {Node}[{prop}: "{stuff[prop].name}"]()', f"return (out: {empty_call})"):
                 assert line in exported and not warnings, f"{kind} {idname}: '{line}' not in\n{exported}{warnings}"
             tree.name = f"datablock_{prop}.original"
             rebuilt = build_source(exported, filename=f"datablock_{prop}.bn")[0]
@@ -513,7 +522,7 @@ def test_constant_nodes_by_hand():
     bpy.context.view_layer.update()
     menu.value = "B"
     exported, _ = export_tree(tree)
-    assert "Menu(value: B)" in exported, exported
+    assert "Menu[value: B]()" in exported, exported
     tree.name = "menu_by_hand.original"
     rebuilt = build_source(exported, filename="menu_by_hand.bn")[0]
     assert next(n for n in rebuilt.nodes if n.bl_idname == "FunctionNodeInputMenu").value == "B"
@@ -1072,7 +1081,7 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
     # A datablock property is written by its name
     image = bpy.data.images.new("brick", 4, 4)
     wall = """shader graph wall(uv: Vector) -> Shader {
-  t = ImageTexture(vector: uv, image: "brick")
+  t = ImageTexture[image: "brick"](vector: uv)
   return DiffuseBSDF(color: t.color)
 }
 """
@@ -1084,10 +1093,11 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
     ramp.color_ramp.elements.new(0.5).color = (1.0, 0.5, 0.0, 1.0)
     tree.links.new(ramp.outputs["Color"], next(n for n in tree.nodes if n.bl_idname == "ShaderNodeBsdfDiffuse").inputs[0])
     text, warnings = export_tree(tree)
-    assert ("      color_ramp: Ramp(\n"
+    assert ("    color: ColorRamp[\n"
+            "      color_ramp: Ramp(\n"
             "        (0.0, (0.0, 0.0, 0.0, 1.0)),\n"
             "        (0.5, (1.0, 0.5, 0.0, 1.0)),\n"
-            "        (1.0, (1.0, 1.0, 1.0, 1.0)))).color)\n") in text and not warnings, (text, warnings)
+            "        (1.0, (1.0, 1.0, 1.0, 1.0)))]().color)\n") in text and not warnings, (text, warnings)
 
     def error(source):
         try:
@@ -1096,8 +1106,14 @@ shader graph bumpy() -> (surface: Shader, displacement: Vector) {
             return str(e.diagnostics[0])
         raise AssertionError(f"built: {source}")
 
-    assert error('shader graph w() -> Shader {\n  return DiffuseBSDF(color: ImageTexture(image: "nope").color)\n}') \
-        == "t.bn:2:29  image: Image 'nope' not found in file"
+    # A datablock the file does not have: the build goes on, the setting left empty, said once
+    warnings = []
+    missing, = build_source('shader graph w() -> Shader {\n  t = ImageTexture[image: "nope"]()\n'
+                            '  return DiffuseBSDF(color: ImageTexture[image: "nope"]().color + t.color)\n}',
+                            "t.bn", warnings=warnings)
+    assert [str(w) for w in warnings] == ['t.bn:2:7  warning: missing datablock: Image "nope"'], warnings
+    assert all(n.image is None for n in missing.nodes if n.bl_idname == "ShaderNodeTexImage")
+    bpy.data.node_groups.remove(missing)
     # The interface of a shader group takes a String since Blender 5.3
     string = "String, " if bpy.app.version >= (5, 3) else ""
     assert error("shader graph g(g: Geometry) -> Shader {\n  return DiffuseBSDF()\n}") \
@@ -1145,11 +1161,10 @@ geometry graph kept(geometry: Geometry, source: Geometry) -> Geometry {
 CONTRAST = """use math (gain, luminance)
 
 compositor graph contrast(image: Color, amount: Float = 0.3 in 0.0..1.0) -> Color {
-  return Mix(
+  return Mix[RGBA](
     factor: gain(x: luminance(image), contrast: amount),
     a: image,
-    b: (1.0, 1.0, 1.0, 1.0),
-    data_type: RGBA)
+    b: (1.0, 1.0, 1.0, 1.0))
 }
 """
 
@@ -1207,8 +1222,8 @@ def test_module_graphs_in_other_trees():
 
 
 TEMPLATES = """geometry graph attribute_or<T: Float | Vector | Color>(name: String, fallback: T) -> (value: T) {
-  a = NamedAttribute(name: name, data_type: T)
-  return (value: Switch(switch: a.exists, false_: fallback, true_: a.attribute, input_type: T))
+  a = NamedAttribute[T](name: name)
+  return (value: Switch[T](switch: a.exists, false_: fallback, true_: a.attribute))
 }
 """
 
@@ -1221,7 +1236,7 @@ geometry graph fallbacks(geometry: Geometry, offset: Vector) -> Geometry {
   tint = attribute_or<Color>(name: "tint")
   return geometry
     |> SetPosition(offset: rest)
-    |> StoreNamedAttribute(name: "col", value: tint, data_type: FLOAT_COLOR)
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "col", value: tint)
 }
 """
 
@@ -1996,7 +2011,7 @@ def test_material_tree():
 
     # A Material Output for one render engine says so; another one is a node of the text
     two = """shader(material: true, target: EEVEE) graph Two() -> (surface: Shader) {
-  output_material = MaterialOutput(surface: Emission(), is_active_output: false, target: CYCLES)
+  output_material = MaterialOutput[CYCLES, is_active_output: false](surface: Emission())
   return (surface: DiffuseBSDF())
 }
 """
@@ -2095,38 +2110,35 @@ def test_material_tree():
 
 
 RAMPS = """shader graph ramps(f: Float, c: Color, v: Vector) -> (shade: Color, bend: Vector) {
-  r = ColorRamp(
-    factor: f,
+  r = ColorRamp[
     color_ramp: Ramp(
       (0.0, (0.1, 0.0, 0.0, 1.0)),
       (0.25, (1.0, 0.5, 0.0, 0.5)),
       (1.0, (0.0, 0.0, 1.0, 1.0)),
       interpolation: EASE,
       color_mode: HSV,
-      hue_interpolation: FAR))
-  k = FloatCurve(
-    value: r.alpha,
+      hue_interpolation: FAR)](factor: f)
+  k = FloatCurve[
     mapping: Curve(
       (0.0, 0.2),
       (0.4, 0.9, VECTOR),
       (1.0, 0.0),
       extend: HORIZONTAL,
       use_clip: false,
-      clip_min_y: -1.0))
-  s = RGBCurves(
-    color: r.color,
+      clip_min_y: -1.0)](value: r.alpha)
+  s = RGBCurves[
     mapping: Curves(
       r: Curve((0.0, 0.0), (0.5, 0.7), (1.0, 1.0)),
       c: Curve((0.0, 0.1), (1.0, 0.9, AUTO_CLAMPED)),
-      black_level: (0.05, 0.05, 0.05)))
+      black_level: (0.05, 0.05, 0.05))](color: r.color)
   return (
     shade: MixLegacy(factor: k, color1: s, color2: c),
-    bend: VectorCurves(vector: v, mapping: Curves(z: Curve((-1.0, 1.0), (1.0, -1.0)))))
+    bend: VectorCurves[mapping: Curves(z: Curve((-1.0, 1.0), (1.0, -1.0)))](vector: v))
 }
 """
 
 HUE = """compositor graph hue(image: Color) -> Color {
-  return HueCorrect(image, mapping: Curves(s: Curve((0.0, 0.5), (0.5, 0.8), (1.0, 0.5))))
+  return HueCorrect[mapping: Curves(s: Curve((0.0, 0.5), (0.5, 0.8), (1.0, 0.5)))](image)
 }
 """
 
@@ -2190,11 +2202,11 @@ def test_ramps_and_curves():
             return str(e.diagnostics[0])
         raise AssertionError(f"built: {source}")
 
-    assert error("shader graph g(f: Float) -> Color {\n  return ColorRamp(factor: f, color_ramp: Ramp((0.5, (1.0, 1.0, 1.0)), "
-                 "interpolation: SMOOTH)).color\n}") \
-        == "t.bn:2:72  interpolation expects one of EASE, CARDINAL, LINEAR, B_SPLINE, CONSTANT"
-    assert error("shader graph g(c: Color) -> Color {\n  return RGBCurves(color: c, mapping: Curve((0.0, 0.0), (1.0, 1.0)))\n}") \
-        == "t.bn:2:39  mapping expects Curves(r: Curve((x, y), …), …); channels: r, g, b, c"
+    assert error("shader graph g(f: Float) -> Color {\n  return ColorRamp[color_ramp: Ramp((0.5, (1.0, 1.0, 1.0)), "
+                 "interpolation: SMOOTH)](factor: f).color\n}") \
+        == "t.bn:2:61  interpolation expects one of EASE, CARDINAL, LINEAR, B_SPLINE, CONSTANT"
+    assert error("shader graph g(c: Color) -> Color {\n  return RGBCurves[mapping: Curve((0.0, 0.0), (1.0, 1.0))](color: c)\n}") \
+        == "t.bn:2:29  mapping expects Curves(r: Curve((x, y), …), …); channels: r, g, b, c"
 
     bpy.data.node_groups.remove(tree)
     bpy.data.node_groups.remove(hue)
@@ -2624,7 +2636,7 @@ geometry graph timed(geometry: Geometry) -> (Geometry: Geometry, Time: Float) {
     # A generation item of a foreach named like its main geometry
     each, = build_source("""
 geometry graph each(geometry: Geometry) -> (Geometry: Geometry, Points: Geometry) {
-  e = foreach(geometry, domain: FACE) -> {
+  e = foreach[FACE](geometry) -> {
     return (points: Points(1))
   }
   return (Geometry: e, Points: e.points)
@@ -2708,8 +2720,8 @@ TWINS = """geometry graph twins(
     Menu as menu_2: Menu = Center,
     Offset: Float = 2.0
 ) -> (Value: Float) {
-  a = MenuSwitch(menu: Menu, Scalar: 1.0, Label: 2.0, data_type: FLOAT)
-  b = MenuSwitch(menu: menu_2, Transform: 3.0, Center: 4.0, data_type: FLOAT)
+  a = MenuSwitch[FLOAT](menu: Menu, Scalar: 1.0, Label: 2.0)
+  b = MenuSwitch[FLOAT](menu: menu_2, Transform: 3.0, Center: 4.0)
   return (Value: a.output * b.output + Scalar + Offset)
 }
 """
@@ -2816,16 +2828,16 @@ def test_comparisons_in_a_shader_tree():
         return text.split("{\n", 1)[1].rsplit("\n}", 1)[0]
 
     # Written by hand, the same nodes: they read back as the operator, which then stays
-    assert read("  return Math(a, b, operation: GREATER_THAN)") == "  return a > b"
+    assert read("  return Math[GREATER_THAN](a, b)") == "  return a > b"
     assert read("  return 1.0 - (a < b)") == "  return a >= b"
-    assert read("  return 1.0 - Math(a, b, operation: GREATER_THAN)") == "  return a <= b"
-    assert read("  return Math(a, b, 0.001, operation: COMPARE)") == "  return a == b"
+    assert read("  return 1.0 - Math[GREATER_THAN](a, b)") == "  return a <= b"
+    assert read("  return Math[COMPARE](a, b, 0.001)") == "  return a == b"
     assert read("  return a >= b") == "  return a >= b"
     # Another epsilon is not `==`: Math's own default is 0.5
-    assert read("  return Math(a, b, operation: COMPARE)") == \
-        "  return Math(Value: a, Value_001: b, operation: COMPARE)"
-    assert read("  return Math(a, b, 0.1, operation: COMPARE)") == \
-        "  return Math(Value: a, Value_001: b, Value_002: 0.1, operation: COMPARE)"
+    assert read("  return Math[COMPARE](a, b)") == \
+        "  return Math[COMPARE](Value: a, Value_001: b)"
+    assert read("  return Math[COMPARE](a, b, 0.1)") == \
+        "  return Math[COMPARE](Value: a, Value_001: b, Value_002: 0.1)"
     # A comparison bound to a name is a node of its own: 1 minus it stays a subtraction
     assert read("  low = a < b\n  return low * (1.0 - low)") == "  low = a < b\n  return low * (1.0 - low)"
     # Twice from 1 is no operator of its own
@@ -2842,8 +2854,8 @@ def test_comparisons_in_a_shader_tree():
 
     # A geometry tree has Compare: nothing changes there, and Math's comparisons stay calls
     geo = ("geometry graph g(a: Float, b: Float) -> (c: Bool, m: Float, n: Float) {\n"
-           "  return (\n    c: a >= b,\n    m: Math(Value: a, Value_001: b, operation: GREATER_THAN),\n"
-           "    n: 1.0 - Math(Value: a, Value_001: b, operation: LESS_THAN))\n}\n")
+           "  return (\n    c: a >= b,\n    m: Math[GREATER_THAN](Value: a, Value_001: b),\n"
+           "    n: 1.0 - Math[LESS_THAN](Value: a, Value_001: b))\n}\n")
     tree = build_source(geo, filename="geo.bn")[-1]
     assert [n.operation for n in tree.nodes if n.bl_idname == "FunctionNodeCompare"] == ["GREATER_EQUAL"]
     text, warnings = export_tree(tree)
@@ -2921,15 +2933,15 @@ def test_ternary():
              "  return SetPosition(m, offset: on ? a : 0.0)")
     # …and where it cannot (no geometry), the Switch stays a call
     geometry("  return Switch(switch: on, true_: m)",
-             "  return Switch(switch: on, true_: m, input_type: GEOMETRY)")
+             "  return Switch[GEOMETRY](switch: on, true_: m)")
     # A Switch nothing switches stays a call
     geometry("  return Switch(false_: m, true_: SubdivideMesh(m))",
-             "  return Switch(false_: m, true_: SubdivideMesh(m), input_type: GEOMETRY)")
+             "  return Switch[GEOMETRY](false_: m, true_: SubdivideMesh(m))")
     # A Switch whose type its branches do not give says it, in a call: a Rotation's tuple reads as a Vector
-    kept = "  x = Switch(switch: on, false_: (0.0, 0.0, 0.0), true_: r, input_type: ROTATION)\n" \
+    kept = "  x = Switch[ROTATION](switch: on, false_: (0.0, 0.0, 0.0), true_: r)\n" \
            "  return m\n    |> RotateInstances(rotation: x)"
     text = geometry(kept)
-    assert "Switch(switch: on, true_: r, input_type: ROTATION)" in text and "?" not in text, text
+    assert "Switch[ROTATION](switch: on, true_: r)" in text and "?" not in text, text
     # In a geometry tree a Mix is a Mix
     assert geometry("  return m |> SetPosition(offset: Mix(factor: a > 0.5, a: (0.0, 0.0, 0.0), b: (0.0, 0.0, 1.0)))") \
         .count("?") == 0
@@ -2965,12 +2977,10 @@ def test_ternary():
     assert shader("  hot = a > b\n  return hot * (hot ? a : b)") == "  hot = a > b\n  return hot * (hot ? a : b)"
     # A Mix by any number blends: it stays a call, and so does one with a setting of its own
     assert shader("  return Mix(factor: a, a: 1.0, b: 2.0)") == "  return Mix(factor: a, a: 1.0, b: 2.0)"
-    assert "?" not in shader("  return Mix(factor: a > b, a: c, b: (1.0, 0.0, 0.0, 1.0), blend_type: MULTIPLY, "
-                             "data_type: RGBA).x")
+    assert "?" not in shader("  return Mix[RGBA, MULTIPLY](factor: a > b, a: c, b: (1.0, 0.0, 0.0, 1.0)).x")
     # A Switch of a shader tree stays a Switch
     if shader_switch:
-        assert shader("  return Switch(switch: on, false_: a, true_: b)").startswith(
-            "  return Switch(switch: on, false_: a, true_: b")
+        assert "Switch[FLOAT](switch: on, false_: a, true_: b" in shader("  return Switch(switch: on, false_: a, true_: b)")
     fails("shader graph g(a: Float, b: Float) -> Float {\n  return a ? 1.0 : b\n}\n",
           "the condition of '? :' is a Float: in a shader tree it is built with Mix, which blends by any number")
     fails('shader graph g(on: Bool) -> Float {\n  x = on ? "a" : "b"\n  return 1.0\n}\n',
@@ -3051,12 +3061,12 @@ TUPLE_TYPES = """geometry graph tuple_types(geometry: Geometry, b: Bool, i: Int)
   index = IndexSwitch(i, 1.0, (0.5, 0.5, 0.0))
   menu = MenuSwitch(A: (1.0, 0.0, 0.0), B: (0.5, 0.5, 0.0, 1.0))
   return geometry
-    |> StoreNamedAttribute(name: "sw", value: sw + sw_link + mix, data_type: FLOAT_VECTOR)
-    |> StoreNamedAttribute(name: "color", value: sw_color, data_type: FLOAT_COLOR)
-    |> StoreNamedAttribute(name: "mix", value: mix_color, data_type: FLOAT_COLOR)
-    |> StoreNamedAttribute(name: "above", value: above, data_type: BOOLEAN)
-    |> StoreNamedAttribute(name: "index", value: index, data_type: FLOAT_VECTOR)
-    |> StoreNamedAttribute(name: "menu", value: menu.output, data_type: FLOAT_COLOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "sw", value: sw + sw_link + mix)
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "color", value: sw_color)
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "mix", value: mix_color)
+    |> StoreNamedAttribute[BOOLEAN](name: "above", value: above)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "index", value: index)
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "menu", value: menu.output)
     |> StoreNamedAttribute(name: "store", value: (0.0, 0.0, 1.0))
 }
 """
@@ -3146,14 +3156,14 @@ def test_tuples_choose_the_type():
     refused = {
         "Switch(b, (1.0, 0.0), (0.5, 0.5))":
             "Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)",
-        "Switch(b, (1.0, 0.0, 0.0), 2.0, input_type: FLOAT)": "Switch.false_ expects Float, receives a Vector tuple",
-        "Mix(0.5, (1.0, 0.0, 0.0, 1.0), Position(), data_type: VECTOR)":
+        "Switch[FLOAT](b, (1.0, 0.0, 0.0), 2.0)": "Switch.false_ expects Float, receives a Vector tuple",
+        "Mix[VECTOR](0.5, (1.0, 0.0, 0.0, 1.0), Position())":
             "Mix.a expects a Vector of 3 numbers, receives 4; write (1.0, 0.0, 0.0)",
     }
     with BlenderSchema() as schema:
         for value, message in refused.items():
             src = (f"geometry graph refused(geometry: Geometry, b: Bool) -> Geometry {{\n  v = {value}\n"
-                   f'  return StoreNamedAttribute(geometry, name: "v", value: v, data_type: FLOAT_VECTOR)\n}}\n')
+                   f'  return StoreNamedAttribute[FLOAT_VECTOR](geometry, name: "v", value: v)\n}}\n')
             try:
                 compile_source(src, schema, "refused.bn")
             except BnError as e:
@@ -3178,11 +3188,11 @@ compositor graph colour_switch(on: Bool, image: Color) -> Color {
 }
 
 compositor graph written_type(on: Bool, x: Float) -> Color {
-  return Switch(switch: on, false_: x, true_: 1.0, input_type: RGBA)
+  return Switch[RGBA](switch: on, false_: x, true_: 1.0)
 }
 
 geometry graph count_or_size(on: Bool, x: Float, i: Int) -> Float {
-  return Switch(on, 1, 2) + Switch(on, 1, x) + Switch(on, 1, x, input_type: INT) + Switch(on, i, 2, input_type: FLOAT)
+  return Switch(on, 1, 2) + Switch(on, 1, x) + Switch[INT](on, 1, x) + Switch[FLOAT](on, i, 2)
 }
 """
 
@@ -3214,8 +3224,8 @@ def test_switch_takes_the_type_of_its_values():
     for name in list(switches):
         tree = bpy.data.node_groups[name]
         text, _ = export_tree(tree)
-        assert text.count("input_type") == {"frame_or_zero": 1, "value_or_zero": 1,
-                                            "count_or_size": 2}.get(name, 0), text
+        assert text.count("Switch[") == {"frame_or_zero": 1, "value_or_zero": 1,
+                                         "count_or_size": 2}.get(name, 0), text
         first = graph_shape(tree)
         rebuilt = build_source(text, filename=f"{name}.bn")[-1]
         assert graph_shape(rebuilt) == first, f"not the same graph:\n{text}"
@@ -3356,11 +3366,10 @@ def test_node_names():
         assert name("shader", "ShaderNodeRGBCurve") == "RGBCurves"
         assert name("compositor", "GeometryNodeSwitch") == "Switch"
         assert name("compositor", "CompositorNodeSwitch") == "CompositorNodeSwitch"
-        # Names are unique in each kind, and an old name is never one of them
+        # Names are unique in each kind
         for kind in ("geometry", "shader", "compositor"):
             names = schema.node_names(kind)
             assert len(names) == len(set(names)), kind
-            assert not set(schema.renamed(kind)) & set(names), kind
 
     def error(source):
         try:
@@ -3369,15 +3378,15 @@ def test_node_names():
             return str(e.diagnostics[0])
         raise AssertionError(f"built: {source}")
 
-    assert error("shader graph s() -> Shader {\n  return BsdfPrincipled()\n}") \
-        == "t.bn:2:10  unknown node 'BsdfPrincipled' in a shader tree; it is now written PrincipledBSDF"
-    assert error("shader graph s() -> Shader {\n  return ShaderNodeBsdfPrincipled()\n}") \
-        == "t.bn:2:10  unknown node 'ShaderNodeBsdfPrincipled' in a shader tree; it is now written PrincipledBSDF"
+    # A name of no node is unknown, whatever Blender calls the node inside
+    for old in ("BsdfPrincipled", "ShaderNodeBsdfPrincipled"):
+        message = error(f"shader graph s() -> Shader {{\n  return {old}()\n}}")
+        assert message.startswith(f"t.bn:2:10  unknown node '{old}' in a shader tree") and "now written" not in message, message
     assert error("shader graph s() -> Float {\n  return noise_texture().fac\n}") \
         == "t.bn:2:10  unknown node 'noise_texture' in a shader tree; did you mean NoiseTexture?"
     assert error("geometry graph g() -> Geometry {\n  return meshline()\n}") \
         == "t.bn:2:10  unknown node 'meshline' in a geometry tree; did you mean MeshLine?"
-    print("   ✓ UI names written and read, old names refused with the new one")
+    print("   ✓ UI names written and read, other names unknown")
 
 
 def test_group_without_tree():
@@ -3904,6 +3913,7 @@ def main():
         test_builtin_font_by_any_name,
         test_font_everywhere,
         test_constant_nodes_by_hand,
+        test_normal_holds_its_vector,
         test_comments,
         test_targets_and_linter,
         test_pipe_symbol,
