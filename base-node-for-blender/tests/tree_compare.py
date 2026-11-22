@@ -19,16 +19,18 @@ then gets the colours of a Weisfeiler-Lehman refinement run on both trees at onc
 (and the group it calls), at level k+1 its colour at level k with the colours of its neighbours at level
 k, by which socket they are linked (by index). Two nodes are matched when one colour, at the deepest
 level where it is so, is held by one node of each tree; then from each matched pair to its neighbours
-linked through the same sockets; then, in a class of colour that holds as many nodes on both sides,
-in the order of their settings and of the tree; at last by type, in that order. What is left is
-missing (or merged into a node of the same settings that feeds the same nodes), or extra.
+linked through the same sockets; then, in a class of colour that holds as many nodes on both sides
+(symmetric branches), one pair at a time, the most alike in settings, then in presentation, then in
+place, each followed by its neighbours, so that a branch is paired with one branch; at last by type
+alone, the most alike first (a group node calling another group is still that group node). What is
+left is missing (or merged into a node of the same settings that feeds the same nodes), or extra.
 
-Blind spots: two nodes no link, colour nor setting tells apart are matched in the order of the tree,
-which may pair them crosswise (their differences then show as settings); a difference near a node
-blurs its colour, so a tree with many differences may pair some nodes wrongly; a merge is only seen
-between nodes of the same settings; the links of a reroute that nothing feeds are dropped, as Blender
-gives nothing through it; what is not RNA (the inside of a compositor's image, a driver's expression
-beyond its presence) is not compared.
+Blind spots: two nodes no link, colour nor setting tells apart may be paired crosswise, which then
+shows only as presentation; a difference near a node blurs its colour, so a tree with many
+differences may pair some nodes wrongly (their differences then show as settings and links); a merge
+is only seen between nodes of the same settings; a node made into another type is one missing and one
+extra; the links of a reroute that nothing feeds are dropped, as Blender gives nothing through it;
+what is not RNA (the inside of an image, a driver's expression beyond its path) is not compared.
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ import collections
 import math
 import re
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import bpy
 
@@ -50,7 +52,7 @@ CLASSES = (
     "node-split",            # one node of the original is several in the rebuilt tree
     "link-missing",          # a link of the original is not in the rebuilt tree
     "link-extra",            # a link of the rebuilt tree is not in the original
-    "link-muted",            # a link muted on one side only
+    "link-muted",            # a link muted on one side only (or a muted link on one side only)
     "link-invalid",          # a link Blender holds invalid on one side only
     "link-order",            # the links of a multi-input in another order
     "group-tree",            # a group node calls another group
@@ -71,6 +73,8 @@ CLASSES = (
     "tree-animation",        # its drivers and animation, as far as their presence
     "float-below-1e-6",      # a float (setting, default, interface) differs by 1e-6 or less
     "default-unavailable",   # the value of an input that its node does not show (unavailable) differs
+    "link-unavailable",      # a link into or out of a socket its node does not show (unavailable),
+                             # which Blender does not follow, on one side only
     "socket-hide-value",     # hide_value of a socket
     "socket-hide",           # hide of a socket
     "socket-identifier",     # the identifier of a socket of a node that has no interface
@@ -92,7 +96,9 @@ NODE_PRESENTATION = {"location", "location_absolute", "width", "height", "name",
                      "use_custom_color", "select", "parent", "hide", "show_options", "show_preview",
                      "show_texture", "panel_states",
                      # Read only, the colour of the node's type or of the group it calls
-                     "color_tag"}
+                     "color_tag",
+                     # How a String node's text box is scrolled and how many lines it shows
+                     "textbox_state"}
 # Anywhere below a node or an interface item: which item of a list the editor shows as active, whether
 # it is selected or unfolded
 NESTED_PRESENTATION = {"select", "show_expanded", "active_index", "active_item", "active_input_index",
@@ -150,6 +156,9 @@ OWN_IDPROPS = "base_node_"
 # never read, and is not compared
 VALUE_OUTPUTS = {"ShaderNodeValue", "ShaderNodeRGB", "ShaderNodeNormal", "CompositorNodeValue",
                  "CompositorNodeRGB", "CompositorNodeNormal"}
+# The kinds of a flattened node's values that say what it does: two nodes alike in these are one
+# node twice (a merge)
+MEANINGFUL = {"setting", "default", "output-value", "items", "group-tree", "socket-count", "socket"}
 # Out of the graph: a frame holds nodes, a reroute passes a link on
 FRAME, REROUTE, GROUP_INPUT = "NodeFrame", "NodeReroute", "NodeGroupInput"
 INTERFACE_NODES = {GROUP_INPUT, "NodeGroupOutput"}
@@ -318,7 +327,8 @@ class Side:
             found.append({"src": self.keys[src.from_node.as_pointer()], "si": si,
                           "dst": self.keys[l.to_node.as_pointer()], "di": di,
                           "dst_socket": l.to_socket.as_pointer(), "multi": l.to_socket.is_multi_input,
-                          "muted": muted, "valid": valid, "sort": l.multi_input_sort_id})
+                          "muted": muted, "valid": valid, "sort": l.multi_input_sort_id,
+                          "dead": unavailable(src.from_socket) or unavailable(l.to_socket)})
         return found
 
 
@@ -358,6 +368,10 @@ class Comparator:
         return self.fresh_nodes[k]
 
     def ref_id(self, value):
+        if isinstance(value, bpy.types.VectorFont) and value.filepath == "<builtin>":
+            # Blender's own font, under whatever name the file gives its copy (Bfont Regular.001
+            # once a library brought one): the same font
+            return ("ID", "VectorFont", "<builtin>", None)
         return ("ID", type(value).__name__, self.name(value),
                 value.library.filepath if value.library is not None else None)
 
@@ -476,7 +490,7 @@ class Comparator:
                     kind = "output-value"
                 elif s.as_pointer() in side.fed:
                     continue  # a linked input's value is not read
-                elif not s.enabled or s.is_unavailable:
+                elif unavailable(s):
                     kind = "default-unavailable"
                 else:
                     kind = "default"
@@ -538,9 +552,12 @@ class Comparator:
         def free(side_tag, side):
             return [k for k in side.graph_nodes if (k not in m if side_tag == "a" else k not in taken)]
 
+        work = []
+
         def pair(x, y):
             m[x] = y
             taken.add(y)
+            work.append((x, y))
 
         def groups(level):
             g = {}
@@ -551,23 +568,21 @@ class Comparator:
             return g
 
         def propagate():
-            changed = True
-            while changed:
-                changed = False
-                for x, y in list(m.items()):
-                    for mine, theirs, far, idx in ((a.outs[x], b.outs[y], "dst", ("si", "di")),
-                                                   (a.ins[x], b.ins[y], "src", ("di", "si"))):
-                        for l in mine:
-                            u = l[far]
-                            if u in m:
-                                continue
-                            cands = [t[far] for t in theirs if t[far] not in taken
-                                     and (t["si"], t["di"]) == (l["si"], l["di"])
-                                     and levels[0]["b", t[far]] == levels[0]["a", u]]
-                            cands = list(dict.fromkeys(cands))
-                            if len(cands) == 1:
-                                pair(u, cands[0])
-                                changed = True
+            """From each pair newly matched to its neighbours: a node linked through the same sockets
+            to the counterpart, of the same type, the only one."""
+            while work:
+                x, y = work.pop()
+                for mine, theirs, far in ((a.outs[x], b.outs[y], "dst"), (a.ins[x], b.ins[y], "src")):
+                    for l in mine:
+                        u = l[far]
+                        if u in m:
+                            continue
+                        cands = list(dict.fromkeys(
+                            t[far] for t in theirs if t[far] not in taken
+                            and (t["si"], t["di"]) == (l["si"], l["di"])
+                            and levels[0]["b", t[far]] == levels[0]["a", u]))
+                        if len(cands) == 1:
+                            pair(u, cands[0])
 
         if "GI" in a.graph_nodes and "GI" in b.graph_nodes:
             pair("GI", "GI")
@@ -576,12 +591,18 @@ class Comparator:
                 if len(xs) == 1 and len(ys) == 1:
                     pair(xs[0], ys[0])
         propagate()
+        # Nodes no colour tells apart (two symmetric branches): one pair at a time, the most alike,
+        # and its neighbours from it, so that a branch is matched with one branch
         for level in reversed(levels):
             for xs, ys in groups(level).values():
-                if xs and len(xs) == len(ys):
-                    for x, y in self.closest(a, b, xs, ys):
-                        pair(x, y)
-            propagate()
+                while True:
+                    xs = [x for x in xs if x not in m]
+                    ys = [y for y in ys if y not in taken]
+                    if not xs or len(xs) != len(ys):
+                        break
+                    x, y = self.closest(a, b, xs, ys)[0]
+                    pair(x, y)
+                    propagate()
         # At last by type alone: a group node that calls another group is still that group node
         by_type = {}
         for k in free("a", a):
@@ -776,8 +797,9 @@ class Comparator:
         matched, whose counterpart feeds the counterparts of the nodes `k` feeds."""
         n = side.node_of[k]
         flat = side.flat[k]
+        # What it does, not how it shows (hidden sockets) nor what Blender numbered
         settings = {p: v for p, (kind, v) in flat.items()
-                    if not kind.startswith("presentation") and not isinstance(v, Ref)}
+                    if kind in MEANINGFUL and not isinstance(v, Ref)}
         for j in side.graph_nodes:
             if j == k or j not in mm or side.node_of[j].bl_idname != n.bl_idname:
                 continue
@@ -829,10 +851,13 @@ class Comparator:
 
         for key in la.keys() - lb.keys():
             for l in la[key]:
-                diff("link-missing", a.node_of[l["dst"]], f"inputs[{l['di']}]", text(a, l), None)
+                # A muted link lost: muted on one side only
+                diff("link-unavailable" if l["dead"] else "link-muted" if l["muted"] else "link-missing",
+                     a.node_of[l["dst"]], f"inputs[{l['di']}]", text(a, l), None)
         for key in lb.keys() - la.keys():
             for l in lb[key]:
-                diff("link-extra", b.node_of[l["dst"]], f"inputs[{l['di']}]", None, text(b, l))
+                diff("link-unavailable" if l["dead"] else "link-muted" if l["muted"] else "link-extra",
+                     b.node_of[l["dst"]], f"inputs[{l['di']}]", None, text(b, l))
         for key in la.keys() & lb.keys():
             x, y = la[key][0], lb[key][0]
             if x["muted"] != y["muted"]:
@@ -875,6 +900,8 @@ class Comparator:
             if t.asset_data is not None:
                 self.walk(t.asset_data, "asset_data", f, "tree-asset", None, 1)
             ad = t.animation_data
+            if ad is not None and ad.action is None and not len(ad.drivers) and not len(ad.nla_tracks):
+                ad = None  # animation data that animates nothing: as none
             f["animation_data"] = ("tree-animation", None if ad is None else (
                 ad.action.name if ad.action else None, len(ad.drivers),
                 tuple(sorted(d.data_path for d in ad.drivers))))
@@ -913,9 +940,9 @@ class Comparator:
             if op == "replace" and len(xs) == len(ys):
                 for x, y in zip(xs, ys):
                     if x.item_type == y.item_type and getattr(x, "in_out", None) == getattr(y, "in_out", None):
-                        for i, (u, v) in enumerate(zip(key(x), key(y))):
-                            if u != v:
-                                diff("interface", None, f"{item_label(x)}.{('item_type', 'in_out', 'name', 'socket_type', 'panel')[i]}", u, v)
+                        # Its name and type are said with its other properties; its panel here
+                        if key(x)[-1] != key(y)[-1]:
+                            diff("interface", None, f"{item_label(x)}.panel", key(x)[-1], key(y)[-1])
                         self.interface_item(x, y, diff)
                     else:
                         diff("interface-missing", None, item_label(x), item_label(x), None)
@@ -957,6 +984,11 @@ class Comparator:
             if kind == "interface" and p in fx and p in fy and floats(vx) and floats(vy) and close(vx, vy):
                 kind = "float-below-1e-6"
             diff(kind, None, f"{item_label(x)}.{p}", vx, vy)
+
+
+def unavailable(socket):
+    """A socket its node does not show in its present mode (the B of a Math node that adds…)."""
+    return not socket.enabled or socket.is_unavailable
 
 
 def summary(flat, collection):

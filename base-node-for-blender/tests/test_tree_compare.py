@@ -244,6 +244,9 @@ def test_links():
     def mute(b):
         next(l for l in b.links if l.from_node.bl_idname == "GeometryNodeInputPosition").is_muted = True
     changed(mute, "link-muted")
+    # Into the third input of a Math node that raises to a power, which it does not show
+    changed(lambda b: b.links.new(node(b, "ShaderNodeValue").outputs[0], node(b, "ShaderNodeMath").inputs[2]),
+            "link-unavailable")
 
     def swap(b):
         join = node(b, "GeometryNodeJoinGeometry")
