@@ -126,7 +126,7 @@ def highlight(code):
         cls = {"KEYWORD": "kw", "NUMBER": "num", "STRING": "str", "OPEN_STRING": "str", "COMMENT": "cmt",
                "COLOR": "num"}.get(t.kind)
         if t.kind == "IDENT":
-            cls = "fn" if nxt == "(" else "ty" if t.text[:1].isupper() else None
+            cls = "fn" if nxt in ("(", "[") else "ty" if t.text[:1].isupper() else None
         out.append(f'<span class="{cls}">{esc(text)}</span>' if cls else esc(text))
         pos = end
     out.append(esc(code[pos:]))
@@ -477,8 +477,12 @@ def node_signature(node):
     ins = [f"{s['key']}: {s['type']}" + (f" = {value_text(s['default'])}" if "default" in s else "") for s in node["inputs"]]
     outs = [f"{s['key']}: {s['type']}" for s in node["outputs"]]
     sets = [f"{p['name']}: {value_text(p['default'])}" for p in node["settings"] if "default" in p]
-    args = ins + sets
-    head = f"{node['name']}(" + (", ".join(args) if len(", ".join(args)) < 70 else "\n  " + ",\n  ".join(args) + "\n") + ")"
+
+    def listed(items, open_, close):
+        return open_ + (", ".join(items) if len(", ".join(items)) < 70 else "\n  " + ",\n  ".join(items) + "\n") + close
+
+    # Its settings in brackets, what a wire can feed in parentheses
+    head = node["name"] + (listed(sets, "[", "]") if sets else "") + listed(ins, "(", ")")
     return head + (" -> (" + ", ".join(outs) + ")" if outs else "")
 
 
@@ -497,7 +501,7 @@ def nodes_page(kind, backend, targets):
     body = [f"<h1>Nodes of a {kind} tree</h1>",
             f'<p class="lead">The {len(nodes)} nodes a <code>{kind} graph</code> can write in Blender {esc(backend["blender"])}, '
             "by the name the text calls them. The signature is a new node's: a setting may show or hide inputs "
-            "(<code>Math(operation: SINE)</code> has one). Keys repeat as Blender's identifiers (<code>Value_001</code>).</p>",
+            "(<code>Math[SINE]()</code> has one). Keys repeat as Blender's identifiers (<code>Value_001</code>).</p>",
             '<div class="kinds">' + " ".join(f'<a href="nodes-{k}.html"{" aria-current=page" if k == kind else ""}>{k}</a>' for k in KINDS) + "</div>",
             '<p><input id="filter" type="search" placeholder="Filter by name, label or bl_idname" '
             'aria-label="Filter nodes"> <span class="muted" id="count"></span></p>']

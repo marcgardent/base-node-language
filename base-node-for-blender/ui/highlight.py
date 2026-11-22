@@ -50,9 +50,14 @@ def classify(tokens, context=None):
     allowed_types = ctx.get("allowed_types")
 
     out = []
+    settings = 0  # depth of the brackets of a call's settings the token is in, on this line
     for i, t in enumerate(tokens):
         prev = tokens[i - 1].kind if i else None
         nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        if t.kind == "[":
+            settings += 1
+        elif t.kind == "]" and settings:
+            settings -= 1
         if t.kind == "KEYWORD":
             out.append((t, "literal" if t.text in ("true", "false") else "keyword"))
         elif t.kind in ("NUMBER", "STRING", "OPEN_STRING"):
@@ -82,7 +87,7 @@ def classify(tokens, context=None):
                     out.append((t, "warning"))
                 else:
                     out.append((t, t.text))
-            elif nxt is not None and nxt.kind == "(":
+            elif nxt is not None and nxt.kind in ("(", "["):
                 if t.text in declared:
                     out.append((t, "local_func" if mode == "origin" else "function"))
                 elif t.text in FUNCS:
@@ -94,6 +99,9 @@ def classify(tokens, context=None):
                         out.append((t, "node"))
             elif prev == "KEYWORD" and tokens[i - 1].text == "graph":
                 out.append((t, "local_func" if mode == "origin" else "node"))
+            elif settings and (nxt is None or nxt.kind != ":"):
+                # An enum value in a call's settings: `Math[ADD]`
+                out.append((t, "literal"))
     return out
 
 

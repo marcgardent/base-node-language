@@ -13,7 +13,7 @@ from .schema import TREE_KINDS, TYPES, key, snake
 from .sugar import COMPONENTS, FUNCS, VECTOR, WORDS
 
 # Typing one of these opens the suggestions by itself
-OPENERS = ("(", ",", ".", ":", "#")
+OPENERS = ("(", "[", ",", ".", ":", "#")
 
 # Keywords that a value follows
 KEYWORDS = ("return", "and", "or", "xor", "not")
@@ -25,7 +25,7 @@ class Item:
     label: str
     insert: str     # replaces the word being typed
     detail: str = ""
-    kind: str = ""  # node, graph, function, input, prop, enum, output, local, param, type, keyword, color
+    kind: str = ""  # node, graph, function, input, setting, enum, output, local, param, type, keyword, color
 
 
 @dataclass
@@ -40,9 +40,9 @@ class Outline:
 
 @dataclass(frozen=True)
 class Signature:
-    """The prototype of the call the cursor is in."""
+    """The prototype of the call the cursor is in: its inputs in parentheses, its settings in brackets."""
     name: str
-    inputs: tuple   # (key, type, state): state is "given", "current" or ""
+    inputs: tuple   # (key, type, state): state is "given", "current" or "". In brackets: the settings
     outputs: tuple  # (key, type)
     col: int = 0    # 1-based column of the call's name
 
@@ -380,15 +380,22 @@ class Context:
         t = self.t
         last = t[-1]
         new_line = last.line < self.line
-        call = self.open_call(body)
+        call, opener = self.open_at(body)
 
+        if opener == "[":
+            # In a call's settings: no wire feeds them, only literals and enum values
+            if last.kind == ":" and len(t) >= 3 and t[-2].kind == "IDENT" and t[-3].kind in ("[", ","):
+                return self.setting_values(call, t[-2].text)
+            if last.kind in ("[", ","):
+                return self.settings(call)
+            return []
         if last.kind == ".":
             return self.members(len(t) - 2, body)
         if last.kind == "|>":
             return [i for i in self.values(body) if i.kind in ("node", "graph", "function")]
         if call is not None and last.kind == ":" and len(t) >= 3 and t[-2].kind == "IDENT" \
                 and t[-3].kind in ("(", ","):
-            return self.arg_values(call, t[-2].text, body)
+            return self.values(body)
         if last.kind in ("(", ","):
             return (self.args(call) if call is not None else []) + self.values(body)
         if last.kind in OPERATORS or last.kind == ":" or (last.kind == "KEYWORD" and last.text in KEYWORDS):
@@ -402,18 +409,20 @@ class Context:
 
     def signature(self):
         body = self.body()
-        call = self.open_call(body) if body is not None else None
+        call, opener = self.open_at(body) if body is not None else (None, None)
         if call is None:
             return None
         t, name = self.t, self.t[call].text
+        if opener == "[":
+            return self.settings_signature(call)
         # What the call says so far: its named inputs, how many by position, the one being written
         named, current, positional = set(), None, 1 if call and t[call - 1].kind == "|>" else 0
         depth, starts = 0, True
-        for i in range(call + 1, len(t)):
+        for i in range(self.inputs_at(call) or call + 1, len(t)):
             k = t[i].kind
-            if k in ("(", "{"):
+            if k in ("(", "{", "["):
                 depth += 1
-            elif k in (")", "}"):
+            elif k in (")", "}", "]"):
                 depth -= 1
             if depth != 1 or k == "(":
                 continue
@@ -434,8 +443,6 @@ class Context:
                 return None
             ins, outs = self.schema.sockets(self.kind, spec, props)
             inputs = [(k, s.type) for k, s in keyed(ins)]
-            inputs += [(p.name, p.kind.lower()) for p in spec.props.values()]
-            inputs += [(p.name, p.kind.lower()) for p in spec.data.values()]
             outputs = [(k, s.type) for k, s in keyed(outs)]
         by_position = [k for k, _ty in inputs if k not in named][:positional]
         state = lambda k: "current" if k == current else "given" if k in named or k in by_position else ""
@@ -449,17 +456,55 @@ class Context:
 
     def open_call(self, body):
         """Index of the name of the innermost unclosed call, or None."""
+        return self.open_at(body)[0]
+
+    def open_at(self, body):
+        """(index of the name of the innermost unclosed call, "(" or "[": in its inputs or its settings),
+        or (None, the bracket open there)."""
         stack = []
         for i in range(body + 1, len(self.t)):
             k = self.t[i].kind
-            if k == "(":
+            if k in ("(", "["):
                 stack.append(i)
-            elif k == ")" and stack:
+            elif k in (")", "]") and stack:
                 stack.pop()
         if not stack:
-            return None
-        i = stack[-1] - 1
-        return i if self.t[i].kind == "IDENT" else None
+            return None, None
+        at = stack[-1]
+        return self.name_before(at), self.t[at].kind
+
+    def name_before(self, at):
+        """The index of the call's name before its `(` or `[` at `at`: past its settings and its types."""
+        t = self.t
+        i = at - 1
+        if t[at].kind == "(" and i >= 0 and t[i].kind == "]":
+            depth = 0
+            while i >= 0:
+                depth += {"]": 1, "[": -1}.get(t[i].kind, 0)
+                if depth == 0:
+                    break
+                i -= 1
+            i -= 1
+        if i >= 0 and t[i].kind == ">":
+            while i >= 0 and t[i].kind != "<":
+                i -= 1
+            i -= 1
+        return i if i >= 0 and t[i].kind == "IDENT" else None
+
+    def inputs_at(self, name_at):
+        """The index of the `(` of the call whose name is at `name_at`, past its types and settings, or None."""
+        t = self.t
+        i = name_at + 1
+        for opener, closer in (("<", ">"), ("[", "]")):
+            if i < len(t) and t[i].kind == opener:
+                depth = 0
+                while i < len(t):
+                    depth += {opener: 1, closer: -1}.get(t[i].kind, 0)
+                    if depth == 0:
+                        break
+                    i += 1
+                i += 1
+        return i if i < len(t) and t[i].kind == "(" else None
 
     # What may come there
 
@@ -507,26 +552,62 @@ class Context:
         return name
 
     def call_props(self, name_at):
-        """Props written in the call at `name_at`, for the sockets they make available."""
-        t = self.t
-        spec = self.schema.node(self.kind, t[name_at].text)
-        props, given = {}, set()
+        """(spec, the settings its brackets write, for the sockets they make available, the inputs given
+        by name in its parentheses)."""
+        spec = self.schema.node(self.kind, self.t[name_at].text)
+        props = self.written_settings(name_at, spec)[0] if spec else {}
+        return spec, props, self.named_in(self.inputs_at(name_at))
+
+    def named_in(self, at, closer=")"):
+        """The names given `name: value` in the parentheses or brackets opened at `at`."""
+        t, given = self.t, set()
+        if at is None:
+            return given
         depth = 0
-        for i in range(name_at + 1, len(t)):
+        for i in range(at, len(t)):
             k = t[i].kind
-            depth += {"(": 1, ")": -1}.get(k, 0)
+            depth += {"(": 1, "[": 1, ")": -1, "]": -1}.get(k, 0)
             if depth == 0:
                 break
-            if depth == 1 and k == "IDENT" and i + 1 < len(t) and t[i + 1].kind == ":" and t[i - 1].kind in ("(", ","):
+            if depth == 1 and k == "IDENT" and i + 1 < len(t) and t[i + 1].kind == ":" and t[i - 1].kind in ("(", "[", ","):
                 given.add(t[i].text)
-                prop = spec.props.get(t[i].text) if spec else None
-                if prop and i + 2 < len(t):
-                    v = t[i + 2]
-                    if prop.kind == "ENUM" and v.kind in ("IDENT", "STRING") and (not prop.items or v.text in prop.items):
-                        props[prop.name] = v.text
-                    elif prop.kind == "BOOLEAN" and v.text in ("true", "false"):
-                        props[prop.name] = v.text == "true"
-        return spec, props, given
+        return given
+
+    def written_settings(self, name_at, spec):
+        """({setting: value} of the enum and boolean settings the call's brackets write, the settings given),
+        a value by position going to the first enum setting that holds it."""
+        t = self.t
+        props, given = {}, set()
+        at = name_at + 1
+        if at < len(t) and t[at].kind == "<":
+            while at < len(t) and t[at].kind != ">":
+                at += 1
+            at += 1
+        if at >= len(t) or t[at].kind != "[":
+            return props, given
+        depth = 0
+        for i in range(at, len(t)):
+            k = t[i].kind
+            depth += {"(": 1, "[": 1, ")": -1, "]": -1}.get(k, 0)
+            if depth == 0:
+                break
+            if depth != 1 or t[i - 1].kind not in ("[", ","):
+                continue
+            if k == "IDENT" and i + 2 < len(t) and t[i + 1].kind == ":":
+                given.add(t[i].text)
+                prop, v = spec.props.get(t[i].text), t[i + 2]
+            elif k in ("IDENT", "STRING"):
+                prop = next((p for p in spec.props.values() if p.kind == "ENUM" and t[i].text in p.items), None)
+                v = t[i]
+                if prop is not None:
+                    given.add(prop.name)
+            else:
+                continue
+            if prop and prop.kind == "ENUM" and v.kind in ("IDENT", "STRING") and (not prop.items or v.text in prop.items):
+                props[prop.name] = v.text
+            elif prop and prop.kind == "BOOLEAN" and v.text in ("true", "false"):
+                props[prop.name] = v.text == "true"
+        return props, given
 
     def args(self, call):
         name = self.t[call].text
@@ -537,18 +618,39 @@ class Context:
         if spec is None:
             return []
         inputs, _ = self.schema.sockets(self.kind, spec, props)
-        out = [Item(k, k + ": ", s.type, "input") for k, s in keyed(inputs) if k not in given]
-        out += [Item(p.name, p.name + ": ", p.kind.lower(), "prop") for p in spec.props.values() if p.name not in given]
+        return [Item(k, k + ": ", s.type, "input") for k, s in keyed(inputs) if k not in given]
+
+    def settings(self, call):
+        """In a call's brackets: the values of its enum settings not written yet, by position, then the
+        names of its other settings."""
+        spec = self.schema.node(self.kind, self.t[call].text) if call is not None else None
+        if spec is None:
+            return []
+        _props, given = self.written_settings(call, spec)
+        out = [Item(v, v if v.isidentifier() else f'"{v}"', p.name, "enum")
+               for p in spec.props.values() if p.kind == "ENUM" and p.name not in given for v in p.items]
+        out += [Item(p.name, p.name + ": ", p.kind.lower(), "setting")
+                for p in [*spec.props.values(), *spec.data.values()] if p.name not in given]
         return out
 
-    def arg_values(self, call, arg, body):
-        spec = self.schema.node(self.kind, self.t[call].text)
-        prop = spec.props.get(arg) if spec else None
+    def setting_values(self, call, name):
+        spec = self.schema.node(self.kind, self.t[call].text) if call is not None else None
+        prop = spec.props.get(name) if spec else None
         if prop and prop.kind == "ENUM" and prop.items:
             return [Item(v, v if v.isidentifier() else f'"{v}"', prop.name, "enum") for v in prop.items]
         if prop and prop.kind == "BOOLEAN":
             return [Item(b, b, kind="keyword") for b in ("true", "false")]
-        return self.values(body)
+        return []
+
+    def settings_signature(self, call):
+        """The settings of the node whose brackets the cursor is in, as a Signature."""
+        spec = self.schema.node(self.kind, self.t[call].text)
+        if spec is None:
+            return None
+        _props, given = self.written_settings(call, spec)
+        settings = [*spec.props.values(), *spec.data.values()]
+        return Signature(spec.name, tuple((p.name, p.kind.lower(), "given" if p.name in given else "")
+                                          for p in settings), (), self.t[call].col)
 
     def members(self, at, body):
         t = self.t

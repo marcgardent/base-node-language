@@ -55,8 +55,8 @@ def accept(context):
     row = Popup.line - 1
     text.select_set(row, Popup.start - 1, row, text.current_character)
     bpy.ops.text.insert(text=item.insert)
-    # A call or a prop has more to say right after: its inputs, its values
-    if item.insert.endswith("(") or item.kind == "prop":
+    # A call or a setting has more to say right after: its inputs, its values
+    if item.insert.endswith("(") or item.kind == "setting":
         Popup.selected = 0
         return refresh(text)
     close()
@@ -153,7 +153,7 @@ def draw_overlay():
 # The inputs of the call stand apart from every other suggestion
 ARGUMENT = (1.00, 0.50, 0.72)
 KIND_COLORS = {
-    "input": ARGUMENT, "prop": ARGUMENT, "enum": COLORS["literal"], "keyword": COLORS["keyword"],
+    "input": ARGUMENT, "setting": ARGUMENT, "enum": COLORS["literal"], "keyword": COLORS["keyword"],
     "node": COLORS["node"], "function": COLORS["function"], "graph": COLORS["local_func"],
 }
 
@@ -227,8 +227,8 @@ def draw_popup(space, gap_below=0, gap_above=0):
         color = k.kind(item)
         row_top = top - pad - lh * n
         draw.rects([(x + pad, row_top - lh + pad, x + pad + mark, row_top - pad)], (*color, 1.0))
-        is_arg = item.kind in ("input", "prop")
-        if n and not is_arg and shown[n - 1].kind in ("input", "prop"):
+        is_arg = item.kind in ("input", "setting")
+        if n and not is_arg and shown[n - 1].kind in ("input", "setting"):
             # Where the inputs of the call end and the rest begins
             draw.rects([(x + pad, row_top, x + width - pad, row_top + 1)], (*k.fg, 0.3))
         blf.color(0, *(color if is_arg or item.kind in ("enum", "keyword") else k.fg), 1.0)
