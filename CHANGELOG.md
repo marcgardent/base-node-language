@@ -7,6 +7,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] - 2026-11-22
+
 ### Blender add-on
 
 - Fixed: Blender's own font reads as `"Bfont Regular"` whatever the file names it. A library

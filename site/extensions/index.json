@@ -8,7 +8,7 @@
       "id": "base_node",
       "name": "Base Node",
       "tagline": "Nodes as Text (.bn) \u2014 Read and write node trees as functions",
-      "version": "1.0.0-rc.1",
+      "version": "1.0.0-rc.2",
       "type": "add-on",
       "maintainer": "Marc Gardent",
       "license": [
@@ -30,9 +30,9 @@
         "Text Editor",
         "Import-Export"
       ],
-      "archive_url": "./base_node-1.0.0-rc.1.zip",
-      "archive_size": 250092,
-      "archive_hash": "sha256:80f8bcd7595c77e27610d732e2497a21a6d8a0e4ac734ab4f0e934e0cec985e3"
+      "archive_url": "./base_node-1.0.0-rc.2.zip",
+      "archive_size": 251982,
+      "archive_hash": "sha256:9cad279909321addedeed4f7160565bc58b5608366073b2acf6219ae91d97503"
     }
   ]
 }
