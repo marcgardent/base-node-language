@@ -1,0 +1,25 @@
+geometry graph easeCirc(
+    Value: Float(hide_value: true) = 0.5 in 0.0..1.0,
+    EaseIn: Bool = true,
+    EaseOut: Bool
+) -> (Value: Float) {
+  {
+    math = 1.0 - sqrt(1.0 - pow(Value, 2.0))
+  }
+  {
+    math_2 = sqrt(1.0 - pow(Value - 1.0, 2.0))
+  }
+  {
+    compare = Value < 0.5 @ hide
+    switch = compare
+      ? (1.0 - sqrt(1.0 - pow(Value * 2.0, 2.0))) / 2.0
+      : (sqrt(1.0 - pow(Math[MULTIPLY_ADD](Value: Value, Value_001: -2.0, Value_002: 2.0), 2.0))
+          + 1.0)
+        / 2.0
+  }
+  switch_2 = EaseIn ? math : Value @ hide
+  switch_3 = EaseOut ? math_2 : switch_2 @ hide
+  boolean_math = EaseIn and EaseOut @ hide
+  switch_4 = boolean_math ? switch : switch_3 @ hide
+  return (Value: switch_4)
+}

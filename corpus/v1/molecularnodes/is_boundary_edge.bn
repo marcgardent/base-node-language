@@ -1,0 +1,10 @@
+geometry graph "Is Boundary Edge"(
+    Mask: Bool(hide_value: true) = true
+) -> (Selection: Bool(description: "The calculated selection")) {
+  edge_vertices = EdgeVertices()
+  return (
+    Selection: EdgeNeighbors() == 1
+      and EvaluateOnDomain[EDGE, BOOLEAN](
+        value: EvaluateAtIndex[BOOLEAN](value: Mask, index: edge_vertices.vertex_index_1)
+          and EvaluateAtIndex[BOOLEAN](value: Mask, index: edge_vertices.vertex_index_2)))
+}

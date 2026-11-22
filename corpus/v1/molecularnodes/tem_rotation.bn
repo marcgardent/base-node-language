@@ -1,0 +1,35 @@
+geometry graph "Rotation from ZYZ"(
+    Phi: Float(
+      subtype: ANGLE,
+      description: "First rotation around the Z axis") in -10000.0..10000.0,
+    Theta: Float(
+      subtype: ANGLE,
+      description: "Second rotation around the Y axis") in -10000.0..10000.0,
+    Psi: Float(
+      subtype: ANGLE,
+      description: "Third rotation around the Z axis") in -10000.0..10000.0
+) -> (Rotation: Rotation(description: "The combined Rotation")) {
+  "Combine a rotation defined as ZYZ common in electron tomography"
+  return (
+    Rotation: RotateRotation(
+      rotation: RotateRotation(
+        rotation: AxisAngleToRotation(angle: -Phi),
+        rotate_by: AxisAngleToRotation(axis: (0.0, 1.0, 0.0), angle: -Theta)),
+      rotate_by: AxisAngleToRotation(angle: -Psi)))
+}
+
+geometry graph "TEM Rotation"(
+    Phi: String(optional_label: true) = "rlnAngleRot",
+    Theta: String(optional_label: true) = "rlnAngleTilt",
+    Psi: String(optional_label: true) = "rlnAnglePsi"
+) -> (Rotation: Rotation(description: "The combined Rotation"), Boolean: Bool) {
+  named_attribute = NamedAttribute(name: Phi)
+  named_attribute_2 = NamedAttribute(name: Psi)
+  named_attribute_3 = NamedAttribute(name: Theta)
+  return (
+    Rotation: rotation_from_zyz(
+      phi: radians(named_attribute.attribute),
+      theta: radians(named_attribute_3.attribute),
+      psi: radians(named_attribute_2.attribute)),
+    Boolean: named_attribute.exists and (named_attribute_3.exists and named_attribute_2.exists))
+}

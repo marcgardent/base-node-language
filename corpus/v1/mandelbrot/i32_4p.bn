@@ -1,0 +1,86 @@
+geometry graph "i32 mBeB"() -> (mBits: Int, eBias: Int) {
+  mBits = 32 @ "mBits" #83314a
+  eBias = 65536 @ "eBias" #83314a
+  return (mBits: mBits, eBias: eBias)
+}
+
+geometry graph "i32 mBits"(
+    Menu: Menu(optional_label: true) = "Bit Length",
+    Value: Int
+) -> (Result: Int) {
+  compare = Value >= 65536 @ #3b5d3d
+  bit_math = BitMath[SHIFT](a: Value, shift: -16) @ #83314a
+  switch = compare ? bit_math : Value
+  switch_2 = compare ? 16 : 0
+  compare_2 = switch >= 256 @ #3b5d3d
+  bit_math_2 = BitMath[SHIFT](a: switch, shift: -8) @ #83314a
+  switch_3 = compare_2 ? bit_math_2 : switch
+  switch_4 = compare_2 ? IntegerMath[ADD](Value: switch_2, Value_001: 8) : switch_2
+  compare_3 = switch_3 >= 16 @ #3b5d3d
+  bit_math_3 = BitMath[SHIFT](a: switch_3, shift: -4) @ #83314a
+  switch_5 = compare_3 ? bit_math_3 : switch_3
+  switch_6 = compare_3 ? IntegerMath[ADD](Value: switch_4, Value_001: 4) : switch_4
+  compare_4 = switch_5 >= 4 @ #3b5d3d
+  bit_math_4 = BitMath[SHIFT](a: switch_5, shift: -2) @ #83314a
+  switch_7 = compare_4 ? IntegerMath[ADD](Value: switch_6, Value_001: 2) : switch_6
+  compare_5 = (compare_4 ? bit_math_4 : switch_5) >= 2 @ #3b5d3d
+  switch_8 = Value < 0 ? 31 : compare_5 ? IntegerMath[ADD](Value: switch_7, Value_001: 1) : switch_7
+  return (
+    Result: Value != 0
+      ? MenuSwitch(
+        menu: Menu,
+        "Bit Length": IntegerMath[ADD](Value: switch_8, Value_001: 1),
+        "Log Base 2": switch_8).output
+      : 0)
+}
+
+geometry graph "i32 4p"(
+    "Position" {},
+    "Parameters" {
+        Resolution: Int(force_non_field: true, structure_type: SINGLE) = 128 in 32..16384
+    }
+) -> (
+    "Position" {
+        Real: Bundle,
+        Imaginary: Bundle
+    }
+) {
+  integer_math = IntegerMath[SUBTRACT](Value: Resolution, Value_001: 1)
+  integer_math_2 = IntegerMath[SUBTRACT](
+    Value: IntegerMath[MULTIPLY](
+      Value: IntegerMath[DIVIDE](Value: Index(), Value_001: Resolution),
+      Value_001: 2),
+    Value_001: integer_math)
+  integer_math_3 = IntegerMath[SUBTRACT](
+    Value: IntegerMath[MULTIPLY](
+      Value: IntegerMath[MODULO](Value: Index(), Value_001: Resolution),
+      Value_001: 2),
+    Value_001: integer_math)
+  integer_math_4 = IntegerMath[ABSOLUTE](value: integer_math_2)
+  group = i32_mbeb() @ #3b5d3d
+  group_2 = i32_mbits(menu: "Log Base 2", value: Resolution) @ #3b5d3d
+  integer_math_6 = IntegerMath[SUBTRACT](Value: 31, Value_001: group_2)
+  group_3 = i32_mbits(value: integer_math_4) @ #3b5d3d
+  integer_math_5 = IntegerMath[SUBTRACT](Value: group_2, Value_001: group_3)
+  bit_math = BitMath[SHIFT](a: integer_math_4, shift: integer_math_5) @ #83314a
+  integer_math_7 = IntegerMath[ABSOLUTE](value: integer_math_3)
+  bit_math_3 = BitMath[SHIFT](a: bit_math, shift: integer_math_6) @ #83314a
+  group_4 = i32_mbeb() @ #3b5d3d
+  group_5 = i32_mbits(value: integer_math_7) @ #3b5d3d
+  integer_math_8 = IntegerMath[SUBTRACT](Value: group_2, Value_001: group_5)
+  bit_math_2 = BitMath[SHIFT](a: integer_math_7, shift: integer_math_8) @ #83314a
+  bit_math_4 = BitMath[SHIFT](a: bit_math_2, shift: integer_math_6) @ #83314a
+  return (
+    Real: CombineBundle(
+      m: bit_math_3,
+      e: IntegerMath[ADD](
+        Value: group.ebias,
+        Value_001: IntegerMath[SUBTRACT](Value: 2, Value_001: integer_math_5)),
+      s: integer_math_2 < 0),
+    Imaginary: CombineBundle(
+      m: bit_math_4,
+      e: IntegerMath[ADD](
+        Value: group_4.ebias,
+        Value_001: IntegerMath[SUBTRACT](Value: 2, Value_001: integer_math_8)),
+      s: integer_math_3 < 0))
+}

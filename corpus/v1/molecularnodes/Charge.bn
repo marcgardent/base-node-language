@@ -1,0 +1,23 @@
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph Charge(
+    Index: Int = Index() in 0..
+) -> (
+    charge: Float(
+      description: "Read the `charge` attribute from the geometry, only present when the file or topology provided charges. 0.0 if the geometry has no `charge` attribute")
+) {
+  "Read the `charge` attribute from the geometry. The attribute is only present when the file or topology provided charges (partial charges from a simulation topology, formal charges from a structure file's charge column or `pdbx_formal_charge`). Outputs 0.0 when the geometry has no `charge` attribute."
+  return (charge: EvaluateAtIndex(value: fallback_float(name: "charge"), index: Index))
+}

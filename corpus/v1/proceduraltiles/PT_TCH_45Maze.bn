@@ -1,0 +1,54 @@
+shader graph PT_TCH_45Maze(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Thickness: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Seed: Int,
+    "UV oriented": Bool
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, "Signed edge": Float, Masks: Int) {
+  vector_math = Vector * Scale
+  vector_math_2 = floor(vector_math)
+  math = WhiteNoiseTexture["2D"](vector: vector_math_2 + Seed).value > 0.5
+  math_2 = math * 1.5707964
+  vector_rotate = VectorRotate[invert: true](
+    vector: fract(vector_math),
+    center: (0.5, 0.5, 0.0),
+    angle: math_2)
+  math_3 = vector_rotate.x + vector_rotate.y - 1.0
+  math_4 = abs(math_3)
+  math_6 = Math[PINGPONG](Value: vector_math.x) @ hide
+  math_7 = Math[PINGPONG](Value: vector_math.y) @ hide
+  map_range = MapRange(value: Thickness, to_max: 0.707105)
+  math_5 = Math[PINGPONG](Value: math_4) * 1.4142135 - map_range
+  math_8 = math_3 > 0.0
+  math_9 = math_4 * 1.4142135 @ hide
+  map_range_2 = MapRange(value: Thickness, to_max: 0.5)
+  math_10 = 2.0 / 3.0 * (map_range_2 * map_range_2 - map_range_2 + 1.0) * 0.5
+  combine_xyz = CombineXYZ(x: math_10, y: math_10)
+  vector_math_3 = VectorRotate(
+      vector: math_9 > map_range
+        ? (math_5 > 0.0
+          ? (math_8 ? (1.0, 1.0, 0.0) - combine_xyz : combine_xyz)
+          : math_8 ? (1.0, 1.0, 0.0) : (0.0, 0.0, 0.0))
+        : (0.5, 0.5, 0.0),
+      center: (0.5, 0.5, 0.0),
+      angle: math_2)
+    + vector_math_2
+  vector_math_4 = vector_math_3 / Scale
+  vector_math_5 = vector_math_3 + (1000.0, 1000.0, 0.0) @ hide
+  vector_math_6 = (Vector - vector_math_4) * 20.4
+  map_range_3 = MapRange(
+    value: math,
+    from_min: 1.0,
+    from_max: 0.0,
+    to_min: -0.7853982,
+    to_max: 0.7853982) @ hide
+  math_11 = min(abs(math_5), min(math_6, math_7) * 2.0) * 0.5 / Scale @ hide
+  math_12 = math_5 / Scale @ hide
+  return (
+    Position: vector_math_4,
+    UV: uv_oriented ? VectorRotate(vector: vector_math_6, angle: map_range_3) : vector_math_6,
+    Color: WhiteNoiseTexture(vector: vector_math_5).color,
+    Edge: math_11,
+    "Signed edge": math_12,
+    Masks: math_5 > 0.0)
+}

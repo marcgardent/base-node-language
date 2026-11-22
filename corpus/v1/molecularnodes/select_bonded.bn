@@ -1,0 +1,27 @@
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Select Bonded"(
+    Selection: Bool(description: "Selection of atoms to apply this node to", hide_value: true),
+    Depth: Int(description: "Number of bonds to expand the selection by") = 1 in 0..
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Bonded: Bool(description: "Expanded Selection that excludes the original selection")
+) {
+  shortest_edge_paths = ShortestEdgePaths(end_vertex: Selection)
+  compare = Compare[LESS_EQUAL, INT](a: shortest_edge_paths.total_cost, b: Depth)
+  compare_2 = Compare[GREATER_THAN, INT](a: shortest_edge_paths.total_cost)
+  return (
+    Selection: boolean_andor(and_: compare, or_: Selection, boolean: compare_2).boolean,
+    Bonded: compare and compare_2)
+}

@@ -1,0 +1,27 @@
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Unit Convert"(
+    "Distance Type": Menu(
+      description: "What unit to scale the value to",
+      optional_label: true) = Angstrom,
+    From: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (
+    World: Float(description: "The value that has been scaled appropriately for the world space")
+) {
+  math = From * mn_world_scale()
+  math_2 = math * 10.0
+  return (
+    World: MenuSwitch(
+      menu: distance_type,
+      Angstrom: math,
+      Nanometre: math_2,
+      Micrometre: math_2 * 1000.0).output)
+}
+
+geometry graph "Angstrom to World"(Angstrom: Float = 3.0 in -10000.0..10000.0) -> (World: Float) {
+  return (World: unit_convert(from: Angstrom))
+}

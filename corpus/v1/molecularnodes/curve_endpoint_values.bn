@@ -1,0 +1,25 @@
+geometry graph "Curve Endpoint Values"(
+    "Start Size": Int(description: "The size of the starting points of the curve") = 1 in 0..,
+    "Start Value": Int(
+      description: "The value to output for the starting points of the curve") = 1 in -2147483647..,
+    "Other Value": Int(
+      description: "The value for the points which aren't part of the start or end points") in -2147483647..,
+    "End Size": Int(description: "The size of the end points") = 1 in 0..,
+    "End Value": Int(
+      description: "The value that is returned for the end points of the curve") = -1
+) -> (
+    Value: Int(
+      description: "The value for the point, determined by the inputs if it is in the start, end or 'other' region"),
+    "Start Selection": Bool(
+      description: "The `n` points at the start of a spline determined by `Start Size`"),
+    "End Selection": Bool(
+      description: "The `n` points at the end of a spline determined by `End Size`")
+) {
+  "Output a different integer value for the endpoints of a curve and the middle of a curve"
+  endpoint_selection = EndpointSelection(start_size: 0, end_size: end_size)
+  endpoint_selection_2 = EndpointSelection(start_size: start_size, end_size: 0)
+  return (
+    Value: endpoint_selection ? end_value : endpoint_selection_2 ? start_value : other_value,
+    "Start Selection": endpoint_selection_2,
+    "End Selection": endpoint_selection)
+}

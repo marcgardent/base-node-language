@@ -1,0 +1,11 @@
+geometry(is_modifier: false) graph "XPBD Finalise"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE)
+) -> Geometry {
+  return StoreNamedAttribute[FLOAT_VECTOR](
+    Geometry,
+    selection: Selection,
+    name: "velocity",
+    value: (Position() - NamedAttribute[FLOAT_VECTOR](name: "p_i").attribute) / deltaT)
+}

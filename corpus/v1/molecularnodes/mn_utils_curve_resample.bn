@@ -1,0 +1,50 @@
+geometry(is_modifier: false) graph ".MN_utils_curve_resample"(
+    Geometry: Geometry,
+    Offset: Float = 2.3 in -10000.0..10000.0,
+    Length: Float(subtype: DISTANCE) = 0.36 in 0.01..,
+    "Field Float": Float(hide_value: true),
+    "Field Int": Int(hide_value: true),
+    "Field Vec": Vector(hide_value: true)
+) -> (
+    Geometry: Geometry,
+    Position: Vector,
+    Tangent: Vector,
+    Normal: Vector,
+    "Field Float": Float,
+    "Field Int": Int,
+    "Field Vec": Vector
+) {
+  capture_attribute = Geometry
+    |> ResampleCurve[keep_last_segment: false](mode: "Length", count: 18, length: Length)
+    |> CaptureAttribute[CURVE](Value: Index())
+  accumulate_field = AccumulateField(value: Length, group_id: capture_attribute.value)
+  switch = Offset == 0.0
+    ? accumulate_field.trailing
+    : Math[WRAP](
+      Value: accumulate_field.trailing + Offset,
+      Value_001: SplineLength().length,
+      Value_002: 0.0)
+  sample_curve = SampleCurve[LENGTH](
+    capture_attribute.geometry,
+    value: field_float,
+    length: switch,
+    curve_index: capture_attribute.value)
+  return (
+    Geometry: capture_attribute.geometry
+      |> ResampleCurve[keep_last_segment: false](count: SplineLength().point_count - 1.0)
+      |> SetPosition(position: sample_curve.position),
+    Position: sample_curve.position,
+    Tangent: sample_curve.tangent,
+    Normal: sample_curve.normal,
+    "Field Float": sample_curve.value,
+    "Field Int": SampleCurve[LENGTH, INT](
+      capture_attribute.geometry,
+      value: field_int,
+      length: switch,
+      curve_index: capture_attribute.value).value,
+    "Field Vec": SampleCurve[LENGTH, FLOAT_VECTOR](
+      capture_attribute.geometry,
+      value: field_vec,
+      length: switch,
+      curve_index: capture_attribute.value).value)
+}

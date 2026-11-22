@@ -1,0 +1,154 @@
+shader graph PT_ConvergingLeafs(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0 in -10000.0..10000.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  combine_xyz = CombineXYZ(x: 1.7320508, y: 1.0)
+  {
+    combine_xyz_2 = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k" hide
+    separate_xyz_2 = SeparateXYZ(vector: combine_xyz_2) @ hide
+    math_9 = -separate_xyz_2.z @ hide
+    vector_math_24 = combine_xyz_2 * (1.0, 1.0, 0.0) @ hide
+  }
+  {
+    combine_xyz_4 = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k" hide
+    separate_xyz_5 = SeparateXYZ(vector: combine_xyz_4) @ hide
+    math_13 = -separate_xyz_5.z @ hide
+    vector_math_32 = combine_xyz_4 * (1.0, 1.0, 0.0) @ hide
+  }
+  {
+    value = 0.5235988
+    math_27 = cos(value)
+    math_28 = sin(value)
+    value_3 = 0.3954
+  }
+  "edge" {
+    value_2 = 1.0
+  }
+  math_34 = Scale * 0.57735
+  vector_math_10 = Vector * math_34
+  {
+    vector_math_11 = vector_math_10 / combine_xyz
+    vector_math_12 = (fract(vector_math_11) - (0.5, 0.5, 0.0)) * combine_xyz
+    vector_math_16 = floor(vector_math_11) * combine_xyz + combine_xyz * 0.5
+    vector_math_17 = abs(vector_math_12) @ hide
+    vector_math_19 = vector_math_24 ⋅ vector_math_17 @ hide
+    math_8 = min(vector_math_19, 0.0) @ hide
+    vector_math_20 = vector_math_24 * math_8 @ hide
+    vector_math_21 = vector_math_20 * 2.0 @ hide
+    vector_math_18 = vector_math_17 - vector_math_21 @ hide
+    separate_xyz = SeparateXYZ(vector: vector_math_18) @ hide
+    clamp = Clamp(value: separate_xyz.x, min: math_9, max: separate_xyz_2.z) @ hide
+    combine_xyz_3 = CombineXYZ(x: clamp, y: 0.5) @ "k" hide
+    vector_math_22 = vector_math_18 - combine_xyz_3 @ hide
+    vector_math_23 = length(vector_math_22) @ hide
+    separate_xyz_3 = SeparateXYZ(vector: vector_math_22) @ hide
+    math_11 = separate_xyz_3.y > 0.0 @ hide
+    mix = math_11 ? 1.0 : -1.0 @ hide
+    math_10 = vector_math_23 * mix @ hide
+  }
+  math_7 = math_10 > 0.0
+  {
+    vector_math_13 = (vector_math_10 - combine_xyz * 0.5) / combine_xyz
+    vector_math_14 = (fract(vector_math_13) - (0.5, 0.5, 0.0)) * combine_xyz
+    vector_math_15 = floor(vector_math_13) * combine_xyz + combine_xyz
+    vector_math_25 = abs(vector_math_14) @ hide
+    vector_math_27 = vector_math_32 ⋅ vector_math_25 @ hide
+    math_12 = min(vector_math_27, 0.0) @ hide
+    vector_math_28 = vector_math_32 * math_12 @ hide
+    vector_math_29 = vector_math_28 * 2.0 @ hide
+    vector_math_26 = vector_math_25 - vector_math_29 @ hide
+    separate_xyz_4 = SeparateXYZ(vector: vector_math_26) @ hide
+    clamp_2 = Clamp(value: separate_xyz_4.x, min: math_13, max: separate_xyz_5.z) @ hide
+    combine_xyz_5 = CombineXYZ(x: clamp_2, y: 0.5) @ "k" hide
+    vector_math_30 = vector_math_26 - combine_xyz_5 @ hide
+    vector_math_31 = length(vector_math_30) @ hide
+    separate_xyz_6 = SeparateXYZ(vector: vector_math_30) @ hide
+    math_15 = separate_xyz_6.y > 0.0 @ hide
+    mix_2 = math_15 ? 1.0 : -1.0 @ hide
+    math_14 = vector_math_31 * mix_2 @ hide
+  }
+  vector_math = (math_7 ? vector_math_14 : vector_math_12) * 1.7320508
+  {
+    vector_rotate = VectorRotate(vector: vector_math, angle: -2.0943952)
+    vector_math_3 = CombineXYZ(x: 1.0) * vector_rotate.x
+      + CombineXYZ(x: 0.57735026, y: 1.1547) * vector_rotate.y
+      - (0.5, 0.5, 0.0)
+    vector_math_2 = CombineXYZ(x: 1.0) * vector_math_3.x
+      + CombineXYZ(x: -0.5, y: 0.866025) * vector_math_3.y
+  }
+  {
+    vector_rotate_2 = VectorRotate(vector: vector_math, angle: 2.0943952)
+    vector_math_4 = CombineXYZ(x: 1.0) * vector_rotate_2.x
+      + CombineXYZ(x: 0.57735026, y: 1.1547) * vector_rotate_2.y
+    math = vector_math_4.x > 0.0 @ hide
+    math_2 = vector_math_4.y > 0.0 @ hide
+    math_3 = math * math_2 @ hide
+    vector_math_6 = vector_math_4 - (0.5, 0.5, 0.0)
+    vector_math_5 = CombineXYZ(x: 1.0) * vector_math_6.x
+      + CombineXYZ(x: -0.5, y: 0.866025) * vector_math_6.y
+  }
+  {
+    vector_math_7 = CombineXYZ(x: 1.0) * vector_math.x
+      + CombineXYZ(x: 0.57735026, y: 1.1547) * vector_math.y
+    math_4 = vector_math_7.x > 0.0 @ hide
+    math_5 = vector_math_7.y > 0.0 @ hide
+    math_6 = math_4 * math_5 @ hide
+    vector_math_9 = vector_math_7 - (0.5, 0.5, 0.0)
+    vector_math_8 = CombineXYZ(x: 1.0) * vector_math_9.x
+      + CombineXYZ(x: -0.5, y: 0.866025) * vector_math_9.y
+  }
+  vector_math_33 = Mix[RGBA](
+      factor: math_6,
+      a: Mix[RGBA](factor: math_3, a: vector_math_2, b: vector_math_5),
+      b: vector_math_8)
+    + (0.25, 0.433013, 0.0)
+  "edge" .. {
+    vector_math_34 = vector_math_33 - (-1.0, 0.0, 0.0) @ hide
+    vector_math_35 = vector_math_33 - (1.0, 0.0, 0.0) @ hide
+    vector_math_36 = vector_math_33 - (0.5, 0.8660254, 0.0) @ hide
+    vector_math_37 = vector_math_33 - (2.0, 0.0, 0.0) @ hide
+    vector_math_38 = vector_math_33 - (1.0, 1.7320508, 0.0) @ hide
+    vector_math_41 = length(vector_math_34) @ hide
+    math_29 = vector_math_41 - value_2 @ hide
+    math_16 = abs(math_29) @ hide
+    vector_math_42 = length(vector_math_35) @ hide
+    math_30 = vector_math_42 - value_2 @ hide
+    math_17 = abs(math_30) @ hide
+    math_24 = min(math_16, math_17) @ hide
+    vector_math_43 = length(vector_math_36) @ hide
+    math_31 = vector_math_43 - value_2 @ hide
+    math_18 = abs(math_31) @ hide
+    math_23 = min(math_24, math_18) @ hide
+    vector_math_44 = length(vector_math_37) @ hide
+    math_32 = vector_math_44 - value_2 @ hide
+    math_19 = abs(math_32) @ hide
+    math_22 = min(math_23, math_19) @ hide
+    vector_math_45 = length(vector_math_38) @ hide
+    math_33 = vector_math_45 - value_2 @ hide
+    math_20 = abs(math_33) @ hide
+    math_21 = min(math_22, math_20) @ hide
+  }
+  {
+    math_25 = math_29 < 0.0
+    math_26 = math_30 < 0.0
+    mix_3 = math_26
+      ? CombineXYZ(x: math_27, y: math_28) * value_3
+      : math_25 ? CombineXYZ(x: -math_27, y: math_28) * value_3 : CombineXYZ(y: 1.0 - value_3)
+  }
+  vector_math_39 = (math_7 ? vector_math_15 : vector_math_16)
+    + VectorRotate(
+      vector: mix_3,
+      angle: Mix(factor: math_6, a: Mix(factor: math_3, a: 2.0943952, b: -2.0944)))
+  vector_math_40 = vector_math_39 * (1.0 / math_34)
+  vector_math_46 = vector_math_39 + (1000.0, 1000.0, 0.0) @ hide
+  math_35 = Math[ADD](Value: vector_math_39, Value_001: 0.0)
+  return (
+    Position: vector_math_40,
+    UV: Vector - vector_math_40,
+    Color: WhiteNoiseTexture(vector: vector_math_46).color,
+    Edge: math_21 / Scale,
+    Masks: Math[FLOORED_MODULO](
+      Value: (math_26 ? 0.0 : math_25 ? 2.0 : 1.0)
+        - Mix(factor: math_6, a: Mix(factor: math_3, a: 1.0, b: 2.0)),
+      Value_001: 3.0))
+}

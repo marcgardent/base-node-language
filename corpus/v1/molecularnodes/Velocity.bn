@@ -1,0 +1,3 @@
+geometry graph Velocity() -> (velocity: Vector) {
+  return (velocity: NamedAttribute[FLOAT_VECTOR](name: "velocity").attribute)
+}

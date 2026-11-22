@@ -1,0 +1,13 @@
+geometry graph "Edge Length"() -> (Length: Float) {
+  edge_vertices = EdgeVertices()
+  return (
+    Length: EvaluateOnDomain[EDGE](
+      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
+}
+
+geometry(is_modifier: false) graph "Store Edge Length"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_length"
+) -> (Curves: Geometry) {
+  return (Curves: StoreNamedAttribute[EDGE](Curves, name: Name, value: edge_length()))
+}

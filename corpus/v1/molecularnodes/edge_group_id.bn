@@ -1,0 +1,11 @@
+geometry graph "Edge Group ID"(
+    "Group ID": Int(hide_value: true)
+) -> (Difference: Int(attribute_domain: EDGE), "Is Equal": Bool(attribute_domain: EDGE)) {
+  edge_vertices = EdgeVertices()
+  evaluate_at_index = EvaluateAtIndex[INT](value: group_id, index: edge_vertices.vertex_index_2)
+  evaluate_at_index_2 = EvaluateAtIndex[INT](value: group_id, index: edge_vertices.vertex_index_1)
+  return (
+    Difference: IntegerMath[ABSOLUTE](
+      value: IntegerMath[SUBTRACT](Value: evaluate_at_index_2, Value_001: evaluate_at_index)),
+    "Is Equal": evaluate_at_index_2 == evaluate_at_index)
+}

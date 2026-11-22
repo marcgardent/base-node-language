@@ -1,0 +1,47 @@
+shader graph "WoodP.002"(
+    Color2: Color = (1.0, 0.5224627, 0.2629702),
+    Color1: Color = (0.03565516, 0.008246762, 0.0),
+    IOR: Float = 1.4000001 in 1.0..1000.0
+) -> Shader {
+  fresnel = Fresnel(ior: IOR)
+  texture_coordinate = TextureCoordinate() @ hide
+  mapping_8 = Mapping(vector: texture_coordinate.generated) @ "Global Mapping"
+  mapping = Mapping(vector: mapping_8, scale: (3.0, 1.0, 1.0)) @ hide
+  mapping_2 = Mapping(vector: mapping_8, scale: (2.0, 1.0, 1.0)) @ hide
+  noise_texture = NoiseTexture(vector: mapping, scale: 4000.0) @ hide
+  noise_texture_2 = NoiseTexture(vector: mapping_2, scale: 20000.0) @ hide
+  mapping_3 = Mapping(vector: mapping_8, scale: (8.0, 1.0, 1.0)) @ hide
+  mix = Mix[RGBA, OVERLAY](a: noise_texture.factor, b: noise_texture_2.factor) @ hide
+  mapping_4 = Mapping(vector: mapping_8, scale: (11.0, 1.0, 1.0)) @ hide
+  mapping_5 = Mapping(vector: mapping_8, scale: (7.0, 1.0, 1.0)) @ hide
+  noise_texture_4 = NoiseTexture(vector: mapping_3, scale: 400.0) @ hide
+  noise_texture_5 = NoiseTexture(vector: mapping_4, scale: 40.0) @ hide
+  noise_texture_6 = NoiseTexture(vector: mapping_5, scale: 160.0) @ hide
+  mapping_6 = Mapping(vector: mapping_8, scale: (15.0, 1.0, 1.0)) @ hide
+  noise_texture_7 = NoiseTexture(vector: mapping_6) @ hide
+  mix_4 = Mix[RGBA, MULTIPLY](
+    factor: 0.70000005,
+    a: noise_texture_7.factor,
+    b: noise_texture_5.factor) @ hide
+  mapping_7 = Mapping(vector: mapping_8, scale: (4.0, 1.0, 1.0)) @ hide
+  noise_texture_3 = NoiseTexture(vector: mapping_7, scale: 1200.0) @ hide
+  mix_2 = Mix[RGBA, OVERLAY](a: noise_texture_3.factor, b: mix) @ hide
+  mix_3 = Mix[RGBA, OVERLAY](a: noise_texture_4.factor, b: mix_2) @ hide
+  mix_5 = Mix[RGBA, OVERLAY](a: noise_texture_6.factor, b: mix_3) @ hide
+  mix_6 = Mix[RGBA, OVERLAY](a: mix_4, b: mix_5) @ hide
+  mix_7 = Mix[RGBA](
+    factor: Math[MULTIPLY](Value: mix_6, Value_001: 0.20000002),
+    a: Color1,
+    b: Color2) @ "Diffuse"
+  mix_8 = Mix[RGBA](factor: mix_6, a: Color1, b: Color2) @ "Diffuse"
+  mix_shader = MixShader(
+    factor: fresnel,
+    a: MixShader(
+      factor: fresnel,
+      a: DiffuseBSDF(color: mix_8),
+      b: GlossyBSDF[BECKMANN](color: mix_7)),
+    b: GlossyBSDF[BECKMANN](color: Color2, roughness: 1.0))
+  "bwide.wordpress.com" {
+    return mix_shader
+  }
+}

@@ -1,0 +1,136 @@
+geometry graph "Normal Selection"(
+    Direction: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    Threshold: Float(subtype: ANGLE) = 0.0872665
+) -> (Selection: Bool) {
+  return (
+    Selection: Compare[LESS_EQUAL, VECTOR, DIRECTION](
+      a: Direction,
+      b: Normal().normal,
+      angle: Threshold))
+}
+
+geometry graph "O Slice"(
+    Index: Int in 0..2,
+    Shape: Vector(
+      description: "Side length along each axis",
+      hide_value: true) = (1.0, 1.0, 1.0) in 0.0..,
+    Position: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Space: Float = 2.0 in 1.0..5.0
+) -> ("Slice Mesh": Geometry) {
+  vector_math = Shape * 0.5 @ hide
+  separate_xyz = SeparateXYZ(vector: Math[DIVIDE](Value: Shape, Value_001: Space)) @ hide
+  cube = Cube(
+    size: Shape,
+    vertices_x: separate_xyz.x,
+    vertices_y: separate_xyz.y,
+    vertices_z: separate_xyz.z) @ hide
+  math = Shape.x * Position @ hide
+  combine_xyz = CombineXYZ(x: math) @ hide
+  math_2 = Shape.y * Position @ hide
+  combine_xyz_2 = CombineXYZ(y: math_2) @ hide
+  math_3 = Shape.z * Position @ hide
+  combine_xyz_3 = CombineXYZ(z: math_3) @ hide
+  group = normal_selection(direction: (-1.0, 0.0, 0.0)) @ hide
+  group_2 = normal_selection(direction: (0.0, -1.0, 0.0)) @ hide
+  group_3 = normal_selection(direction: (0.0, 0.0, -1.0)) @ hide
+  transform_geometry = cube.mesh
+    |> SeparateGeometry[FACE](selection: IndexSwitch(Index, group, group_2, group_3)).selection
+    |> TransformGeometry(
+      translation: vector_math
+        + IndexSwitch(Index, combine_xyz, combine_xyz_2, combine_xyz_3)) @ hide
+  return ("Slice Mesh": transform_geometry)
+}
+
+geometry graph "O Slice View"(
+    Menu: Menu(optional_label: true) = Scalar,
+    Scalar: Bundle,
+    Label: Bundle,
+    Color: Bundle,
+    Menu as menu_menu: Menu(menu_expanded: true, optional_label: true) = Z,
+    Position: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "From Min": Float(subtype: FACTOR) in 0.0..1.0,
+    "From Max": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    "Options" {
+        Space: Float = 2.0 in 1.0..5.0
+    }
+) -> (Slice: Geometry, Color: Vector) {
+  menu_switch = MenuSwitch(menu: Menu, Scalar: 0, Label: 1, Color: 2)
+  separate_bundle = SeparateBundle[define_signature: true](
+    Scalar) -> (
+    Data: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE),
+    Min: Float(structure_type: SINGLE),
+    Max: Float(structure_type: SINGLE))
+  separate_bundle_2 = SeparateBundle[define_signature: true](
+    Label) -> (
+    Data: Bool(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  grid_info = GridInfo(grid: separate_bundle.data)
+  grid_info_2 = GridInfo(grid: separate_bundle_2.data)
+  map_range = MapRange(
+    value: separate_bundle.data,
+    from_min: separate_bundle.min,
+    from_max: separate_bundle.max) @ hide
+  map_range_2 = MapRange(value: map_range, from_min: from_min, from_max: from_max) @ hide
+  menu_switch_2 = MenuSwitch(menu: menu_menu, X: 0, Y: 1, Z: 2) @ hide
+  group = o_slice(
+    index: menu_switch_2.output,
+    shape: separate_bundle.shape,
+    position: Position,
+    space: Space) @ hide
+  group_2 = o_slice(
+    index: menu_switch_2.output,
+    shape: separate_bundle_2.shape,
+    position: Position,
+    space: Space) @ hide
+  separate_bundle_3 = SeparateBundle[define_signature: true](
+    Color) -> (
+    Data: Vector(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  sample_grid = SampleGrid[VECTOR](
+    grid: IndexSwitch[VECTOR](
+      menu_switch.output,
+      map_range_2,
+      separate_bundle_2.data,
+      separate_bundle_3.data))
+  grid_info_3 = GridInfo(grid: separate_bundle_3.data)
+  group_3 = o_slice(
+    index: menu_switch_2.output,
+    shape: separate_bundle_3.shape,
+    position: Position,
+    space: Space) @ hide
+  group_4 = Group()
+  cube = Cube(size: separate_bundle.shape) @ hide
+  cube_2 = Cube(size: separate_bundle_2.shape) @ hide
+  cube_3 = Cube(size: separate_bundle_3.shape) @ hide
+  vector_math = separate_bundle.shape * 0.5 @ hide
+  transform_geometry = TransformGeometry(cube.mesh, translation: vector_math) @ hide
+  vector_math_2 = separate_bundle_2.shape * 0.5 @ hide
+  transform_geometry_2 = TransformGeometry(cube_2.mesh, translation: vector_math_2) @ hide
+  vector_math_3 = separate_bundle_3.shape * 0.5 @ hide
+  transform_geometry_3 = TransformGeometry(cube_3.mesh, translation: vector_math_3) @ hide
+  index_switch = IndexSwitch(
+    menu_switch.output,
+    TransformGeometry(transform_geometry, mode: Matrix, transform: grid_info.transform),
+    TransformGeometry(transform_geometry_2, mode: Matrix, transform: grid_info_2.transform),
+    TransformGeometry(transform_geometry_3, mode: Matrix, transform: grid_info_3.transform))
+  return (
+    Slice: JoinGeometry(
+      IndexSwitch(
+          menu_switch.output,
+          TransformGeometry(group, mode: Matrix, transform: grid_info.transform),
+          TransformGeometry(group_2, mode: Matrix, transform: grid_info_2.transform),
+          TransformGeometry(group_3, mode: Matrix, transform: grid_info_3.transform))
+        |> StoreNamedAttribute[FLOAT_COLOR](name: "o_color", value: sample_grid)
+        |> SetMaterial(material: "O Slice")),
+    Color: sample_grid)
+}

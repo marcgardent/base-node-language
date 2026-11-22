@@ -1,0 +1,26 @@
+geometry graph easeExpo(
+    Value: Float(hide_value: true) = 0.5 in 0.0..1.0,
+    EaseIn: Bool = true,
+    EaseOut: Bool
+) -> (Value: Float) {
+  boolean_math = EaseIn and EaseOut @ hide
+  {
+    switch_4 = Value == 0.0 ? 0.0 : pow(2.0, Value * 10.0 - 10.0)
+  }
+  switch = EaseIn ? switch_4 : Value @ hide
+  {
+    switch_5 = Value == 1.0 ? 1.0 : 1.0 - pow(2.0, Value * -10.0)
+  }
+  switch_2 = EaseOut ? switch_5 : switch @ hide
+  {
+    compare = Value == 0.0 @ hide
+    compare_2 = Value == 1.0 @ hide
+    compare_3 = Value < 0.5 @ hide
+    boolean_math_2 = not compare_3 @ hide
+    switch_6 = boolean_math_2
+      ? (2.0 - pow(2.0, Math[MULTIPLY_ADD](Value: Value, Value_001: -20.0, Value_002: 10.0))) / 2.0
+      : compare_3 ? pow(2.0, Value * 20.0 - 10.0) / 2.0 : compare_2 ? 1.0 : compare ? 0.0 : Value
+  }
+  switch_3 = boolean_math ? switch_6 : switch_2 @ hide
+  return (Value: switch_3)
+}

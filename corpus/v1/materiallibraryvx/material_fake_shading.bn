@@ -1,0 +1,11 @@
+shader(material: true) graph "Fake Shading"() -> (surface: Shader) {
+  light_path = LightPath()
+  return (
+    surface: Emission(
+      color: Mix[RGBA](
+        factor: abs(Geometry().incoming + TextureCoordinate().reflection)
+          ⋅ (0.33333334, 0.33333334, 0.33333334),
+        a: (0.4751, 0.01064, 0.00834, 1.0),
+        b: (0.8876, 0.81437, 0.00747, 1.0)),
+      strength: max(light_path.is_camera_ray, light_path.is_glossy_ray) * 1.0))
+}

@@ -1,0 +1,11 @@
+shader graph "SpecularReflection.001"(
+    Shader: Shader,
+    Fac: Float = 0.02999,
+    ColorSpec: Color = (0.8, 0.8, 0.8),
+    RoughReflec: Float = 0.00999
+) -> Shader {
+  return MixShader(
+    factor: Fac,
+    a: Shader,
+    b: GlossyBSDF[BECKMANN](color: ColorSpec, roughness: pow(RoughReflec, 0.5)))
+}

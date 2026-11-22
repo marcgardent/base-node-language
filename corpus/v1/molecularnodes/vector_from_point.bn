@@ -1,0 +1,17 @@
+geometry graph "Vector from Point"(
+    Target: Vector(description: "Vector that is the target") in -10000.0..10000.0,
+    Position: Vector(
+      description: "Position of the current point") = Position() in -10000.0..10000.0
+) -> (
+    Vector: Vector(description: "Vector from the current point's position to the given vector"),
+    Direction: Vector(description: "Normalized output vector"),
+    Length: Float(description: "Length of the output vector"),
+    Rotation: Rotation
+) {
+  vector_math = Target - Position
+  return (
+    Vector: vector_math,
+    Direction: normalize(vector_math),
+    Length: length(vector_math),
+    Rotation: AlignRotationToVector(vector: vector_math))
+}

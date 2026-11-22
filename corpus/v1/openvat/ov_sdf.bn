@@ -1,0 +1,61 @@
+geometry graph ov_sdf(
+    Geometry: Geometry,
+    Collection: Collection,
+    is_sparse: Bool,
+    sparse_min: Float,
+    sparse_max: Float
+) -> (
+    Geometry: Geometry,
+    SignedDistance: Float(default_attribute_name: "signed_dist"),
+    min_distance: Float(default_attribute_name: "min_dist"),
+    max_distance: Float(default_attribute_name: "max_dist")
+) {
+  position = Position() @ hide
+  store_named_attribute = StoreNamedAttribute[BOOLEAN](Geometry, name: "pointgrid", value: true)
+  realize_instances = CollectionInfo(collection: Collection)
+    |> RealizeInstances[realize_to_point_domain: true]()
+    |> MeshToVolume(voxel_amount: 256.0)
+    |> VolumeToMesh()
+    |> RealizeInstances[realize_to_point_domain: true]()
+  sample_nearest = SampleNearest(
+    realize_instances,
+    sample_position: SampleIndex[FLOAT_VECTOR](
+      store_named_attribute,
+      value: Position(),
+      index: Index()))
+  separate_geometry = SeparateGeometry(
+    realize_instances + store_named_attribute,
+    selection: NamedAttribute[BOOLEAN](name: "pointgrid").attribute)
+  vector_math = distance(
+    Position(),
+    SampleIndex[FLOAT_VECTOR](realize_instances, value: position, index: sample_nearest))
+  attribute_statistic = AttributeStatistic(separate_geometry.selection, attribute: vector_math)
+  position_2 = Position() @ hide
+  raycast = Raycast(
+    realize_instances,
+    source_position: position_2,
+    ray_direction: SampleIndex[FLOAT_VECTOR](
+      realize_instances,
+      value: Normal().normal,
+      index: sample_nearest),
+    ray_length: 0.2)
+  map_range = MapRange(
+    value: (raycast.is_hit ? -1 : 1) * vector_math,
+    from_min: is_sparse ? sparse_min : attribute_statistic.min,
+    from_max: is_sparse ? sparse_max : attribute_statistic.max)
+  store_named_attribute_2 = separate_geometry.selection
+    |> StoreNamedAttribute[BOOLEAN](name: "inside", value: raycast.is_hit)
+    |> SetPosition(position: Mix[VECTOR](factor: 0.0, a: Position(), b: raycast.hit_position))
+    |> StoreNamedAttribute(name: "distance", value: map_range)
+  viewer = Viewer(
+    Geometry: MeshToPoints(
+      store_named_attribute_2,
+      radius: (0.009999998 - NamedAttribute(name: "distance").attribute) * 7.7),
+    Value: 0.0)
+  math = 0.20000005 - map_range
+  return (
+    Geometry: store_named_attribute_2,
+    SignedDistance: NamedAttribute(name: "distance").attribute,
+    min_distance: attribute_statistic.min,
+    max_distance: attribute_statistic.max)
+}

@@ -1,0 +1,315 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Get Attachment Surface"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  separate_bundle = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_geometry: Geometry, surface_uv_map: Vector)
+  compare = DomainSize(separate_bundle.surface_geometry).point_count == 0
+  separate_bundle_2 = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_object: Object, surface_uv_map_name: String)
+  switch = compare
+    ? ObjectInfo[RELATIVE](object: separate_bundle_2.surface_object).geometry
+    : separate_bundle.surface_geometry
+  return (
+    "Surface Geometry": switch,
+    "Surface UV Map": compare
+      ? NamedAttribute[FLOAT_VECTOR](name: separate_bundle_2.surface_uv_map_name).attribute
+      : separate_bundle.surface_uv_map,
+    Exists: not Warning(
+      show: DomainSize(switch).point_count == 0,
+      message: "Missing surface geometry"))
+}
+
+geometry graph "Get Rest Geometry"(
+    Geometry: Geometry
+) -> ("Rest Geometry": Geometry, "Rest Geometry Found": Bool, "Rest Attribute Found": Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: "rest_geometry",
+    remove: true)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  return (
+    "Rest Geometry": Warning[WARNING](
+        show: not get_bundle_item.exists,
+        message: "Missing rest geometry. Use 'Capture Rest Geometry'.")
+      ? SetPosition(
+        get_geometry_bundle.geometry,
+        selection: named_attribute.exists,
+        position: named_attribute.attribute)
+      : get_bundle_item.item,
+    "Rest Geometry Found": get_bundle_item.exists,
+    "Rest Attribute Found": SampleIndex[BOOLEAN](
+      get_geometry_bundle.geometry,
+      value: AccumulateField[INT](value: named_attribute.exists).total))
+}
+
+geometry graph "Rest Surface"(Surface: Geometry) -> ("Rest Surface": Geometry, Exists: Bool) {
+  group = get_rest_geometry(Surface)
+  return (
+    "Rest Surface": Warning[WARNING](
+        show: not (group.rest_geometry_found or group.rest_attribute_found),
+        message: "Missing rest geometry on surface. Use 'Capture Rest Geometry' or enable 'Add Rest Position'.")
+      ? Surface
+      : group.rest_geometry,
+    Exists: group.rest_geometry_found)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Set Attachment Surface"(
+    Geometry: Geometry,
+    Mode: Menu(optional_label: true) = Object,
+    "Surface Geometry": Geometry,
+    "Surface Object": Object(optional_label: true),
+    "Surface UV Map": Vector(
+      hide_value: true,
+      default_attribute_name: "UVMap",
+      structure_type: FIELD) = (0.0, 0.0)
+) -> Geometry {
+  "Set provided attachment surface directly" {
+    get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle = SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle.bundle,
+              path: "surface_geometry",
+              item: surface_geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  "Take attachment surface from object" {
+    get_geometry_bundle_2 = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle_2 = SetGeometryBundle(
+      get_geometry_bundle_2.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle_2.bundle,
+              path: "surface_geometry",
+              item: ObjectInfo[RELATIVE](object: surface_object).geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  return MenuSwitch(menu: Mode, Object: set_geometry_bundle_2, Geometry: set_geometry_bundle).output
+}
+
+geometry(show_modifier_manage_panel: false) graph "Attach Hair Curves to Surface"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    "Surface Source": Menu(
+      description: "Select the input source for the surface geometry.",
+      menu_expanded: true,
+      optional_label: true) = Object,
+    "Surface Geometry": Geometry(description: "Surface geometry to attach hair curves to"),
+    "Surface Object": Object(description: "Surface Object to attach to", optional_label: true),
+    "Surface UV Map": Vector(
+      description: "Surface UV map used for attachment",
+      hide_value: true,
+      default_attribute_name: "UVMap"),
+    "Resting Surface": Bool(
+      description: "Use the surface's resting state to preserve stability under deformation"),
+    "Use Existing Attachment": Bool(
+      description: "Sample the surface UV map at the attachment point"),
+    "Snap to Surface"(description: "Snap hair roots to the attachment point on the surface") {
+        "Snap to Surface": Bool(
+          is_panel_toggle: true,
+          description: "Snap the root of each curve to the closest surface point") = true,
+        "Blend along Curve": Float(
+          subtype: FACTOR,
+          description: "Blend deformation along each curve from the root") in 0.0..1.0,
+        "Align to Surface Normal": Bool(
+          description: "Align the curve to the surface normal (needs a guide as reference)")
+    }
+) -> (
+    Geometry: Geometry,
+    "Surface UV Coordinate": Vector(
+      description: "Surface UV coordinates at the attachment point",
+      attribute_domain: CURVE),
+    "Surface Normal": Vector(
+      description: "Surface normal at the attachment point",
+      attribute_domain: CURVE)
+) {
+  "Calculate New Position" #222222 {
+    group = curve_root()
+    vector_math = Position() - group.root_position
+    "Blend Deformation" {
+      map_range = MapRange[SMOOTHSTEP](
+        value: SplineParameter().factor,
+        from_max: blend_along_curve,
+        to_min: 1.0,
+        to_max: 0.0) @ hide
+      switch_5 = Compare[EQUAL](a: blend_along_curve, epsilon: 0.0) ? 1.0 : map_range
+    }
+    "Align to Normal" #171717 {
+      "Sample from Guide" {
+        named_attribute = NamedAttribute[INT](name: "guide_curve_index")
+      }
+    }
+  }
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "surface_normal")
+  "New Attachment Point" {
+    boolean_math = not (NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").exists
+      and use_existing_attachment)
+  }
+  named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate")
+  accumulate_field = AccumulateField[INT](value: named_attribute_3.exists) @ hide
+  group_2 = get_attachment_surface(Geometry)
+  menu_switch = MenuSwitch(
+    menu: surface_source,
+    Attached(
+      description: "Use the attached surface of the incoming hair geometry"): set_attachment_surface(
+        Geometry,
+        mode: "Geometry",
+        surface_geometry: group_2.surface_geometry,
+        surface_object: surface_object,
+        surface_uv_map: group_2.surface_uv_map),
+    Input(
+      description: "Use the incoming surface input mesh"): set_attachment_surface(
+        Geometry,
+        mode: "Geometry",
+        surface_geometry: DomainSize(surface_geometry).point_count == 0
+          ? SeparateComponents(Geometry).mesh
+          : surface_geometry,
+        surface_uv_map: surface_uv_map),
+    Object(
+      description: "Use a specific object"): set_attachment_surface(
+        Geometry,
+        surface_geometry: surface_geometry,
+        surface_object: surface_object,
+        surface_uv_map: surface_uv_map))
+  sample_index = SampleIndex[BOOLEAN, CURVE](
+    menu_switch.output,
+    value: accumulate_field.total) @ hide
+  "Surface Geometry Input" {
+    separate_bundle = SeparateBundle(
+      GetGeometryBundle(menu_switch.output).bundle) -> (surface_geometry: Geometry)
+    compare = DomainSize(separate_bundle).face_count == 0
+    switch_4 = resting_surface ? rest_surface(separate_bundle).rest_surface : separate_bundle
+  }
+  "Smooth Normals" {
+    capture_attribute_3 = CaptureAttribute(
+      switch_4,
+      Value: Normal[legacy_corner_normals: true]().normal) @ hide
+  }
+  group_3 = get_attachment_surface(menu_switch.output)
+  "Sample Attachment UV" {
+    sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
+      switch_4,
+      value: group_3.surface_uv_map,
+      sample_position: curve_root().root_position)
+  }
+  capture_attribute_2 = CaptureAttribute[CURVE](
+    menu_switch.output,
+    selection: boolean_math,
+    "New Attachment UV": sample_nearest_surface.value)
+  "Sample Surface" {
+    sample_uvsurface_2 = SampleUVSurface[FLOAT_VECTOR](
+      capture_attribute_3.geometry,
+      value: capture_attribute_3.value,
+      uv_map: group_3.surface_uv_map,
+      sample_uv: NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute) @ hide
+  }
+  switch_8 = named_attribute_2.exists ? named_attribute_2.attribute : sample_uvsurface_2.value
+  switch_9 = capture_attribute_2.selection
+    ? capture_attribute_2.new_attachment_uv
+    : named_attribute_3.attribute
+  "Write Data" {
+    switch_2 = compare
+      ? NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute
+      : switch_9
+  }
+  "Sample Surface" .. {
+    sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+      capture_attribute_3.geometry,
+      value: Position(),
+      uv_map: group_3.surface_uv_map,
+      sample_uv: switch_9) @ hide
+    sample_uvsurface_3 = SampleUVSurface[FLOAT_VECTOR](
+      capture_attribute_3.geometry,
+      value: capture_attribute_3.value,
+      uv_map: group_3.surface_uv_map,
+      sample_uv: switch_9) @ hide
+  }
+  capture_attribute = CaptureAttribute[CURVE](
+    capture_attribute_2.geometry,
+    "New Surface Normal": sample_uvsurface_3.value)
+  "Write Data" .. {
+    switch_3 = compare
+      ? NamedAttribute[FLOAT_VECTOR](name: "surface_normal").attribute
+      : capture_attribute.new_surface_normal
+  }
+  "Calculate New Position" .. {
+    "Align to Normal" .. {
+      evaluate_on_domain_2 = EvaluateOnDomain[CURVE, QUATERNION](
+        value: AlignRotationToVector(vector: sample_uvsurface_3.value)) @ hide
+      "Sample from Guide" .. {
+        sample_index_2 = SampleIndex[FLOAT_VECTOR, CURVE](
+          capture_attribute_3.geometry,
+          value: sample_uvsurface_3.value,
+          index: named_attribute.attribute) @ hide
+      }
+      "Optimize" {
+        switch_6 = sample_index ? switch_8 : sample_index_2 @ hide
+      }
+      evaluate_on_domain = EvaluateOnDomain[CURVE, QUATERNION](
+        value: AlignRotationToVector(vector: switch_6)) @ hide
+      rotate_vector = RotateVector(
+        vector: named_attribute.exists
+          ? RotateVector(vector: vector_math, rotation: evaluate_on_domain)
+          : vector_math,
+        rotation: InvertRotation(rotation: evaluate_on_domain_2))
+    }
+    vector_math_2 = (EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+          value: sample_uvsurface.value - group.root_position)
+        + (align_to_surface_normal ? rotate_vector : vector_math)
+        - (Position() - group.root_position))
+      * switch_5
+  }
+  switch_7 = snap_to_surface
+    ? SetPosition(capture_attribute.geometry, offset: vector_math_2)
+    : capture_attribute.geometry
+  "Write Data" .. {
+    switch = compare
+      ? menu_switch.output
+      : StoreNamedAttribute[FLOAT_VECTOR, CURVE](
+        use_existing_attachment
+          ? StoreNamedAttribute[FLOAT2, CURVE](
+            switch_7,
+            name: "surface_uv_coordinate",
+            value: switch_9)
+          : switch_7,
+        name: "surface_normal",
+        value: capture_attribute.new_surface_normal)
+  }
+  return (Geometry: switch, "Surface UV Coordinate": switch_2, "Surface Normal": switch_3)
+}

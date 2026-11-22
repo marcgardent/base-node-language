@@ -1,0 +1,12 @@
+geometry graph "Cartesian to Spherical"(
+    "x,y,z": Vector in -10000.0..10000.0
+) -> ("ρ, θ, φ": Vector) {
+  "To Spherical" {
+    vector_math = length(x_y_z)
+    combine_xyz = CombineXYZ(
+      x: vector_math,
+      y: atan2(x_y_z.y, x_y_z.x),
+      z: acos(x_y_z.z / vector_math))
+  }
+  return ("ρ, θ, φ": combine_xyz)
+}

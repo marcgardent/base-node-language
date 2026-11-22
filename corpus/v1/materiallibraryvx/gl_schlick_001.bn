@@ -1,0 +1,11 @@
+shader graph "GL_Schlick.001"(
+    RefZero: Float = 0.5,
+    Contrast: Float = 1.0,
+    Strength: Float = 1.0
+) -> (Value: Float) {
+  geometry = Geometry()
+  math = min(max(RefZero, 0.0), 1.0)
+  return (
+    Value: (math + (1.0 - math) * pow(1.0 - geometry.normal ⋅ geometry.incoming, Contrast))
+      * Strength)
+}

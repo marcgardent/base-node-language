@@ -1,0 +1,21 @@
+shader graph ".uSDF_Segment"(
+    Vector: Vector(hide_value: true),
+    "Points" {
+        A: Vector in -10000.0..10000.0,
+        B: Vector = (1.0, 1.0, 0.0) in -10000.0..10000.0
+    }
+) -> (Value: Float, Value as value_float: Float) {
+  "SDF node"
+  vector_math = A + 0.0
+  vector_math_2 = Vector + 0.0 - vector_math
+  vector_math_3 = B + 0.0 - vector_math
+  vector_math_4 = B - A
+  return (
+    Value: length(
+      vector_math_2
+        - vector_math_3
+          * Math[DIVIDE, use_clamp: true](
+            Value: vector_math_2 ⋅ vector_math_3,
+            Value_001: vector_math_3 ⋅ vector_math_3)),
+    value_float: (Vector - A) ⋅ normalize(CombineXYZ(x: -vector_math_4.y, y: vector_math_4.x)))
+}

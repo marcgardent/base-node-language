@@ -1,0 +1,193 @@
+geometry graph "Contains Geometry"(
+    Geometry: Geometry
+) -> (
+    "Not Empty": Bool(description: "True when the input contains some geometry"),
+    Empty: Bool(description: "True when the input contains no geometry")
+) {
+  boolean_math = DomainSize(Geometry).point_count == 0
+    and DomainSize[POINTCLOUD](Geometry) == 0
+    and DomainSize[CURVE](Geometry).point_count == 0
+    and DomainSize[INSTANCES](Geometry) == 0
+    and DomainSize[GREASEPENCIL](Geometry) == 0
+  return ("Not Empty": not boolean_math, Empty: boolean_math)
+}
+
+geometry graph "Fallback Geometry"(Geometry: Geometry, Fallback: Geometry) -> Geometry {
+  return contains_geometry(Geometry).not_empty ? Geometry : Fallback
+}
+
+geometry graph "Fallback Matrix"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Matrix(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Matrix: Matrix(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT4X4](name: Name)
+  return (Matrix: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Fallback Rotation"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Rotation(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Rotation: Rotation(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[QUATERNION](name: Name)
+  return (Rotation: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Primitive Arrow"(
+    Vertices: Int = 6 in 3..16,
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0,
+    Ratio: Float(subtype: FACTOR) = 0.7 in 0.0..1.0,
+    Value: Color = (0.8, 0.8, 0.8),
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> Geometry {
+  math = Height * Ratio
+  math_2 = Height - math
+  return (Cone(vertices: Vertices, radius_bottom: 0.2, depth: math_2).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: Height - math_2)))
+      + (Cylinder(vertices: Vertices, radius: 0.08, depth: math).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: math / 2.0)))
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: Value)
+    |> SetMaterial(material: Material)
+}
+
+geometry graph "Primitive Gimbal"(
+    Vertices: Int = 6 in 3..16,
+    X: Color = (0.623968, 0.01033, 0.063011),
+    Y: Color = (0.076185, 0.623968, 0.084375),
+    Z: Color = (0.0, 0.00091, 0.623968),
+    Material: Material(description: "Material to apply to the resulting geometry"),
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0
+) -> Geometry {
+  repeat_output = repeat(3, Geometry: Geometry, Integer: 0) -> {
+    return (
+      Geometry: Geometry
+        + (primitive_arrow(
+            vertices: Vertices,
+            height: Height,
+            value: IndexSwitch(Integer, X, Y, Z),
+            material: Material)
+          |> TransformGeometry(
+            rotation: IndexSwitch[ROTATION](
+              Integer,
+              (0.0, 1.5707964, 0.0),
+              (-1.5707964, 0.0, 0.0),
+              (0.0, 0.0, 0.0)))),
+      Integer: Int = Integer + 1.0)
+  }
+  return repeat_output.geometry
+}
+
+geometry graph "Rotation from ZYZ"(
+    Phi: Float(
+      subtype: ANGLE,
+      description: "First rotation around the Z axis") in -10000.0..10000.0,
+    Theta: Float(
+      subtype: ANGLE,
+      description: "Second rotation around the Y axis") in -10000.0..10000.0,
+    Psi: Float(
+      subtype: ANGLE,
+      description: "Third rotation around the Z axis") in -10000.0..10000.0
+) -> (Rotation: Rotation(description: "The combined Rotation")) {
+  "Combine a rotation defined as ZYZ common in electron tomography"
+  return (
+    Rotation: RotateRotation(
+      rotation: RotateRotation(
+        rotation: AxisAngleToRotation(angle: -Phi),
+        rotate_by: AxisAngleToRotation(axis: (0.0, 1.0, 0.0), angle: -Theta)),
+      rotate_by: AxisAngleToRotation(angle: -Psi)))
+}
+
+geometry graph "TEM Rotation"(
+    Phi: String(optional_label: true) = "rlnAngleRot",
+    Theta: String(optional_label: true) = "rlnAngleTilt",
+    Psi: String(optional_label: true) = "rlnAnglePsi"
+) -> (Rotation: Rotation(description: "The combined Rotation"), Boolean: Bool) {
+  named_attribute = NamedAttribute(name: Phi)
+  named_attribute_2 = NamedAttribute(name: Psi)
+  named_attribute_3 = NamedAttribute(name: Theta)
+  return (
+    Rotation: rotation_from_zyz(
+      phi: radians(named_attribute.attribute),
+      theta: radians(named_attribute_3.attribute),
+      psi: radians(named_attribute_2.attribute)),
+    Boolean: named_attribute.exists and (named_attribute_3.exists and named_attribute_2.exists))
+}
+
+geometry graph "Rotation RELION"() -> (Rotation: Rotation, "Is Valid": Bool) {
+  group = tem_rotation()
+  return (Rotation: group.rotation, "Is Valid": group.boolean)
+}
+
+geometry graph "Rotation cisTEM"() -> (Rotation: Rotation, "Is Valid": Bool) {
+  group = tem_rotation(phi: "cisTEMAnglePhi", theta: "cisTEMAngleTheta", psi: "cisTEMAnglePsi")
+  return (Rotation: group.rotation, "Is Valid": group.boolean)
+}
+
+geometry(is_modifier: false) graph "Starfile Instances"(
+    Points: Geometry,
+    Selection: Bool(
+      description: "Becomes the output value if it is chosen by the menu input",
+      hide_value: true,
+      structure_type: FIELD) = true,
+    Image: Int(
+      description: "The ID of the image that should be shown",
+      force_non_field: true,
+      structure_type: SINGLE) in 0..,
+    Menu: Menu(menu_expanded: true, optional_label: true) = Object,
+    Geometry: Geometry(description: "Becomes the output value if it is chosen by the menu input"),
+    Object: Object(
+      description: "The object that should be placed at each instance",
+      optional_label: true),
+    "Pixel Scale": Float(
+      description: "The data in .ndjson files are in pixel coordinates so require scaling to fit overall data coordinates.",
+      structure_type: FIELD) = 1.0 in -10000.0..10000.0,
+    "Instance Scale": Float(description: "Scale of the instances") = 1.0,
+    Material: Material(
+      description: "Material to apply to the resulting geometry",
+      optional_label: true)
+) -> (Instances: Geometry) {
+  "Selection" {
+    boolean_math = Image == NamedAttribute[INT](name: "image_id").attribute and Selection
+  }
+  "Instance" {
+    value = 2.0
+    group = MenuSwitch(
+        menu: Menu,
+        Object: ObjectInfo(object: Object).geometry,
+        Geometry: Geometry).output
+      |> fallback_geometry(
+        fallback: primitive_gimbal(vertices: 3, material: Material)
+          |> TransformGeometry(scale: value))
+  }
+  "Scale Pixel Coordinates" {
+    set_position = SetPosition(Points, position: Position() * pixel_scale)
+  }
+  "Instances" {
+    "Rotation" {
+      group_2 = rotation_cistem()
+      group_3 = fallback_matrix(
+        name: "transform",
+        fallback: fallback_rotation(
+          name: "rotation",
+          fallback: group_2.is_valid ? group_2.rotation : rotation_relion().rotation))
+    }
+    instance_on_points = InstanceOnPoints(
+      set_position,
+      selection: boolean_math,
+      instance: group,
+      rotation: group_3,
+      scale: instance_scale)
+  }
+  return (Instances: instance_on_points)
+}

@@ -1,0 +1,56 @@
+geometry graph "Tessera · Region"(
+    Position: Vector,
+    Shape: Int,
+    "Half Size": Vector,
+    Margin: Float,
+    Region: Int,
+    Sides: Int = 8
+) -> (Inside: Bool, Clamped: Vector) {
+  math = max(half_size.x - Margin, 1e-05)
+  math_2 = max(half_size.y - Margin, 1e-05)
+  math_3 = 6.2831855 / max(Sides, 3.0)
+  math_4 = abs(Position.x)
+  math_5 = abs(Position.y)
+  math_6 = length(CombineXYZ(x: Position.x, y: Position.y))
+    * cos(
+      Math[FLOORED_MODULO](
+          Value: atan2(Position.y, Position.x) + 1.5707964 + math_3 * 0.5,
+          Value_001: math_3)
+        - math_3 * 0.5)
+  math_7 = half_size.y - half_size.x
+  index_switch = IndexSwitch(
+    Shape,
+    math_4 <= half_size.x and math_5 <= half_size.y,
+    pow(Position.x / half_size.x, 2.0) + pow(Position.y / half_size.y, 2.0) <= 1.0,
+    math_4 <= half_size.x and Position.y >= -half_size.y and Position.y <= math_7
+      or Position.y > math_7
+        and length(CombineXYZ(x: Position.x, y: Position.y - math_7)) <= half_size.x,
+    math_6 <= min(half_size.x, half_size.y))
+  math_8 = math_2 - math
+  index_switch_2 = IndexSwitch(
+    Shape,
+    math_4 <= math and math_5 <= math_2,
+    pow(Position.x / math, 2.0) + pow(Position.y / math_2, 2.0) <= 1.0,
+    math_4 <= math and Position.y >= -math_2 and Position.y <= math_8
+      or Position.y > math_8 and length(CombineXYZ(x: Position.x, y: Position.y - math_8)) <= math,
+    math_6 <= min(math, math_2))
+  compare = Region == 1
+  switch = compare ? math : half_size.x
+  switch_2 = compare ? math_2 : half_size.y
+  math_9 = switch_2 - switch
+  combine_xyz = CombineXYZ(x: Position.x, y: Position.y - math_9)
+  switch_3 = Position.y > math_9
+    ? CombineXYZ(y: math_9) + combine_xyz * min(1.0, switch / max(length(combine_xyz), 1e-09))
+    : CombineXYZ(x: Position.x, y: Position.y)
+  return (
+    Inside: IndexSwitch(Region, index_switch, index_switch_2, index_switch and not index_switch_2),
+    Clamped: IndexSwitch(
+      Shape,
+      CombineXYZ(
+        x: min(max(Position.x, -switch), switch),
+        y: min(max(Position.y, -switch_2), switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y)
+        * (1.0 / max(sqrt(pow(Position.x / switch, 2.0) + pow(Position.y / switch_2, 2.0)), 1.0)),
+      CombineXYZ(x: min(max(switch_3.x, -switch), switch), y: max(switch_3.y, -switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y) * (1.0 / max(math_6 / min(switch, switch_2), 1.0))))
+}

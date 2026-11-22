@@ -1,0 +1,27 @@
+geometry graph "Between Integer"(
+    Value: Int(description: "The value to test if it exists within the bounds"),
+    Lower: Int(description: "The lower bounds for the test"),
+    Upper: Int(description: "The upper bounds for the test") = 19
+) -> (
+    Boolean: Bool(
+      description: "Whether the input `Value` is between (and including) the lower and upper bounds")
+) {
+  return (Boolean: Value >= Lower and Value <= Upper)
+}
+
+geometry graph "Animate Action"(
+    Start: Int = 1,
+    Length: Int = 100 in 0..
+) -> (
+    Factor: Float,
+    Active: Bool(
+      description: "Whether the input `Value` is between (and including) the lower and upper bounds"),
+    Stop: Int
+) {
+  integer_math = IntegerMath[ADD](Value: Start, Value_001: Length)
+  scene_time = SceneTime()
+  return (
+    Factor: MapRange(value: scene_time.frame, from_min: Start, from_max: integer_math),
+    Active: between_integer(value: scene_time.frame, lower: Start, upper: integer_math),
+    Stop: integer_math)
+}

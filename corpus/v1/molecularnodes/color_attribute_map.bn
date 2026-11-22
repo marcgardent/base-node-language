@@ -1,0 +1,132 @@
+geometry graph ".OKLab Matrices"() -> (M1: Matrix, M2: Matrix) {
+  return (
+    M1: CombineMatrix(
+      column_1_row_1: 0.818933,
+      column_1_row_2: 0.032985,
+      column_1_row_3: 0.0482,
+      column_2_row_1: 0.3618667,
+      column_2_row_2: 0.9293119,
+      column_2_row_3: 0.264366,
+      column_3_row_1: -0.1288597,
+      column_3_row_2: 0.03614564,
+      column_3_row_3: 0.633852),
+    M2: CombineMatrix(
+      column_1_row_1: 0.21045426,
+      column_1_row_2: 1.9779985,
+      column_1_row_3: 0.025904037,
+      column_2_row_1: 0.7936178,
+      column_2_row_2: -2.42859,
+      column_2_row_3: 0.7827718,
+      column_3_row_1: -0.004072047,
+      column_3_row_2: 0.4505937,
+      column_3_row_3: -0.8086758))
+}
+
+geometry graph "Color to OKLab"(Color: Color) -> (OKLab: Vector(subtype: XYZ)) {
+  value = 0.3333333
+  return (
+    OKLab: TransformPoint(
+      vector: VectorMath[POWER](
+        Vector: TransformPoint(vector: Color, transform: oklab_matrices().m1),
+        Vector_001: value),
+      transform: oklab_matrices().m2))
+}
+
+geometry graph "OKLab to Color"(OKLab: Vector) -> Color {
+  integer = 3
+  return TransformPoint(
+    vector: VectorMath[POWER](
+      Vector: TransformPoint(
+        vector: OKLab,
+        transform: InvertMatrix(matrix: oklab_matrices().m2).matrix),
+      Vector_001: integer),
+    transform: InvertMatrix(matrix: oklab_matrices().m1).matrix)
+}
+
+geometry graph "Color OKLab Mix"(
+    Factor: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    A: Color = (0.05120815, 0.3684095, 0.7010043),
+    B: Color = (0.6960105, 0.04253292, 0.03904183)
+) -> (Result: Color) {
+  return (
+    Result: oklab_to_color(
+      oklab: Mix[VECTOR](factor: Factor, a: color_to_oklab(color: A), b: color_to_oklab(color: B))))
+}
+
+geometry graph "Color Mix Intermediate"(
+    Factor: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Menu: Menu(optional_label: true) = Linear,
+    Intermediate: Bool,
+    A: Color = (0.0769495, 0.4785124, 0.5),
+    Intermediate as intermediate_color: Color = (0.5, 0.5, 0.5),
+    B: Color = (0.5, 0.1594808, 0.05802507)
+) -> (Output: Color) {
+  group = color_to_oklab(color: intermediate_color)
+  separate_color = SeparateColor(color: Mix[RGBA](factor: Factor, a: intermediate_color, b: B))
+  separate_color_2 = SeparateColor(color: Mix[RGBA](factor: Factor, a: A, b: intermediate_color))
+  separate_color_3 = SeparateColor(color: A)
+  combine_color = CombineColor(
+    red: separate_color_2.red,
+    green: separate_color_2.green,
+    blue: separate_color_2.blue,
+    alpha: separate_color_3.alpha)
+  separate_color_4 = SeparateColor(
+    color: Mix[RGBA](
+      factor: Factor,
+      a: combine_color,
+      b: CombineColor(
+        red: separate_color.red,
+        green: separate_color.green,
+        blue: separate_color.blue,
+        alpha: SeparateColor(color: intermediate_color).alpha)))
+  separate_color_5 = SeparateColor(color: Mix[RGBA](factor: Factor, a: A, b: B))
+  return (
+    Output: MenuSwitch(
+      menu: Menu,
+      Linear: Intermediate
+        ? CombineColor(
+          red: separate_color_4.red,
+          green: separate_color_4.green,
+          blue: separate_color_4.blue,
+          alpha: SeparateColor(color: combine_color).alpha)
+        : CombineColor(
+          red: separate_color_5.red,
+          green: separate_color_5.green,
+          blue: separate_color_5.blue,
+          alpha: separate_color_3.alpha),
+      OKLab: Intermediate
+        ? oklab_to_color(
+          oklab: Mix[VECTOR](
+            factor: Factor,
+            a: Mix[VECTOR](factor: Factor, a: color_to_oklab(color: A), b: group),
+            b: Mix[VECTOR](factor: Factor, a: group, b: color_to_oklab(color: B))))
+        : color_oklab_mix(factor: Factor, a: A, b: B)).output)
+}
+
+geometry graph "Color Attribute Map"(
+    "Color Space": Menu(optional_label: true) = Linear,
+    Name: String(
+      description: "Name of the attribute to map colors to",
+      optional_label: true) = "b_factor",
+    Min: Float(description: "Value for the attribute to be the minimum color") in -10000.0..10000.0,
+    Max: Float(
+      description: "Value for the attribute to be the maxium color") = 150.0 in -10000.0..10000.0,
+    "Color" {
+        Intermediate: Bool(description: "Wheter to interpolate through the 'Mid' color.") = true,
+        A: Color(
+          description: "Color mapped to the minimum value of the attribute") = (0.0769495, 0.4785124, 0.5),
+        Intermediate as intermediate_color: Color(
+          description: "Color mapped to the middle value of the attribute") = (0.5, 0.5, 0.5),
+        B: Color(
+          description: "Color mapped to the maximum value of the attribute") = (0.5, 0.1594808, 0.05802507)
+    }
+) -> (Color: Color(description: "The mapped color value based on the attribute.")) {
+  return (
+    Color: color_mix_intermediate(
+      factor: MapRange(value: NamedAttribute(name: Name).attribute, from_min: Min, from_max: Max),
+      menu: color_space,
+      Intermediate: Intermediate,
+      a: A,
+      intermediate_color: intermediate_color,
+      b: B))
+}

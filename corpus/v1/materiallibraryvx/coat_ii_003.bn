@@ -1,0 +1,34 @@
+shader graph "Coat II.003"(
+    Shader: Shader,
+    "Gloss Color": Color = (0.8, 0.8, 0.8),
+    IOR: Float = 1.45 in 0.0..10000.0,
+    "Fresnel/Facing": Float = 0.1 in 0.0..1.0,
+    "Facing Strength": Float = 0.5 in 0.0..1.0,
+    "Center Gloss": Float(subtype: FACTOR) in 0.0..1.0,
+    "Edge Gloss": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "Center Roughness": Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+    "Edge Roughness": Float(subtype: FACTOR) = 0.005 in 0.0..1.0,
+    Normal: Vector(hide_value: true) in -1.0..1.0
+) -> (Shader: Shader, Control: Shader) {
+  fresnel = Fresnel(ior: IOR)
+  layer_weight = LayerWeight(blend: facing_strength)
+  mix = Mix[RGBA](
+    factor: Mix[RGBA](factor: fresnel_facing, a: fresnel, b: layer_weight.facing),
+    a: center_gloss,
+    b: edge_gloss)
+  mix_shader = MixShader(
+    factor: mix,
+    a: Shader,
+    b: GlossyBSDF[GGX](
+      color: gloss_color,
+      roughness: Math[POWER](
+        Value: Mix[RGBA](
+          factor: Mix[RGBA](factor: fresnel_facing, a: fresnel, b: layer_weight.facing),
+          a: center_roughness,
+          b: edge_roughness)),
+      normal: Normal))
+  emission = Emission(color: mix)
+  "bwide.wordpress.com" {
+    return (Shader: mix_shader, Control: emission)
+  }
+}

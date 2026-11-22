@@ -1,0 +1,24 @@
+geometry graph "Face Corner Angle"() -> (
+    "Corner Angle": Float(
+      description: "Angle between the next and previous edge of a face corner within the face"),
+    Bisector: Vector(
+      description: "Directional vector pointing central between next and previous edge of a face corner")
+) {
+  position = Position()
+  vector_math = normalize(
+    EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: position, index: OffsetCornerInFace(offset: -1))
+      - position)
+  vector_math_2 = normalize(
+    EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: position, index: OffsetCornerInFace(offset: 1))
+      - position)
+  evaluate_on_domain = EvaluateOnDomain[FACE, FLOAT_VECTOR](value: Normal().true_normal)
+  math = sign((vector_math × vector_math_2) ⋅ evaluate_on_domain)
+  math_2 = acos(vector_math ⋅ vector_math_2)
+  "angle" {
+    switch = math > 0.0 ? 6.2831855 - math_2 : math_2
+  }
+  return (
+    "Corner Angle": EvaluateOnDomain[CORNER](value: switch),
+    Bisector: EvaluateOnDomain[CORNER, FLOAT_VECTOR](
+      value: VectorRotate(vector: vector_math_2, axis: evaluate_on_domain, angle: switch * 0.5)))
+}

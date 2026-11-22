@@ -1,0 +1,66 @@
+compositor graph "Tune Image"(
+    Image: Color,
+    Contrast: Float(description: "Add more contrast relative to brightness") in -5.0..5.0,
+    "Color Boost": Float(subtype: FACTOR, description: "Saturate the image") in 0.0..1.0,
+    Clarity: Float(
+      subtype: FACTOR,
+      description: "Low frequency contrast using an unsharp mask") in 0.0..1.0,
+    Detail: Float(
+      subtype: FACTOR,
+      description: "Higher frequency contrast using an unsharp mask") in 0.0..1.0,
+    Sharpen: Float(subtype: FACTOR, description: "The amount of diamond sharpening") in 0.0..1.0,
+    "Preserve Colors": Bool(
+      description: "Avoid color clipping by working in logarithmic space") = true
+) -> (Image: Color) {
+  relative_to_pixel = RelativeToPixel(value: 0.1, image: Image)
+  "prevent colors from exploding by working in Log" {
+    math_2 = color_boost + 1.0
+  }
+  separate_color = SeparateColor[HSV](Image)
+  math_3 = Contrast * 5.0 @ "x 5" hide
+  math = math_3 * 0.25
+  switch = Switch(
+    switch: preserve_colors,
+    false_: BrightnessContrast(Image, brightness: math, contrast: math_3),
+    true_: CombineColor[HSV](
+      red: separate_color.red,
+      green: separate_color.green,
+      blue: BrightnessContrast(separate_color.blue, brightness: math, contrast: math_3),
+      alpha: separate_color.alpha))
+  "prevent colors from exploding by working in Log" .. {
+    convert_colorspace = switch
+      |> ConvertColorspace[
+        from_color_space: "Linear Rec.709",
+        to_color_space: "Filmic Log",
+        to_interop_id: "blender:filmiclog_rec709_scene"]()
+      |> HueSaturationValue(saturation: math_2)
+      |> ConvertColorspace[
+        from_color_space: "Filmic Log",
+        from_interop_id: "blender:filmiclog_rec709_scene",
+        to_color_space: "Linear Rec.709"]()
+  }
+  convert_colorspace_2 = Switch(
+      switch: preserve_colors,
+      false_: HueSaturationValue(switch, saturation: math_2),
+      true_: convert_colorspace)
+    |> ConvertColorspace[
+      from_color_space: "Linear Rec.709",
+      to_color_space: "Filmic Log",
+      to_interop_id: "blender:filmiclog_rec709_scene"]()
+  mix = Mix[RGBA, ADD](
+    factor: Clarity,
+    a: convert_colorspace_2,
+    b: Mix[RGBA, SUBTRACT](
+      a: convert_colorspace_2,
+      b: Blur(convert_colorspace_2, size: relative_to_pixel)))
+  return (
+    Image: Mix[RGBA, ADD](
+        factor: Detail,
+        a: mix,
+        b: Mix[RGBA, SUBTRACT](a: mix, b: Blur(mix, size: relative_to_pixel * 0.1)))
+      |> Filter(factor: Sharpen, type: "Diamond Sharpen")
+      |> ConvertColorspace[
+        from_color_space: "Filmic Log",
+        from_interop_id: "blender:filmiclog_rec709_scene",
+        to_color_space: "Linear Rec.709"]())
+}

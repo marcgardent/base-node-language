@@ -1,0 +1,38 @@
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "World to Angstrom"(World: Float = 0.5 in -10000.0..10000.0) -> (Angstrom: Float) {
+  return (Angstrom: World / mn_world_scale())
+}
+
+geometry graph "Recip. Ang. Dis"(
+    A: Vector in -10000.0..10000.0,
+    B: Vector in -10000.0..10000.0
+) -> (Value: Float) {
+  return (Value: 1.0 / world_to_angstrom(world: distance(A, B)))
+}
+
+geometry graph "HBond Energy"(
+    O: Vector,
+    C: Vector,
+    N: Vector,
+    H: Vector
+) -> ("Is Bonded": Bool, "Bond Energy": Float, "Bond Vector": Vector) {
+  "1 / r(ON)" {
+    group = recip_ang_dis(a: O, b: N)
+  }
+  "1 / r(CH)" {
+    group_2 = recip_ang_dis(a: C, b: H)
+  }
+  "1 / r(OH)" {
+    group_3 = recip_ang_dis(a: O, b: H)
+  }
+  "1 / r(CN)" {
+    group_4 = recip_ang_dis(a: C, b: N)
+  }
+  math = -(group + group_2 - group_3 - group_4) @ mute
+  math_2 = math * 0.084 * 332.0
+  return ("Is Bonded": math_2 < -0.5, "Bond Energy": math_2, "Bond Vector": O - H)
+}

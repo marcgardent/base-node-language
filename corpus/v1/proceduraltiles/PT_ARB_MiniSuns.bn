@@ -1,0 +1,211 @@
+shader graph PT_ARB_MiniSuns(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Value: Float = 0.207108 in 0.0..10000.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  value = 0.70710677
+  value_2 = 1.707105
+  value_3 = 3.41421
+  {
+    math_92 = Math[MULTIPLY_ADD](Value: 2.0, Value_001: 1.4142135, Value_002: 2.0) @ hide
+  }
+  value_4 = 1.0
+  {
+    math_77 = pow(value_4, 2.0) @ hide
+    math_80 = pow(value_4, 3.0) @ hide
+    math_79 = math_80 / 3.0 @ hide
+    math_78 = math_79 / 2.4142137 @ hide
+  }
+  {
+    math_87 = pow(value_4, 3.0) @ hide
+    math_86 = 0.17157288 * math_87 @ hide
+    math_85 = math_86 / 3.0 @ hide
+  }
+  {
+    math_91 = pow(value_4, 2.0) @ hide
+    math_90 = math_91 / math_92 @ hide
+  }
+  value_5 = 1.35355
+  math_112 = Value + 0.5
+  math_57 = math_112 * value_3
+  {
+    math_56 = math_57 - 1.7071068 @ hide
+    math_58 = math_56 * 2.0 @ hide
+    math_61 = math_57 * 2.0 @ hide
+  }
+  math_93 = Math[MULTIPLY_ADD](Value: math_57, Value_001: 2.0, Value_002: -2.41421)
+  {
+    math_76 = math_93 * math_77 @ hide
+    math_100 = math_76 / 2.0 @ hide
+    math_75 = math_100 - math_78 @ hide
+  }
+  {
+    math_84 = pow(math_93, 2.0) @ hide
+    math_83 = math_84 * value_4 @ hide
+    math_82 = math_83 - math_85 @ hide
+    math_81 = math_82 / 2.0 @ hide
+  }
+  {
+    math_89 = value_4 * math_93 @ hide
+    math_88 = math_89 - math_90 @ hide
+  }
+  math_94 = math_88 + value_5 @ hide
+  vector_math_4 = (CombineXYZ(x: math_75 / math_88 + 1.7071068, y: math_81 / math_88 + 0.707107)
+        * math_88
+      + CombineXYZ(x: 2.5606601, y: 0.5606602) * value_5)
+    / math_94
+    / value_3
+  math_99 = math_112 * 2.0
+  {
+    combine_xyz = CombineXYZ(x: 1.0, y: math_99)
+  }
+  math_113 = Scale / 2.0
+  .. {
+    vector_math_5 = Vector * math_113 / combine_xyz
+    separate_xyz = SeparateXYZ(vector: fract(vector_math_5)) @ hide
+    math_95 = Math[PINGPONG](Value: separate_xyz.y) @ hide
+    math_96 = Math[PINGPONG](Value: separate_xyz.x) @ hide
+    combine_xyz_2 = CombineXYZ(x: math_96, y: math_95) @ hide
+    vector_math_6 = combine_xyz_2 * combine_xyz @ hide
+    vector_math_8 = vector_math_5 + (0.5, 0.5, 0.0) @ hide
+    vector_math_7 = floor(vector_math_8) * combine_xyz @ hide
+    math_97 = separate_xyz.x > 0.5 @ hide
+    math_98 = separate_xyz.y > 0.5 @ hide
+    mix_2 = math_97 ? (-1.0, 0.0, 0.0) : (1.0, 0.0, 0.0) @ hide
+    mix_3 = Mix[VECTOR, clamp_factor: false](
+      factor: math_98,
+      a: (0.0, 1.0, 0.0),
+      b: (0.0, -1.0, 0.0)) @ hide
+  }
+  vector_math_2 = vector_math_6 * 2.0
+  math = vector_math_2.y > math_112
+  vector_math = (math
+      ? (vector_math_2 - CombineXYZ(x: 1.0, y: math_112 * 2.0)) * (-1.0, -1.0, 0.0)
+      : vector_math_2)
+    * value_3
+  math_2 = max(vector_math.x, vector_math.y) @ hide
+  math_4 = vector_math.x + vector_math.y @ hide
+  math_6 = math_4 / 1.4142135 @ hide
+  math_5 = min(math_2, math_6) @ hide
+  math_3 = math_5 - value @ hide
+  math_7 = vector_math.x - value @ hide
+  math_8 = vector_math.y - value @ hide
+  math_9 = vector_math.x - vector_math.y @ hide
+  math_12 = math_9 * 0.70710677 @ hide
+  math_10 = abs(math_12) @ hide
+  math_11 = math_10 - value @ hide
+  math_13 = max(math_7, math_11) @ hide
+  math_14 = max(math_8, math_11) @ hide
+  math_15 = vector_math.x - value_2 @ hide
+  math_16 = vector_math.y - value_2 @ hide
+  math_17 = vector_math.x - 2.7071068 @ hide
+  math_18 = vector_math.x + vector_math.y @ hide
+  {
+    math_24 = abs(math_15) @ hide
+    math_32 = -math_11 @ hide
+    math_43 = max(math_7, math_32) @ hide
+    math_44 = -math_43 @ hide
+  }
+  math_34 = abs(math_7) @ hide
+  math_35 = min(math_34, math_13) @ hide
+  .. {
+    math_27 = min(math_35, math_14) @ hide
+    math_29 = -math_27 @ hide
+    math_30 = min(math_29, math_3) @ hide
+    math_31 = -math_30 @ hide
+    math_41 = max(math_31, math_15) @ hide
+  }
+  math_36 = abs(math_16) @ hide
+  math_37 = max(math_36, math_15) @ hide
+  math_39 = -math_7 @ hide
+  math_38 = max(math_37, math_39) @ hide
+  math_42 = math_18 * 0.70710677 @ hide
+  math_20 = math_42 - 1.7071068 @ hide
+  math_19 = math_20 - 1.0 @ hide
+  .. {
+    math_22 = min(math_19, math_17) @ hide
+    math_21 = -math_22 @ hide
+    math_23 = min(math_21, math_24) @ hide
+    math_33 = max(math_20, math_32) @ hide
+    math_45 = max(math_33, math_44) @ hide
+    math_25 = min(math_23, math_45) @ hide
+    math_26 = min(math_25, math_41) @ hide
+    math_40 = min(math_26, math_38) @ hide
+  }
+  {
+    math_46 = math_16 - math_58 @ hide
+    math_47 = min(math_46, math_15) @ hide
+    math_48 = -math_47 @ hide
+    math_49 = max(math_48, math_17) @ hide
+    math_50 = vector_math.x - vector_math.y @ hide
+    math_55 = math_17 < 0.0 @ hide
+    math_59 = math_50 + math_61 @ hide
+    math_60 = math_59 - 3.41421 @ hide
+    math_62 = math_60 - 1.0 @ hide
+    math_51 = math_62 * 0.70710677 @ hide
+    math_53 = abs(math_51) @ hide
+    math_54 = max(math_55, math_53) @ hide
+    math_52 = min(math_54, math_49) @ hide
+  }
+  math_64 = min(math_21, math_43) @ hide
+  math_63 = math_64 > 0.0 @ hide
+  math_65 = math_15 > 0.5 @ hide
+  math_66 = math_35 < 0.0 @ hide
+  math_67 = math_14 < 0.0 @ hide
+  math_68 = math_3 < 0.0 @ hide
+  math_70 = max(math_15, math_16) @ hide
+  math_69 = math_70 < 0.0 @ hide
+  math_71 = math_33 < 0.0 @ hide
+  vector_math_3 = (CombineXYZ(x: vector_math.x, y: vector_math.y) - (2.4142137, 0.0, 0.0))
+    ⋅ normalize((-1.0, 2.4142137, 0.0))
+  {
+    math_72 = min(math_40, vector_math_3) @ hide
+    math_28 = abs(math_72) @ hide
+  }
+  math_73 = vector_math_3 < 0.0 @ hide
+  math_74 = math_15 < 0.0 @ hide
+  mix = math_63
+    ? (math_68
+      ? (0.0, 0.0, 0.0)
+      : math_66
+        ? (0.132149, 0.31, 0.0)
+        : math_67
+          ? (0.31, 0.1321489, 0.0)
+          : math_71
+            ? (0.5, 0.0, 0.0)
+            : math_69
+              ? (0.3535497, 0.35355, 0.0)
+              : math_73
+                ? (1.0, 0.0, 0.0)
+                : math_74 ? CombineXYZ(x: 1.0, y: math_112 * 2.0) - vector_math_4 : vector_math_4)
+    : math_65 ? CombineXYZ(x: 1.0, y: math_112) : CombineXYZ(y: math_112)
+  vector_math_10 = (math ? (mix - CombineXYZ(x: 1.0, y: math_112 * 2.0)) * (-1.0, -1.0, 0.0) : mix)
+    * 0.5
+  vector_math_9 = mix_2 * vector_math_10.x + mix_3 * vector_math_10.y + vector_math_7
+  vector_math_11 = vector_math_9 / math_113
+  math_102 = min(math_21, math_43) @ hide
+  math_101 = math_102 > 0.0 @ hide
+  math_103 = math_35 < 0.0 @ hide
+  math_104 = math_14 < 0.0 @ hide
+  math_105 = math_3 < 0.0 @ hide
+  math_107 = max(math_15, math_16) @ hide
+  math_106 = math_107 < 0.0 @ hide
+  math_108 = math_33 < 0.0 @ hide
+  math_109 = vector_math_3 < 0.0 @ hide
+  math_110 = vector_math_2.x * value_3 - value_2 < 0.0 @ hide
+  math_111 = max(math_104, math_103) @ hide
+  return (
+    Position: vector_math_11,
+    UV: Vector - vector_math_11,
+    Color: WhiteNoiseTexture(vector: vector_math_9 + (1000.0, 1000.0, 0.0)).color,
+    Edge: min(math_28, math_52) / math_113 / value_3 / 2.0,
+    Masks: math_101
+      ? (math_105
+        ? 0.0
+        : Mix(
+          factor: math_111,
+          a: math_108 ? 5.0 : math_106 ? 4.0 : math_109 ? 3.0 : math_110 ? 2.0 : 1.0,
+          b: 6.0))
+      : 7.0)
+}

@@ -1,0 +1,8 @@
+geometry graph "O Debug Structure"(Structure: Bundle) -> (Grid: Vector, Mesh: Geometry) {
+  separate_bundle = SeparateBundle(Structure) -> (Solid: Bool, Albedo: Vector, Opacity: Float)
+  return (
+    Grid: Mix[VECTOR](
+      factor: SampleGrid[BOOLEAN](grid: separate_bundle.solid),
+      b: separate_bundle.albedo),
+    Mesh: GridToMesh(grid: separate_bundle.solid, threshold: 0.5))
+}

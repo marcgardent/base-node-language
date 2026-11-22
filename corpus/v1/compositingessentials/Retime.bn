@@ -1,0 +1,27 @@
+compositor graph Retime(
+    Offset: Int(description: "Offset to add to the current scene frame. Can also be negative."),
+    Step: Int(description: "Snap scene frame to increments") = 1 in 0..1000,
+    Speed: Float(
+      description: "Multiply the current scene frame by this factor") = 1.0 in -10000.0..10000.0,
+    Cyclic: Bool(description: "Restart from start frame when Cycle Length is reached"),
+    "Cycle Length": Int(
+      description: "Number of frames to cycle through. Not affected by Speed.") = 10
+) -> (Frame: Int) {
+  scene_time = SceneTime()
+  "Offset" {
+    math = scene_time.frame + Offset
+  }
+  "Step" {
+    math_2 = Math[SNAP](Value: math, Value_001: Step)
+  }
+  "Speed" {
+    math_3 = (math_2 - Offset) * Speed + Offset
+  }
+  "Cyclic" {
+    switch = Switch[RGBA](
+      switch: Cyclic,
+      false_: math_3,
+      true_: Math[FLOORED_MODULO](Value: math_3, Value_001: cycle_length) + Offset)
+  }
+  return (Frame: switch)
+}

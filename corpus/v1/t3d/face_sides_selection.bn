@@ -1,0 +1,6 @@
+geometry graph "Face Sides Selection"(Sides: Int = 3 in 3..) -> (Selection: Bool) {
+  "Face Sides" {
+    compare = FaceNeighbors().vertex_count == Sides
+  }
+  return (Selection: compare)
+}

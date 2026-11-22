@@ -1,0 +1,40 @@
+geometry graph "Fractionate Float"(
+    Menu: Menu(menu_expanded: true, optional_label: true) = Linear,
+    Value: Float(description: "The value to fractionate")
+) -> (
+    Fraction: Float(description: "Fractional component of the value, between 0 and 1"),
+    Floor: Int(description: "The floor of the value; the integer rounded down"),
+    Ceiling: Int(description: "The ceiling of the value, the integer rounded up")
+) {
+  math = fract(Value)
+  return (
+    Fraction: MenuSwitch(
+      menu: Menu,
+      Linear: math,
+      Smoother: MapRange[SMOOTHERSTEP](value: math)).output,
+    Floor: FloatToInteger[FLOOR](float: Value),
+    Ceiling: FloatToInteger[CEILING](float: Value))
+}
+
+geometry graph "Index Mix Color"(
+    Color: Color(
+      description: "The field to interpolate based on the input `Index`") = (1.0, 1.0, 1.0),
+    Index: Float(
+      description: "The floor and ceiling of this Index value is taken and used for sampling, the fraction of this value is then used to mix between the sampled values")
+) -> (
+    Color: Color(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`"),
+    From: Int(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`"),
+    To: Int(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`")
+) {
+  group = fractionate_float(value: Index)
+  return (
+    Color: Mix[RGBA, clamp_result: true](
+      factor: group.fraction,
+      a: EvaluateAtIndex[FLOAT_COLOR](value: Color, index: group.floor),
+      b: EvaluateAtIndex[FLOAT_COLOR](value: Color, index: group.ceiling)),
+    From: group.floor,
+    To: group.ceiling)
+}

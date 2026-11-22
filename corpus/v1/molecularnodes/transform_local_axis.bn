@@ -1,0 +1,16 @@
+geometry graph "Transform Local Axis"(
+    Origin: Vector(
+      subtype: TRANSLATION,
+      description: "The vector defining the local space. Defaults to `Position`",
+      hide_value: true) = Position(),
+    Axis: Vector(description: "The axis to rotate around") = (0.0, 0.0, 1.0),
+    Angle: Float(subtype: ANGLE, description: "Amount to rotate around the axis")
+) -> (Transform: Matrix(description: "The Transform around the axis")) {
+  "Create a transform around an axis in local space defined by the `Origin` point"
+  return (
+    Transform: MultiplyMatrices(
+      Matrix: CombineTransform(
+        translation: Origin,
+        rotation: AxisAngleToRotation(axis: Axis, angle: Angle)),
+      Matrix_001: CombineTransform(translation: -Origin)))
+}

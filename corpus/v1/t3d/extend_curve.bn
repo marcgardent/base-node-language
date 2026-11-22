@@ -1,0 +1,20 @@
+geometry graph "Extend Curve"(
+    Curve: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    "Start Point": Float = 1.0,
+    "End Point": Float = 1.0
+) -> (Curve: Geometry) {
+  {
+    endpoint_selection = EndpointSelection(end_size: 0)
+    endpoint_selection_2 = EndpointSelection(start_size: 0)
+    vector_math = CurveTangent()
+      * (-start_point * nimply(endpoint_selection, endpoint_selection_2)
+        + nimply(endpoint_selection_2, endpoint_selection) * end_point)
+  }
+  {
+    set_position = Curve
+      |> ResampleCurve[keep_last_segment: false](mode: Evaluated)
+      |> SetPosition(selection: Selection, offset: vector_math)
+  }
+  return (Curve: set_position)
+}

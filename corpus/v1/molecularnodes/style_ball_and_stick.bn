@@ -1,0 +1,622 @@
+geometry graph ".Is Extra Bonds"() -> (
+    "Is Extra Bonds": Bool,
+    "Is Double Bond": Bool,
+    "Is Triple Bond": Bool
+) {
+  named_attribute = NamedAttribute[INT](name: "bond_type")
+  compare = named_attribute.attribute == 2
+  compare_2 = named_attribute.attribute == 3
+  return (
+    "Is Extra Bonds": compare or compare_2 or named_attribute.attribute == 6,
+    "Is Double Bond": compare,
+    "Is Triple Bond": compare_2)
+}
+
+geometry graph Color(
+    Index: Int = Index() in 0..
+) -> (Color: Color(description: "Read the `Color` attribute from the geometry")) {
+  return (
+    Color: EvaluateAtIndex[FLOAT_COLOR](
+      value: NamedAttribute[FLOAT_COLOR](name: "Color").attribute,
+      index: Index))
+}
+
+geometry graph ".Sample Atomic Attributes to Face Corner"(
+    Geometry: Geometry,
+    "Sample Atoms": Geometry,
+    Index: Int = Index()
+) -> Geometry {
+  repeat_output = repeat(9, Geometry: Geometry) -> {
+    index_switch = IndexSwitch(
+      iteration,
+      "atomic_number",
+      "atom_id",
+      "atom_name",
+      "res_id",
+      "res_name",
+      "chain_id",
+      "entity_id",
+      "sec_struct",
+      "ures_id")
+    return StoreNamedAttribute[INT, CORNER](
+      Geometry,
+      name: index_switch,
+      value: SampleIndex[INT](
+        sample_atoms,
+        value: NamedAttribute[INT](name: index_switch).attribute,
+        index: Index))
+  }
+  repeat_output_2 = repeat(3, Geometry: repeat_output) -> {
+    index_switch_2 = IndexSwitch(iteration, "vdw_radii", "mass", "b_factor")
+    return StoreNamedAttribute[CORNER](
+      Geometry,
+      name: index_switch_2,
+      value: SampleIndex(
+        sample_atoms,
+        value: NamedAttribute(name: index_switch_2).attribute,
+        index: Index))
+  }
+  repeat_output_3 = repeat(6, Geometry: repeat_output_2) -> {
+    index_switch_3 = IndexSwitch(
+      iteration,
+      "is_alpha_carbon",
+      "is_side_chain",
+      "is_backbone",
+      "is_solvent",
+      "is_nucleic",
+      "is_peptide")
+    return StoreNamedAttribute[BOOLEAN, CORNER](
+      Geometry,
+      name: index_switch_3,
+      value: SampleIndex[BOOLEAN](
+        sample_atoms,
+        value: NamedAttribute[BOOLEAN](name: index_switch_3).attribute,
+        index: Index))
+  }
+  return StoreNamedAttribute[FLOAT_COLOR, CORNER](
+    repeat_output_3,
+    name: "Color",
+    value: SampleIndex[FLOAT_COLOR](sample_atoms, value: Color(), index: Index))
+}
+
+geometry graph ".map_bond_type"() -> ("Bond Count": Int) {
+  return (
+    "Bond Count": IndexSwitch(
+      NamedAttribute[INT](name: "bond_type").attribute,
+      1,
+      1,
+      2,
+      3,
+      1,
+      1,
+      2))
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "MN Units"(
+    Value: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (Angstrom: Float, Nanometre: Float) {
+  math = Value * mn_world_scale()
+  return (Angstrom: math, Nanometre: math * 10.0)
+}
+
+geometry graph ".MN_utils_style_sticks"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Radius: Float(description: "Radius of the bond mesh.") = 0.3 in 0.0..1.0,
+    Resolution: Int(description: "Resolution of the created bond cylinders.") = 6 in 3..512,
+    "Scale Extra Bond Radius": Float = 0.65 in -10000.0..10000.0,
+    "Extra Bond Offset": Float = 0.4 in -10000.0..10000.0,
+    "Extra Bond Rotate": Float in -10000.0..10000.0,
+    Menu: Menu(optional_label: true) = Single,
+    "Material" {
+        "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+        Material: Material(description: "Material to apply to the resulting geometry")
+    }
+) -> Geometry {
+  separate_geometry = SeparateGeometry(Atoms, selection: Selection)
+  "Offset Vector" {
+    "Vector for Extra Bond Offsetting" {
+      edge_vertices = EdgeVertices()
+      edge_vertices_2 = EdgeVertices()
+      vector_math = edge_vertices.position_1 - edge_vertices.position_2
+      vector_math_2 = normalize(
+          normalize(
+              EvaluateAtIndex[EDGE, FLOAT_VECTOR](
+                value: vector_math,
+                index: EdgesOfVertex(vertex_index: edge_vertices_2.vertex_index_1).edge_index))
+            × normalize(
+              EvaluateAtIndex[EDGE, FLOAT_VECTOR](
+                value: vector_math,
+                index: EdgesOfVertex(
+                  vertex_index: edge_vertices_2.vertex_index_2,
+                  sort_index: 2).edge_index)))
+        * mn_units(value: extra_bond_offset).angstrom
+    }
+    capture_attribute = CaptureAttribute[EDGE](separate_geometry.selection, Vector: vector_math_2)
+  }
+  split_edges = SplitEdges(capture_attribute.geometry)
+  "Rotate and offset Extra Bonds" {
+    group = map_bond_type()
+    edge_vertices_3 = EdgeVertices()
+    capture_attribute_2 = CaptureAttribute(split_edges, selection: group > 1)
+    duplicate_elements = DuplicateElements[EDGE](capture_attribute_2.geometry, amount: group)
+    set_position = SetPosition(
+      duplicate_elements.geometry,
+      selection: capture_attribute_2.selection,
+      offset: VectorRotate(
+          vector: capture_attribute.vector,
+          axis: edge_vertices_3.position_1 - edge_vertices_3.position_2,
+          angle: Math[MULTIPLY_ADD](
+            Value: duplicate_elements.duplicate_index,
+            Value_001: 6.2831855 / map_bond_type(),
+            Value_002: 3.1415927 / 2.0 + extra_bond_rotate))
+        * 1.0)
+  }
+  menu_switch = MenuSwitch(menu: Menu, Single: split_edges, Double: set_position)
+  "Compute Radius" {
+    capture_attribute_3 = CaptureAttribute[EDGE](
+      menu_switch.output,
+      Output: menu_switch.double and is_extra_bonds().is_extra_bonds
+        ? scale_extra_bond_radius
+        : 1.0)
+  }
+  set_curve_radius = capture_attribute_3.geometry
+    |> MeshToCurve()
+    |> SetCurveRadius(radius: capture_attribute_3.output)
+  "Get correct index to sample from" {
+    capture_attribute_4 = CaptureAttribute[CURVE](
+      set_curve_radius,
+      "First Point": PointsOfCurve().point_index,
+      "Last Point": PointsOfCurve(sort_index: 1).point_index,
+      "Curve Index": Index())
+    switch = Resolution
+        < AccumulateField[INT, FACE](group_id: capture_attribute_4.curve_index).leading
+      ? capture_attribute_4.last_point
+      : capture_attribute_4.first_point
+  }
+  "curve to mesh" {
+    group_2 = capture_attribute_4.geometry
+      |> SubdivideCurve()
+      |> CurveToMesh(
+        profile_curve: CurveCircle(resolution: Resolution, radius: mn_units(value: 1.0).angstrom),
+        scale: Radius() * Radius)
+      |> sample_atomic_attributes_to_face_corner(
+        sample_atoms: capture_attribute_4.geometry,
+        index: switch)
+  }
+  "Set up materials" {
+    set_shade_smooth = group_2
+      |> SetMaterial(material: Material)
+      |> SetShadeSmooth(shade_smooth: shade_smooth)
+  }
+  return set_shade_smooth
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Unique Residue ID"() -> (
+    "Group ID": Int(description: "A unique Group ID for eash residue")
+) {
+  group = atom_name()
+  accumulate_field = AccumulateField[INT](
+    value: group == 1 or group == 50 or integer_run(value: residue_id()).is_different)
+  {
+    integer_math = IntegerMath[SUBTRACT](Value: accumulate_field.leading, Value_001: 1)
+  }
+  return ("Group ID": integer_math)
+}
+
+geometry graph "Set URes ID"(Geometry: Geometry) -> Geometry {
+  return StoreNamedAttribute[INT](Geometry, name: "ures_id", value: unique_residue_id())
+}
+
+geometry graph ".MN_ensure_ures_id"(Input: Geometry) -> (Output: Geometry) {
+  "If the `ures_id` attribute doesn't exist, create it"
+  "Check if `ures_id` exists" {
+    get_attribute_names = GetAttributeNames(
+      Input,
+      filter_data_type: true,
+      data_type: Integer,
+      filter_domain: true)
+    list_length = ListLength[STRING](
+      list: FilterList[STRING](
+        list: get_attribute_names,
+        selection: get_attribute_names == "ures_id").selection)
+  }
+  return (Output: list_length ? Input : set_ures_id(Input))
+}
+
+geometry graph "Contains Geometry"(
+    Geometry: Geometry
+) -> (
+    "Not Empty": Bool(description: "True when the input contains some geometry"),
+    Empty: Bool(description: "True when the input contains no geometry")
+) {
+  boolean_math = DomainSize(Geometry).point_count == 0
+    and DomainSize[POINTCLOUD](Geometry) == 0
+    and DomainSize[CURVE](Geometry).point_count == 0
+    and DomainSize[INSTANCES](Geometry) == 0
+    and DomainSize[GREASEPENCIL](Geometry) == 0
+  return ("Not Empty": not boolean_math, Empty: boolean_math)
+}
+
+geometry graph "Check Geometry"(
+    Geometry: Geometry,
+    Message: String(
+      optional_label: true) = "Input contains no geometry, check your node connections."
+) -> Geometry {
+  warning = Warning(show: contains_geometry(Geometry).empty, message: Message)
+  return Geometry
+}
+
+geometry graph "Get Geometry Atoms"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> (Geometry: Geometry, Bundle: Bundle, Atoms: Geometry) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  string = "MN/Atoms"
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: string,
+    remove: true)
+  return (
+    Geometry: Switch[GEOMETRY](switch: get_bundle_item.exists, true_: get_geometry_bundle.geometry),
+    Bundle: get_bundle_item.bundle,
+    Atoms: get_bundle_item.exists ? get_bundle_item.item : get_geometry_bundle.geometry)
+}
+
+geometry graph "Evaluate on Atoms"(
+    Geometry: Geometry(description: "Geometry to get the bundle of"),
+    Selection: Bool(
+      description: "The parts of the geometry that go into the first output",
+      hide_value: true) = true,
+    Closure: Closure,
+    Result: Menu(
+      description: "Where to store the result of the closure. Bundle overwrite the existing `MN/Atoms` bundle. Geometry passes along the bundle and joins the resulting geometry into the output.",
+      menu_expanded: true,
+      optional_label: true) = Geometry
+) -> Geometry {
+  group = get_geometry_atoms(Geometry)
+  "Evaluate the closure on the 'Atoms'" {
+    evaluate_closure = EvaluateClosure(
+      Closure,
+      Atoms: group.atoms
+        |> check_geometry(message: "'Atoms' contains no geometry, check your node connections.")
+        |> mn_ensure_ures_id()
+        |> SeparateGeometry(selection: Selection).selection) -> Geometry
+  }
+  menu_switch = MenuSwitch(menu: Result, Geometry: 0, Bundle: 1)
+  string = "Evaluate the 'Closure' on the 'Atoms' geometry, join the resulting geometry with the input geometry.  If the input 'Geometry' doesn't contain a 'MN/Atoms' bundle then we treat the input geometry as the 'Atoms'."
+  return SetGeometryBundle(
+    group.geometry + IndexSwitch(menu_switch.output, evaluate_closure, _),
+    bundle: StoreBundleItem[GEOMETRY](
+      bundle: group.bundle,
+      path: "MN/Atoms",
+      item: IndexSwitch(menu_switch.output, group.atoms, evaluate_closure)))
+}
+
+geometry graph ".Sample Atomic Attributes"(
+    Atoms: Geometry,
+    "Sample Atoms": Geometry,
+    Index: Int = Index()
+) -> (Atoms: Geometry) {
+  return (
+    Atoms: TransferAttributes(
+      Atoms,
+      source: sample_atoms,
+      source_point_id: Index,
+      attribute_names: FieldToList(String: "bond_type"),
+      exclude_names: true).target)
+}
+
+geometry graph "Sample Position"(
+    Geometry: Geometry(description: "The geometry to sample the `Position` from"),
+    Position: Vector(
+      description: "The `Position` field to sample the values from",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to sample the `Position` field from") = Index()
+) -> (Position: Vector(description: "The sampled `Position` field")) {
+  "A convenience wrapper around the `Sample Index` and `Position` nodes"
+  return (Position: SampleIndex[FLOAT_VECTOR, clamp: true](Geometry, value: Position, index: Index))
+}
+
+geometry graph Plexus(
+    Points: Geometry,
+    Sort: Bool(
+      description: "Sort the resulting points so their `Index` matches the input geometry") = true,
+    Distance: Float(subtype: DISTANCE) = 0.5 in -10000.0..10000.0,
+    Radius: Float = 1.0
+) -> Geometry {
+  "Create a clean set of points for instancing on" {
+    index = Index()
+    points = Points(
+      count: DomainSize(Points).point_count,
+      position: SampleIndex[FLOAT_VECTOR](Points, value: Position(), index: index),
+      radius: SampleIndex(Points, value: Distance, index: index)
+        * SampleIndex(Points, value: Radius, index: index))
+  }
+  "Create Distance Probe" {
+    ico_sphere = IcoSphere()
+    merge_by_distance = ico_sphere.mesh
+      |> InstanceOnPoints(
+        instance: MeshLine(count: 2),
+        rotation: AxesToRotation(
+          primary_axis: SampleIndex[FLOAT_VECTOR](
+            ico_sphere.mesh,
+            value: -Position(),
+            index: Index())))
+      |> RealizeInstances[realize_to_point_domain: true]()
+      |> MergeByDistance()
+  }
+  "Apply the distance probe" {
+    capture_attribute = points
+      |> InstanceOnPoints(instance: merge_by_distance, scale: Radius())
+      |> RealizeInstances[realize_to_point_domain: true]()
+      |> CaptureAttribute(Index: SampleNearest(points))
+    merge_points = capture_attribute.geometry
+      |> SetPosition(position: sample_position(points, index: capture_attribute.index))
+      |> MergePoints(merge_id: capture_attribute.index)
+  }
+  "Potentially sort the results into same order" {
+    switch = Sort ? SortElements(merge_points, sort_weight: SampleNearest(Points)) : merge_points
+  }
+  return switch
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "VDW Radii"(
+    Index: Int = Index() in 0..
+) -> (vdw_radii: Float(description: "Read the `vdw_radii` attribute from the geometry")) {
+  return (
+    vdw_radii: EvaluateAtIndex(
+      value: fallback_float(name: "vdw_radii", fallback: mn_world_scale()),
+      index: Index))
+}
+
+geometry graph "Find Bonds"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Scale: Float(
+      description: "Scale the VDW radii of the atoms when searching for bonds") = 1.0 in 0.0..10000.0
+) -> (Atoms: Geometry) {
+  closure_output = graph(Atoms: Geometry) -> Geometry {
+    separate_geometry = SeparateGeometry(Atoms, selection: Selection)
+    Plexus = Plexus(separate_geometry.selection, distance: Scale, radius: vdw_radii() * 0.58)
+    return sample_atomic_attributes(Plexus, sample_atoms: separate_geometry.selection)
+  }
+  return (Atoms: evaluate_on_atoms(Atoms, closure: closure_output))
+}
+
+geometry graph "Set Instancer"(
+    Geometry: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    is_instanced: Bool = true
+) -> Geometry {
+  return StoreNamedAttribute[BOOLEAN](Geometry, name: "is_instanced", value: is_instanced)
+}
+
+geometry graph ".MN_utils_style_spheres_icosphere"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Scale: Float(description: "Scale the VDW radii of the atoms.") = 0.8 in 0.0..10000.0,
+    Subdivisions: Int = 2 in 0..5,
+    "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> (Instances: Geometry) {
+  return (
+    Instances: Atoms
+      |> set_instancer()
+      |> InstanceOnPoints(
+        selection: Selection,
+        instance: Subdivisions
+          ? IcoSphere(subdivisions: Subdivisions).mesh
+          : Cube().mesh |> TransformGeometry(rotation: (0.7853982, 0.7853982, 0.7853982)),
+        scale: vdw_radii() * Scale)
+      |> SetShadeSmooth(shade_smooth: shade_smooth)
+      |> SetMaterial(material: Material))
+}
+
+geometry graph ".MN_utils_style_spheres_points"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Scale: Float = 0.8 in 0.0..10000.0,
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> ("Point Cloud": Geometry) {
+  return (
+    "Point Cloud": Atoms
+      |> MeshToPoints(selection: Selection, radius: Scale * vdw_radii())
+      |> SetMaterial(material: Material))
+}
+
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph "Style Spheres"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this style to, discarding unselected points",
+      hide_value: true) = true,
+    Sphere: Menu(
+      description: "Show spheres as a _Point Cloud_, _Instances_ of a mesh Icosphere, or realised _Mesh_ instances of an Icosphere. Point cloud is best for performance and should definitely be used if rendering in Cycles.",
+      menu_expanded: true,
+      optional_label: true) = Point,
+    Quality: Int(
+      description: "Number of subdicisions when using _Instances_ or _Mesh_ to represent atoms") = 2 in 0..5,
+    Scale: Float(
+      description: "Scale the `vdw_radii` of the atom when setting the radius of the spheres") = 0.8 in 0.0..2.0,
+    "Material"(default_closed: true) {
+        "Shade Smooth": Bool(
+          description: "Apply smooth shading when using _Instances_ or _Mesh_") = true,
+        Material: Material(
+          description: "Material to apply to the resulting geometry",
+          optional_label: true)
+    }
+) -> (Geometry: Geometry(description: "The generated geometry for the style node group")) {
+  closure_output = graph(Atoms: Geometry) -> Geometry {
+    group = mn_utils_style_spheres_icosphere(
+      Atoms,
+      selection: Selection,
+      scale: Scale,
+      subdivisions: Quality,
+      shade_smooth: shade_smooth,
+      material: Material)
+    return MenuSwitch(
+      menu: Sphere,
+      Point: mn_utils_style_spheres_points(
+        Atoms,
+        selection: Selection,
+        scale: Scale,
+        material: Material),
+      Instance: group,
+      Mesh: RealizeInstances[realize_to_point_domain: true](group)).output
+  }
+  return (Geometry: evaluate_on_atoms(Atoms, closure: closure_output))
+}
+
+geometry(show_modifier_manage_panel: false) graph "Style Ball and Stick"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this style to, discarding unselected points",
+      hide_value: true) = true,
+    Quality: Int(
+      description: "A lower value results in less geometry, with a higher value meaning better looking but more dense geometry",
+      force_non_field: true,
+      structure_type: SINGLE) = 2 in 0..8,
+    "Sphere"(default_closed: true) {
+        Sphere: Menu(
+          description: "Show spheres as a _Point Cloud_, _Instances_ of a mesh Icosphere, or realised _Mesh_ instances of an Icosphere. Point cloud is best for performance and should definitely be used if rendering in Cycles.",
+          menu_expanded: true,
+          optional_label: true) = Instance,
+        Scale: Float(
+          description: "Scale the `vdw_radii` attribute before setting the radius for the spheres") = 0.3 in 0.0..2.0
+    },
+    "Bond"(default_closed: true) {
+        "Bond Split": Menu(menu_expanded: true, optional_label: true) = Double,
+        "Bond Scale": Float(
+          description: "Set the radius for the generated bonds in Angstroms") = 0.3 in 0.0..1.0,
+        "Bond Find"(
+          description: "Search for nearby atoms to create bonds based on VDW radii. Removes existing bonds.",
+          default_closed: true) {
+            "Bond Find": Bool(
+              is_panel_toggle: true,
+              description: "Find possible bonds for the selected atoms based on a distance search. Unselected atoms maintain any bonds they already have. Bonds that are found are all treated as single bonds"),
+            "Bond Find Scale": Float(
+              subtype: FACTOR,
+              description: "Scale the VDW radii of the atoms when searching for bonds") = 1.0 in 0.0..2.0
+        }
+    },
+    "Material" {
+        "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+        Material: Material(
+          description: "Material to apply to the resulting geometry",
+          optional_label: true)
+    }
+) -> (Geometry: Geometry(description: "The generated geometry for the style node group")) {
+  closure_output = graph(Atoms: Geometry) -> Geometry {
+    separate_geometry = SeparateGeometry(Atoms, selection: Selection)
+    return SetMaterial(
+      style_spheres(
+          separate_geometry.selection,
+          sphere: Sphere,
+          quality: Quality,
+          scale: Scale,
+          shade_smooth: shade_smooth,
+          material: Material)
+        + mn_utils_style_sticks(
+          bond_find
+            ? find_bonds(separate_geometry.selection, scale: bond_find_scale)
+            : separate_geometry.selection,
+          radius: bond_scale,
+          resolution: IntegerMath[MULTIPLY](Value: Quality, Value_001: 6),
+          scale_extra_bond_radius: 0.45,
+          extra_bond_offset: Scale * 0.8,
+          menu: bond_split,
+          shade_smooth: shade_smooth,
+          material: Material),
+      material: Material)
+  }
+  return (Geometry: evaluate_on_atoms(Atoms, closure: closure_output))
+}

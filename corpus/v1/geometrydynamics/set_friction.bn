@@ -1,0 +1,9 @@
+geometry(is_modifier: false) graph "Set Friction"(
+    Geometry: Geometry(description: "Geometry to store a new attribute with the given name on"),
+    Static: Float = 0.5 in 0.0..,
+    Dynamic: Float = 0.5 in 0.0..
+) -> Geometry {
+  return Geometry
+    |> StoreNamedAttribute(name: "static_friction", value: Static)
+    |> StoreNamedAttribute(name: "dynamic_friction", value: Dynamic)
+}

@@ -1,0 +1,6 @@
+geometry graph "Is Edge Boundary"() -> (
+    "Is Edge Boundary": Bool(
+      description: "Selection of edges that are part of the boundary of a mesh surface")
+) {
+  return ("Is Edge Boundary": EvaluateOnDomain[EDGE, BOOLEAN](value: EdgeNeighbors() == 1))
+}

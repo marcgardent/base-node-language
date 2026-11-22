@@ -1,0 +1,20 @@
+geometry graph "Contains Geometry"(
+    Geometry: Geometry
+) -> (
+    "Not Empty": Bool(description: "True when the input contains some geometry"),
+    Empty: Bool(description: "True when the input contains no geometry")
+) {
+  boolean_math = DomainSize(Geometry).point_count == 0
+    and DomainSize[POINTCLOUD](Geometry) == 0
+    and DomainSize[CURVE](Geometry).point_count == 0
+    and DomainSize[INSTANCES](Geometry) == 0
+    and DomainSize[GREASEPENCIL](Geometry) == 0
+  return ("Not Empty": not boolean_math, Empty: boolean_math)
+}
+
+geometry(is_modifier: false) graph "Fallback Geometry"(
+    Geometry: Geometry,
+    Fallback: Geometry
+) -> Geometry {
+  return contains_geometry(Geometry).not_empty ? Geometry : Fallback
+}

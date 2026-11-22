@@ -1,0 +1,23 @@
+geometry graph "O Grid Info"(
+    Grid: Float(hide_value: true),
+    Shape: Vector(
+      subtype: TRANSLATION,
+      description: "Side length along each axis",
+      hide_value: true) = (100.0, 100.0, 100.0) in 1.0..512.0
+) -> ("Voxel Size": Vector(subtype: XYZ), "Median Point": Vector) {
+  grid_info = GridInfo(grid: Grid) @ hide
+  cube = Cube(size: Shape) @ hide
+  vector_math_3 = Shape * 0.5 @ hide
+  transform_geometry_2 = TransformGeometry(cube.mesh, translation: vector_math_3) @ hide
+  transform_geometry = TransformGeometry(
+    transform_geometry_2,
+    mode: Matrix,
+    transform: grid_info.transform) @ hide
+  bounding_box = BoundingBox(transform_geometry) @ hide
+  vector_math_2 = bounding_box.min + bounding_box.max @ hide
+  vector_math = vector_math_2 * 0.5 @ hide
+  combine_transform = CombineTransform(translation: vector_math) @ hide
+  return (
+    "Voxel Size": SeparateTransform(transform: grid_info.transform).scale,
+    "Median Point": vector_math)
+}

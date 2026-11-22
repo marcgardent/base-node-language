@@ -1,0 +1,16 @@
+geometry graph "Primitive Arrow"(
+    Vertices: Int = 6 in 3..16,
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0,
+    Ratio: Float(subtype: FACTOR) = 0.7 in 0.0..1.0,
+    Value: Color = (0.8, 0.8, 0.8),
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> Geometry {
+  math = Height * Ratio
+  math_2 = Height - math
+  return (Cone(vertices: Vertices, radius_bottom: 0.2, depth: math_2).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: Height - math_2)))
+      + (Cylinder(vertices: Vertices, radius: 0.08, depth: math).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: math / 2.0)))
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: Value)
+    |> SetMaterial(material: Material)
+}

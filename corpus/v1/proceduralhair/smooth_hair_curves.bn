@@ -1,0 +1,244 @@
+geometry graph ".shape_range"(
+    Value: Float(hide_value: true) in 0.0..1.0,
+    Min: Float(description: "rdghrhd") in -10000.0..10000.0,
+    Max: Float = 1.0 in -10000.0..10000.0,
+    Shape: Float in -1.0..1.0,
+    Base: Float = 2.0 in 1.0..10000.0
+) -> (Value: Float) {
+  map_range = MapRange[clamp: false](value: Value, from_min: Min, from_max: Max) @ hide
+  math_2 = 1.0 - map_range @ hide
+  compare = Shape < 0.0 @ hide
+  boolean_math = not compare @ hide
+  math_7 = max(Base, 1.00001) @ hide
+  math_3 = 1.0 / math_7 @ hide
+  math_4 = 1.0 - math_3 @ hide
+  math_5 = math_4 * 2.0 @ hide
+  math_10 = max(math_7, 1.000001) @ hide
+  math_15 = min(abs(Shape), 0.999999)
+  compare_2 = math_15 > 0.5 @ hide
+  switch_2 = compare_2 ? boolean_math : compare @ hide
+  switch = switch_2 ? math_2 : map_range @ hide
+  math_14 = Math[PINGPONG](Value: math_15) @ hide
+  math_6 = math_14 * math_5 @ hide
+  math_9 = 1.0 - math_6 @ hide
+  math_11 = max(math_9, 1e-05) @ hide
+  math_13 = log(math_11, math_10) @ hide
+  math_8 = -math_13 @ hide
+  math_12 = pow(switch, math_8)
+  math = 1.0 - math_12 @ hide
+  switch_3 = compare_2 ? math : math_12 @ hide
+  return (
+    Value: Compare[EQUAL](a: Shape, epsilon: 1e-05)
+      ? 1.0
+      : MapRange(value: switch_3, to_min: Min, to_max: Max))
+}
+
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph "Restore Curve Segment Length"(
+    Curves: Geometry,
+    Selection: Bool(description: "Only affect selected elements", hide_value: true) = true,
+    Factor: Float(subtype: FACTOR, description: "Factor to blend overall effect") = 1.0 in 0.0..1.0,
+    "Reference Position": Vector(
+      description: "Reference position before deformation",
+      hide_value: true,
+      default_attribute_name: "rest_position") = (8.14654, 4.96987, 9.87454),
+    "Pin at Parameter": Float(
+      subtype: FACTOR,
+      description: "Pin each curve at a certain point for the operation") in 0.0..1.0
+) -> (Curves: Geometry) {
+  "Restore Segment Lengths" {
+    index = Index()
+    math = index - 1.0 @ hide
+    compare = CurveOfPoint().index_in_curve == 0 @ hide
+    group = curve_segment()
+  }
+  "Default Fallback" {
+    named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+    switch_2 = Compare[EQUAL, VECTOR](
+        a: reference_position,
+        b: (8.14654, 4.96987, 9.87454),
+        epsilon: 0.0)
+      ? (named_attribute.exists ? named_attribute.attribute : Position())
+      : reference_position
+  }
+  "Restore Segment Lengths" .. {
+    set_position = SetPosition(
+      Curves,
+      selection: Factor > 0.0 and Selection,
+      position: curve_root().root_position,
+      offset: AccumulateField[FLOAT_VECTOR](
+        value: group.segment_direction
+          * Mix(
+            factor: Factor,
+            a: group.segment_length,
+            b: distance(
+              EvaluateAtIndex[FLOAT_VECTOR](
+                value: switch_2,
+                index: Switch[INT](switch: compare, false_: math, true_: index)),
+              switch_2)),
+        group_id: CurveOfPoint().curve_index).leading)
+  }
+  "Pin at Parameter" {
+    sample_curve = SampleCurve[FLOAT_VECTOR](
+      set_position,
+      value: switch_2,
+      factor: pin_at_parameter,
+      curve_index: Index())
+    vector_math = sample_curve.value - sample_curve.position @ hide
+    evaluate_on_domain = EvaluateOnDomain[CURVE, FLOAT_VECTOR](value: vector_math) @ hide
+    compare_2 = Compare[NOT_EQUAL](a: pin_at_parameter, epsilon: 0.0) @ hide
+    boolean_math = compare_2 and Selection @ hide
+    attribute_statistic = AttributeStatistic[CURVE](set_position, attribute: boolean_math) @ hide
+    compare_3 = attribute_statistic.max > 0.0 @ hide
+    switch = compare_3
+      ? SetPosition(set_position, selection: boolean_math, offset: evaluate_on_domain)
+      : set_position
+  }
+  return (Curves: switch)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Smooth Hair Curves"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    Amount: Float(subtype: FACTOR, description: "Amount of smoothing") = 1.0 in -1.0..1.0,
+    Shape: Float(
+      description: "Shape of the influence along curves (0 = constant, 0.5 = linear)") in -1.0..1.0,
+    Iterations: Int(description: "Amount of smoothing steps") = 10 in 0..10000,
+    Weight: Float(subtype: FACTOR, description: "Weight used for smoothing") = 0.5 in 0.0..1.0,
+    "Lock Tips": Bool(description: "Lock tip position when smoothing"),
+    "Preserve Length": Bool(description: "Preserve each curve's length during deformation") = true
+) -> Geometry {
+  "Optimization" {
+    compare = Compare[NOT_EQUAL](a: Amount, epsilon: 0.0) @ hide
+    accumulate_field = AccumulateField[INT, CURVE](value: compare) @ hide
+    sample_index = SampleIndex[INT, CURVE](Geometry, value: accumulate_field.total) @ hide
+    compare_2 = sample_index == 0 @ hide
+  }
+  "Blurred Position Attribute" {
+    "Root Pinning" {
+      group_2 = curve_root()
+    }
+  }
+  "Smoothing Mask" {
+    boolean_math_2 = Compare[NOT_EQUAL](a: Amount, epsilon: 0.0) and Weight > 0.0 @ hide
+    boolean_math_4 = curve_tip().tip_selection and lock_tips @ hide
+    boolean_math_3 = not boolean_math_4 @ hide
+    boolean_math_5 = boolean_math_3 and boolean_math_2 @ hide
+  }
+  "Smooth Weight" {
+    math = Weight
+      * boolean_math_5
+      * (shape_range(value: SplineParameter().factor, shape: Shape, base: 2.7182817)
+        * (not curve_root().root_selection))
+  }
+  "Length Preservation" {
+    boolean_math = preserve_length and boolean_math_2 @ hide
+  }
+  "Blurred Position Attribute" .. {
+    blur_attribute = BlurAttribute[FLOAT_VECTOR](
+      value: Position(),
+      iterations: Iterations,
+      weight: math)
+    "Root Pinning" .. {
+      evaluate_at_index_2 = EvaluateAtIndex[FLOAT_VECTOR](
+        value: blur_attribute,
+        index: group_2.root_index) @ hide
+    }
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  "Optimization" {
+    capture_attribute_2 = CaptureAttribute[CURVE](
+      get_geometry_component.component,
+      Value: SplineResolution())
+    set_spline_type = SetSplineType(capture_attribute_2.geometry)
+  }
+  capture_attribute = CaptureAttribute(set_spline_type, Value: Position())
+  "Blurred Position Attribute" .. {
+    "Root Pinning" .. {
+      evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
+        value: capture_attribute.value,
+        index: group_2.root_index) @ hide
+      vector_math_2 = blur_attribute - (evaluate_at_index - evaluate_at_index_2)
+    }
+    vector_math = (vector_math_2 - Position()) * Amount
+  }
+  set_position = SetPosition(
+    capture_attribute.geometry,
+    selection: boolean_math_5,
+    offset: vector_math)
+  "Length Preservation" .. {
+    group = restore_curve_segment_length(
+      set_position,
+      selection: boolean_math,
+      reference_position: capture_attribute.value)
+  }
+  "Optimization" {
+    set_spline_resolution = group
+      |> SetSplineType[CATMULL_ROM]()
+      |> SetSplineResolution(
+        resolution: capture_attribute_2.value == 0 ? 12 : capture_attribute_2.value)
+  }
+  join_geometry = get_geometry_component.geometry + set_spline_resolution
+  "Optimization" {
+    switch = Iterations == 0 or compare_2 ? Geometry : join_geometry
+  }
+  return switch
+}

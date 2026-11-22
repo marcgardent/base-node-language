@@ -1,0 +1,146 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_id: Int(
+      description: "The `atom_id` attribute, read from geometry. Corresponds to the order of the atoms when they were read from the file")
+) {
+  return (atom_id: attribute_at_index(index: Index, name: "atom_id"))
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Unit Convert"(
+    "Distance Type": Menu(
+      description: "What unit to scale the value to",
+      optional_label: true) = Angstrom,
+    From: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (
+    World: Float(description: "The value that has been scaled appropriately for the world space")
+) {
+  math = From * mn_world_scale()
+  math_2 = math * 10.0
+  return (
+    World: MenuSwitch(
+      menu: distance_type,
+      Angstrom: math,
+      Nanometre: math_2,
+      Micrometre: math_2 * 1000.0).output)
+}
+
+geometry graph "Angstrom to World"(Angstrom: Float = 3.0 in -10000.0..10000.0) -> (World: Float) {
+  return (World: unit_convert(from: Angstrom))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Unique Chain ID"(
+    Cutoff: Float(
+      subtype: DISTANCE,
+      description: "Threshold distance over which the next points are considered to be part of a new chain") = 4.5 in 0.0..10000.0
+) -> ("Group ID": Int(description: "Calculated `Group ID` attribute")) {
+  "Compute a unique Group ID based on the `chain_id` attribute, but also incrememnting if subsequent points are over a cutoff distance from each other"
+  position = Position()
+  return (
+    "Group ID": IntegerMath[ADD](
+      Value: integer_run(value: chain_id()).group_id,
+      Value_001: AccumulateField[INT](
+        value: distance(offset_vector(vector: position, offset: -1), position)
+          > angstrom_to_world(angstrom: Cutoff)).leading))
+}
+
+geometry(is_modifier: false) graph "Atoms to Curves"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Points to maintain and use for splines, non-selected points are removed",
+      hide_value: true) = true,
+    "Sort Points": Bool(
+      description: "Sort points first by atom_id and chain_id before splitting to curves"),
+    Cutoff: Float(subtype: DISTANCE) = 6.0 in -10000.0..10000.0
+) -> (Curves: Geometry) {
+  group = chain_id()
+  separate_components = SeparateComponents(Atoms)
+  mesh_to_points = MeshToPoints(
+    CurveToMesh(separate_components.curve) + separate_components.mesh,
+    selection: Selection)
+  return (
+    Curves: PointsToCurves(
+      sort_points
+        ? mesh_to_points
+          |> SortElements(sort_weight: group)
+          |> SortElements(group_id: group, sort_weight: atom_id())
+        : mesh_to_points,
+      curve_group_id: unique_chain_id(cutoff: Cutoff)))
+}

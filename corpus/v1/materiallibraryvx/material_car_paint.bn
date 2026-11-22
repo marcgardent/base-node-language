@@ -1,0 +1,19 @@
+shader(material: true) graph "Car Paint"() -> (surface: Shader) {
+  return (
+    surface: PrincipledBSDF[GGX, BURLEY](
+      base_color: ColorRamp[
+        color_ramp: Ramp(
+          (0.49090907, (1.0, 0.0, 0.0056576193, 1.0)),
+          (1.0, (1.0, 0.4476854, 0.0, 1.0)))](factor: LayerWeight().facing).color,
+      metallic: 1.0,
+      roughness: ColorRamp[
+        color_ramp: Ramp(
+          (0.0, (0.35884064, 0.35884064, 0.35884064, 1.0)),
+          (1.0, (1.0, 1.0, 1.0, 1.0)))](
+        factor: VoronoiTexture[SMOOTH_F1](scale: 4000.0).color).color,
+      ior: 1.45,
+      subsurface_scale: 0.05,
+      coat_weight: 0.25,
+      emission_color: (0.0, 0.0, 0.0, 1.0),
+      emission_strength: 1.0))
+}

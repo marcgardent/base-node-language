@@ -1,0 +1,141 @@
+geometry graph "Curve Rotation"(
+    Normal: Vector(
+      description: "The default direction to use as the Secondary Axis / X axis when computing the rotation") = Normal()
+) -> (Rotation: Rotation(description: "The computed rotation for the point on the curve")) {
+  "Computes the rotation of the point on the curve, by default using the `Normal` attribute and the `Tangent` axis"
+  return (Rotation: AxesToRotation(primary_axis: CurveTangent(), secondary_axis: Normal))
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph ".MN_select_sec_struct_id"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    id: Int(description: "Secondary structure component to select") = 1
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: id == NamedAttribute[INT](name: "sec_struct").attribute)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Sheet"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or, id: 2)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Rotation"(
+    Rotation: Rotation(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Rotation: Rotation(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Rotation: EvaluateAtIndex[QUATERNION](
+      value: Rotation,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry(is_modifier: false) graph NodeGroup(
+    Curves: Geometry(
+      description: "Geometry to evaluate the given fields and store the resulting attributes on. All geometry types except volumes are supported"),
+    "Reset Curve Normal": Bool(force_non_field: true, structure_type: SINGLE),
+    Rotation: Rotation,
+    Menu: Menu(optional_label: true) = Smooth,
+    Resolution: Int(description: "Number of points on the circle") = 12 in 3..512,
+    Radius: Float(
+      subtype: DISTANCE,
+      description: "Distance of the points from the origin") = 0.1 in 0.0..,
+    Scale: Vector(subtype: XYZ) = (1.0, 2.5, 1.0)
+) -> Geometry {
+  mix = Mix(b: 1.0)
+  capture_attribute = CaptureAttribute(Curves, Rotation: curve_rotation(), Position: Position())
+  sample_curve = SampleCurve[LENGTH, QUATERNION](
+    capture_attribute.geometry,
+    value: capture_attribute.rotation,
+    length: SplineParameter().length + 0.0,
+    curve_index: CurveOfPoint().curve_index)
+  capture_attribute_2 = CaptureAttribute(
+    capture_attribute.geometry,
+    Rotation: sample_curve.value,
+    Position: sample_curve.position)
+  switch = EndpointSelection(end_size: 0)
+    ? Mix[ROTATION](
+      factor: 0.0,
+      a: capture_attribute_2.rotation,
+      b: offset_rotation(rotation: capture_attribute_2.rotation, offset: 1))
+    : capture_attribute_2.rotation
+  set_curve_normal = capture_attribute_2.geometry
+    |> SetPosition(position: capture_attribute_2.position)
+    |> SetCurveNormal(
+      mode: Free,
+      normal: BlurAttribute[FLOAT_VECTOR](
+        value: RotateVector(
+          vector: (1.0, 0.0, 0.0),
+          rotation: is_sheet().selection
+            ? RotateRotation[LOCAL](rotation: switch, rotate_by: (0.0, 0.0, 0.7853982))
+            : switch),
+        iterations: 84,
+        weight: EndpointSelection(start_size: 4, end_size: 3))) @ mute
+  transform_geometry = CurveCircle(resolution: 4, radius: 0.1)
+    |> TransformGeometry(
+      mode: Matrix,
+      rotation: (0.0, 0.0, 0.7853982),
+      transform: MultiplyMatrices(
+        Matrix: CombineTransform(rotation: Rotation, scale: Scale),
+        Matrix_001: CombineTransform(rotation: (0.0, 0.0, 0.7853982))))
+  triangulate = set_curve_normal
+    |> CurveToMesh(
+      profile_curve: MenuSwitch(
+        menu: Menu,
+        Sharp: transform_geometry,
+        Smooth: mix > 0.0
+          ? transform_geometry
+            |> SetSplineType[BEZIER]()
+            |> SetHandleType()
+            |> FilletCurve(radius: Mix(factor: mix, a: 0.001, b: 0.05), limit_radius: true)
+          : transform_geometry,
+        Round: CurveCircle(resolution: Resolution, radius: Radius)).output,
+      fill_caps: true)
+    |> SetShadeSmooth(shade_smooth: false)
+    |> Triangulate() @ mute
+  return triangulate
+}

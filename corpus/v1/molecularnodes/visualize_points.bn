@@ -1,0 +1,52 @@
+geometry graph "Primitive Arrow"(
+    Vertices: Int = 6 in 3..16,
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0,
+    Ratio: Float(subtype: FACTOR) = 0.7 in 0.0..1.0,
+    Value: Color = (0.8, 0.8, 0.8),
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> Geometry {
+  math = Height * Ratio
+  math_2 = Height - math
+  return (Cone(vertices: Vertices, radius_bottom: 0.2, depth: math_2).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: Height - math_2)))
+      + (Cylinder(vertices: Vertices, radius: 0.08, depth: math).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: math / 2.0)))
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: Value)
+    |> SetMaterial(material: Material)
+}
+
+geometry graph "Vector from Point"(
+    Target: Vector(description: "Vector that is the target") in -10000.0..10000.0,
+    Position: Vector(
+      description: "Position of the current point") = Position() in -10000.0..10000.0
+) -> (
+    Vector: Vector(description: "Vector from the current point's position to the given vector"),
+    Direction: Vector(description: "Normalized output vector"),
+    Length: Float(description: "Length of the output vector"),
+    Rotation: Rotation
+) {
+  vector_math = Target - Position
+  return (
+    Vector: vector_math,
+    Direction: normalize(vector_math),
+    Length: length(vector_math),
+    Rotation: AlignRotationToVector(vector: vector_math))
+}
+
+geometry(is_modifier: false) graph "Visualize Points"(
+    Points: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Target: Vector(description: "Vector that is the target") in -10000.0..10000.0,
+    Position: Vector(
+      description: "Position of the current point",
+      hide_value: true) = Position() in -10000.0..10000.0
+) -> (Instances: Geometry) {
+  group = vector_from_point(target: Target, position: Position)
+  return (
+    Instances: InstanceOnPoints(
+      Points,
+      selection: Selection,
+      instance: primitive_arrow(value: (0.0, 0.0, 0.0, 1.0)),
+      rotation: group.rotation,
+      scale: CombineXYZ(x: 0.5, y: 0.5, z: group.length)))
+}

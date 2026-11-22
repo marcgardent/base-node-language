@@ -1,0 +1,89 @@
+shader graph "PT_ARB_StarSquare(13)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 3.0,
+    "Factor a": Float(subtype: FACTOR) = 0.27 in 0.0..1.0,
+    "Factor b": Float(subtype: FACTOR) = 0.85 in 0.0..1.0
+) -> (Position: Vector, UV: Vector, "UV oriented": Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  vector_math = normalize((1.7320508, 1.0, 0.0))
+  vector_math_2 = vector_math * MapRange(value: factor_a, to_max: 0.57735026)
+  combine_xyz = CombineXYZ(x: MapRange(value: factor_b, to_max: 0.5))
+  combine_xyz_2 = CombineXYZ(x: 0.5, y: 0.28867513)
+  vector_math_4 = combine_xyz - vector_math_2
+  vector_math_6 = combine_xyz_2 - combine_xyz
+  "p6m(17)" #311b4e {
+    vector_math_8 = Vector * Scale
+    combine_xyz_3 = CombineXYZ(x: 1.0, y: 1.73205)
+    vector_math_10 = vector_math_8 / combine_xyz_3 @ hide
+    vector_math_9 = fract(vector_math_10) @ hide
+    vector_math_7 = vector_math_9 - (0.5, 0.5, 0.0) @ hide
+    vector_math_11 = vector_math_7 * combine_xyz_3 @ hide
+    vector_math_14 = combine_xyz_3 * 0.5 @ hide
+    vector_math_12 = vector_math_8 - vector_math_14 @ hide
+    vector_math_13 = vector_math_12 / combine_xyz_3 @ hide
+    vector_math_15 = floor(vector_math_10) @ hide
+    vector_math_16 = vector_math_15 * combine_xyz_3 @ hide
+    vector_math_17 = floor(vector_math_13) @ hide
+    vector_math_18 = vector_math_17 * combine_xyz_3 @ hide
+    vector_math_19 = vector_math_18 + combine_xyz_3 @ hide
+    vector_math_21 = combine_xyz_3 * 0.5 @ hide
+    vector_math_20 = vector_math_16 + vector_math_21 @ hide
+    vector_math_22 = abs(vector_math_11) @ hide
+    vector_math_24 = vector_math_22 - (1.0, 0.0, 0.0) @ hide
+    vector_math_23 = vector_math_24 ⋅ combine_xyz_3 @ hide
+    math_3 = vector_math_23 > 0.0 @ hide
+    mix_2 = math_3 ? vector_math_19 : vector_math_20
+    vector_rotate = VectorRotate[Z_AXIS](vector: vector_math_8 - mix_2, angle: 1.0471976) @ hide
+    math_4 = atan2(vector_rotate.y, vector_rotate.x) @ hide
+    math_6 = vector_rotate.y < 0.0 @ hide
+    math_8 = math_6 * 6.2831855 @ hide
+    math_7 = math_4 + math_8 @ hide
+    map_range = MapRange(value: math_7, from_max: 6.2831855, to_max: 6.0)
+    math_5 = floor(map_range) @ hide
+    math_9 = math_5 * 5.2359877
+    vector_rotate_2 = VectorRotate[Z_AXIS](vector: vector_rotate, angle: math_9)
+    separate_xyz = SeparateXYZ(
+      vector: VectorRotate[Z_AXIS](vector: vector_rotate_2, angle: 0.5235988)) @ hide
+    math_13 = map_range * 2.0 @ hide
+    math_14 = floor(math_13) @ hide
+    math_15 = Math[FLOORED_MODULO](Value: math_14, Value_001: 2.0)
+    combine_xyz_6 = CombineXYZ(
+      x: Mix(factor: math_15, a: vector_rotate_2.x, b: separate_xyz.y),
+      y: Mix(factor: math_15, a: vector_rotate_2.y, b: separate_xyz.x))
+    math_16 = math_7 - 0.5235988 @ hide
+    math_17 = Math[FLOORED_MODULO](Value: math_16, Value_001: 6.2831855) @ hide
+    math_18 = floor(MapRange(value: math_17, from_max: 6.2831855, to_max: 6.0)) @ hide
+    math_19 = math_18 * 5.2359877
+    math_10 = cos(math_19) @ hide
+    math_11 = sin(math_19) @ hide
+    combine_xyz_5 = CombineXYZ(x: math_11, y: math_10) @ hide
+    math_12 = -math_11 @ hide
+    combine_xyz_4 = CombineXYZ(x: math_10, y: math_12) @ hide
+    vector_math_25 = combine_xyz_5 * MapRange(value: math_15, to_min: 1.0, to_max: -1.0)
+  }
+  vector_math_3 = (combine_xyz_6 - vector_math_2)
+    ⋅ normalize(CombineXYZ(x: -vector_math_4.y, y: vector_math_4.x))
+  vector_math_5 = (combine_xyz_6 - combine_xyz)
+    ⋅ normalize(CombineXYZ(x: -vector_math_6.y, y: vector_math_6.x))
+  math = vector_math_3 < 0.0 @ hide
+  math_2 = vector_math_5 < 0.0 @ hide
+  mix = math
+    ? (0.0, 0.0, 0.0)
+    : math_2
+      ? (0.5, 0.0, 0.0)
+      : vector_math * (vector_math ⋅ ((combine_xyz + combine_xyz_2 + vector_math_2) * 0.33333334))
+  vector_math_26 = combine_xyz_4 * mix.x + vector_math_25 * mix.y + mix_2
+  vector_math_27 = vector_math_26 / Scale
+  vector_math_28 = Vector - vector_math_27
+  math_20 = vector_math_3 < 0.0 @ hide
+  math_21 = vector_math_5 < 0.0 @ hide
+  return (
+    Position: vector_math_27,
+    UV: vector_math_28,
+    "UV oriented": VectorRotate(
+      vector: vector_math_28,
+      angle: (math_9 - 1.0471976) * min(vector_math_3 > 0.0, vector_math_5 > 0.0)),
+    Color: WhiteNoiseTexture(vector: vector_math_26 + (1000.0, 1000.0, 0.0)).color,
+    Edge: abs(min(vector_math_3, vector_math_5)) / Scale,
+    Masks: math_20 ? 0.0 : math_21 ? 2.0 : 1.0)
+}

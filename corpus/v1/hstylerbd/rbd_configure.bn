@@ -1,0 +1,124 @@
+geometry(is_modifier: false) graph "RBD Configure"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    Selection: Bool(
+      description: "The pieces to configure. A piece counts as selected when most of it is") = true,
+    "Set Active" {
+        "Set Active": Bool(is_panel_toggle: true),
+        Active: Bool(
+          description: "Off: the selected pieces never move, but other pieces still collide with them") = true
+    },
+    "Set Initial Velocity"(default_closed: true) {
+        "Set Initial Velocity": Bool(is_panel_toggle: true),
+        "Velocity Type": Menu(
+          description: "Constant: the same velocity for every piece. Radial: away from a point, like an explosion") = Radial,
+        Velocity: Vector(subtype: VELOCITY),
+        Origin: Vector(
+          subtype: TRANSLATION,
+          description: "Centre of the blast, in the space of the object"),
+        Speed: Float(description: "Metres per second at the origin") = 8.0 in 0.0..,
+        "Falloff Radius": Float(
+          subtype: DISTANCE,
+          description: "The speed fades to zero at this distance. 0 = no fade") in 0.0..,
+        "Up Bias": Float(
+          subtype: FACTOR,
+          description: "0 = straight away from the origin, 1 = straight up") = 0.3 in 0.0..1.0,
+        "Speed Variance": Float(subtype: FACTOR) = 0.3 in 0.0..1.0,
+        Spin: Float(description: "Random tumbling, radians per second") = 3.0 in 0.0..,
+        Seed: Int in 0..
+    },
+    "Set Activation"(default_closed: true) {
+        "Set Activation": Bool(is_panel_toggle: true),
+        "Activation Type": Menu(
+          description: "When the pieces are handed to the solver; until then they hold still. Radial Wave: one after the other, by their distance from a point") = "Radial Wave",
+        Delay: Float(description: "Seconds after the start frame") in 0.0..,
+        "Wave Origin": Vector(subtype: TRANSLATION),
+        "Wave Speed": Float(description: "Metres per second") = 10.0 in 0.001..
+    },
+    "Set Physical Properties"(default_closed: true) {
+        "Set Physical Properties": Bool(is_panel_toggle: true),
+        Density: Float(description: "Mass per cubic metre") = 100.0 in 0.001..,
+        Friction: Float = 0.6 in 0.0..,
+        Bounce: Float = 0.05 in 0.0..1.0
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  named_attribute_2 = NamedAttribute[INT](name: "piece_id")
+  named_attribute_3 = NamedAttribute[BOOLEAN](name: "active")
+  switch = set_active
+    ? StoreNamedAttribute[BOOLEAN](
+      Geometry,
+      name: "active",
+      value: Selection ? Active : named_attribute_3.exists ? named_attribute_3.attribute : true)
+    : Geometry
+  menu_switch = MenuSwitch(menu: velocity_type, Constant: 0, Radial: 1)
+  vector_math = named_attribute.attribute - Origin
+  switch_2 = falloff_radius > 0.0
+    ? max(1.0 - length(vector_math) / max(falloff_radius, 1e-06), 0.0)
+    : 1.0
+  named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "v")
+  named_attribute_5 = NamedAttribute[FLOAT_VECTOR](name: "w")
+  switch_3 = set_initial_velocity
+    ? switch
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "v",
+        value: Selection
+          ? (menu_switch.radial
+            ? normalize(normalize(vector_math) * (1.0 - up_bias) + (0.0, 0.0, 1.0) * up_bias)
+              * (Speed
+                * switch_2
+                * (1.0
+                  + speed_variance
+                    * RandomValue(min: -1.0, id: named_attribute_2.attribute, seed: Seed + 11.0)))
+            : Velocity)
+          : named_attribute_4.exists ? named_attribute_4.attribute : (0.0, 0.0, 0.0))
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "w",
+        value: Selection
+          ? (menu_switch.radial
+            ? normalize(
+                RandomValue[FLOAT_VECTOR](
+                  min: (-1.0, -1.0, -1.0),
+                  id: named_attribute_2.attribute,
+                  seed: Seed + 12.0))
+              * (Spin
+                * switch_2
+                * RandomValue(min: 0.3, id: named_attribute_2.attribute, seed: Seed + 13.0))
+            : (0.0, 0.0, 0.0))
+          : named_attribute_5.exists ? named_attribute_5.attribute : (0.0, 0.0, 0.0))
+    : switch
+  named_attribute_6 = NamedAttribute(name: "activate_time")
+  switch_4 = set_activation
+    ? StoreNamedAttribute(
+      switch_3,
+      name: "activate_time",
+      value: Selection
+        ? (MenuSwitch(menu: activation_type, "At Time": 0, "Radial Wave": 1).radial_wave
+          ? Delay + length(named_attribute.attribute - wave_origin) / wave_speed
+          : Delay)
+        : named_attribute_6.exists ? named_attribute_6.attribute : 0.0)
+    : switch_3
+  named_attribute_7 = NamedAttribute(name: "density")
+  named_attribute_8 = NamedAttribute(name: "friction")
+  named_attribute_9 = NamedAttribute(name: "bounce")
+  return (
+    Geometry: set_physical_properties
+      ? switch_4
+        |> StoreNamedAttribute(
+          name: "density",
+          value: Selection
+            ? Density
+            : named_attribute_7.exists ? named_attribute_7.attribute : -1.0)
+        |> StoreNamedAttribute(
+          name: "friction",
+          value: Selection
+            ? Friction
+            : named_attribute_8.exists ? named_attribute_8.attribute : -1.0)
+        |> StoreNamedAttribute(
+          name: "bounce",
+          value: Selection ? Bounce : named_attribute_9.exists ? named_attribute_9.attribute : -1.0)
+      : switch_4,
+    "Constraint Geometry": constraint_geometry,
+    "Proxy Geometry": proxy_geometry)
+}

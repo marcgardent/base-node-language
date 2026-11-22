@@ -1,0 +1,13 @@
+geometry graph "Set Geometry Visibility"(
+    Viewport: Geometry,
+    Render: Geometry,
+    "Preview Render": Bool
+) -> Geometry {
+  "Viewport" {
+    switch = IsViewport() ? Viewport : Render
+  }
+  "Render View" {
+    switch_2 = preview_render ? Render : switch
+  }
+  return switch_2
+}

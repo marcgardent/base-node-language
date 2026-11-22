@@ -1,0 +1,17 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Segment ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    segid: Int(
+      description: "The `segid` attribute read from the points, an integer index into the segments read from the topology")
+) {
+  "Integer representation of the segment IDs present in the structure (MDAnalysis `segid`), assigned in order of the segments read from the topology"
+  return (segid: attribute_at_index(index: Index, name: "segid"))
+}

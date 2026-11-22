@@ -1,0 +1,23 @@
+geometry graph "Select Similar Vertices"(
+    Index: Int = 1 in 0..,
+    Threshold: Float = 0.001 in 0.0..1.0
+) -> (Normal: Bool, "Adjacent Edges": Bool, "Adjacent Faces": Bool) {
+  {
+    vertex_neighbors = VertexNeighbors()
+    compare = vertex_neighbors.vertex_count
+      == EvaluateAtIndex[INT](value: vertex_neighbors.vertex_count, index: Index)
+  }
+  {
+    vertex_neighbors_2 = VertexNeighbors()
+    compare_2 = vertex_neighbors_2.face_count
+      == EvaluateAtIndex[INT](value: vertex_neighbors_2.face_count, index: Index)
+  }
+  {
+    normal = Normal[legacy_corner_normals: true]()
+    compare_3 = Compare[EQUAL](
+      a: EvaluateAtIndex[FLOAT_VECTOR](value: normal.normal, index: Index) ⋅ normal.normal,
+      b: 1.0,
+      epsilon: Threshold)
+  }
+  return (Normal: compare_3, "Adjacent Edges": compare, "Adjacent Faces": compare_2)
+}

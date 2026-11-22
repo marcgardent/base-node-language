@@ -1,0 +1,20 @@
+geometry graph easeQuad(
+    Value: Float(hide_value: true) = 0.5 in 0.0..1.0,
+    EaseIn: Bool = true,
+    EaseOut: Bool
+) -> (Value: Float) {
+  switch = EaseIn ? pow(Value, 2.0) : Value @ hide
+  boolean_math = EaseIn and EaseOut @ hide
+  {
+    math = 1.0 - pow(1.0 - Value, 2.0)
+  }
+  switch_2 = EaseOut ? math : switch @ hide
+  {
+    compare = Value < 0.5 @ hide
+    switch_4 = compare
+      ? pow(Value, 2.0) * 2.0
+      : 1.0 - pow(Math[MULTIPLY_ADD](Value: Value, Value_001: -2.0, Value_002: 2.0), 2.0) / 2.0
+  }
+  switch_3 = boolean_math ? switch_4 : switch_2 @ hide
+  return (Value: switch_3)
+}

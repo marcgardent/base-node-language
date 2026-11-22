@@ -1,0 +1,30 @@
+shader(material: true) graph Lemon() -> (surface: Shader, displacement: Vector) {
+  RGB = (0.7991, 0.65397, 0.01765, 1.0)
+  voronoi_texture = VoronoiTexture(scale: 75.0)
+  voronoi_texture_2 = VoronoiTexture(scale: 400.0)
+  return (
+    surface: MixShader(
+      factor: Fresnel(ior: 2.21038),
+      a: MixShader(
+        factor: Fresnel(ior: 28.76226),
+        a: GlossyBSDF[BECKMANN](color: (1.0, 0.83284, 0.41994, 1.0), roughness: 0.4472136),
+        b: MixShader(
+          factor: 0.2232,
+          a: SubsurfaceScattering[BURLEY](
+            color: (0.8000001, 0.6408449, 0.0, 1.0),
+            scale: 0.19999999),
+          b: DiffuseBSDF(color: (0.8000001, 0.23150535, 0.0, 1.0)))),
+      b: TransparentBSDF(color: (0.7394299, 0.4437619, 0.0, 1.0))),
+    displacement: Displacement(
+      height: Mix[RGBA, OVERLAY](
+        factor: 0.0688,
+        a: RGB,
+        b: Math[MULTIPLY](
+          Value: RGB,
+          Value_001: Mix[RGBA, SUBTRACT](
+            factor: 0.5,
+            a: log(voronoi_texture_2.distance * voronoi_texture_2.distance, 14.64355),
+            b: log(voronoi_texture.distance * voronoi_texture.distance, 10.0)))),
+      midlevel: 0.0,
+      scale: 0.1))
+}

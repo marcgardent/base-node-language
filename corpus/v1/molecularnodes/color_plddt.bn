@@ -1,0 +1,27 @@
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "B Factor"(Index: Int = Index() in 0..) -> (b_factor: Float) {
+  return (b_factor: EvaluateAtIndex(value: fallback_float(name: "b_factor"), index: Index))
+}
+
+geometry graph "Color pLDDT"(
+    "<50": Color(description: "Color for pLDTT < 50") = (1.000169, 0.20506974, 0.05950701),
+    "<70": Color(description: "Color for 50 < pLDTT < 70") = (1.0001687, 0.7083451, 0.006511816),
+    "<90": Color(description: "Color for 70 < pLDTT < 90") = (0.13015743, 0.5971759, 0.8962046),
+    ">90" as _90_color: Color(description: "Color for 90 < pLDTT") = (0.0, 0.08649647, 0.6723945)
+) -> (Color: Color(description: "Assigned color based on the pLDTT score")) {
+  group = b_factor()
+  return (Color: group > 90.0 ? _90_color : group > 70.0 ? _90 : group > 50.0 ? _70 : _50)
+}

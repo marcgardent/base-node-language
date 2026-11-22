@@ -1,0 +1,14 @@
+shader(material: true) graph "Ceramic Polished"() -> (surface: Shader) {
+  fresnel = Fresnel(ior: 1.45)
+  "Change to Facing" #4f4f4f {
+    layer_weight = LayerWeight(blend: 0.10000001)
+  }
+  return (
+    surface: MixShader(
+      factor: layer_weight.fresnel,
+      a: GlossyBSDF[BECKMANN](color: fresnel, roughness: 0.099949986),
+      b: DiffuseBSDF(
+        color: ColorRamp[
+          color_ramp: Ramp((0.0, (0.22811979, 0.7610084, 1.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](
+          factor: fresnel).color)))
+}

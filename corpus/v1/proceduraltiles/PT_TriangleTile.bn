@@ -1,0 +1,42 @@
+shader graph PT_TriangleTile(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Shift: Bool = true,
+    "UV oriented": Bool = true
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float) {
+  vector_math_3 = CombineXYZ(x: 0.8660254, y: 1.0) * 1.1547005
+  vector_math = Vector * Scale * vector_math_3
+  vector_math_8 = floor(vector_math)
+  combine_xyz = CombineXYZ(x: vector_math_8.y * 0.5, y: vector_math_8.y) @ hide
+  vector_math_11 = combine_xyz * Shift
+  vector_math_9 = vector_math - vector_math_11
+  vector_math_2 = fract(vector_math_9)
+  vector_math_4 = abs(vector_math_2 - (0.5, 0.0, 0.0))
+  math = vector_math_4.x + vector_math_4.y * 0.5
+  math_2 = math > 0.5
+  vector_math_5 = vector_math_2 - (0.5, 0.28867513, 0.0)
+  math_3 = vector_math_2.x > 0.5
+  mix_2 = math_3 ? (0.5, 0.0, 0.0) : (-0.5, 0.0, 0.0) @ hide
+  vector_math_10 = floor(vector_math_9) + vector_math_11
+  mix = math_2
+    ? vector_math_10 + (0.5, 0.711325, 0.0) + mix_2
+    : vector_math_10 + (0.5, 0.28867513, 0.0)
+  vector_math_6 = mix / Scale / vector_math_3
+  vector_math_7 = mix + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_6,
+    UV: uv_oriented
+      ? (math_2
+          ? MapRange[FLOAT_VECTOR, clamp: false](
+              vector: vector_math_5,
+              from_max: (0.5, 0.288675, 0.0),
+              to_min: (0.5, 0.288675, 0.0),
+              to_max: (0.0, 0.0, 0.0))
+            * CombineXYZ(x: math_3 ? 1.0 : -1.0, y: 1.0)
+          : vector_math_5)
+        / Scale
+        / vector_math_3
+      : Vector - vector_math_6,
+    Color: WhiteNoiseTexture(vector: vector_math_7).color,
+    Edge: min(abs(math - 0.5), Math[PINGPONG](Value: vector_math_4.y)) * 0.8660254 / Scale)
+}

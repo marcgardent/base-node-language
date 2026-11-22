@@ -1,0 +1,19 @@
+shader graph uPT_Roulette(
+    Vector: Vector(hide_value: true),
+    Vertices: Float = 6.0,
+    Radius: Float,
+    "Centered UV": Bool,
+    "Align Edge": Bool,
+    "Vertex dist as Radius": Bool(description: "use the distance to the vertex  as radius")
+) -> (Vector: Vector, Masks: Int) {
+  "PT Utils"
+  math_2 = 6.2831855 / (Vertices * 2.0)
+  mix = align_edge ? VectorRotate(vector: Vector, angle: math_2) : Vector
+  math = floor((atan2(mix.y, mix.x) + (mix.y < 0.0) * 6.2831855) / 6.2831855 * Vertices)
+  math_3 = cos(math_2) * Radius @ hide
+  mix_2 = vertex_dist_as_radius ? math_3 : Radius
+  vector_math = (VectorRotate(vector: mix, angle: -((math + 0.5) / Vertices * 6.28319))
+      - CombineXYZ(x: mix_2, y: centered_uv ? 0.0 : -mix_2))
+    * (-1.0, 1.0, 0.0)
+  return (Vector: CombineXYZ(x: vector_math.y, y: vector_math.x), Masks: math)
+}

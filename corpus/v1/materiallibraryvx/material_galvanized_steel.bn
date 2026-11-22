@@ -1,0 +1,14 @@
+shader(material: true) graph "Galvanized Steel"() -> (surface: Shader) {
+  value = 15.0 @ "Scale" #ff1a1a
+  mix = Mix[RGBA](
+    factor: 0.75,
+    a: NoiseTexture(scale: value * 4.0).color,
+    b: VoronoiTexture(scale: value).color)
+  math = Math[ADD](Value: Gamma(color: mix)) / 5.0
+  return (
+    surface: MixShader(
+      a: GlossyBSDF[BECKMANN](color: (0.86666, 1.0, 1.0, 1.0), roughness: pow(math, 0.5)),
+      b: GlossyBSDF[BECKMANN](
+        color: Gamma(color: RGBToBW(color: mix), gamma: 0.5),
+        roughness: pow(math, 0.5))))
+}

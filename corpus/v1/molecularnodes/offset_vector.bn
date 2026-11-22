@@ -1,0 +1,20 @@
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}

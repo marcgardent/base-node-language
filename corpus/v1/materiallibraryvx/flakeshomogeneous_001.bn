@@ -1,0 +1,12 @@
+shader graph "FlakesHomogeneous.001"(
+    BaseColor: Color = (0.8, 0.8, 0.8),
+    Scale: Float = 500.0
+) -> Shader {
+  hue_saturation_value = HueSaturationValue(color: BaseColor) @ "ColorRepeater" hide
+  return MixShader(
+    factor: Gamma(color: VoronoiTexture(scale: Scale).color, gamma: 5.0),
+    a: GlossyBSDF[BECKMANN](
+      color: BrightnessContrast(color: hue_saturation_value, brightness: -0.2),
+      roughness: 0.5477134),
+    b: GlossyBSDF[BECKMANN](color: hue_saturation_value, roughness: 0.6324476))
+}

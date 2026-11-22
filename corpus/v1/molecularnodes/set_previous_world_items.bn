@@ -1,0 +1,23 @@
+geometry graph "Set Previous World Items"(World: Bundle, Cache: Bundle) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    pattern_mode: Wildcard,
+    bundle_type: "*",
+    data_type: Bundle)
+  repeat_output = repeat(ListLength[STRING](list: get_nested_bundle_paths), World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+    get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item, remove: true)
+    get_bundle_item_2 = GetBundleItem[BUNDLE](bundle: Cache, path: get_list_item)
+    return get_bundle_item.exists and get_bundle_item_2.exists
+      ? StoreBundleItem[BUNDLE](
+        bundle: World,
+        path: get_list_item,
+        item: StoreBundleItem[BUNDLE](
+          bundle: get_bundle_item.item,
+          path: "previous",
+          item: get_bundle_item_2.item))
+      : World
+  }
+  return (World: repeat_output)
+}

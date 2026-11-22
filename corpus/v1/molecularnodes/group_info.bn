@@ -1,0 +1,16 @@
+geometry graph "Group Info"(
+    "Group ID": Int(hide_value: true)
+) -> (Size: Int, "Index in Group": Int, "Index of First": Int, "Index of Last": Int) {
+  index = Index()
+  integer = 1
+  accumulate_field = AccumulateField[INT](value: integer, group_id: group_id)
+  return (
+    Size: accumulate_field.total,
+    "Index in Group": accumulate_field.trailing,
+    "Index of First": AccumulateField[INT](
+      value: accumulate_field.trailing == 0 ? index : 0,
+      group_id: group_id).total,
+    "Index of Last": AccumulateField[INT](
+      value: accumulate_field.leading == accumulate_field.total ? index : 0,
+      group_id: group_id).total)
+}

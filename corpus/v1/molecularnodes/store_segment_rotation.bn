@@ -1,0 +1,16 @@
+geometry(is_modifier: false) graph "Store Segment Rotation"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  position = Position()
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: Name,
+      value: AxesToRotation(
+        primary_axis: EvaluateAtIndex[FLOAT_VECTOR](
+            value: position,
+            index: OffsetPointInCurve(offset: 1).point_index)
+          - position,
+        secondary_axis: Normal().normal)))
+}

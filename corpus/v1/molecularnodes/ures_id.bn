@@ -1,0 +1,17 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}

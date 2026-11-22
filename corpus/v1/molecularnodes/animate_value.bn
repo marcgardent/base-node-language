@@ -1,0 +1,35 @@
+geometry graph "Animate Value"(
+    "Smoother Step": Bool(description: "Ease out and in from the min and max values"),
+    Clamped: Bool(description: "Whether to clamp the interpolated value to the max"),
+    "Frame" {
+        "Frame Start": Int(description: "Frame to start the animation on") = 1 in 1..,
+        "Frame End": Int(description: "Frame to finish the animation on") = 250 in 1..
+    },
+    "Value" {
+        "Value Min": Float(description: "Value to start animation from") in -10000.0..10000.0,
+        "Value Max": Float(description: "Value to end animation at") = 1.0 in -10000.0..10000.0
+    }
+) -> (Value: Float(description: "Animated value that interpolates from min to max over frames")) {
+  scene_time = SceneTime()
+  return (
+    Value: smoother_step
+      ? MapRange[SMOOTHERSTEP, clamp: false](
+        value: scene_time.frame,
+        from_min: frame_start,
+        from_max: frame_end,
+        to_min: value_min,
+        to_max: value_max)
+      : Clamped
+        ? MapRange(
+          value: scene_time.frame,
+          from_min: frame_start,
+          from_max: frame_end,
+          to_min: value_min,
+          to_max: value_max)
+        : MapRange[clamp: false](
+          value: scene_time.frame,
+          from_min: frame_start,
+          from_max: frame_end,
+          to_min: value_min,
+          to_max: value_max))
+}

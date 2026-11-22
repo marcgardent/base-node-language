@@ -1,0 +1,146 @@
+shader graph PT_QuadFlower(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "Petal rounding": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "Pill rounding": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "Splited flower": Bool
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  vector_math_4 = Vector * Scale
+  vector_math = abs(fract(vector_math_4 + (0.5, 0.5, 0.0)) - (0.5, 0.5, 0.0))
+  vector_math_5 = fract(vector_math_4)
+  "mask" {
+    math_6 = vector_math_5.x > 0.5
+    math_7 = vector_math_5.y > 0.5
+  }
+  math_13 = Math[FLOORED_MODULO](Value: vector_math_5.x + vector_math_5.y, Value_001: 1.0)
+  "mask" .. {
+    math_9 = math_13 > 0.5
+  }
+  math_14 = Math[FLOORED_MODULO](Value: vector_math_5.x - vector_math_5.y, Value_001: 1.0)
+  "mask" .. {
+    math_10 = math_14 > 0.5
+  }
+  math_15 = Math[ADD, use_clamp: true](
+    Value: Math[MULTIPLY, use_clamp: true](
+      Value: MapRange(value: math_9, to_min: 1.0, to_max: 0.0),
+      Value_001: math_10),
+    Value_001: Math[MULTIPLY, use_clamp: true](
+      Value: MapRange(value: math_10, to_min: 1.0, to_max: 0.0),
+      Value_001: math_9))
+  math_24 = 1.0 / Scale
+  math_25 = Math[MULTIPLY](Value: abs(vector_math_5 - (0.5, 0.5, 0.0)), Value_001: 1.5) < 0.25
+  {
+    vector_math_9 = vector_math + 0.0 @ hide
+    vector_math_19 = vector_math + 0.0 @ hide
+    vector_math_20 = 0.0 + (0.0, 0.0, 0.0) @ hide
+    vector_math_21 = (0.5, 0.5, 0.0) + 0.0 @ hide
+    vector_math_22 = vector_math_19 - vector_math_20 @ hide
+    vector_math_23 = vector_math_21 - vector_math_20 @ hide
+    vector_math_24 = vector_math_22 ⋅ vector_math_23 @ hide
+    vector_math_25 = vector_math_23 ⋅ vector_math_23 @ hide
+    math_31 = Math[DIVIDE, use_clamp: true](Value: vector_math_24, Value_001: vector_math_25) @ hide
+    vector_math_28 = vector_math_23 * math_31 @ hide
+    vector_math_27 = vector_math_22 - vector_math_28 @ hide
+    vector_math_26 = length(vector_math_27) @ hide
+  }
+  {
+    vector_math_29 = vector_math + 0.0 @ hide
+  }
+  map_range = MapRange[clamp: false](value: pill_rounding, to_max: 0.25)
+  combine_xyz = CombineXYZ(x: map_range, y: 0.5 - map_range)
+  combine_xyz_2 = CombineXYZ(x: combine_xyz.y, y: combine_xyz.x)
+  "mask" .. {
+    math_4 = vector_math.x > combine_xyz.y
+    math_5 = vector_math.y > combine_xyz.y
+    math_8 = (vector_math.x > combine_xyz.x) * (vector_math.y > combine_xyz.x)
+  }
+  math_11 = Math[SUBTRACT, use_clamp: true](Value: max(math_4, math_5), Value_001: math_8)
+  math_23 = combine_xyz.y * 0.5
+  math_22 = -math_23
+  .. {
+    vector_math_30 = combine_xyz + 0.0 @ hide
+    vector_math_31 = combine_xyz_2 + 0.0 @ hide
+    vector_math_32 = vector_math_29 - vector_math_30 @ hide
+    vector_math_33 = vector_math_31 - vector_math_30 @ hide
+    vector_math_34 = vector_math_32 ⋅ vector_math_33 @ hide
+    vector_math_35 = vector_math_33 ⋅ vector_math_33 @ hide
+    math_32 = Math[DIVIDE, use_clamp: true](Value: vector_math_34, Value_001: vector_math_35) @ hide
+    vector_math_38 = vector_math_33 * math_32 @ hide
+    vector_math_37 = vector_math_32 - vector_math_38 @ hide
+    vector_math_36 = length(vector_math_37) @ hide
+  }
+  math = vector_math_36 - map_range
+  map_range_2 = MapRange[clamp: false](value: petal_rounding, to_max: 0.35355338 - map_range)
+  math_3 = (map_range_2 + map_range) / 1.4142135
+  combine_xyz_3 = CombineXYZ(x: math_3, y: math_3)
+  vector_math_2 = (0.25, 0.25, 0.0) - combine_xyz_3
+  vector_math_3 = (0.25, 0.25, 0.0) + combine_xyz_3
+  {
+    vector_math_10 = vector_math_2 + 0.0 @ hide
+    vector_math_11 = vector_math_3 + 0.0 @ hide
+    vector_math_12 = vector_math_9 - vector_math_10 @ hide
+    vector_math_13 = vector_math_11 - vector_math_10 @ hide
+    vector_math_14 = vector_math_12 ⋅ vector_math_13 @ hide
+    vector_math_15 = vector_math_13 ⋅ vector_math_13 @ hide
+    math_30 = Math[DIVIDE, use_clamp: true](Value: vector_math_14, Value_001: vector_math_15) @ hide
+    vector_math_18 = vector_math_13 * math_30 @ hide
+    vector_math_17 = vector_math_12 - vector_math_18 @ hide
+    vector_math_16 = length(vector_math_17) @ hide
+  }
+  mix_3 = splited_flower ? vector_math_26 : vector_math_16 @ #9b9b9b
+  math_33 = mix_3 - map_range_2 @ hide
+  math_34 = math - map_range_2 @ hide
+  combine_xyz_4 = CombineXYZ(x: math_33, y: math_34) @ hide
+  vector_math_39 = min(combine_xyz_4, 0.0) @ hide
+  vector_math_40 = length(vector_math_39) @ hide
+  math_35 = -vector_math_40 @ hide
+  math_36 = min(mix_3, math) @ hide
+  math_37 = max(math_36, map_range_2) @ hide
+  math_38 = math_35 + math_37 @ hide
+  "mask" .. {
+    math_2 = math_38 > 0.0
+    mix = math_2
+      ? Mix[VECTOR](
+        factor: math_8 * math_25 * math_2,
+        a: ((math_4 ? (0.5, 0.0, 0.0) : math_6 ? (1.0, 0.0, 0.0) : (0.0, 0.0, 0.0))
+            + (math_5 ? (0.0, 0.5, 0.0) : math_7 ? (0.0, 1.0, 0.0) : (0.0, 0.0, 0.0)))
+          * math_2,
+        b: (0.5, 0.5, 0.0))
+      : (math_6 ? (0.75, 0.0, 0.0) : (0.25, 0.0, 0.0))
+        + (math_7 ? (0.0, 0.75, 0.0) : (0.0, 0.25, 0.0))
+  }
+  math_12 = Math[SUBTRACT, use_clamp: true](Value: math_2, Value_001: math_11)
+  math_16 = Math[MULTIPLY, use_clamp: true](
+    Value: math_12,
+    Value_001: MapRange(value: math_15, to_min: 1.0, to_max: 0.0))
+  math_17 = Math[MULTIPLY, use_clamp: true](Value: math_12, Value_001: math_15)
+  math_18 = Math[MULTIPLY, use_clamp: true](Value: math_16, Value_001: math_10)
+  math_19 = Math[SUBTRACT, use_clamp: true](Value: math_16, Value_001: math_18)
+  math_20 = Math[MULTIPLY, use_clamp: true](Value: math_17, Value_001: math_9)
+  math_21 = Math[SUBTRACT, use_clamp: true](Value: math_17, Value_001: math_20)
+  mix_2 = splited_flower
+    ? Mix[RGBA, ADD](
+      factor: math_19,
+      a: Mix[RGBA, ADD](
+        factor: math_18,
+        a: Mix[RGBA, ADD](
+          factor: math_21,
+          a: Mix[RGBA, ADD](factor: math_20, a: mix, b: CombineXYZ(y: math_22)),
+          b: CombineXYZ(y: math_23)),
+        b: CombineXYZ(x: math_22)),
+      b: CombineXYZ(x: math_23))
+    : mix @ #9b9b9b
+  vector_math_6 = mix_2 + floor(vector_math_4)
+  vector_math_7 = vector_math_6 * math_24
+  vector_math_8 = vector_math_6 + (1000.0, 1000.0, 0.0) @ hide
+  math_28 = math_20 * 4.0 + math_19 * 1.0 @ hide
+  math_27 = math_28 + math_18 * 3.0 @ hide
+  math_26 = math_27 + math_21 * 2.0 @ hide
+  math_29 = math_26 + math_11 * math_2 * 5.0 @ hide
+  return (
+    Position: vector_math_7,
+    UV: Vector - vector_math_7,
+    Color: WhiteNoiseTexture(vector: vector_math_8).color,
+    Edge: abs(math_38) * math_24,
+    Masks: math_29)
+}

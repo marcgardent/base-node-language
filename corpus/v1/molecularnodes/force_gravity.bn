@@ -1,0 +1,6 @@
+geometry graph "Force Gravity"(
+    Add: Vector(hide_value: true) in -10000.0..10000.0,
+    Gravity: Vector = (0.0, 0.0, -9.8) in -10000.0..10000.0
+) -> (Force: Vector) {
+  return (Force: Add + Gravity)
+}

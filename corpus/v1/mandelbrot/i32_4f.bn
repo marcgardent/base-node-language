@@ -1,0 +1,33 @@
+geometry graph "i32 mBeB"() -> (mBits: Int, eBias: Int) {
+  mBits = 32 @ "mBits" #83314a
+  eBias = 65536 @ "eBias" #83314a
+  return (mBits: mBits, eBias: eBias)
+}
+
+geometry graph "i32 4f"(
+    Value: Float
+) -> (
+    "i32" {
+        Value: Bundle
+    }
+) {
+  math = abs(Value)
+  math_2 = floor(log(math, 2.0) + 1.0)
+  group = i32_mbeb() @ #3b5d3d
+  math_3 = math / pow(2.0, math_2) * pow(2.0, group.mbits)
+  compare = math_3 >= 2147483600.0 @ #83314a
+  group_2 = i32_mbeb() @ #3b5d3d
+  compare_2 = Compare[NOT_EQUAL](a: Value, epsilon: 0.0)
+  return (
+    Value: CombineBundle(
+      m: compare_2 ? Switch[INT](switch: compare, false_: math_3, true_: math_3 / 2.0) : 0,
+      e: compare_2
+        ? IntegerMath[ADD](
+          Value: Switch[INT](
+            switch: compare,
+            false_: math_2,
+            true_: IntegerMath[ADD](Value: math_2, Value_001: 1)),
+          Value_001: group_2.ebias)
+        : 0,
+      s: Value < 0.0))
+}

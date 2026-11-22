@@ -1,0 +1,16 @@
+geometry(is_modifier: false) graph "Store Bend Rotation"(
+    Curves: Geometry,
+    "Bend Rotation Name": String(optional_label: true) = "rest_bend_rotation",
+    "Rotation Name": String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  named_attribute = NamedAttribute[QUATERNION](name: rotation_name)
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: bend_rotation_name,
+      value: RotateRotation[LOCAL](
+        rotation: InvertRotation(rotation: named_attribute.attribute),
+        rotate_by: EvaluateAtIndex[QUATERNION](
+          value: named_attribute.attribute,
+          index: OffsetPointInCurve(offset: 1).point_index))))
+}

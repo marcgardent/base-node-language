@@ -1,0 +1,6 @@
+geometry graph "Is Edge Manifold"() -> (
+    "Is Edge Manifold": Bool(
+      description: "Selection of edges that connect two faces of a mesh surface")
+) {
+  return ("Is Edge Manifold": EvaluateOnDomain[EDGE, BOOLEAN](value: CornersOfEdge().total == 2))
+}

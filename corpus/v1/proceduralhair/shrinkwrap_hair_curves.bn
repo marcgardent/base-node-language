@@ -1,0 +1,122 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Shrinkwrap Hair Curves"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    "Surface Input Type": Menu(
+      description: "Select the input type for the surface geometry.",
+      hide_in_modifier: true,
+      menu_expanded: true,
+      optional_label: true) = Object,
+    Surface: Object(description: "Surface object used for shrinkwrap", optional_label: true),
+    Surface as surface_geometry: Geometry(description: "Surface geometry used for shrinkwrap"),
+    Factor: Float(subtype: FACTOR, description: "Factor") = 1.0 in 0.0..1.0,
+    "Offset Distance": Float(
+      subtype: DISTANCE,
+      description: "Distance from the surface used for shrinkwrap") in 0.0..,
+    "Above Surface": Float(
+      subtype: FACTOR,
+      description: "Blend shrinkwrap for points above the surface") = 0.5 in 0.0..1.0,
+    "Smoothing Steps": Int(
+      description: "Amount of steps of smoothing applied after shrinkwrap") in 0..,
+    "Lock Roots": Bool(description: "Lock the position of root points") = true
+) -> Geometry {
+  "Blending" {
+    position = Position()
+  }
+  {
+    boolean_math = not curve_root().root_selection or not lock_roots
+  }
+  {
+    compare_2 = Compare[EQUAL](a: offset_distance, epsilon: 0.0) @ hide
+    compare_3 = Compare[EQUAL](a: above_surface, epsilon: 0.0) @ hide
+    math_5 = max(offset_distance, 1e-10) @ hide
+  }
+  "Surface Geometry" {
+    menu_switch = MenuSwitch(
+      menu: surface_input_type,
+      Object: ObjectInfo[RELATIVE](object: Surface).geometry,
+      Geometry: surface_geometry)
+  }
+  capture_attribute = CaptureAttribute(
+    menu_switch.output,
+    Value: Normal[legacy_corner_normals: true]().normal)
+  geometry_proximity = GeometryProximity(capture_attribute.geometry)
+  sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: capture_attribute.value)
+  {
+    vector_math_2 = geometry_proximity.position - Position() @ hide
+    vector_math_3 = vector_math_2 ⋅ sample_nearest_surface.value @ hide
+    compare = vector_math_3 > 0.0
+    boolean_math_2 = compare and boolean_math
+  }
+  "Smoothing" {
+    math_2 = BlurAttribute(value: boolean_math_2, iterations: smoothing_steps) - 0.5 @ hide
+    math = abs(math_2) @ hide
+    math_3 = 0.5 - math @ hide
+    math_4 = math_3 * 2.0 @ hide
+  }
+  {
+    math_6 = -geometry_proximity.distance @ hide
+    switch_2 = compare_2 and compare_3
+      ? boolean_math_2
+      : MapRange(
+          value: compare ? math_6 : geometry_proximity.distance,
+          from_max: math_5,
+          to_min: 1.0,
+          to_max: above_surface)
+        * boolean_math
+  }
+  mix = Mix[VECTOR](
+    factor: switch_2,
+    a: Position(),
+    b: Position()
+      + VectorMath[PROJECT](Vector: vector_math_2, Vector_001: sample_nearest_surface.value)
+      + sample_nearest_surface.value * offset_distance)
+  "Smoothing" .. {
+    blur_attribute = BlurAttribute[FLOAT_VECTOR](
+      value: mix,
+      iterations: smoothing_steps,
+      weight: math_4)
+  }
+  "Blending" .. {
+    vector_math = position + (blur_attribute - position) * Factor
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  "Optimization" {
+    capture_attribute_2 = CaptureAttribute[CURVE](
+      get_geometry_component.component,
+      Value: SplineResolution())
+    set_spline_type = SetSplineType(capture_attribute_2.geometry)
+  }
+  set_position = SetPosition(set_spline_type, selection: boolean_math, position: vector_math)
+  "Optimization" {
+    set_spline_resolution = set_position
+      |> SetSplineType[CATMULL_ROM]()
+      |> SetSplineResolution(
+        resolution: capture_attribute_2.value == 0 ? 12 : capture_attribute_2.value)
+  }
+  join_geometry = get_geometry_component.geometry + set_spline_resolution
+  "Optimization" {
+    switch = DomainSize(menu_switch.output).point_count == 0 ? Geometry : join_geometry
+  }
+  return switch
+}

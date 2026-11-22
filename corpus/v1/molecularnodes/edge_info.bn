@@ -1,0 +1,37 @@
+geometry graph "Edge Info"(
+    "Vertex Index": Int(hide_value: true) = Index(),
+    "Edge Index": Int(
+      description: "Index within the gorup of edges that are connected to this point") in 0..3
+) -> (
+    "Is Valid": Bool(description: "Whether there is a valid edge corresponding to the given index"),
+    "Point Index": Int(
+      description: "The index for the other point involved in this edge, -1 if not connected"),
+    "Point Position": Vector(
+      description: "The position for the other point involved in this edge, (0, 0, 0) if not connected"),
+    "Edge Index": Int(
+      description: "The index on the edge domain for the selected edge. -1 if not connected"),
+    "Edge Vector": Vector(
+      subtype: EULER,
+      description: "The vector along the selected edge. (0, 0, 0) if not connected"),
+    "Edge Length": Float(description: "Length of the selected edge, -1 if not connected")
+) {
+  edge_vertices = EdgeVertices()
+  edges_of_vertex = EdgesOfVertex(vertex_index: vertex_index, sort_index: edge_index)
+  "Check edge exists, or return index -1 and (0, 0, 0) vector" {
+    compare = edge_index < edges_of_vertex.total
+  }
+  math = EvaluateAtIndex[EDGE, INT](
+      value: edge_vertices.vertex_index_1 + edge_vertices.vertex_index_2,
+      index: edges_of_vertex.edge_index)
+    - Index()
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](value: position, index: math)
+  vector_math = evaluate_at_index - position
+  return (
+    "Is Valid": compare,
+    "Point Index": Switch[INT](switch: compare, false_: -1, true_: math),
+    "Point Position": evaluate_at_index,
+    "Edge Index": compare ? edges_of_vertex.edge_index : -1,
+    "Edge Vector": compare ? vector_math : (0.0, 0.0, 0.0),
+    "Edge Length": compare ? length(vector_math) : -1.0)
+}

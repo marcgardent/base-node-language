@@ -1,0 +1,10 @@
+geometry graph "Spherical to Cartesian"(
+    "ρ, θ, φ": Vector in -10000.0..10000.0
+) -> ("x,y,z": Vector) {
+  "to cartesian" {
+    math = ρ_θ_φ.x * (sin(ρ_θ_φ.y) * sin(ρ_θ_φ.z))
+    math_2 = ρ_θ_φ.x * (cos(ρ_θ_φ.y) * sin(ρ_θ_φ.z))
+    math_3 = ρ_θ_φ.x * cos(ρ_θ_φ.z)
+  }
+  return ("x,y,z": CombineXYZ(x: math_2, y: math, z: math_3))
+}

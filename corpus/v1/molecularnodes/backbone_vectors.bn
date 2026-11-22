@@ -1,0 +1,276 @@
+geometry graph "Fallback Vector"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Vector(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Output: Vector(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: Name)
+  return (Output: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Group Pick"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(
+      description: "Valid for the point only if there is 1 single `True` for the `Pick` field in the point's group in the `Group ID`"),
+    Index: Int(description: "Index of picked item. Returns -1 if not a valid pick")
+) {
+  "Get the item of the `True` in each `Group ID`, but only if there is a single `True` in each group"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total == 1
+  return (
+    "Is Valid": compare,
+    Index: compare ? AccumulateField[INT](value: Pick ? Index() : 0, group_id: group_id).total : -1)
+}
+
+geometry graph "Group Pick Vector"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true),
+    Position: Vector(
+      description: "Vector field to pick vlaue for, defaults to `Position`",
+      hide_value: true) = Position()
+) -> (
+    "Is Valid": Bool(description: "Whether the pick for the point's `Group ID` is valid"),
+    Index: Int(description: "Picked Index for the Group, -1 if not valid"),
+    Vector: Vector(description: "Picked vector for the group, `(0, 0, 0)` if not valid")
+) {
+  group = group_pick(pick: Pick, group_id: group_id)
+  return (
+    "Is Valid": group.is_valid,
+    Index: group.index,
+    Vector: group.is_valid
+      ? EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: group.index)
+      : (0.0, 0.0, 0.0))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}
+
+geometry graph "Residue Mask"(
+    atom_name: Int(description: "Atom to pick from the group") = 1 in 2..
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(pick: atom_name() == atom_name, group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph ".Backbone Position"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Read,
+    Menu: Menu(
+      description: "the particular backbone residue to read the value from",
+      optional_label: true) = backbone_N
+) -> (Position: Vector) {
+  menu_switch = MenuSwitch(menu: Menu, backbone_N: 1, backbone_CA: 2, backbone_C: 3, backbone_O: 4)
+  index_switch = IndexSwitch(
+    menu_switch.output,
+    "",
+    "backbone_N",
+    "backbone_CA",
+    "backbone_C",
+    "backbone_O")
+  return (
+    Position: MenuSwitch(
+      menu: Method,
+      Read: NamedAttribute[FLOAT_VECTOR](name: index_switch).attribute,
+      Compute: EvaluateAtIndex[FLOAT_VECTOR](
+        value: fallback_vector(
+          name: index_switch,
+          fallback: residue_mask(atom_name: menu_switch.output).position),
+        index: residue_mask(atom_name: 2).index)).output)
+}
+
+geometry graph "Backbone C"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (C: Vector) {
+  return (C: backbone_position(method: Method, menu: backbone_C))
+}
+
+geometry graph "Backbone CA"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (CA: Vector) {
+  return (CA: backbone_position(method: Method, menu: backbone_CA))
+}
+
+geometry graph "Backbone N"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (N: Vector) {
+  return (N: backbone_position(method: Method))
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Unit Convert"(
+    "Distance Type": Menu(
+      description: "What unit to scale the value to",
+      optional_label: true) = Angstrom,
+    From: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (
+    World: Float(description: "The value that has been scaled appropriately for the world space")
+) {
+  math = From * mn_world_scale()
+  math_2 = math * 10.0
+  return (
+    World: MenuSwitch(
+      menu: distance_type,
+      Angstrom: math,
+      Nanometre: math_2,
+      Micrometre: math_2 * 1000.0).output)
+}
+
+geometry graph "Angstrom to World"(Angstrom: Float = 3.0 in -10000.0..10000.0) -> (World: Float) {
+  return (World: unit_convert(from: Angstrom))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Vector Direction"(
+    Normalize: Bool = true,
+    To: Vector in -10000.0..10000.0,
+    From: Vector in -10000.0..10000.0
+) -> (
+    Direction: Vector(description: "Vector between the points, potentially normalized"),
+    Distance: Float(description: "Distance between the points before normalization")
+) {
+  vector_math = To - From
+  return (
+    Direction: Normalize ? normalize(vector_math) : vector_math,
+    Distance: length(vector_math))
+}
+
+geometry graph "Backbone NH"(
+    Menu: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (NH: Vector) {
+  group = backbone_n(method: Read)
+  group_2 = backbone_n()
+  string = "backbone_NH"
+  vector_math = VectorMath[MULTIPLY_ADD](
+    Vector: normalize(
+      vector_direction(to: group, from: backbone_ca(method: Read)).direction
+        + vector_direction(to: group, from: backbone_c(method: Read)).direction),
+    Vector_001: angstrom_to_world(angstrom: 1.01),
+    Vector_002: backbone_n(method: Read))
+  return (
+    NH: MenuSwitch(
+      menu: Menu,
+      Read: NamedAttribute[FLOAT_VECTOR](name: string).attribute,
+      Compute: fallback_vector(
+        name: string,
+        fallback: VectorMath[MULTIPLY_ADD](
+          Vector: vector_direction(
+            to: group_2,
+            from: Mix[VECTOR](
+              factor: 0.5,
+              a: backbone_ca(),
+              b: offset_vector(vector: backbone_c(), offset: -1))).direction,
+          Vector_001: angstrom_to_world(angstrom: 1.01),
+          Vector_002: group_2))).output)
+}
+
+geometry graph "Backbone O"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (O: Vector) {
+  return (O: backbone_position(method: Method, menu: backbone_O))
+}
+
+geometry graph "Backbone Positions"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    O: Vector(description: "The position of the backbone _O_ atom for the residue"),
+    C: Vector(description: "The position of the backbone _C_ atom for the residue"),
+    CA: Vector(description: "The position of the backbone _CA_ atom for the residue"),
+    N: Vector(description: "The position of the backbone _N_ atom for the residue"),
+    NH: Vector
+) {
+  menu_switch = MenuSwitch(menu: Method, Read: 0, Compute: 1)
+  return (
+    O: backbone_o(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    C: backbone_c(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    CA: backbone_ca(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    N: backbone_n(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    NH: backbone_nh(menu: IndexSwitch[MENU](menu_switch.output, Read, Compute)))
+}
+
+geometry graph "Backbone Vectors"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    Normal: Vector(
+      description: "The vector used for the `Normal` of a curve when reading positions from a peptide backbone"),
+    Tangent: Vector(
+      description: "The vector used as the `Tangent` for a curve when reading values from a peptide backbone"),
+    Bitangent: Vector(description: "Cross product of the Normal and Tangent")
+) {
+  "The `Vectors` that are useful for a curve when reading from a peptide backbone"
+  group = backbone_positions(method: Method)
+  vector_math = normalize(group.c - group.n)
+  vector_math_2 = normalize(Mix[VECTOR](factor: 0.45, a: group.c, b: group.n) - group.ca)
+  return (
+    Normal: vector_math_2,
+    Tangent: vector_math,
+    Bitangent: normalize(vector_math × vector_math_2))
+}

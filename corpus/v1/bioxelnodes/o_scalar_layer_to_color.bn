@@ -1,0 +1,22 @@
+geometry graph "O Scalar Layer to Color"(
+    Scalar: Bundle,
+    "From Min": Float in -10000.0..10000.0,
+    "From Max": Float = 1.0 in -10000.0..10000.0,
+    Custom: Closure
+) -> Color {
+  return EvaluateClosure[define_signature: true](
+    Custom,
+    Color: MapRange(
+      value: SampleGrid(
+        grid: (SeparateBundle(
+          Scalar) -> (
+          Data: Float(structure_type: GRID),
+          Name: String(structure_type: SINGLE),
+          Kind: String(structure_type: SINGLE),
+          Shape: Vector(structure_type: SINGLE),
+          ID: Int(structure_type: SINGLE),
+          Min: Float(structure_type: SINGLE),
+          Max: Float(structure_type: SINGLE))).data),
+      from_min: from_min,
+      from_max: from_max)) -> Color
+}

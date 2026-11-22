@@ -1,0 +1,62 @@
+geometry graph "Between Vector"(
+    Value: Vector(description: "The value to test element-wise"),
+    Lower: Vector(description: "The lower bounds (including) for the comparison"),
+    Upper: Vector(description: "The upper bounds (including) for the comparison")
+) -> (
+    Boolean: Bool(
+      description: "If the value is between (and including) the lower the upper bounds")
+) {
+  return (Boolean: Value >= Lower and Value <= Upper)
+}
+
+geometry(is_modifier: false) graph "Density Style ISO Surface"(
+    Volume: Geometry(description: "Input geometry"),
+    Visible: Bool(description: "Visibility of style") = true,
+    Threshold: Float(description: "ISO value") = 0.00959343 in 0.0..1.0,
+    "Contours"(default_closed: true) {
+        "Show Contours": Bool(description: "Whether to show surface contours"),
+        "Only Contours": Bool(description: "Only show contour edges"),
+        "Contour Thickness": Float(
+          subtype: FACTOR,
+          description: "Thickness of the contour edges") = 0.1 in 0.0..1.0,
+        "Contour Color": Color(description: "Color of contour edges")
+    },
+    "Slice" {
+        "Slice Width": Vector(subtype: FACTOR, description: "1") = (0.5, 0.5, 0.5) in 0.0..1.0,
+        "Slice Center": Vector(subtype: FACTOR) = (0.5, 0.5, 0.5) in 0.0..1.0
+    },
+    "Material"(default_closed: true) {
+        "Negative Color": Color(description: "Color for negative ISO values") = (1.0, 0.0, 0.0),
+        "Positive Color": Color(description: "Color for positive ISO values") = (0.0, 0.0, 1.0),
+        "Shade Smooth": Bool(description: "Use smooth shading for surface") = true,
+        Material: Material(description: "Material to use for this surface")
+    }
+) -> (Geometry: Geometry(description: "ISO surface geometry output")) {
+  bounding_box = BoundingBox(Volume)
+  math = contour_thickness * 0.001
+  switch = Switch[GEOMETRY](switch: Visible, true_: Volume)
+  separate_geometry = (switch
+        |> VolumeToMesh(threshold: Threshold)
+        |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: positive_color)
+        |> SetMaterial(material: Material))
+      + (switch
+        |> VolumeToMesh(threshold: -Threshold)
+        |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: negative_color)
+        |> SetMaterial(material: Material))
+    |> SetShadeSmooth(shade_smooth: shade_smooth)
+    |> SeparateGeometry(
+      selection: between_vector(
+        value: MapRange[FLOAT_VECTOR](
+          vector: Position(),
+          from_min: bounding_box.min,
+          from_max: bounding_box.max),
+        lower: slice_center - slice_width,
+        upper: slice_center + slice_width))
+  return (
+    Geometry: Switch[GEOMETRY](switch: only_contours, false_: separate_geometry.selection)
+      + (separate_geometry.selection
+        |> MeshToCurve(selection: show_contours)
+        |> CurveToMesh(profile_curve: Quadrilateral(width: math, height: math))
+        |> StoreNamedAttribute[FLOAT_COLOR, EDGE](name: "Color", value: contour_color)
+        |> SetMaterial(material: Material)))
+}

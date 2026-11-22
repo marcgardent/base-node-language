@@ -1,0 +1,25 @@
+compositor graph Sepia(
+    Image: Color = (0.5, 0.5, 0.5),
+    Contrast: Float in -10.0..10.0,
+    Tone: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Saturation: Float(subtype: FACTOR) = 1.0 in 0.0..2.0
+) -> (Image: Color) {
+  math_2 = Contrast * 5.0 @ hide
+  math = math_2 * 0.25 @ hide
+  rgbto_bw = RGBToBW(Image) @ hide
+  color_balance = rgbto_bw
+    |> BrightnessContrast(brightness: math, contrast: math_2)
+    |> ColorBalance(
+      type: "Offset/Power/Slope (ASC-CDL)",
+      "Color Gamma": (1.0, 0.6815481, 0.422649, 1.0),
+      "Base Gain": 1.5911603,
+      "Color Power": (1.0000241, 1.0000241, 1.0000241, 1.0),
+      "Color Slope": HueSaturationValue(
+        image: (1.0000241, 0.5070486, 0.21401343, 1.0),
+        hue: MapRange(value: Tone, to_min: 0.45, to_max: 0.55),
+        saturation: Saturation))
+  "Restore Alpha" {
+    set_alpha = SetAlpha(color_balance, alpha: SeparateColor(Image).alpha, type: "Replace Alpha")
+  }
+  return (Image: set_alpha)
+}

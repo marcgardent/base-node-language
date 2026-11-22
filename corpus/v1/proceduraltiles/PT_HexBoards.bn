@@ -1,0 +1,95 @@
+shader graph PT_HexBoards(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "UV oriented": Bool
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "mask" {
+    value = 0.70710677
+  }
+  value_2 = 0.70710677 @ "x"
+  value_3 = 1.7071068 @ "y"
+  vector_math_7 = Vector * Scale
+  vector_math_2 = vector_math_7 * (1.0, 1.2, 0.0)
+  vector_math = fract(vector_math_2)
+  math_38 = Math[PINGPONG](Value: floor(vector_math_2).y, Value_001: 1.0)
+  map_range_2 = MapRange[FLOAT_VECTOR](
+    vector: vector_math,
+    from_max: (1.0, 1.0, 0.0),
+    to_min: (1.0, 1.0, 0.0),
+    to_max: (0.0, 0.0, 0.0)) @ hide
+  vector_math_6 = Mix[VECTOR](factor: math_38, a: vector_math, b: map_range_2) * (6.0, 5.0, 0.0)
+  "mask" .. {
+    vector_math_3 = (vector_math_6 - (0.0, 4.0, 0.0)) ⋅ normalize((1.0, -1.0, 0.0))
+    vector_math_4 = (vector_math_6 - (3.0, 1.0, 0.0)) ⋅ normalize((-1.0, 1.0, 0.0))
+    vector_math_5 = (vector_math_6 - (3.0, 1.0, 0.0)) ⋅ normalize((1.0, 1.0, 0.0))
+    math = abs(vector_math_3) - value
+    math_2 = abs((vector_math_6 - (3.0, 3.0, 0.0)) ⋅ normalize((-1.0, 1.0, 0.0))) - value
+    math_3 = abs(vector_math_4) - value
+    math_4 = abs(vector_math_5) - value
+    math_5 = abs((vector_math_6 - (3.0, -1.0, 0.0)) ⋅ normalize((1.0, 1.0, 0.0))) - value
+    math_6 = vector_math_6.x - 1.0
+    math_7 = vector_math_6.x - 2.0
+    map_range = MapRange(value: vector_math_6.x, from_max: 6.0, to_min: 6.0, to_max: 0.0)
+    math_10 = map_range - 1.0
+    math_11 = map_range - 2.0
+    math_14 = vector_math_5 - value @ hide
+    math_17 = vector_math_3 - value @ hide
+    math_32 = vector_math_4 - value @ hide
+  }
+  math_8 = max(math, math_6) @ hide
+  math_9 = max(math_2, math_10) @ hide
+  math_13 = -math_14 @ hide
+  math_12 = max(math_3, math_13) @ hide
+  math_16 = -math_17 @ hide
+  math_15 = max(math_4, math_16) @ hide
+  math_18 = -math_11 @ hide
+  math_19 = max(math_15, math_18) @ hide
+  math_21 = min(math_6, math_7) @ hide
+  math_22 = -math_21 @ hide
+  math_20 = max(math_5, math_22) @ hide
+  math_26 = min(math_8, math_9) @ hide
+  math_25 = min(math_26, math_19) @ hide
+  math_24 = min(math_25, math_12) @ hide
+  math_23 = min(math_24, math_20) @ hide
+  math_27 = math_20 < 0.0 @ hide
+  math_28 = math_12 < 0.0 @ hide
+  math_29 = math_19 < 0.0 @ hide
+  math_30 = math_9 < 0.0 @ hide
+  math_31 = math_8 < 0.0 @ hide
+  math_33 = min(math_32, math_14) + 0.707107 > 0.0
+  math_37 = max(math_31, math_30) @ hide
+  math_36 = max(math_37, math_29) @ hide
+  math_35 = max(math_36, math_28) @ hide
+  math_34 = max(math_35, math_27) @ hide
+  mix = Mix[VECTOR](
+    factor: Math[MAXIMUM, use_clamp: true](Value: math_34, Value_001: math_33),
+    a: vector_math_6.x > 3.0 ? (3.0, -5.0, 0.0) : (-3.0, -5.0, 0.0),
+    b: (-3.85355, -1.85355, 0.0) * math_31
+      + (3.85355, 1.85355, 0.0) * math_30
+      + (-0.853553, -3.14645, 0.0) * math_29
+      + (2.14645, -1.85355, 0.0) * math_28
+      + (0.853552, -6.85355, 0.0) * math_27
+      + (0.0, 0.0, 0.0) * Math[SUBTRACT, use_clamp: true](Value: math_33, Value_001: math_34))
+  combine_xyz = CombineXYZ(x: 1.0, y: 0.6)
+  vector_math_8 = (floor(vector_math_7 * combine_xyz) + (0.5, 0.5, 0.0)) / combine_xyz
+    + Mix[VECTOR](factor: math_38, a: mix, b: -mix) * 0.16666667
+  vector_math_9 = vector_math_8 / Scale
+  vector_math_10 = Vector - vector_math_9
+  math_39 = max(math_31, math_30) @ hide
+  math_40 = max(math_39, math_28) @ hide
+  math_41 = max(math_29, math_27) @ hide
+  math_42 = math_40 * -0.7853982 @ hide
+  math_43 = math_41 * 0.7853982 @ hide
+  math_44 = math_40 * 1.0 @ hide
+  math_45 = math_41 * 2.0 @ hide
+  math_46 = math_44 + math_45 @ hide
+  vector_math_11 = vector_math_8 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_9,
+    UV: uv_oriented
+      ? VectorRotate(vector: vector_math_10, angle: math_42 + math_43)
+      : vector_math_10,
+    Color: WhiteNoiseTexture(vector: vector_math_11).color,
+    Edge: abs(math_23) / 6.0 / Scale,
+    Masks: math_46)
+}

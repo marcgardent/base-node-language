@@ -1,0 +1,40 @@
+shader graph PT_HexTile(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0,
+    Scale: Float = 10.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float) {
+  vector_math = Vector * Scale
+  combine_xyz = CombineXYZ(x: 1.7320508, y: 1.0)
+  vector_math_2 = vector_math / combine_xyz
+  mix = (abs((fract(vector_math_2) - (0.5, 0.5, 0.0)) * combine_xyz) - (0.57735026, 0.0, 0.0))
+        ⋅ combine_xyz
+      > 0.0
+    ? floor((vector_math - combine_xyz * 0.5) / combine_xyz) * combine_xyz + combine_xyz
+    : floor(vector_math_2) * combine_xyz + combine_xyz * 0.5
+  vector_math_3 = vector_math - mix
+  combine_xyz_2 = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k" hide
+  vector_math_4 = abs(vector_math_3) @ hide
+  separate_xyz_2 = SeparateXYZ(vector: combine_xyz_2) @ hide
+  math_3 = -separate_xyz_2.z @ hide
+  vector_math_11 = combine_xyz_2 * (1.0, 1.0, 0.0) @ hide
+  vector_math_6 = vector_math_11 ⋅ vector_math_4 @ hide
+  math_2 = min(vector_math_6, 0.0) @ hide
+  vector_math_7 = vector_math_11 * math_2 @ hide
+  vector_math_8 = vector_math_7 * 2.0 @ hide
+  vector_math_5 = vector_math_4 - vector_math_8 @ hide
+  separate_xyz = SeparateXYZ(vector: vector_math_5) @ hide
+  clamp = Clamp(value: separate_xyz.x, min: math_3, max: separate_xyz_2.z) @ hide
+  combine_xyz_3 = CombineXYZ(x: clamp, y: 0.5) @ "k" hide
+  vector_math_9 = vector_math_5 - combine_xyz_3 @ hide
+  vector_math_10 = length(vector_math_9) @ hide
+  separate_xyz_3 = SeparateXYZ(vector: vector_math_9) @ hide
+  math_5 = separate_xyz_3.y > 0.0 @ hide
+  mix_2 = math_5 ? 1.0 : -1.0 @ hide
+  math_4 = vector_math_10 * mix_2 @ hide
+  math = -math_4 @ hide
+  vector_math_12 = mix + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: mix / Scale,
+    UV: vector_math_3 / Scale,
+    Color: WhiteNoiseTexture(vector: vector_math_12).color,
+    Edge: math / Scale)
+}

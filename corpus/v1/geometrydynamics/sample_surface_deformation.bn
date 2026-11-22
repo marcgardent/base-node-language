@@ -1,0 +1,94 @@
+geometry graph "Get Rest Geometry"(
+    Geometry: Geometry
+) -> ("Rest Geometry": Geometry, "Rest Geometry Found": Bool, "Rest Attribute Found": Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: "rest_geometry",
+    remove: true)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  return (
+    "Rest Geometry": Warning[WARNING](
+        show: not get_bundle_item.exists,
+        message: "Missing rest geometry. Use 'Capture Rest Geometry'.")
+      ? SetPosition(
+        get_geometry_bundle.geometry,
+        selection: named_attribute.exists,
+        position: named_attribute.attribute)
+      : get_bundle_item.item,
+    "Rest Geometry Found": get_bundle_item.exists,
+    "Rest Attribute Found": SampleIndex[BOOLEAN](
+      get_geometry_bundle.geometry,
+      value: AccumulateField[INT](value: named_attribute.exists).total))
+}
+
+geometry graph "Rest Surface"(Surface: Geometry) -> ("Rest Surface": Geometry, Exists: Bool) {
+  group = get_rest_geometry(Surface)
+  return (
+    "Rest Surface": Warning[WARNING](
+        show: not (group.rest_geometry_found or group.rest_attribute_found),
+        message: "Missing rest geometry on surface. Use 'Capture Rest Geometry' or enable 'Add Rest Position'.")
+      ? Surface
+      : group.rest_geometry,
+    Exists: group.rest_geometry_found)
+}
+
+geometry graph "Sample Surface Transform"(
+    Mesh: Geometry,
+    "UV Map": Vector(hide_value: true),
+    "Sample UV": Vector = (0.0, 0.0)
+) -> (Translation: Vector, Rotation: Rotation, Normal: Vector, Tangent: Vector, Valid: Bool) {
+  "Sample Position" {
+    sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: Position(),
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  "Sample UV Tangent" {
+    sample_uvsurface_2 = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: UVTangent(uv: uv_map),
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  "Sample Normal" {
+    sample_uvsurface_3 = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: Normal().normal,
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  return (
+    Translation: sample_uvsurface.value,
+    Rotation: AxesToRotation(
+      primary_axis: sample_uvsurface_3.value,
+      secondary_axis: sample_uvsurface_2.value),
+    Normal: sample_uvsurface_3.value,
+    Tangent: sample_uvsurface_2.value,
+    Valid: sample_uvsurface.is_valid)
+}
+
+geometry graph "Sample Surface Deformation"(
+    Mesh: Geometry,
+    "Surface UV Map": Vector(hide_value: true),
+    "Sample UV": Vector = (0.0, 0.0),
+    "Rest" {},
+    "Deformed" {}
+) -> (Transform: Matrix, Rotation: Rotation, Valid: Bool) {
+  group = Mesh
+    |> rest_surface().rest_surface
+    |> sample_surface_transform(uv_map: surface_uv_map, sample_uv: sample_uv)
+  group_2 = sample_surface_transform(Mesh, uv_map: surface_uv_map, sample_uv: sample_uv)
+  rotate_rotation = RotateRotation(
+    rotation: InvertRotation(rotation: group.rotation),
+    rotate_by: group_2.rotation)
+  return (
+    Transform: MultiplyMatrices(
+      Matrix: CombineTransform(translation: group_2.translation),
+      Matrix_001: MultiplyMatrices(
+        Matrix: CombineTransform(rotation: rotate_rotation),
+        Matrix_001: CombineTransform(translation: 0.0 - group.translation))),
+    Rotation: rotate_rotation,
+    Valid: group.valid and group_2.valid)
+}

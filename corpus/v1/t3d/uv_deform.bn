@@ -1,0 +1,20 @@
+geometry graph "UV Deform"(
+    "Target Mesh": Geometry,
+    "Sample Mesh": Geometry,
+    Strength: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    "Target UV": Vector(hide_value: true),
+    "Sample UV": Vector
+) -> (Mesh: Geometry, Position: Vector) {
+  {
+    position = Position()
+    sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+      sample_mesh,
+      value: position,
+      uv_map: sample_uv,
+      sample_uv: target_uv)
+    set_position = SetPosition(
+      target_mesh,
+      position: Mix[VECTOR](factor: Strength, a: position, b: sample_uvsurface.value))
+  }
+  return (Mesh: set_position, Position: sample_uvsurface.value)
+}

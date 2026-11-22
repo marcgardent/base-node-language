@@ -1,0 +1,73 @@
+compositor graph "Rounded Square Mask"(
+    Image: Color(hide_value: true) = (0.8, 0.8, 0.8),
+    Scale: Vector = (1.0, 1.0) in -10000.0..10000.0,
+    "Corner Roundness": Float(subtype: FACTOR) in 0.0..1.0,
+    Feather: Float(subtype: FACTOR) in 0.0..1.0,
+    Offset: Vector(subtype: XYZ) = (0.0, 0.0),
+    Angle: Float(subtype: ANGLE, description: "Angle to rotate the input vector by")
+) -> (Mask: Float) {
+  math = Feather + 0.0001
+  image_info = ImageInfo(Image)
+  vector_math_2 = Switch[RGBA](
+      switch: Math[GREATER_THAN](
+        Value: image_info.dimensions.y,
+        Value_001: image_info.dimensions.x),
+      false_: CombineXYZ(x: 1.0, y: 1.0 / image_info.dimensions.x * image_info.dimensions.y),
+      true_: CombineXYZ(x: 1.0 / image_info.dimensions.y * image_info.dimensions.x, y: 1.0))
+    * Scale
+  switch = Switch[RGBA](
+    switch: true,
+    false_: corner_roundness,
+    true_: Clamp(value: corner_roundness, max: min(vector_math_2.x, vector_math_2.y)))
+  vector_math = abs(
+      VectorRotate[Z_AXIS](vector: ImageCoordinates(Image).uniform - Offset, angle: Angle))
+    - vector_math_2
+    + VectorMath[SCALE](vector: (1.0, 1.0, 0.0), scale: switch)
+  return (
+    Mask: MapRange[SMOOTHSTEP](
+      value: min(max(vector_math.x, vector_math.y), 0.0)
+        + Math[SUBTRACT](Value: length(max(vector_math, 0.0)), Value_001: switch),
+      from_min: MapRange(value: math, from_min: 1.0, from_max: 0.0, to_min: -0.5, to_max: 0.0),
+      from_max: MapRange(
+        value: math,
+        from_min: 1.0,
+        from_max: math * 0.5,
+        to_min: 1.0,
+        to_max: 0.0),
+      to_min: 1.0,
+      to_max: 0.0))
+}
+
+compositor graph Vignette(
+    Image: Color,
+    Factor: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Feather: Float(
+      subtype: FACTOR,
+      description: "Smoothness of the transition between dark and bright regions") = 0.4 in 0.0..1.0,
+    "Transform"(default_closed: true) {
+        "Corner Roundness": Float(
+          subtype: FACTOR,
+          description: "Circularity of the effect") = 1.0 in 0.0..1.0,
+        Scale: Vector(description: "Relative size of area to be darkened") = (0.8, 0.8),
+        Offset: Vector(
+          subtype: XYZ,
+          description: "Relative translation of area to be darkened") = (0.0, 0.0),
+        Angle: Float(subtype: ANGLE, description: "Rotation of the area to be darkened")
+    }
+) -> (Image: Color, Mask: Float(description: "The region where the image will be darkened")) {
+  group = rounded_square_mask(
+    Image,
+    scale: Scale,
+    corner_roundness: corner_roundness,
+    feather: Feather,
+    offset: Offset,
+    angle: Angle)
+  separate_color = SeparateColor[HSV](Image)
+  return (
+    Image: CombineColor[HSV](
+      red: separate_color.red,
+      green: separate_color.green,
+      blue: Mix[RGBA, MULTIPLY](factor: Factor, a: separate_color.blue, b: group),
+      alpha: separate_color.alpha),
+    Mask: Math[SUBTRACT, use_clamp: true](Value: 1.0, Value_001: group))
+}

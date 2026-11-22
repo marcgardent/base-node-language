@@ -1,0 +1,38 @@
+geometry graph Spherify(
+    Mesh: Geometry,
+    Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
+    Strength: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    "Preserve Area": Bool = true
+) -> (Mesh: Geometry) {
+  "Input" {
+    split_edges = SplitEdges(Mesh, selection: Selection)
+  }
+  "Preserve Face Area" {
+    face_area = FaceArea()
+  }
+  "Boundary Edge" {
+    compare = EdgeNeighbors() == 1
+  }
+  "Field Sphere" {
+    bounding_box = BoundingBox(split_edges)
+    vector_math = normalize(Position())
+      * Math[INVERSE_SQRT](value: abs(bounding_box.min - bounding_box.max))
+  }
+  "Deform Position " {
+    set_position = SetPosition(
+      split_edges,
+      selection: Selection,
+      position: Mix[VECTOR](factor: Strength, a: Position(), b: vector_math))
+  }
+  "Preserve Face Area" .. {
+    merge_by_distance = set_position
+      |> SetPosition(
+        selection: preserve_area,
+        position: Position()
+          * sqrt(
+            AttributeStatistic[FACE](split_edges, attribute: face_area).sum
+              / AttributeStatistic[FACE](set_position, attribute: face_area).sum))
+      |> MergeByDistance(selection: compare)
+  }
+  return (Mesh: merge_by_distance)
+}

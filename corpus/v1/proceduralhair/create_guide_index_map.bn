@@ -1,0 +1,116 @@
+geometry(show_modifier_manage_panel: false) graph "Create Guide Index Map"(
+    Geometry: Geometry,
+    Guides: Geometry(description: "Guide curves or points used for the selection of guide curves"),
+    "Guide Distance": Float(
+      subtype: DISTANCE,
+      description: "Minimum distance between two guides") in 0.0..,
+    "Guide Mask": Float(
+      description: "Mask for which curves are eligible to be selected as guides") = 1.0 in 0.0..1.0,
+    "Group ID": Int(description: "ID to group curves together for guide map creation"),
+    Seed: Int(description: "Random seed for the guide map")
+) -> (
+    Geometry: Geometry,
+    "Guide Curves": Geometry,
+    "Guide Index": Int(attribute_domain: CURVE),
+    "Guide Selection": Bool(attribute_domain: CURVE)
+) {
+  "Input Guide Geometry Points" {
+    separate_components = SeparateComponents(Guides)
+    join_geometry = MeshToPoints(separate_components.mesh)
+      + separate_components.point_cloud
+      + CurveToPoints(separate_components.curve, count: 1).points
+  }
+  "Ensure Data on Input Points" {
+    domain_size = DomainSize[POINTCLOUD](join_geometry) @ hide
+    compare = domain_size > 0
+    capture_attribute_5 = CaptureAttribute(join_geometry, Value: guide_mask)
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  capture_attribute = CaptureAttribute[CURVE](get_geometry_component.component, Value: guide_mask)
+  capture_attribute_2 = CaptureAttribute[CURVE](capture_attribute.geometry, Value: group_id)
+  capture_attribute_3 = CaptureAttribute[CURVE](capture_attribute_2.geometry, Value: Index())
+  curve_to_points = CurveToPoints(capture_attribute_3.geometry, count: 1)
+  "Ensure Data on Input Points" .. {
+    capture_attribute_4 = CaptureAttribute(
+      capture_attribute_5.geometry,
+      Value: SampleIndex[INT](
+        curve_to_points.points,
+        value: group_id,
+        index: SampleNearest(curve_to_points.points)))
+    switch = compare ? capture_attribute_5.value : capture_attribute.value
+    integer_math = IntegerMath[ADD](
+      Value: capture_attribute_4.value,
+      Value_001: capture_attribute_2.value)
+  }
+  "Switch Guide Input" {
+    switch_2 = compare ? capture_attribute_4.geometry : curve_to_points.points
+  }
+  "Isolate Guide Points" {
+    "Merge by Distance" {
+      "Optimization" {
+        compare_3 = guide_distance > 0.0
+      }
+    }
+    "Scramble Indices to Randomize Point Clustering" {
+      sort_elements = SortElements(
+        switch_2,
+        group_id: HashValue(value: Index(), seed: HashValue(value: Seed, seed: 398257)))
+      "Optimization" {
+        switch_3 = Seed == 0 ? switch_2 : sort_elements
+      }
+    }
+    "Merge by Distance" .. {
+      merge_points = MergePoints(
+        switch_3,
+        selection: compare_3,
+        merge_id: ClusterByDistance(
+          selection: compare_3,
+          group_id: integer_math,
+          distance: guide_distance))
+    }
+    "Delete Guide Points Based on Guide Mask" {
+      delete_geometry = DeleteGeometry(
+        merge_points,
+        selection: RandomValue(seed: HashValue(value: Seed, seed: 568746))
+          > SampleIndex(
+            curve_to_points.points,
+            value: switch,
+            index: SampleNearest(curve_to_points.points)))
+    }
+  }
+  "Sample per Group ID" {
+    "Separate Guide Points Based on Their Group ID" {
+      bounding_box = BoundingBox(switch_2, use_radius: false)
+      vector_math = (4.0, 4.0, 4.0) * (length(bounding_box.max - bounding_box.min) * integer_math)
+    }
+    sample_nearest = delete_geometry
+      |> SetPosition(offset: vector_math)
+      |> SampleNearest(sample_position: Position() + vector_math)
+  }
+  "Sample Guide Index" {
+    capture_attribute_7 = CaptureAttribute[CURVE](
+      capture_attribute_2.geometry,
+      Value: SampleIndex[INT](
+        curve_to_points.points,
+        value: SampleIndex[INT](
+          delete_geometry,
+          value: SampleIndex[INT](
+            curve_to_points.points,
+            value: capture_attribute_3.value,
+            index: SampleNearest(curve_to_points.points)),
+          index: sample_nearest),
+        index: Index()))
+  }
+  compare_2 = capture_attribute_7.value == Index() @ hide
+  capture_attribute_6 = capture_attribute_7.geometry
+    |> StoreNamedAttribute[INT, CURVE](name: "guide_curve_index", value: capture_attribute_7.value)
+    |> CaptureAttribute[CURVE](Value: compare_2)
+  separate_geometry = SeparateGeometry[CURVE](
+    capture_attribute_6.geometry,
+    selection: capture_attribute_6.value) @ hide
+  return (
+    Geometry: get_geometry_component.geometry + capture_attribute_6.geometry,
+    "Guide Curves": separate_geometry.selection,
+    "Guide Index": capture_attribute_7.value,
+    "Guide Selection": capture_attribute_6.value)
+}

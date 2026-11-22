@@ -1,0 +1,523 @@
+geometry graph ".shape_range"(
+    Value: Float(hide_value: true) in 0.0..1.0,
+    Min: Float(description: "rdghrhd") in -10000.0..10000.0,
+    Max: Float = 1.0 in -10000.0..10000.0,
+    Shape: Float in -1.0..1.0,
+    Base: Float = 2.0 in 1.0..10000.0
+) -> (Value: Float) {
+  map_range = MapRange[clamp: false](value: Value, from_min: Min, from_max: Max) @ hide
+  math_2 = 1.0 - map_range @ hide
+  compare = Shape < 0.0 @ hide
+  boolean_math = not compare @ hide
+  math_7 = max(Base, 1.00001) @ hide
+  math_3 = 1.0 / math_7 @ hide
+  math_4 = 1.0 - math_3 @ hide
+  math_5 = math_4 * 2.0 @ hide
+  math_10 = max(math_7, 1.000001) @ hide
+  math_15 = min(abs(Shape), 0.999999)
+  compare_2 = math_15 > 0.5 @ hide
+  switch_2 = compare_2 ? boolean_math : compare @ hide
+  switch = switch_2 ? math_2 : map_range @ hide
+  math_14 = Math[PINGPONG](Value: math_15) @ hide
+  math_6 = math_14 * math_5 @ hide
+  math_9 = 1.0 - math_6 @ hide
+  math_11 = max(math_9, 1e-05) @ hide
+  math_13 = log(math_11, math_10) @ hide
+  math_8 = -math_13 @ hide
+  math_12 = pow(switch, math_8)
+  math = 1.0 - math_12 @ hide
+  switch_3 = compare_2 ? math : math_12 @ hide
+  return (
+    Value: Compare[EQUAL](a: Shape, epsilon: 1e-05)
+      ? 1.0
+      : MapRange(value: switch_3, to_min: Min, to_max: Max))
+}
+
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph "Create Guide Index Map"(
+    Geometry: Geometry,
+    Guides: Geometry(description: "Guide curves or points used for the selection of guide curves"),
+    "Guide Distance": Float(
+      subtype: DISTANCE,
+      description: "Minimum distance between two guides") in 0.0..,
+    "Guide Mask": Float(
+      description: "Mask for which curves are eligible to be selected as guides") = 1.0 in 0.0..1.0,
+    "Group ID": Int(description: "ID to group curves together for guide map creation"),
+    Seed: Int(description: "Random seed for the guide map")
+) -> (
+    Geometry: Geometry,
+    "Guide Curves": Geometry,
+    "Guide Index": Int(attribute_domain: CURVE),
+    "Guide Selection": Bool(attribute_domain: CURVE)
+) {
+  "Input Guide Geometry Points" {
+    separate_components = SeparateComponents(Guides)
+    join_geometry = MeshToPoints(separate_components.mesh)
+      + separate_components.point_cloud
+      + CurveToPoints(separate_components.curve, count: 1).points
+  }
+  "Ensure Data on Input Points" {
+    domain_size = DomainSize[POINTCLOUD](join_geometry) @ hide
+    compare = domain_size > 0
+    capture_attribute_5 = CaptureAttribute(join_geometry, Value: guide_mask)
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  capture_attribute = CaptureAttribute[CURVE](get_geometry_component.component, Value: guide_mask)
+  capture_attribute_2 = CaptureAttribute[CURVE](capture_attribute.geometry, Value: group_id)
+  capture_attribute_3 = CaptureAttribute[CURVE](capture_attribute_2.geometry, Value: Index())
+  curve_to_points = CurveToPoints(capture_attribute_3.geometry, count: 1)
+  "Ensure Data on Input Points" .. {
+    capture_attribute_4 = CaptureAttribute(
+      capture_attribute_5.geometry,
+      Value: SampleIndex[INT](
+        curve_to_points.points,
+        value: group_id,
+        index: SampleNearest(curve_to_points.points)))
+    switch = compare ? capture_attribute_5.value : capture_attribute.value
+    integer_math = IntegerMath[ADD](
+      Value: capture_attribute_4.value,
+      Value_001: capture_attribute_2.value)
+  }
+  "Switch Guide Input" {
+    switch_2 = compare ? capture_attribute_4.geometry : curve_to_points.points
+  }
+  "Isolate Guide Points" {
+    "Merge by Distance" {
+      "Optimization" {
+        compare_3 = guide_distance > 0.0
+      }
+    }
+    "Scramble Indices to Randomize Point Clustering" {
+      sort_elements = SortElements(
+        switch_2,
+        group_id: HashValue(value: Index(), seed: HashValue(value: Seed, seed: 398257)))
+      "Optimization" {
+        switch_3 = Seed == 0 ? switch_2 : sort_elements
+      }
+    }
+    "Merge by Distance" .. {
+      merge_points = MergePoints(
+        switch_3,
+        selection: compare_3,
+        merge_id: ClusterByDistance(
+          selection: compare_3,
+          group_id: integer_math,
+          distance: guide_distance))
+    }
+    "Delete Guide Points Based on Guide Mask" {
+      delete_geometry = DeleteGeometry(
+        merge_points,
+        selection: RandomValue(seed: HashValue(value: Seed, seed: 568746))
+          > SampleIndex(
+            curve_to_points.points,
+            value: switch,
+            index: SampleNearest(curve_to_points.points)))
+    }
+  }
+  "Sample per Group ID" {
+    "Separate Guide Points Based on Their Group ID" {
+      bounding_box = BoundingBox(switch_2, use_radius: false)
+      vector_math = (4.0, 4.0, 4.0) * (length(bounding_box.max - bounding_box.min) * integer_math)
+    }
+    sample_nearest = delete_geometry
+      |> SetPosition(offset: vector_math)
+      |> SampleNearest(sample_position: Position() + vector_math)
+  }
+  "Sample Guide Index" {
+    capture_attribute_7 = CaptureAttribute[CURVE](
+      capture_attribute_2.geometry,
+      Value: SampleIndex[INT](
+        curve_to_points.points,
+        value: SampleIndex[INT](
+          delete_geometry,
+          value: SampleIndex[INT](
+            curve_to_points.points,
+            value: capture_attribute_3.value,
+            index: SampleNearest(curve_to_points.points)),
+          index: sample_nearest),
+        index: Index()))
+  }
+  compare_2 = capture_attribute_7.value == Index() @ hide
+  capture_attribute_6 = capture_attribute_7.geometry
+    |> StoreNamedAttribute[INT, CURVE](name: "guide_curve_index", value: capture_attribute_7.value)
+    |> CaptureAttribute[CURVE](Value: compare_2)
+  separate_geometry = SeparateGeometry[CURVE](
+    capture_attribute_6.geometry,
+    selection: capture_attribute_6.value) @ hide
+  return (
+    Geometry: get_geometry_component.geometry + capture_attribute_6.geometry,
+    "Guide Curves": separate_geometry.selection,
+    "Guide Index": capture_attribute_7.value,
+    "Guide Selection": capture_attribute_6.value)
+}
+
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Braid Hair Curves"(
+    Geometry: Geometry,
+    Factor: Float(subtype: FACTOR, description: "Factor to blend overall effect") = 1.0 in 0.0..1.0,
+    Subdivision: Int(description: "Subdivision level applied before deformation") = 1 in 0..6,
+    "Braid Start": Float(
+      description: "Percentage along each curve to blend deformation from the root") = 0.1 in 0.0..1.0,
+    Radius: Float(subtype: DISTANCE, description: "Overall radius of the braids") = 0.1 in 0.0..,
+    Shape: Float(
+      description: "Shape of the braid radius along each curve") = 0.49999994 in -1.0..1.0,
+    Frequency: Float(description: "Frequency factor of the braids") = 1.0 in 0.0..10000.0,
+    "Shape Parameters"(default_closed: true) {
+        "Factor Min": Float(
+          description: "Factor of the minimum radius of the braids") in 0.0..10000.0,
+        "Factor Max": Float(
+          description: "Factor of the maximum radius of the braids") = 1.0 in 0.0..10000.0,
+        Thickness: Float(
+          description: "Thickness of each strand of hair") = 1.0 in -10000.0..10000.0,
+        "Thickness Shape": Float(
+          description: "Shape adjustment of the strand thickness for the braids") = 0.5 in -10000.0..10000.0,
+        "Shape Asymmetry": Float(
+          description: "Asymmetry of the shape adjustment of the strand thickness") in -10000.0..10000.0,
+        "Flare Length": Float(
+          subtype: DISTANCE,
+          description: "Length of the flare at the end of the braid") in 0.0..,
+        "Flare Opening": Float(
+          subtype: DISTANCE,
+          description: "Opening radius of the flare at the tip of the braid") in 0.0..
+    },
+    "Hair Tie"(default_closed: true) {
+        "Hair Tie": Bool(is_panel_toggle: true, force_non_field: true, structure_type: SINGLE),
+        "Hair Tie Input Type": Menu(
+          description: "Select the input type for the hair tie geometry.",
+          hide_in_modifier: true,
+          menu_expanded: true,
+          optional_label: true) = Object,
+        "Hair Tie" as hair_tie_geometry: Geometry(
+          description: "Geometry used for the hair tie instance (priority)"),
+        "Hair Tie" as hair_tie_object: Object(
+          description: "Object used for the hair tie instance",
+          optional_label: true),
+        "Hair Tie Scale": Float(
+          description: "Scale of the hair tie instance") = 1.0 in -10000.0..10000.0
+    },
+    "Guide Map"(default_closed: true) {
+        "Guide Index": Int(
+          description: "Guide index map to use. This input has priority.",
+          hide_value: true,
+          hide_in_modifier: true) = -987654,
+        "Guide Distance": Float(
+          subtype: DISTANCE,
+          description: "Minimum distance between two guides for new guide map") = 0.1 in 0.0..,
+        "Guide Mask": Float(
+          description: "Mask for which curves are eligible to be selected as guides") = 1.0 in 0.0..1.0,
+        Seed: Int(description: "Random seed for the guide map"),
+        "Existing Guide Map": Bool(
+          description: "Use the existing guide map attribute if available") = true
+    }
+) -> (
+    Geometry: Geometry,
+    "Flare Parameter": Float(description: "Parameter from 0 to 1 along the flare"),
+    "Strand Index": Int(
+      description: "Index of the strand within a braid that each curve belongs to",
+      attribute_domain: CURVE),
+    "Guide Map" {
+        "Guide Index": Int(
+          description: "Guide index map that was used for the operation",
+          attribute_domain: CURVE)
+    }
+) {
+  math_2 = pow(2.0, Subdivision) @ hide
+  math = math_2 - 1.0 @ hide
+  "Random Disc Position" {
+    random_value = RandomValue[FLOAT_VECTOR](id: curve_info().curve_id, seed: 287)
+    evaluate_on_domain = EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: VectorRotate[Z_AXIS](
+        vector: CombineXYZ(x: acos(random_value.x)),
+        angle: random_value.y * 6.2831855))
+  }
+  {
+    value = 0.5 @ "Size"
+    value_2 = 0.5 @ "Flatness"
+    math_26 = 1.0 / value
+  }
+  "Radius" {
+    math_9 = Radius
+      * MapRange(
+        value: shape_range(value: SplineParameter().factor, shape: -Shape),
+        to_min: factor_min,
+        to_max: factor_max)
+  }
+  "Braid Shape" {
+    math_16 = math_26 * 2.0 @ hide
+  }
+  "Guide Map Fallback" {
+    named_attribute = NamedAttribute[INT](name: "guide_curve_index")
+    accumulate_field = AccumulateField[INT](value: named_attribute.exists) @ hide
+    compare_2 = guide_index != -987654
+  }
+  "Assign Curves to Strand" {
+    group = curve_root()
+    integer = 3
+  }
+  "Braid Shape" .. {
+    math_14 = 1.0 / integer
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  "Optimization" {
+    capture_attribute = CaptureAttribute[CURVE](
+      get_geometry_component.component,
+      Value: SplineResolution())
+    set_spline_type = SetSplineType(capture_attribute.geometry)
+  }
+  "Guide Map Fallback" .. {
+    sample_index = SampleIndex[INT](set_spline_type, value: accumulate_field.total) @ hide
+    compare_3 = sample_index > 0 @ hide
+    capture_attribute_9 = CaptureAttribute[CURVE](
+      nimply(
+          compare_3 and existing_guide_map,
+          SampleIndex[BOOLEAN, CURVE](
+            set_spline_type,
+            value: AccumulateField[INT, CURVE](value: compare_2).total))
+        ? set_spline_type
+        : create_guide_index_map(
+          set_spline_type,
+          guide_distance: guide_distance,
+          guide_mask: guide_mask,
+          seed: Seed).geometry,
+      Value: compare_2 ? guide_index : named_attribute.attribute)
+  }
+  "Hair Tie Instancing" {
+    capture_attribute_2 = capture_attribute_9.geometry
+      |> DeleteGeometry[CURVE](selection: capture_attribute_9.value != Index())
+      |> CaptureAttribute[CURVE](Value: curve_info().length - flare_length)
+    sample_curve = SampleCurve[LENGTH](
+      capture_attribute_2.geometry,
+      length: capture_attribute_2.value,
+      curve_index: Index())
+    instance_on_points = capture_attribute_2.geometry
+      |> CurveToPoints(count: 1).points
+      |> SetPosition(position: sample_curve.position)
+      |> InstanceOnPoints(
+        instance: MenuSwitch(
+          menu: hair_tie_input_type,
+          Object: ObjectInfo(object: hair_tie_object, as_instance: true).geometry,
+          Geometry: GeometryToInstance(hair_tie_geometry)).output,
+        rotation: AlignRotationToVector[axis: Y, pivot_axis: Z](
+          rotation: AlignRotationToVector(vector: -sample_curve.tangent),
+          vector: sample_curve.normal),
+        scale: hair_tie_scale)
+  }
+  "Guide Curve Tangent Space" {
+    sample_curve_2 = SampleCurve[LENGTH](
+      capture_attribute_9.geometry,
+      length: SplineParameter().length,
+      curve_index: capture_attribute_9.value)
+    vector_math_4 = sample_curve_2.position - Position() @ hide
+  }
+  capture_attribute_3 = capture_attribute_9.geometry
+    |> SubdivideCurve(cuts: math)
+    |> CaptureAttribute(Value: math_9)
+  .. {
+    math_7 = capture_attribute_3.value * value
+    math_25 = math_7 * (1.0 - value_2)
+  }
+  "Flare Mask" {
+    math_8 = SampleCurve[LENGTH](
+        capture_attribute_3.geometry,
+        value: SplineParameter().length - (curve_info().length - flare_length),
+        length: SplineParameter().length,
+        curve_index: capture_attribute_9.value).value
+      / flare_length
+  }
+  "Phase" {
+    capture_attribute_8 = CaptureAttribute(
+      capture_attribute_3.geometry,
+      Value: SampleCurve[LENGTH](
+        capture_attribute_3.geometry,
+        value: AccumulateField(
+          value: curve_segment().segment_length * (Frequency * 0.1 / capture_attribute_3.value),
+          group_id: CurveOfPoint().curve_index).leading,
+        length: SplineParameter().length,
+        curve_index: capture_attribute_9.value).value)
+  }
+  "Assign Curves to Strand" .. {
+    points_of_curve = PointsOfCurve(curve_index: capture_attribute_9.value)
+    evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
+      value: CurveTangent(),
+      index: points_of_curve.point_index) @ hide
+    evaluate_at_index_2 = EvaluateAtIndex[FLOAT_VECTOR](
+      value: group.root_position,
+      index: points_of_curve.point_index) @ hide
+    vector_math_7 = group.root_position - evaluate_at_index_2 @ hide
+    evaluate_at_index_3 = EvaluateAtIndex[FLOAT_VECTOR](
+      value: Normal[legacy_corner_normals: true]().normal,
+      index: points_of_curve.point_index) @ hide
+    vector_math_8 = vector_math_7 ⋅ evaluate_at_index_3 @ hide
+    vector_math_10 = evaluate_at_index × evaluate_at_index_3 @ hide
+    vector_math_9 = vector_math_7 ⋅ vector_math_10 @ hide
+    math_27 = atan2(vector_math_8, vector_math_9) @ hide
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: Math[WRAP](Value: math_27 / 6.2831855 * integer, Value_001: integer, Value_002: 0.0))
+  }
+  "Attribute Capture" {
+    capture_attribute_7 = CaptureAttribute[CURVE](
+      capture_attribute_8.geometry,
+      Value: evaluate_on_domain_2)
+  }
+  "Braid Shape" .. {
+    math_13 = evaluate_on_domain_2 * math_14 @ hide
+    math_12 = math_13 / math_26 @ hide
+    math_11 = capture_attribute_8.value + math_12 @ hide
+    math_15 = math_11 * math_16 @ hide
+    math_17 = math_11 * math_26 @ hide
+    math_10 = math_17 + math_14
+    math_18 = Math[PINGPONG](Value: math_10 * 4.0 - shape_asymmetry, Value_001: 1.0)
+    math_23 = math_10 * 6.2831855 @ hide
+    math_20 = sin(math_23) @ hide
+    math_19 = math_20 * math_7 @ hide
+    math_24 = (math_15 - math_14) * 6.2831855 @ hide
+    math_22 = sin(math_24) @ hide
+    math_21 = math_22 * math_25 @ hide
+    combine_xyz = CombineXYZ(x: math_19, y: math_21, z: capture_attribute_8.value)
+  }
+  "Attribute Capture" .. {
+    capture_attribute_6 = CaptureAttribute(capture_attribute_7.geometry, Value: combine_xyz)
+    capture_attribute_5 = CaptureAttribute(capture_attribute_6.geometry, Value: math_18)
+    capture_attribute_4 = CaptureAttribute(capture_attribute_5.geometry, Value: math_8)
+  }
+  "Flare Shape" {
+    compare = capture_attribute_4.value > 0.0
+    switch = compare
+      ? FloatCurve[
+        mapping: Curve(
+          (0.0, 0.98958325),
+          (0.011450382, 1.0677088),
+          (0.21755724, 3.0677087),
+          (0.7862595, 1.9791651),
+          (1.0, 1.640625),
+          clip_max_y: 5.0)](value: capture_attribute_4.value)
+      : 1.0
+  }
+  "Distance to Main Strand" {
+    math_6 = capture_attribute_3.value * switch @ hide
+    math_5 = math_6 * Thickness @ hide
+    math_4 = math_5
+      * MapRange[SMOOTHSTEP](
+        value: capture_attribute_5.value,
+        to_min: 1.0 - thickness_shape,
+        to_max: 1.0 + thickness_shape) @ hide
+    math_3 = math_4 / 3.1415927 + (compare ? capture_attribute_4.value * flare_opening : 0.0)
+  }
+  vector_math_6 = (compare ? (0.0, 0.0, 0.0) : capture_attribute_6.value)
+    + evaluate_on_domain * math_3
+  "Guide Curve Tangent Space" .. {
+    vector_math = sample_curve_2.normal * vector_math_6.x @ hide
+    vector_math_2 = (sample_curve_2.tangent × sample_curve_2.normal) * vector_math_6.y @ hide
+    vector_math_3 = vector_math + vector_math_2 @ hide
+    vector_math_5 = vector_math_4 + vector_math_3 @ hide
+  }
+  set_position = SetPosition(
+    capture_attribute_4.geometry,
+    offset: vector_math_5
+      * pow(
+        MapRange[SMOOTHERSTEP](
+          value: SplineParameter().factor,
+          from_min: -1e-05,
+          from_max: braid_start),
+        0.5)
+      * Factor)
+  "Optimization" {
+    set_spline_resolution = set_position
+      |> SetSplineType[CATMULL_ROM]()
+      |> SetSplineResolution(
+        resolution: capture_attribute.value == 0 ? 12 : capture_attribute.value)
+  }
+  join_geometry = get_geometry_component.geometry + set_spline_resolution
+  return (
+    Geometry: hair_tie ? join_geometry + instance_on_points : join_geometry,
+    "Flare Parameter": capture_attribute_4.value,
+    "Strand Index": capture_attribute_7.value,
+    "Guide Index": capture_attribute_9.value)
+}

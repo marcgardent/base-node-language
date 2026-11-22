@@ -1,0 +1,43 @@
+geometry graph "Set Geometry Size"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Menu: Menu(optional_label: true) = Proportional,
+    Size: Vector(subtype: TRANSLATION) = (1.0, 1.0, 1.0) in 0.0..
+) -> Geometry {
+  {
+    bounding_box_2 = BoundingBox(Geometry)
+    set_position = SetPosition(
+      Geometry,
+      selection: Selection,
+      position: MapRange[FLOAT_VECTOR](
+        vector: Position(),
+        from_min: bounding_box_2.min,
+        from_max: bounding_box_2.max,
+        to_max: Size))
+    bounding_box = BoundingBox(set_position)
+    set_position_2 = SetPosition(
+      set_position,
+      position: Position()
+        - Mix[VECTOR, clamp_factor: false](factor: 0.5, a: bounding_box.min, b: bounding_box.max))
+  }
+  {
+    bounding_box_3 = BoundingBox(Geometry)
+    vector_math = bounding_box_3.max - bounding_box_3.min
+    set_position_3 = SetPosition(
+      Geometry,
+      position: Size / max(max(vector_math.x, vector_math.y), vector_math.z) * Position())
+  }
+  {
+    menu_switch = MenuSwitch(menu: Menu, Fit: set_position_2, Proportional: set_position_3)
+    bounding_box_4 = BoundingBox(menu_switch.output)
+    set_position_4 = SetPosition(
+      menu_switch.output,
+      selection: Selection,
+      position: Position()
+        - Mix[VECTOR, clamp_factor: false](
+          factor: 0.5,
+          a: bounding_box_4.min,
+          b: bounding_box_4.max))
+  }
+  return set_position_4
+}

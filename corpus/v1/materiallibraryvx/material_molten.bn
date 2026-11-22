@@ -1,0 +1,28 @@
+shader(material: true) graph Molten() -> (surface: Shader) {
+  texture_coordinate = TextureCoordinate()
+  color_ramp = ColorRamp[
+    color_ramp: Ramp((0.23181, (0.0, 0.0, 0.0, 1.0)), (0.59999, (1.0, 1.0, 1.0, 1.0)))](
+    factor: NoiseTexture(
+      vector: Mix[RGBA](
+        factor: 0.1909,
+        a: Mapping(vector: texture_coordinate.object),
+        b: NoiseTexture(
+          vector: texture_coordinate.object,
+          scale: 1.1,
+          detail: 7.6,
+          distortion: 1.449995).color),
+      scale: 9.4999895,
+      detail: 16.0).color)
+  math = Math[MULTIPLY](Value: color_ramp.color, Value_001: 2500.0)
+  return (
+    surface: MixShader(
+      factor: 0.3909,
+      a: Emission(
+        color: Blackbody(temperature: math),
+        strength: ColorRamp[
+          color_ramp: Ramp((0.51818, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](
+          factor: color_ramp.color).color),
+      b: GlossyBSDF[GGX](
+        roughness: 0.7691944,
+        normal: Bump(strength: 0.45454, distance: 0.1, filter_width: 1.0, height: math))))
+}

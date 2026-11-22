@@ -1,0 +1,23 @@
+geometry(is_modifier: false) graph "Offset Curve"(
+    Curve: Geometry,
+    Points: Float(
+      description: "Number of points to offset and sample position and normal by. Fractions sample between the points along the curve.") in -10000.0..10000.0
+) -> (Curve: Geometry, Factor: Float(description: "The pre-offset factor for the curve's point")) {
+  "Amount of factor for this number of points to offset" {
+    math = Points / SplineLength().point_count
+  }
+  capture_attribute = CaptureAttribute(Curve, Value: SplineParameter().factor + math)
+  sample_curve = SampleCurve(
+    capture_attribute.geometry,
+    factor: capture_attribute.value,
+    curve_index: CurveOfPoint().curve_index)
+  capture_attribute_2 = CaptureAttribute(
+    capture_attribute.geometry,
+    Position: sample_curve.position,
+    Normal: sample_curve.normal)
+  return (
+    Curve: capture_attribute_2.geometry
+      |> SetPosition(position: capture_attribute_2.position)
+      |> SetCurveNormal(mode: Free, normal: capture_attribute_2.normal),
+    Factor: capture_attribute.value)
+}

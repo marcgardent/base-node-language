@@ -1,0 +1,127 @@
+shader graph PT_TCH_FullWire(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Bends: Float(subtype: FACTOR) = 0.7099999 in 0.0..1.0,
+    Thickness: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "Noise props"(default_closed: true) {
+        Scale as noise_props_scale: Float = 2.6 in -1000.0..1000.0,
+        Detail: Float = 2.3 in 0.0..15.0,
+        Roughness: Float(subtype: FACTOR) in 0.0..1.0,
+        Distortion: Float in -1000.0..1000.0
+    }
+) -> (
+    Position: Vector,
+    UV: Vector,
+    Color: Color,
+    Edge: Float,
+    "Signed edge": Float,
+    "Wire edge": Float,
+    Masks: Int
+) {
+  vector_math = Vector * Scale
+  vector_math_2 = floor(vector_math)
+  vector_math_4 = fract(vector_math)
+  "checker" {
+    math_3 = Math[FLOORED_MODULO](
+      Value: Math[MULTIPLY](Value: floor(vector_math), Value_001: 3.0),
+      Value_001: 2.0)
+  }
+  noise_texture = NoiseTexture(
+    vector: vector_math_2 / Scale,
+    scale: noise_props_scale,
+    detail: Detail,
+    roughness: Roughness,
+    distortion: Distortion)
+  math_4 = noise_texture.factor > 0.5 @ hide
+  math_5 = (noise_texture.factor > 0.5) * 1.5707964
+  vector_rotate = VectorRotate[invert: true](
+    vector: vector_math_4,
+    center: (0.5, 0.5, 0.0),
+    angle: math_5)
+  vector_math_3 = vector_rotate - (1.0, 1.0, 0.0) @ hide
+  math = min(length(vector_math_3), length(vector_rotate)) - 0.5
+  mix = math_4 ? math : MapRange(value: math, from_min: -1.0, to_min: 1.0, to_max: -1.0)
+  map_range = MapRange(value: mix, from_min: -1.0, to_min: 1.0, to_max: -1.0)
+  math_6 = vector_rotate.x - 0.5
+  math_7 = abs(math_6)
+  math_9 = vector_rotate.y - 0.5
+  math_10 = abs(math_9)
+  math_12 = SeparateColor[HSV](color: noise_texture.color).red > Bends
+  math_13 = math_6 > 0.0 @ hide
+  math_14 = math_9 > 0.0 @ hide
+  math_15 = min(math_7, math_10)
+    * MapRange(
+      value: Mix[RGBA, DIFFERENCE, clamp_result: true](a: math_13, b: math_14),
+      to_min: -1.0)
+  math_16 = noise_texture.factor > 0.5 @ hide
+  mix_3 = math_16 ? math_15 : MapRange(value: math_15, from_min: -1.0, to_min: 1.0, to_max: -1.0)
+  mix_2 = math_12
+    ? Mix(
+      factor: math_3,
+      a: mix_3,
+      b: MapRange(value: mix_3, from_min: -1.0, to_min: 1.0, to_max: -1.0))
+    : Mix(factor: math_3, a: mix, b: map_range)
+  math_18 = vector_math_4.x + vector_math_4.y > 1.0
+  math_19 = vector_math_4.x - vector_math_4.y < 0.0
+  mix_4 = math_18 ? (1.0, 1.0, 0.0) : (0.0, 0.0, 0.0) @ hide
+  mix_5 = math_19 ? (0.0, 1.0, 0.0) : (1.0, 0.0, 0.0) @ hide
+  math_22 = 1.0 / 3.0 @ hide
+  math_26 = 1.0 / 2.0 @ hide
+  math_29 = 1.0 / 2.0 @ hide
+  math_32 = Thickness * 0.25
+  math_2 = abs(math) - math_32
+  math_8 = math_7 - math_32
+  math_11 = math_10 - math_32
+  math_17 = math_2 < 0.0 @ hide
+  math_25 = math_32 + math_26 @ hide
+  math_24 = pow(math_25, 3.0) @ hide
+  math_28 = math_29 - math_32 @ hide
+  math_27 = pow(math_28, 3.0) @ hide
+  math_23 = math_24 - math_27 @ hide
+  math_21 = math_22 * math_23 @ hide
+  math_20 = math_21 / math_32 @ hide
+  math_30 = math_20 / 1.4142135
+  combine_xyz = CombineXYZ(x: math_30, y: math_30)
+  vector_math_5 = (1.0, 1.0, 0.0) - combine_xyz
+  vector_rotate_2 = VectorRotate[invert: true](
+    vector: math_19 ? combine_xyz : vector_math_5,
+    center: (0.5, 0.5, 0.0),
+    angle: 1.5707964) @ hide
+  math_31 = (0.5 - math_32) * 2.0
+  {
+    math_33 = math_8 > 0.0 @ hide
+    math_34 = math_11 > 0.0 @ hide
+    math_35 = vector_rotate.x > 0.5 @ hide
+    math_36 = vector_rotate.y > 0.5 @ hide
+  }
+  map_range_2 = MapRange(value: math_35, to_min: -1.0) @ hide
+  map_range_3 = MapRange(value: math_36, to_min: -1.0) @ hide
+  vector_math_8 = (1.0, 0.0, 0.0) * map_range_2 @ hide
+  vector_math_9 = (0.0, 1.0, 0.0) * map_range_3 @ hide
+  combine_xyz_2 = CombineXYZ(y: 1.0)
+  vector_rotate_3 = VectorRotate(
+    vector: math_34
+      ? (math_33 ? vector_math_8 + vector_math_9 : math_36 ? combine_xyz_2 : -combine_xyz_2)
+      : (0.0, 0.0, 0.0),
+    angle: math_5) @ hide
+  vector_math_6 = vector_math_2
+    + (math_12
+      ? vector_rotate_3 * 0.5 + (0.5, 0.5, 0.0)
+      : math_17
+        ? (math_16 ? vector_rotate_2 : math_18 ? vector_math_5 : combine_xyz)
+        : map_range < 0.0 ? mix_4 : mix_5)
+  vector_math_7 = vector_math_6 / Scale
+  math_37 = mix_2 / Scale @ hide
+  math_38 = (math_12 ? abs(min(abs(math_8), math_11)) : abs(math_2)) / Scale @ hide
+  vector_math_10 = fract(vector_math)
+  math_39 = Math[PINGPONG](Value: vector_math_10.x) @ hide
+  math_40 = Math[PINGPONG](Value: vector_math_10.y) @ hide
+  return (
+    Position: vector_math_7,
+    UV: Vector - vector_math_7,
+    Color: WhiteNoiseTexture(vector: vector_math_6 + (1000.0, 1000.0, 0.0)).color,
+    Edge: min(math_38, min(math_39, math_40) / Scale),
+    "Signed edge": math_37,
+    "Wire edge": math_38,
+    Masks: abs(mix_2) - math_32 > 0.0)
+}

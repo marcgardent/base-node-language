@@ -1,0 +1,273 @@
+geometry graph "RBD Fracture"(
+    Geometry: Geometry,
+    "Extra Points": Geometry(
+      description: "Optional. Used as the cell points instead of scattering; with Radial Cracks the first of them is the impact point"),
+    Pieces: Int(description: "Number of Voronoi seed points") = 30 in 1..5000,
+    Seed: Int in 0..,
+    "Impact" {
+        "Impact Bias": Float(
+          subtype: FACTOR,
+          description: "Fraction of the seeds concentrated around the impact point (small pieces there)") in 0.0..1.0,
+        "Impact Point": Vector(subtype: TRANSLATION),
+        "Impact Radius": Float(subtype: DISTANCE) = 0.5 in 0.001..
+    },
+    "Secondary Fracture" {
+        "Secondary Ratio": Float(
+          subtype: FACTOR,
+          description: "Share of the pieces that are broken up again into smaller ones") in 0.0..1.0,
+        "Secondary Pieces": Int(
+          description: "Extra seed points added inside each piece that is broken up again") = 4 in 1..32
+    },
+    "Shape" {
+        "Use Loose Parts": Bool(
+          description: "Do not cut: every loose part (connected island) of the mesh is one piece. For models that are already in pieces: bricks, planks, hand-cut debris"),
+        "Cell Stretch": Vector(
+          subtype: XYZ,
+          description: "Elongate cells along an axis. (1, 1, 6) gives wood-like splinters along Z") = (1.0, 1.0, 1.0) in 0.01..,
+        Flat: Bool(
+          description: "2.5D: cut straight through the thinnest axis. Use for glass panes and ground slabs"),
+        "Radial Cracks": Bool(
+          description: "Glass pattern: cracks radiating from the impact point crossed by rings"),
+        Rings: Int = 5 in 1..64,
+        Spokes: Int = 12 in 3..128
+    },
+    "Interior Detail" {
+        "Detail Level": Int(
+          description: "Subdivide the cut faces and roughen them with noise. 0 = flat cuts") in 0..5,
+        "Noise Height": Float(subtype: DISTANCE) = 0.02 in 0.0..,
+        "Noise Scale": Float = 3.0 in 0.0..,
+        "Edge Fade": Float(
+          subtype: DISTANCE,
+          description: "The roughness fades out over this distance from the original surface") = 0.05 in 0.0001..
+    },
+    "Simulation" {
+        "Anchor Group": String(
+          description: "Vertex group painted where pieces must stay in place. A piece is anchored when most of it is painted (average weight of 0.5 or more)")
+    },
+    "Output" {
+        "Use Inner Material": Bool,
+        "Inner Material": Material,
+        "UV Map": String(description: "Cut faces get box-projected UVs in this UV map") = "UVMap",
+        "Inner UV Scale": Float = 1.0 in 0.0..,
+        "Exploded View": Float(description: "Push pieces apart to inspect the fracture") in 0.0..,
+        "Robust Boolean": Bool(
+          description: "Always use the slow exact boolean. It is used automatically where the fast one fails; enable this when pieces still go missing")
+    }
+) -> Geometry {
+  vector_math = 1.0 / cell_stretch
+  store_named_attribute = Geometry
+    |> TransformGeometry(scale: vector_math)
+    |> StoreNamedAttribute[BOOLEAN, FACE](name: "rbd_outer", value: true)
+  bounding_box = BoundingBox(store_named_attribute)
+  vector_math_2 = bounding_box.max - bounding_box.min
+  vector_math_3 = (bounding_box.max + bounding_box.min) * 0.5
+  vector_math_4 = length(vector_math_2)
+  math = vector_math_4 * 0.05 + 0.001
+  boolean_math = vector_math_2.x <= vector_math_2.y and vector_math_2.x <= vector_math_2.z
+  boolean_math_2 = not boolean_math and vector_math_2.y <= vector_math_2.z
+  combine_xyz = CombineXYZ(x: boolean_math, y: boolean_math_2, z: nor(boolean_math, boolean_math_2))
+  vector_math_5 = 1.0 - combine_xyz
+  transform_geometry = TransformGeometry(
+    SeparateComponents(extra_points).point_cloud + MeshToPoints(extra_points),
+    scale: vector_math)
+  compare = DomainSize[POINTCLOUD](transform_geometry) > 0
+  switch = compare and radial_cracks
+    ? SampleIndex[FLOAT_VECTOR](transform_geometry, value: Position())
+    : impact_point * vector_math
+  vector_math_6 = abs(Position() - vector_math_3) - vector_math_2 * 0.5
+  switch_2 = Switch[INT](switch: radial_cracks, true_: Rings * Spokes)
+  index_2 = Index()
+  math_2 = Math[FLOORED_MODULO](Value: index_2, Value_001: Spokes)
+  math_3 = impact_radius
+    * pow(
+      (floor(index_2 / Spokes) + 0.5 + RandomValue(min: -0.12, max: 0.12, seed: Seed + 404.0))
+        / Rings,
+      1.6)
+  math_4 = (math_2 + RandomValue(min: -0.3, max: 0.3, id: math_2, seed: Seed + 505.0))
+    / Spokes
+    * 6.2831855
+  math_5 = math_3 * cos(math_4)
+  math_6 = math_3 * sin(math_4)
+  vector_math_7 = abs(Position() - vector_math_3) - vector_math_2 * 0.5
+  math_7 = max(Pieces - switch_2, 0.0)
+  vector_math_8 = abs(Position() - vector_math_3) - vector_math_2 * 0.5
+  raycast = Raycast(
+    store_named_attribute,
+    ray_direction: (0.0, 0.0, 1.0),
+    ray_length: vector_math_4 * 4.0 + 10.0)
+  capture_attribute = Points(
+      count: math_7 * 12.0 + 64.0,
+      position: RandomValue(seed: Seed + 303.0) < impact_bias
+        ? switch
+          + normalize(RandomValue[FLOAT_VECTOR](min: (-1.0, -1.0, -1.0), seed: Seed + 101.0))
+            * (impact_radius * RandomValue(seed: Seed + 202.0))
+        : RandomValue[FLOAT_VECTOR](min: bounding_box.min, max: bounding_box.max, seed: Seed))
+    |> SetPosition(
+      position: Flat ? Position() * vector_math_5 + vector_math_3 * combine_xyz : Position())
+    |> DeleteGeometry(selection: max(max(vector_math_8.x, vector_math_8.y), vector_math_8.z) > 0.0)
+    |> CaptureAttribute(
+      keep: raycast.is_hit
+        and raycast.hit_normal.z > 0.0
+        and (not radial_cracks or distance(Position(), switch) > impact_radius))
+  delete_geometry = DeleteGeometry(
+    capture_attribute.geometry,
+    selection: not capture_attribute.keep)
+  index_of_nearest = IndexOfNearest()
+  capture_attribute_2 = CaptureAttribute(
+    (compare and not radial_cracks
+        ? transform_geometry
+          |> SetPosition(
+            position: Flat ? Position() * vector_math_5 + vector_math_3 * combine_xyz : Position())
+          |> DeleteGeometry(
+            selection: max(max(vector_math_6.x, vector_math_6.y), vector_math_6.z) > 0.0)
+        : DeleteGeometry(
+          DomainSize[POINTCLOUD](delete_geometry) > 0 or radial_cracks
+            ? delete_geometry
+            : capture_attribute.geometry,
+          selection: Compare[GREATER_EQUAL, INT](a: Index(), b: math_7)))
+      + (Points(
+          count: switch_2,
+          position: switch
+            + (boolean_math
+              ? CombineXYZ(y: math_5, z: math_6)
+              : boolean_math_2
+                ? CombineXYZ(x: math_5, z: math_6)
+                : CombineXYZ(x: math_5, y: math_6)))
+        |> SetPosition(
+          position: Flat ? Position() * vector_math_5 + vector_math_3 * combine_xyz : Position())
+        |> DeleteGeometry(
+          selection: max(max(vector_math_7.x, vector_math_7.y), vector_math_7.z) > 0.0)),
+    spacing: index_of_nearest.has_neighbor
+      ? distance(
+        Position(),
+        EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: index_of_nearest.index))
+      : vector_math_4 * 0.25,
+    picked: RandomValue(seed: Seed + 606.0) < secondary_ratio)
+  vector_math_9 = abs(Position() - vector_math_3) - vector_math_2 * 0.5
+  merge_by_distance = MergeByDistance(
+    (capture_attribute_2.geometry
+        |> DeleteGeometry(selection: not capture_attribute_2.picked)
+        |> DuplicateElements(amount: secondary_pieces).geometry
+        |> SetPosition(
+          offset: normalize(RandomValue[FLOAT_VECTOR](min: (-1.0, -1.0, -1.0), seed: Seed + 707.0))
+            * (capture_attribute_2.spacing
+              * 0.5
+              * RandomValue(min: 0.35, max: 0.95, seed: Seed + 808.0)))
+        |> SetPosition(
+          position: Flat ? Position() * vector_math_5 + vector_math_3 * combine_xyz : Position())
+        |> DeleteGeometry(
+          selection: max(max(vector_math_9.x, vector_math_9.y), vector_math_9.z) > 0.0))
+      + capture_attribute_2.geometry,
+    distance: vector_math_4 * 1e-05 + 1e-07)
+  switch_3 = DomainSize[POINTCLOUD](merge_by_distance) > 0
+    ? merge_by_distance
+    : Points(position: vector_math_3)
+  position = Position()
+  normal = Normal()
+  foreach_output = foreach(switch_3, "Seed Position": Position()) -> {
+    vector_math_10 = Position() - seed_position
+    vector_math_11 = vector_math_10 ⋅ vector_math_10
+    capture_attribute_3 = (Cube(size: (2.0, 2.0, 2.0)).mesh
+          |> MeshToPoints[FACES]()
+          |> SetPosition(
+            position: position
+              * (1.0
+                / (max(position, 0.0)
+                    ⋅ (bounding_box.max + CombineXYZ(x: math, y: math, z: math) - seed_position)
+                  + max(-position, 0.0)
+                    ⋅ (seed_position
+                      - (bounding_box.min - CombineXYZ(x: math, y: math, z: math)))))))
+        + (switch_3
+          |> DeleteGeometry(selection: vector_math_11 < 1e-12)
+          |> SetPosition(position: vector_math_10 * (2.0 / vector_math_11)))
+      |> ConvexHull()
+      |> CaptureAttribute[FACE](vert: normal.normal * (1.0 / (normal.normal ⋅ Position())))
+    set_position = capture_attribute_3.geometry
+      |> DualMesh()
+      |> SetPosition(position: capture_attribute_3.vert + seed_position)
+    mesh_boolean = MeshBoolean[INTERSECT, MANIFOLD](
+      set_position,
+      Switch[GEOMETRY](switch: robust_boolean, false_: store_named_attribute))
+    mesh_boolean_2 = MeshBoolean[INTERSECT, EXACT](set_position, store_named_attribute)
+    return (
+      Geometry: robust_boolean
+        ? mesh_boolean_2.mesh
+        : DomainSize(mesh_boolean.mesh).face_count == 0 ? mesh_boolean_2.mesh : mesh_boolean.mesh)
+  }
+  store_named_attribute_2 = (use_loose_parts
+      ? StoreNamedAttribute[BOOLEAN, FACE](Geometry, name: "rbd_outer", value: true)
+      : TransformGeometry(foreach_output.Geometry, scale: cell_stretch))
+    |> StoreNamedAttribute[INT](name: "piece_id", value: MeshIsland().island_index)
+    |> StoreNamedAttribute[BOOLEAN, FACE](
+      name: "inside",
+      value: not NamedAttribute[BOOLEAN](name: "rbd_outer").attribute)
+    |> RemoveNamedAttribute(name: "rbd_outer")
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "rbd_rest", value: Position())
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  named_attribute_2 = NamedAttribute[BOOLEAN](name: "inside")
+  vector_math_12 = abs(Normal().true_normal)
+  boolean_math_3 = vector_math_12.x >= vector_math_12.y and vector_math_12.x >= vector_math_12.z
+  position_2 = Position()
+  store_named_attribute_3 = StoreNamedAttribute[FLOAT2, CORNER](
+    StringLength(string: anchor_group) > 0
+      ? StoreNamedAttribute(
+        store_named_attribute_2,
+        name: "rbd_anchor",
+        value: AccumulateField(
+            value: use_loose_parts
+              ? NamedAttribute(name: anchor_group).attribute
+              : SampleNearestSurface(
+                Geometry,
+                value: NamedAttribute(name: anchor_group).attribute,
+                sample_position: Position()).value,
+            group_id: named_attribute.attribute).total
+          / AccumulateField(group_id: named_attribute.attribute).total)
+      : store_named_attribute_2,
+    selection: named_attribute_2.attribute,
+    name: uv_map,
+    value: CombineXYZ(
+        x: boolean_math_3 ? position_2.y : position_2.x,
+        y: boolean_math_3 or not boolean_math_3 and vector_math_12.y >= vector_math_12.z
+          ? position_2.z
+          : position_2.y)
+      * inner_uv_scale)
+  switch_4 = use_inner_material
+    ? SetMaterial(
+      store_named_attribute_3,
+      selection: named_attribute_2.attribute,
+      material: inner_material)
+    : store_named_attribute_3
+  separate_geometry = SeparateGeometry[FACE](switch_4, selection: named_attribute_2.attribute)
+  named_attribute_3 = NamedAttribute[INT](name: "piece_id")
+  return (detail_level > 0 and noise_height > 0.0
+      ? (separate_geometry.selection
+          |> Triangulate()
+          |> SubdivideMesh(level: detail_level)
+          |> SetPosition(
+            offset: (NoiseTexture(scale: noise_scale).color - 0.5)
+              * (noise_height
+                * 2.0
+                * MapRange[SMOOTHSTEP](
+                  value: GeometryProximity(Geometry).distance,
+                  from_max: edge_fade))))
+        + separate_geometry.inverted
+      : switch_4)
+    |> SetMeshNormal[TANGENT_SPACE, CORNER](
+      custom_normal: NamedAttribute[BOOLEAN](name: "inside").attribute
+        ? Normal().true_normal
+        : SampleNearestSurface[FLOAT_VECTOR](
+          Geometry,
+          value: Normal().normal,
+          sample_position: Position() * 0.97
+            + EvaluateOnDomain[FACE, FLOAT_VECTOR](value: Position()) * 0.03).value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_pivot",
+      value: AccumulateField[FLOAT_VECTOR](
+          value: Position(),
+          group_id: named_attribute_3.attribute).total
+        * (1.0 / AccumulateField(group_id: named_attribute_3.attribute).total))
+    |> SetPosition(
+      offset: (NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot").attribute
+          - vector_math_3 * cell_stretch)
+        * exploded_view)
+}

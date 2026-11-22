@@ -1,0 +1,14 @@
+geometry(is_modifier: false) graph "Get Geometry Atoms"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> (Geometry: Geometry, Bundle: Bundle, Atoms: Geometry) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  string = "MN/Atoms"
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: string,
+    remove: true)
+  return (
+    Geometry: Switch[GEOMETRY](switch: get_bundle_item.exists, true_: get_geometry_bundle.geometry),
+    Bundle: get_bundle_item.bundle,
+    Atoms: get_bundle_item.exists ? get_bundle_item.item : get_geometry_bundle.geometry)
+}

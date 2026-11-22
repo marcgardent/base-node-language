@@ -1,0 +1,32 @@
+compositor graph "Sensor Noise"(
+    Image: Color = (0.5, 0.5, 0.5),
+    "Luminance Noise": Float(
+      subtype: FACTOR,
+      description: "The amount of value-based noise") = 0.1 in 0.0..1.0,
+    "Chroma Noise": Float(
+      subtype: FACTOR,
+      description: "The amount of color noise") = 0.05 in 0.0..1.0,
+    Animated: Bool(description: "Change noise on every frame")
+) -> (Image: Color) {
+  value = 0.0
+  white_noise_texture = WhiteNoiseTexture(
+    vector: ImageCoordinates(Image).uniform
+      + CombineXYZ(
+        y: Switch[RGBA](
+          switch: Animated,
+          false_: value,
+          true_: WhiteNoiseTexture["1D"](w: SceneTime().frame).value)))
+  separate_color = SeparateColor[HSV](Image)
+  return (
+    Image: CombineColor[HSV](
+      red: Math[FLOORED_MODULO](
+        Value: separate_color.red
+          + Math[MULTIPLY](Value: white_noise_texture.color - 0.5, Value_001: chroma_noise),
+        Value_001: 1.0),
+      green: separate_color.green,
+      blue: Mix[RGBA, OVERLAY](
+        factor: luminance_noise,
+        a: separate_color.blue,
+        b: white_noise_texture.value),
+      alpha: separate_color.alpha))
+}

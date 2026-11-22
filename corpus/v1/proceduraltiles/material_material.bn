@@ -1,0 +1,4 @@
+shader(material: true) graph Material() -> () {
+  texture_coordinate = TextureCoordinate()
+  return ()
+}

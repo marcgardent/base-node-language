@@ -1,0 +1,46 @@
+shader graph PT_RectV(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0,
+    Scale: Float = 10.0,
+    "Board size": Int = 3 in 1..,
+    "UV oriented": Bool(description: "uv based on board orientation") = true
+) -> (Position: Vector, UV: Vector, "UV center": Vector, Color: Color, Edge: Float, Masks: Int) {
+  vector_math_2 = Vector * Scale
+  vector_math = floor(vector_math_2)
+  math_2 = 1.0 / board_size
+  math = (vector_math_2.x + vector_math.y) * math_2
+  math_3 = Math[FLOORED_MODULO](Value: math / 2.0, Value_001: 1.0) > 0.5
+  mix = math_3
+    ? Math[FLOORED_MODULO](Value: (vector_math.x + vector_math_2.y) * math_2, Value_001: 1.0)
+    : Math[FLOORED_MODULO](Value: math, Value_001: 1.0)
+  mix_2 = math_3
+    ? Math[FLOORED_MODULO](Value: vector_math_2.x, Value_001: 1.0)
+    : Math[FLOORED_MODULO](Value: vector_math_2.y, Value_001: 1.0)
+  math_4 = 1.0 / Scale
+  combine_xyz = CombineXYZ(x: mix, y: mix_2)
+  vector_math_4 = (combine_xyz - (0.5, 0.5, 0.0)) * CombineXYZ(x: 1.0, y: math_2) * board_size
+  vector_math_3 = vector_math_2
+    - (math_3 ? CombineXYZ(x: vector_math_4.y, y: vector_math_4.x) : vector_math_4)
+  vector_math_5 = CombineXYZ(x: mix, y: mix_2 * math_2) * board_size * math_4
+  vector_math_7 = vector_math_4 * math_4
+  math_5 = math_3 * MapRange(value: uv_oriented, to_min: 1.0, to_max: 0.0)
+  mix_3 = Mix[VECTOR](
+    factor: math_5,
+    a: vector_math_7,
+    b: CombineXYZ(x: vector_math_7.y, y: vector_math_7.x)) @ "center"
+  mix_4 = Mix[VECTOR](
+    factor: math_5,
+    a: vector_math_5,
+    b: CombineXYZ(x: vector_math_5.y, y: vector_math_5.x)) @ "uv"
+  value = 1000.0
+  vector_math_6 = vector_math_3 + value + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_3 * math_4,
+    UV: mix_4,
+    "UV center": mix_3,
+    Color: WhiteNoiseTexture(vector: vector_math_6).color,
+    Edge: min(
+        Math[PINGPONG](Value: combine_xyz.x) * board_size,
+        Math[PINGPONG](Value: combine_xyz.y))
+      / Scale,
+    Masks: math_3)
+}

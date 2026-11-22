@@ -1,0 +1,129 @@
+geometry graph "Custom/World/Object Space"(
+    Space: Menu(optional_label: true) = "Custom Space"
+) -> (
+    "Custom = 0,World = 1, Object = 2": Int,
+    "Is Custom Space": Bool(description: "True if this item is chosen by the menu input"),
+    "Is World Space": Bool(description: "True if this item is chosen by the menu input"),
+    "Is Object Space": Bool(description: "True if this item is chosen by the menu input")
+) {
+  menu_switch = MenuSwitch(
+    menu: Space,
+    "Custom Space"(description: "Use a user-defined space."): 0,
+    "World Space"(description: "Use world-space coordinates."): 1,
+    "Object Space"(description: "Use the coordinates in object space of the provided object."): 2)
+  return (
+    "Custom = 0,World = 1, Object = 2": menu_switch.output,
+    "Is Custom Space": menu_switch.custom_space,
+    "Is World Space": menu_switch.world_space,
+    "Is Object Space": menu_switch.object_space)
+}
+
+geometry graph "Custom Force"(
+    Mode: Menu(
+      description: "How the force field is defined.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE) = Field,
+    Closure: Closure(
+      description: "The closure computing the force at each point of the input geometry.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Selection: Bool(
+      description: "Selection of points this force is applied to.",
+      hide_value: true,
+      structure_type: FIELD) = true,
+    Force: Vector(subtype: XYZ, description: "The actual force vector.", structure_type: FIELD),
+    "Geometry Space"(description: "Geometry space settings.", default_closed: true) {
+        "Geometry Space": Menu(
+          description: "The space the geometry is transformed to before the field is evaluated.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = "World Space",
+        "Geometry Space" as geometry_space_matrix: Matrix(
+          description: "Custom geometry space.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        Object: Object(
+          description: "Object to take the geometry space from.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = SelfObject()
+    },
+    "Force Space"(description: "Force space settings.", default_closed: true) {
+        "Force Space": Menu(
+          description: "The space the provided force vector is in.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = "World Space",
+        "Force Space" as force_space_matrix: Matrix(
+          description: "Custom force space.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        Object as force_space_object: Object(
+          description: "Object to take the force space from.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = SelfObject()
+    },
+    "Filter"(description: "Filter settings.", default_closed: true) {
+        Filter: String(
+          description: "Comma-separated list of tags this effector should be applied to.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE)
+    }
+) -> (Force: Bundle(description: "A bundle containing all information about this effector.")) {
+  "Create a custom force field to be used in simulations."
+  "Used for type inferencing" {
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      Closure,
+      Geometry(structure_type: SINGLE): Geometry = _,
+      "To World Transform"(structure_type: SINGLE): Matrix) -> (
+      Geometry: Geometry(structure_type: SINGLE),
+      Selection: Bool(structure_type: FIELD),
+      Force: Vector(structure_type: FIELD))
+  }
+  "World space to geometry space" {
+    invert_matrix = InvertMatrix(
+      matrix: IndexSwitch(
+        custom_world_object_space(space: geometry_space).custom_0_world_1_object_2,
+        InvertMatrix(matrix: geometry_space_matrix).matrix,
+        _,
+        ObjectInfo(object: Object).transform))
+    string = "The geometry nodes to be transformed into the space requested by the user before evaluating the fields."
+  }
+  "Force space to world space" {
+    index_switch = IndexSwitch(
+      custom_world_object_space(space: force_space).custom_0_world_1_object_2,
+      force_space_matrix,
+      _,
+      ObjectInfo(object: force_space_object).transform)
+    string_2 = "The computed force field needs to be transformed back into the space of the simulation."
+  }
+  closure_output = graph(
+    Geometry: Geometry,
+    "To World Transform": Matrix
+  ) -> (Geometry: Geometry, Selection: Bool, Force: Vector) {
+    return (
+      Geometry: TransformGeometry(
+        Geometry,
+        mode: Matrix,
+        transform: MultiplyMatrices(Matrix: invert_matrix.matrix, Matrix_001: to_world_transform)),
+      Selection: Selection,
+      Force: TransformDirection(
+        direction: Force,
+        transform: MultiplyMatrices(
+          Matrix: InvertMatrix(matrix: to_world_transform).matrix,
+          Matrix_001: index_switch)))
+  }
+  return (
+    Force: CombineBundle(
+      Type: "Blender.Force",
+      filter: Filter,
+      closure: MenuSwitch(
+        menu: Mode,
+        Field(
+          description: "Create the force just by providing a field and specifying the relevant spaces."): closure_output,
+        Closure(
+          description: "Create a force by providing a closure that computes it."): Closure).output))
+}

@@ -1,0 +1,27 @@
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "3 Index Angle"(
+    "Index A": Int(description: "First of the points for the angle calculation") in 0..,
+    "Index B": Int(description: "The middle point for the angle calculation") = 1 in 0..,
+    "Index C": Int(description: "Last of the points for the angle calculation") = 2 in 0..
+) -> (
+    Angle: Float(subtype: ANGLE, description: "Angle between the points around Index B in radians")
+) {
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](value: position, index: index_b)
+  return (
+    Angle: vector_angle(
+      a: EvaluateAtIndex[FLOAT_VECTOR](value: position, index: index_a) - evaluate_at_index,
+      b: EvaluateAtIndex[FLOAT_VECTOR](value: position, index: index_c) - evaluate_at_index).angle)
+}

@@ -1,0 +1,2468 @@
+geometry graph "Tessera · Region"(
+    Position: Vector,
+    Shape: Int,
+    "Half Size": Vector,
+    Margin: Float,
+    Region: Int,
+    Sides: Int = 8
+) -> (Inside: Bool, Clamped: Vector) {
+  math = max(half_size.x - Margin, 1e-05)
+  math_2 = max(half_size.y - Margin, 1e-05)
+  math_3 = 6.2831855 / max(Sides, 3.0)
+  math_4 = abs(Position.x)
+  math_5 = abs(Position.y)
+  math_6 = length(CombineXYZ(x: Position.x, y: Position.y))
+    * cos(
+      Math[FLOORED_MODULO](
+          Value: atan2(Position.y, Position.x) + 1.5707964 + math_3 * 0.5,
+          Value_001: math_3)
+        - math_3 * 0.5)
+  math_7 = half_size.y - half_size.x
+  index_switch = IndexSwitch(
+    Shape,
+    math_4 <= half_size.x and math_5 <= half_size.y,
+    pow(Position.x / half_size.x, 2.0) + pow(Position.y / half_size.y, 2.0) <= 1.0,
+    math_4 <= half_size.x and Position.y >= -half_size.y and Position.y <= math_7
+      or Position.y > math_7
+        and length(CombineXYZ(x: Position.x, y: Position.y - math_7)) <= half_size.x,
+    math_6 <= min(half_size.x, half_size.y))
+  math_8 = math_2 - math
+  index_switch_2 = IndexSwitch(
+    Shape,
+    math_4 <= math and math_5 <= math_2,
+    pow(Position.x / math, 2.0) + pow(Position.y / math_2, 2.0) <= 1.0,
+    math_4 <= math and Position.y >= -math_2 and Position.y <= math_8
+      or Position.y > math_8 and length(CombineXYZ(x: Position.x, y: Position.y - math_8)) <= math,
+    math_6 <= min(math, math_2))
+  compare = Region == 1
+  switch = compare ? math : half_size.x
+  switch_2 = compare ? math_2 : half_size.y
+  math_9 = switch_2 - switch
+  combine_xyz = CombineXYZ(x: Position.x, y: Position.y - math_9)
+  switch_3 = Position.y > math_9
+    ? CombineXYZ(y: math_9) + combine_xyz * min(1.0, switch / max(length(combine_xyz), 1e-09))
+    : CombineXYZ(x: Position.x, y: Position.y)
+  return (
+    Inside: IndexSwitch(Region, index_switch, index_switch_2, index_switch and not index_switch_2),
+    Clamped: IndexSwitch(
+      Shape,
+      CombineXYZ(
+        x: min(max(Position.x, -switch), switch),
+        y: min(max(Position.y, -switch_2), switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y)
+        * (1.0 / max(sqrt(pow(Position.x / switch, 2.0) + pow(Position.y / switch_2, 2.0)), 1.0)),
+      CombineXYZ(x: min(max(switch_3.x, -switch), switch), y: max(switch_3.y, -switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y) * (1.0 / max(math_6 / min(switch, switch_2), 1.0))))
+}
+
+geometry graph "Tessera · Bed"(
+    Surface: Geometry,
+    Mapping: Int,
+    Shape: Int,
+    Width: Float,
+    Height: Float,
+    Sides: Int,
+    Thickness: Float,
+    "Grout Depth": Float,
+    "Shape Offset": Vector,
+    "Clip to Shape": Bool,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    "UV Map": String,
+    "UV Scale": Float,
+    Holes: Geometry
+) -> Geometry {
+  math = Width * 0.5
+  math_2 = Height * 0.5
+  math_3 = max(Thickness - grout_depth, 1e-05)
+  math_4 = (math + math_2) * 4.0
+  math_5 = Index() / 256.0 * 6.2831855
+  vector_math = shape_offset * (1.0, 1.0, 0.0)
+  merge_by_distance = Points(
+      count: 256,
+      position: tessera_region(
+          position: CombineXYZ(x: math_4 * cos(math_5), y: math_4 * sin(math_5)),
+          shape: Shape,
+          half_size: CombineXYZ(x: math, y: math_2),
+          sides: Sides).clamped
+        + vector_math)
+    |> PointsToCurves(weight: Index())
+    |> SetSplineCyclic(cyclic: true)
+    |> FillCurve(mode: "N-gons")
+    |> MergeByDistance(distance: 1e-05)
+  extrude_mesh = ExtrudeMesh(
+    merge_by_distance,
+    offset: (0.0, 0.0, 1.0),
+    offset_scale: math_3,
+    individual: false)
+  set_position = SetPosition(Holes, offset: (0.0, 0.0, -0.001))
+  delete_geometry = Surface
+    |> SetPosition(offset: Normal().normal * math_3)
+    |> DeleteGeometry[FACE](
+      selection: clip_to_shape
+        and not tessera_region(
+          position: EvaluateOnDomain[FACE, FLOAT_VECTOR](
+              value: Mapping == 2
+                ? NamedAttribute[FLOAT_VECTOR](name: uv_map).attribute * uv_scale
+                : Position())
+            - CombineXYZ(
+              x: (region_min.x + region_max.x) * 0.5,
+              y: (region_min.y + region_max.y) * 0.5)
+            - vector_math,
+          shape: Shape,
+          half_size: CombineXYZ(x: math, y: math_2),
+          sides: Sides).inside)
+  return IndexSwitch(
+    Mapping,
+    DomainSize(Holes).face_count > 0
+      ? (Holes
+          |> SetPosition(offset: CombineXYZ(z: Thickness * 0.08))
+          |> StoreNamedAttribute[FACE](name: "ts_socket", value: 1.0))
+        + (FlipFaces(merge_by_distance) + extrude_mesh.mesh
+          |> MergeByDistance(distance: 1e-07)
+          |> MeshBoolean[DIFFERENCE, EXACT](
+            MergeByDistance(
+              FlipFaces(set_position)
+                + ExtrudeMesh(
+                  set_position,
+                  offset: (0.0, 0.0, 1.0),
+                  offset_scale: math_3 + 0.002,
+                  individual: false).mesh,
+              distance: 1e-07)).mesh)
+      : extrude_mesh.mesh,
+    delete_geometry,
+    delete_geometry)
+}
+
+geometry graph "Tessera · Color"(
+    Geometry: Geometry,
+    Motif: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    Scale: Float,
+    Rotation: Float,
+    Seed: Int,
+    Mapping: Int,
+    "UV Scale": Float,
+    "Color Mode": Int,
+    Colors: Int,
+    "Class Shift": Int,
+    "Accent Chance": Float,
+    "Gradient Angle": Float,
+    "Band Size": Float,
+    "Cluster Scale": Float,
+    Dither: Float,
+    Symmetry: Int,
+    Folds: Int,
+    "Hue Jitter": Float,
+    "Saturation Jitter": Float,
+    "Value Jitter": Float,
+    "Color 1": Color,
+    "Color 2": Color,
+    "Color 3": Color,
+    "Color 4": Color,
+    "Color 5": Color,
+    "Color 6": Color,
+    "Color 7": Color,
+    "Color 8": Color,
+    "Weight 1": Float,
+    "Weight 2": Float,
+    "Weight 3": Float,
+    "Weight 4": Float,
+    "Weight 5": Float,
+    "Weight 6": Float,
+    "Weight 7": Float,
+    "Weight 8": Float,
+    "Metal 1": Float,
+    "Metal 2": Float,
+    "Metal 3": Float,
+    "Metal 4": Float,
+    "Metal 5": Float,
+    "Metal 6": Float,
+    "Metal 7": Float,
+    "Metal 8": Float,
+    Image: Image,
+    "Image Fit": Int,
+    "Image Mix": Float,
+    "Flow Align": Float,
+    "Rhythm Class": Int,
+    "Rhythm Period": Int,
+    "Rhythm Start": Int
+) -> Geometry {
+  math = max(region_max.x - region_min.x, 1e-06)
+  math_2 = max(region_max.y - region_min.y, 1e-06)
+  compare = Mapping == 2
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_la").attribute)
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_lb").attribute)
+  sample_index_3 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_cc").attribute)
+  math_3 = sample_index.x * sample_index_2.y - sample_index.y * sample_index_2.x
+  switch = abs(math_3) > 1e-09 ? math_3 : 1.0
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  vector_math = named_attribute.attribute
+    - CombineXYZ(x: (region_min.x + region_max.x) * 0.5, y: (region_min.y + region_max.y) * 0.5)
+  math_4 = abs(vector_math.x)
+  vector_math_2 = length(CombineXYZ(x: vector_math.x, y: vector_math.y))
+  math_5 = 6.2831855 / max(Folds, 1.0)
+  math_6 = Math[FLOORED_MODULO](Value: atan2(vector_math.y, vector_math.x), Value_001: math_5)
+  math_7 = min(math_6, math_5 - math_6)
+  index_switch = IndexSwitch(
+    Symmetry,
+    CombineXYZ(x: vector_math.x, y: vector_math.y),
+    CombineXYZ(x: math_4, y: vector_math.y),
+    CombineXYZ(x: math_4, y: abs(vector_math.y)),
+    CombineXYZ(x: vector_math_2 * cos(math_7), y: vector_math_2 * sin(math_7)))
+  white_noise_texture = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: index_switch * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.531)
+  separate_color = SeparateColor(color: white_noise_texture.color)
+  separate_color_2 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: index_switch * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.917).color)
+  math_8 = min(max(Colors, 1.0), 8.0)
+  math_9 = NamedAttribute[INT](name: "ts_class").attribute + class_shift
+  math_10 = Math[FLOORED_MODULO](Value: math_9, Value_001: math_8)
+  math_11 = max(weight_1, 0.0) * (0.0 < math_8)
+  math_12 = math_11 + max(weight_2, 0.0) * (1.0 < math_8)
+  math_13 = math_12 + max(weight_3, 0.0) * (2.0 < math_8)
+  math_14 = math_13 + max(weight_4, 0.0) * (3.0 < math_8)
+  math_15 = math_14 + max(weight_5, 0.0) * (4.0 < math_8)
+  math_16 = math_15 + max(weight_6, 0.0) * (5.0 < math_8)
+  math_17 = math_16 + max(weight_7, 0.0) * (6.0 < math_8)
+  math_18 = max(math_17 + max(weight_8, 0.0) * (7.0 < math_8), 1e-06)
+  math_19 = separate_color.red * math_18
+  math_20 = min(
+    (math_19 > math_11 ? 1.0 : 0.0)
+      + (math_19 > math_12 ? 1.0 : 0.0)
+      + (math_19 > math_13 ? 1.0 : 0.0)
+      + (math_19 > math_14 ? 1.0 : 0.0)
+      + (math_19 > math_15 ? 1.0 : 0.0)
+      + (math_19 > math_16 ? 1.0 : 0.0)
+      + (math_19 > math_17 ? 1.0 : 0.0),
+    math_8 - 1.0)
+  math_21 = (separate_color.blue - 0.5) * Dither
+  math_22 = cos(gradient_angle)
+  math_23 = sin(gradient_angle)
+  math_24 = min(
+      max(
+        (vector_math.x * math_22 + vector_math.y * math_23)
+            / (0.5 * (math * abs(math_22) + math_2 * abs(math_23)) + 1e-06)
+            * 0.5
+          + 0.5
+          + math_21,
+        0.0),
+      0.9999)
+    * math_18
+  math_25 = min(
+      max(
+        (NoiseTexture["4D"](
+                vector: named_attribute.attribute * (1.0 / max(cluster_scale, 1e-05)),
+                w: Seed * 1.37,
+                scale: 1.0).factor
+              - 0.5)
+            * 2.6
+          + 0.5
+          + math_21,
+        0.0),
+      0.9999)
+    * math_18
+  math_26 = min(
+    (math_25 > math_11 ? 1.0 : 0.0)
+      + (math_25 > math_12 ? 1.0 : 0.0)
+      + (math_25 > math_13 ? 1.0 : 0.0)
+      + (math_25 > math_14 ? 1.0 : 0.0)
+      + (math_25 > math_15 ? 1.0 : 0.0)
+      + (math_25 > math_16 ? 1.0 : 0.0)
+      + (math_25 > math_17 ? 1.0 : 0.0),
+    math_8 - 1.0)
+  vector_math_3 = NamedAttribute[FLOAT_VECTOR](name: "ts_cp").attribute
+    - NamedAttribute[FLOAT_VECTOR](name: "ts_lc").attribute
+  math_27 = sample_index_3.x
+      * round((vector_math_3.x * sample_index_2.y - vector_math_3.y * sample_index_2.x) / switch)
+    + sample_index_3.y
+      * round((sample_index.x * vector_math_3.y - sample_index.y * vector_math_3.x) / switch)
+  switch_2 = compare
+    ? named_attribute.attribute * (1.0 / uv_scale)
+    : CombineXYZ(
+      x: (named_attribute.attribute.x - region_min.x) / math,
+      y: (named_attribute.attribute.y - region_min.y) / math_2)
+  image_info = ImageInfo(image: Image)
+  math_28 = max(image_info.width, 1.0) / max(image_info.height, 1.0)
+  switch_3 = compare ? 1.0 : math / math_2
+  compare_2 = switch_3 > math_28
+  math_29 = (switch_2.x - 0.5) * (switch_3 / math_28) + 0.5
+  math_30 = (switch_2.y - 0.5) * (math_28 / switch_3) + 0.5
+  index_switch_2 = IndexSwitch(
+    image_fit,
+    switch_2,
+    compare_2 ? CombineXYZ(x: math_29, y: switch_2.y) : CombineXYZ(x: switch_2.x, y: math_30),
+    compare_2 ? CombineXYZ(x: switch_2.x, y: math_30) : CombineXYZ(x: math_29, y: switch_2.y))
+  image_texture = ImageTexture[CLIP](image: Image, vector: index_switch_2)
+  math_31 = distance(image_texture.color, color_1) + (0.0 >= math_8) * 1000.0
+  math_32 = distance(image_texture.color, color_2) + (1.0 >= math_8) * 1000.0
+  math_33 = min(math_32, math_31)
+  math_34 = distance(image_texture.color, color_3) + (2.0 >= math_8) * 1000.0
+  math_35 = min(math_34, math_33)
+  math_36 = distance(image_texture.color, color_4) + (3.0 >= math_8) * 1000.0
+  math_37 = min(math_36, math_35)
+  math_38 = distance(image_texture.color, color_5) + (4.0 >= math_8) * 1000.0
+  math_39 = min(math_38, math_37)
+  math_40 = distance(image_texture.color, color_6) + (5.0 >= math_8) * 1000.0
+  math_41 = min(math_40, math_39)
+  math_42 = distance(image_texture.color, color_7) + (6.0 >= math_8) * 1000.0
+  math_43 = min(math_42, math_41)
+  math_44 = distance(image_texture.color, color_8) + (7.0 >= math_8) * 1000.0
+  math_45 = min(math_44, math_43)
+  math_46 = round(
+    IndexSwitch(
+      color_mode,
+      math_10,
+      math_20,
+      separate_color.green < accent_chance ? math_20 : math_10,
+      min(
+        (math_24 > math_11 ? 1.0 : 0.0)
+          + (math_24 > math_12 ? 1.0 : 0.0)
+          + (math_24 > math_13 ? 1.0 : 0.0)
+          + (math_24 > math_14 ? 1.0 : 0.0)
+          + (math_24 > math_15 ? 1.0 : 0.0)
+          + (math_24 > math_16 ? 1.0 : 0.0)
+          + (math_24 > math_17 ? 1.0 : 0.0),
+        math_8 - 1.0),
+      math_26,
+      Math[FLOORED_MODULO](
+        Value: floor(vector_math_2 / max(band_size, 1e-06) + math_21),
+        Value_001: math_8),
+      Math[FLOORED_MODULO](Value: math_27 + math_9, Value_001: math_8),
+      math_10,
+      image_info.width > 0
+        ? (math_44 < math_43
+          ? 7.0
+          : math_42 < math_41
+            ? 6.0
+            : math_40 < math_39
+              ? 5.0
+              : math_38 < math_37
+                ? 4.0
+                : math_36 < math_35 ? 3.0 : math_34 < math_33 ? 2.0 : math_32 < math_31 ? 1.0 : 0.0)
+        : math_26,
+      Math[FLOORED_MODULO](
+        Value: rhythm_class < 0 or NamedAttribute[INT](name: "ts_class").attribute == rhythm_class
+          ? rhythm_start
+            - 1.0
+            + Math[FLOORED_MODULO](Value: math_27, Value_001: max(rhythm_period, 1.0))
+          : math_10,
+        Value_001: math_8)))
+  index_switch_3 = IndexSwitch(
+    math_46,
+    color_1,
+    color_2,
+    color_3,
+    color_4,
+    color_5,
+    color_6,
+    color_7,
+    color_8)
+  separate_color_3 = SeparateColor[HSV](
+    color: color_mode == 7
+      ? Mix[RGBA](
+        factor: image_texture.alpha * image_mix,
+        a: index_switch_3,
+        b: image_texture.color)
+      : index_switch_3)
+  math_47 = Scale / max(math, math_2) * 0.6
+  math_48 = -math_47
+  math_49 = ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(x: math_47)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+    - ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(x: math_48)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+  math_50 = ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(y: math_47)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+    - ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(y: math_48)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+  return Geometry
+    |> StoreNamedAttribute[FLOAT_COLOR, FACE](
+      name: "ts_color",
+      value: CombineColor[HSV](
+        red: fract(separate_color_3.red + (separate_color_2.red * 2.0 - 1.0) * hue_jitter),
+        green: min(
+          max(
+            separate_color_3.green
+              * (1.0 + (separate_color_2.green * 2.0 - 1.0) * saturation_jitter),
+            0.0),
+          1.0),
+        blue: max(
+          separate_color_3.blue * (1.0 + (separate_color_2.blue * 2.0 - 1.0) * value_jitter),
+          0.0)))
+    |> StoreNamedAttribute[FACE](
+      name: "ts_metal",
+      value: IndexSwitch(
+        math_46,
+        metal_1,
+        metal_2,
+        metal_3,
+        metal_4,
+        metal_5,
+        metal_6,
+        metal_7,
+        metal_8))
+    |> StoreNamedAttribute[FACE](name: "ts_rand", value: white_noise_texture.value)
+    |> StoreNamedAttribute[FACE](
+      name: "ts_flow",
+      value: flow_align > 0.0
+        ? (Math[FLOORED_MODULO](
+              Value: atan2(math_50, math_49) - Rotation + 0.7853982,
+              Value_001: 1.5707964)
+            - 0.7853982)
+          * (min(length(CombineXYZ(x: math_49, y: math_50)) * 12.0, 1.0) * flow_align)
+        : 0.0)
+}
+
+geometry graph "Tessera · Map"(
+    Geometry: Geometry,
+    Surface: Geometry,
+    Mapping: Int,
+    "UV Map": String,
+    "UV Scale": Float,
+    "Bend to Surface": Bool,
+    "Region Min": Vector,
+    "Fit Repeats": Bool,
+    "Wrap Width": Float
+) -> Geometry {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: uv_map)
+  bounding_box = BoundingBox(Surface)
+  math = bounding_box.max.z - bounding_box.min.z + 2.0
+  boolean_math = fit_repeats and wrap_width > 1e-06
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "ts_c2")
+  named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  position = Position()
+  math_2 = position.x - named_attribute_2.attribute.x
+  math_3 = position.y - named_attribute_2.attribute.y
+  normal = Normal()
+  raycast = Raycast(
+    Surface,
+    source_position: CombineXYZ(
+      x: named_attribute_2.attribute.x,
+      y: named_attribute_2.attribute.y,
+      z: bounding_box.max.z + 1.0),
+    ray_length: math)
+  raycast_2 = Raycast(
+    Surface,
+    source_position: CombineXYZ(
+      x: named_attribute_3.attribute.x,
+      y: named_attribute_3.attribute.y,
+      z: bounding_box.max.z + 1.0),
+    ray_length: math)
+  switch = raycast.is_hit ? normalize(raycast.hit_normal) : normalize(raycast_2.hit_normal)
+  vector_math = normalize((1.0, 0.0, 0.0) - switch * switch.x)
+  vector_math_2 = (raycast.is_hit ? raycast.hit_position : raycast_2.hit_position)
+    + vector_math * math_2
+    + ((switch × vector_math) * math_3 + switch * position.z)
+  vector_math_3 = CombineXYZ(
+      x: boolean_math
+        ? region_min.x
+          + Math[FLOORED_MODULO](
+            Value: named_attribute_2.attribute.x - region_min.x,
+            Value_001: max(wrap_width, 1e-06))
+        : named_attribute_2.attribute.x,
+      y: named_attribute_2.attribute.y)
+    * (1.0 / uv_scale)
+  switch_2 = SampleUVSurface[FLOAT_VECTOR](
+      Surface,
+      value: Position(),
+      uv_map: named_attribute.attribute,
+      sample_uv: vector_math_3).is_valid
+    ? vector_math_3
+    : CombineXYZ(
+        x: boolean_math
+          ? region_min.x
+            + Math[FLOORED_MODULO](
+              Value: named_attribute_3.attribute.x - region_min.x,
+              Value_001: max(wrap_width, 1e-06))
+          : named_attribute_3.attribute.x,
+        y: named_attribute_3.attribute.y)
+      * (1.0 / uv_scale)
+  sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+    Surface,
+    value: Position(),
+    uv_map: named_attribute.attribute,
+    sample_uv: switch_2)
+  vector_math_4 = normalize(
+    SampleUVSurface[FLOAT_VECTOR](
+      Surface,
+      value: normal.normal,
+      uv_map: named_attribute.attribute,
+      sample_uv: switch_2).value)
+  sample_uvsurface_2 = SampleUVSurface[FLOAT_VECTOR](
+    Surface,
+    value: Position(),
+    uv_map: named_attribute.attribute,
+    sample_uv: switch_2 + (0.001, 0.0, 0.0))
+  switch_3 = sample_uvsurface_2.is_valid
+    ? sample_uvsurface_2.value - sample_uvsurface.value
+    : sample_uvsurface.value
+      - SampleUVSurface[FLOAT_VECTOR](
+        Surface,
+        value: Position(),
+        uv_map: named_attribute.attribute,
+        sample_uv: switch_2 - (0.001, 0.0, 0.0)).value
+  sample_uvsurface_3 = SampleUVSurface[FLOAT_VECTOR](
+    Surface,
+    value: Position(),
+    uv_map: named_attribute.attribute,
+    sample_uv: switch_2 + (0.0, 0.001, 0.0))
+  vector_math_5 = normalize(switch_3 - vector_math_4 * (switch_3 ⋅ vector_math_4))
+  vector_math_6 = vector_math_4 × vector_math_5
+  vector_math_7 = sample_uvsurface.value
+    + vector_math_5 * math_2
+    + ((vector_math_6
+              ⋅ (sample_uvsurface_3.is_valid
+                ? sample_uvsurface_3.value - sample_uvsurface.value
+                : sample_uvsurface.value
+                  - SampleUVSurface[FLOAT_VECTOR](
+                    Surface,
+                    value: Position(),
+                    uv_map: named_attribute.attribute,
+                    sample_uv: switch_2 - (0.0, 0.001, 0.0)).value)
+            < 0.0
+          ? -vector_math_6
+          : vector_math_6)
+        * math_3
+      + vector_math_4 * position.z)
+  vector_math_8 = CombineXYZ(
+      x: boolean_math
+        ? region_min.x
+          + Math[FLOORED_MODULO](
+            Value: position.x - region_min.x,
+            Value_001: max(wrap_width, 1e-06))
+        : position.x,
+      y: position.y)
+    * (1.0 / uv_scale)
+  sample_uvsurface_4 = SampleUVSurface[FLOAT_VECTOR](
+    Surface,
+    value: Position(),
+    uv_map: named_attribute.attribute,
+    sample_uv: vector_math_8)
+  raycast_3 = Raycast(
+    Surface,
+    source_position: CombineXYZ(x: position.x, y: position.y, z: bounding_box.max.z + 1.0),
+    ray_length: math)
+  return SetPosition(
+    Geometry,
+    position: IndexSwitch(
+      Mapping,
+      position,
+      bend_to_surface
+        ? (raycast_3.is_hit
+          ? raycast_3.hit_position + normalize(raycast_3.hit_normal) * position.z
+          : vector_math_2)
+        : vector_math_2,
+      bend_to_surface
+        ? (sample_uvsurface_4.is_valid
+          ? sample_uvsurface_4.value
+            + normalize(
+                SampleUVSurface[FLOAT_VECTOR](
+                  Surface,
+                  value: normal.normal,
+                  uv_map: named_attribute.attribute,
+                  sample_uv: vector_math_8).value)
+              * position.z
+          : vector_math_7)
+        : vector_math_7))
+}
+
+geometry graph "Tessera · Pieces"(
+    Surface: Geometry,
+    Motif: Geometry,
+    Scale: Float,
+    Rotation: Float,
+    Offset: Vector,
+    "Center Pattern": Bool,
+    Mapping: Int,
+    Shape: Int,
+    Width: Float,
+    Height: Float,
+    Sides: Int,
+    Region: Int,
+    "Border Width": Float,
+    Edge: Int,
+    "Single Cell": Bool,
+    Piece: Int,
+    "Max Cells": Int,
+    "UV Map": String,
+    "UV Scale": Float,
+    Seed: Int,
+    Missing: Float,
+    "Shape Offset": Vector,
+    "Clip to Shape": Bool,
+    "Fit Repeats": Bool,
+    "Wrap Width": Float,
+    "Fit Multiple": Int
+) -> (
+    Geometry: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    "Scale Out": Float,
+    Gone: Geometry
+) {
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_la").attribute)
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_lb").attribute)
+  math = sample_index.x * sample_index_2.y - sample_index.y * sample_index_2.x
+  switch = abs(math) > 1e-09 ? math : 1.0
+  math_2 = Width * 0.5
+  math_3 = Height * 0.5
+  bounding_box = BoundingBox(Surface)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: uv_map)
+  attribute_statistic = AttributeStatistic[FLOAT_VECTOR, CORNER](
+    Surface,
+    attribute: named_attribute.attribute)
+  index_switch = IndexSwitch(
+    Mapping,
+    CombineXYZ(x: -math_2, y: -math_3),
+    bounding_box.min,
+    attribute_statistic.min * uv_scale)
+  index_switch_2 = IndexSwitch(
+    Mapping,
+    CombineXYZ(x: math_2, y: math_3),
+    bounding_box.max,
+    attribute_statistic.max * uv_scale)
+  combine_xyz = CombineXYZ(
+    x: (index_switch.x + index_switch_2.x) * 0.5,
+    y: (index_switch.y + index_switch_2.y) * 0.5)
+  sample_index_3 = SampleIndex(Motif, value: NamedAttribute(name: "ts_hp").attribute)
+  switch_2 = wrap_width > 1e-06 ? wrap_width : max(index_switch_2.x - index_switch.x, 1e-06)
+  math_4 = max(fit_multiple, 1.0)
+  switch_3 = fit_repeats and sample_index_3 > 1e-06
+    ? switch_2
+      / (max(round(switch_2 / max(sample_index_3 * Scale * math_4, 1e-09)), 1.0)
+        * math_4
+        * max(sample_index_3, 1e-09))
+    : Scale
+  vector_math = (center_pattern ? combine_xyz : (0.0, 0.0, 0.0)) + Offset
+  math_5 = cos(Rotation)
+  math_6 = sin(Rotation)
+  math_7 = index_switch.x - vector_math.x
+  math_8 = index_switch.y - vector_math.y
+  math_9 = (math_5 * math_7 + math_6 * math_8) / switch_3
+  math_10 = (math_5 * math_8 - math_6 * math_7) / switch_3
+  math_11 = (math_9 * sample_index_2.y - math_10 * sample_index_2.x) / switch
+  math_12 = (sample_index.x * math_10 - sample_index.y * math_9) / switch
+  math_13 = index_switch_2.x - vector_math.x
+  math_14 = index_switch.y - vector_math.y
+  math_15 = (math_5 * math_13 + math_6 * math_14) / switch_3
+  math_16 = (math_5 * math_14 - math_6 * math_13) / switch_3
+  math_17 = (math_15 * sample_index_2.y - math_16 * sample_index_2.x) / switch
+  math_18 = (sample_index.x * math_16 - sample_index.y * math_15) / switch
+  math_19 = index_switch_2.x - vector_math.x
+  math_20 = index_switch_2.y - vector_math.y
+  math_21 = (math_5 * math_19 + math_6 * math_20) / switch_3
+  math_22 = (math_5 * math_20 - math_6 * math_19) / switch_3
+  math_23 = (math_21 * sample_index_2.y - math_22 * sample_index_2.x) / switch
+  math_24 = (sample_index.x * math_22 - sample_index.y * math_21) / switch
+  math_25 = index_switch.x - vector_math.x
+  math_26 = index_switch_2.y - vector_math.y
+  math_27 = (math_5 * math_25 + math_6 * math_26) / switch_3
+  math_28 = (math_5 * math_26 - math_6 * math_25) / switch_3
+  math_29 = (math_27 * sample_index_2.y - math_28 * sample_index_2.x) / switch
+  math_30 = (sample_index.x * math_28 - sample_index.y * math_27) / switch
+  math_31 = floor(min(min(math_11, math_17), min(math_23, math_29))) - 2.0
+  math_32 = floor(min(min(math_12, math_18), min(math_24, math_30))) - 2.0
+  math_33 = max(ceil(max(max(math_11, math_17), max(math_23, math_29))) + 2.0 - math_31 + 1.0, 1.0)
+  boolean_math = single_cell
+    or not SampleIndex[FLOAT_VECTOR](
+        Motif,
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_cc").attribute).z
+      > 0.5
+  index = Index()
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  combine_xyz_2 = CombineXYZ(x: math_2, y: math_3)
+  vector_math_2 = combine_xyz + shape_offset * (1.0, 1.0, 0.0)
+  math_34 = bounding_box.max.z - bounding_box.min.z + 2.0
+  group = tessera_region(
+    position: named_attribute_2.attribute - vector_math_2,
+    shape: Shape,
+    half_size: combine_xyz_2,
+    margin: border_width,
+    region: Region,
+    sides: Sides)
+  vector_math_3 = group.clamped + vector_math_2
+  boolean_math_2 = group.inside or not clip_to_shape
+  index_switch_3 = IndexSwitch(
+    Mapping,
+    group.inside,
+    Raycast(
+        Surface,
+        source_position: CombineXYZ(
+          x: named_attribute_2.attribute.x,
+          y: named_attribute_2.attribute.y,
+          z: bounding_box.max.z + 1.0),
+        ray_length: math_34).is_hit
+      and boolean_math_2,
+    SampleUVSurface[FLOAT_VECTOR](
+        Surface,
+        value: Position(),
+        uv_map: named_attribute.attribute,
+        sample_uv: named_attribute_2.attribute * (1.0 / uv_scale)).is_valid
+      and boolean_math_2)
+  position = Position()
+  group_2 = tessera_region(
+    position: position - vector_math_2,
+    shape: Shape,
+    half_size: combine_xyz_2,
+    margin: border_width,
+    region: Region,
+    sides: Sides)
+  vector_math_4 = group_2.clamped + vector_math_2
+  boolean_math_3 = group_2.inside or not clip_to_shape
+  evaluate_on_domain = EvaluateOnDomain[FACE](
+    value: EvaluateOnDomain(
+      value: IndexSwitch(
+          Mapping,
+          group_2.inside,
+          Raycast(
+              Surface,
+              source_position: CombineXYZ(
+                x: position.x,
+                y: position.y,
+                z: bounding_box.max.z + 1.0),
+              ray_length: math_34).is_hit
+            and boolean_math_3,
+          SampleUVSurface[FLOAT_VECTOR](
+              Surface,
+              value: Position(),
+              uv_map: named_attribute.attribute,
+              sample_uv: position * (1.0 / uv_scale)).is_valid
+            and boolean_math_3)
+        ? 1.0
+        : 0.0))
+  math_35 = max(math_2 - border_width, 1e-05)
+  math_36 = max(math_3 - border_width, 1e-05)
+  transform_geometry = Cube(size: CombineXYZ(x: math_35 * 2.0, y: math_36 * 2.0, z: 8.0)).mesh
+    |> TransformGeometry(
+      translation: CombineXYZ(),
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  math_37 = max(Sides, 3.0)
+  math_38 = 6.2831855 / math_37
+  math_39 = math_36 - math_35
+  math_40 = max(math_39 + math_36, 0.0001)
+  transform_geometry_2 = IndexSwitch(
+      Shape,
+      transform_geometry,
+      Cylinder(vertices: 160, depth: 8.0).mesh
+        |> TransformGeometry(
+          translation: CombineXYZ(),
+          rotation: CombineXYZ(),
+          scale: CombineXYZ(x: math_35, y: math_36, z: 1.0)),
+      MeshBoolean[INTERSECT, EXACT](
+        transform_geometry,
+        MeshBoolean[UNION, EXACT](
+          Cylinder(vertices: 160, radius: math_35, depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(y: math_39),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+          Cube(size: CombineXYZ(x: math_35 * 2.0, y: math_40, z: 8.0)).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(y: -math_36 + math_40 * 0.5),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+          hole_tolerant: true).mesh,
+        hole_tolerant: true).mesh,
+      Cylinder(
+          vertices: round(math_37),
+          radius: min(math_35, math_36) / cos(math_38 * 0.5),
+          depth: 8.0).mesh
+        |> TransformGeometry(
+          translation: CombineXYZ(),
+          rotation: CombineXYZ(z: -1.5707964 + math_38 * 0.5),
+          scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)))
+    |> TransformGeometry(
+      translation: vector_math_2,
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  transform_geometry_3 = Cube(size: CombineXYZ(x: math_2 * 2.0, y: math_3 * 2.0, z: 8.0)).mesh
+    |> TransformGeometry(
+      translation: CombineXYZ(),
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  math_41 = max(Sides, 3.0)
+  math_42 = 6.2831855 / math_41
+  math_43 = math_3 - math_2
+  math_44 = max(math_43 + math_3, 0.0001)
+  separate_geometry = Points(
+      count: round(
+        boolean_math
+          ? 1.0
+          : min(
+            math_33
+              * max(
+                ceil(max(max(math_12, math_18), max(math_24, math_30))) + 2.0 - math_32 + 1.0,
+                1.0),
+            max_cells)),
+      position: sample_index
+          * (boolean_math ? 0.0 : math_31 + Math[FLOORED_MODULO](Value: index, Value_001: math_33))
+        + sample_index_2 * (boolean_math ? 0.0 : math_32 + floor(index / math_33)))
+    |> InstanceOnPoints(instance: Motif)
+    |> RealizeInstances()
+    |> DeleteGeometry[FACE](
+      selection: Piece >= 0 and NamedAttribute[INT](name: "ts_k").attribute != Piece)
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_cp", value: Position())
+    |> TransformGeometry(
+      translation: vector_math,
+      rotation: CombineXYZ(z: Rotation),
+      scale: CombineXYZ(x: switch_3, y: switch_3, z: switch_3))
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_c", value: Position())
+    |> DeleteGeometry[FACE](
+      selection: not (IndexSwitch(
+          Edge,
+          index_switch_3,
+          evaluate_on_domain > 0.999,
+          index_switch_3 or evaluate_on_domain > 0.001)
+        or single_cell))
+    |> SeparateGeometry[FACE](
+      selection: Edge == 2
+        and (Mapping == 0 or clip_to_shape)
+        and not single_cell
+        and EvaluateOnDomain[FACE](value: EvaluateOnDomain(value: group_2.inside ? 0.0 : 1.0))
+          > 1e-06)
+  mesh_boolean = MeshBoolean[INTERSECT, EXACT](
+    Region == 1
+      ? transform_geometry_2
+      : IndexSwitch(
+          Shape,
+          transform_geometry_3,
+          Cylinder(vertices: 160, depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: math_2, y: math_3, z: 1.0)),
+          MeshBoolean[INTERSECT, EXACT](
+            transform_geometry_3,
+            MeshBoolean[UNION, EXACT](
+              Cylinder(vertices: 160, radius: math_2, depth: 8.0).mesh
+                |> TransformGeometry(
+                  translation: CombineXYZ(y: math_43),
+                  rotation: CombineXYZ(),
+                  scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+              Cube(size: CombineXYZ(x: math_2 * 2.0, y: math_44, z: 8.0)).mesh
+                |> TransformGeometry(
+                  translation: CombineXYZ(y: -math_3 + math_44 * 0.5),
+                  rotation: CombineXYZ(),
+                  scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+              hole_tolerant: true).mesh,
+            hole_tolerant: true).mesh,
+          Cylinder(
+              vertices: round(math_41),
+              radius: min(math_2, math_3) / cos(math_42 * 0.5),
+              depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(),
+              rotation: CombineXYZ(z: -1.5707964 + math_42 * 0.5),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)))
+        |> TransformGeometry(
+          translation: vector_math_2,
+          rotation: CombineXYZ(),
+          scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+    separate_geometry.selection,
+    hole_tolerant: true)
+  boolean_math_4 = fit_repeats and wrap_width > 1e-06
+  position_2 = Position()
+  separate_geometry_2 = SeparateGeometry[FACE](
+    Switch[GEOMETRY](
+        switch: DomainSize(separate_geometry.selection).face_count > 0,
+        true_: SplitEdges(
+          Region == 2
+            ? MeshBoolean[DIFFERENCE, EXACT](
+              mesh_boolean.mesh,
+              transform_geometry_2,
+              hole_tolerant: true).mesh
+            : mesh_boolean.mesh))
+      + separate_geometry.inverted,
+    selection: Edge == 2
+      and Mapping == 2
+      and not clip_to_shape
+      and not single_cell
+      and EvaluateOnDomain[FACE](
+          value: EvaluateOnDomain(
+            value: position_2.y < index_switch.y - 1e-06
+                or position_2.y > index_switch_2.y + 1e-06
+                or (position_2.x < index_switch.x - 1e-06
+                    or position_2.x > index_switch_2.x + 1e-06)
+                  and not boolean_math_4
+              ? 1.0
+              : 0.0))
+        > 1e-06)
+  named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  separate_geometry_3 = Switch[GEOMETRY](
+        switch: DomainSize(separate_geometry_2.selection).face_count > 0,
+        true_: MeshBoolean[INTERSECT, EXACT](
+            Cube(
+                size: CombineXYZ(
+                  x: boolean_math_4 ? 10000.0 : index_switch_2.x - index_switch.x,
+                  y: index_switch_2.y - index_switch.y,
+                  z: 8.0)).mesh
+              |> TransformGeometry(
+                translation: CombineXYZ(
+                  x: (index_switch.x + index_switch_2.x) * 0.5,
+                  y: (index_switch.y + index_switch_2.y) * 0.5),
+                rotation: CombineXYZ(),
+                scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+            separate_geometry_2.selection,
+            hole_tolerant: true).mesh
+          |> SplitEdges())
+      + separate_geometry_2.inverted
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_c", value: Position())
+    |> DeleteGeometry[FACE](
+      selection: not IndexSwitch(
+          Mapping,
+          true,
+          Raycast(
+            Surface,
+            source_position: CombineXYZ(
+              x: named_attribute_3.attribute.x,
+              y: named_attribute_3.attribute.y,
+              z: bounding_box.max.z + 1.0),
+            ray_length: math_34).is_hit,
+          SampleUVSurface[FLOAT_VECTOR](
+            Surface,
+            value: Position(),
+            uv_map: named_attribute.attribute,
+            sample_uv: named_attribute_3.attribute * (1.0 / uv_scale)).is_valid)
+        and not single_cell)
+    |> SeparateGeometry[FACE](
+      selection: SeparateColor(
+          color: WhiteNoiseTexture["4D"](
+            vector: VectorMath[SNAP](
+              Vector: named_attribute_2.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+              Vector_001: (0.0625, 0.0625, 1.0)),
+            w: Seed + 0.713).color).blue
+        < Missing)
+  return (
+    Geometry: separate_geometry_3.inverted,
+    "Region Min": index_switch,
+    "Region Max": index_switch_2,
+    "Scale Out": switch_3,
+    Gone: separate_geometry_3.selection)
+}
+
+geometry graph "Tessera · Inset"(
+    Geometry: Geometry,
+    Distance: Float,
+    Selection: Bool(hide_value: true) = true
+) -> Geometry {
+  index = Index()
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: -1))
+  evaluate_at_index_2 = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: 1))
+  vector_math = normalize((position - evaluate_at_index) * (1.0, 1.0, 0.0))
+  vector_math_2 = normalize((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0))
+  combine_xyz = CombineXYZ(x: -vector_math.y, y: vector_math.x)
+  combine_xyz_2 = CombineXYZ(x: -vector_math_2.y, y: vector_math_2.x)
+  vector_math_3 = (combine_xyz + combine_xyz_2)
+    * (Distance / max(combine_xyz ⋅ combine_xyz_2 + 1.0, 0.08))
+  return SetPosition(
+    Geometry,
+    offset: EvaluateOnDomain[CORNER, FLOAT_VECTOR](
+        value: Selection
+          ? vector_math_3
+            * min(
+              1.0,
+              min(
+                  length((position - evaluate_at_index) * (1.0, 1.0, 0.0)),
+                  length((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0)))
+                * 0.45
+                / max(length(vector_math_3), 1e-12))
+          : (0.0, 0.0, 0.0))
+      * VertexNeighbors().face_count)
+}
+
+geometry graph "Tessera · Solidify"(
+    Geometry: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    Scale: Float,
+    Rotation: Float,
+    Seed: Int,
+    Mapping: Int,
+    "UV Scale": Float,
+    "Grout Width": Float,
+    Thickness: Float,
+    Bevel: Float,
+    "Bevel Segments": Int,
+    "Position Jitter": Float,
+    "Rotation Jitter": Float,
+    "Scale Jitter": Float,
+    "Stretch Jitter": Float,
+    "Edge Wobble": Float,
+    "Height Jitter": Float,
+    "Tilt Jitter": Float,
+    "Quarter Turns": Bool,
+    "Relief Class": Int,
+    "Relief Height": Float,
+    "Viewport Simplify": Bool,
+    Strapwork: Bool,
+    "Strap Height": Float,
+    "Weave Depth": Float,
+    "Chip Rim": Float,
+    Openwork: Bool,
+    "Band Joints": Float,
+    "Broken Tiles": Float,
+    "Grout Depth": Float,
+    "Chip Depth": Float,
+    "Joint Guard": Float,
+    Bites: Float,
+    "Bite Size": Float,
+    "Bite Depth": Float,
+    Gone: Geometry
+) -> (Geometry: Geometry, Holes: Geometry) {
+  combine_xyz = CombineXYZ(
+    x: (region_min.x + region_max.x) * 0.5,
+    y: (region_min.y + region_max.y) * 0.5)
+  math = grout_width
+    * 0.5
+    * (AttributeStatistic[FACE](Geometry, attribute: NamedAttribute(name: "ts_band").attribute).max
+        > 0.5
+      ? (NamedAttribute(name: "ts_band").attribute > 0.5 ? band_joints : 2.0 - band_joints)
+      : 1.0)
+  edge_vertices = EdgeVertices()
+  delete_geometry = DeleteGeometry[FACE](
+    Geometry,
+    selection: FaceArea()
+        * 2.0
+        / max(
+          EvaluateOnDomain[FACE](
+              value: EvaluateOnDomain[EDGE](
+                value: length(edge_vertices.position_1 - edge_vertices.position_2)))
+            * FaceNeighbors().vertex_count,
+          1e-09)
+      < (math + Bevel + chip_rim) * 1.15 + 1e-05)
+  extrude_mesh = ExtrudeMesh(
+    delete_geometry,
+    offset: (0.0, 0.0, 1.0),
+    offset_scale: 0.0,
+    individual: false)
+  compare = EvaluateOnDomain(
+      value: EvaluateOnDomain[FACE](
+        value: NamedAttribute[BOOLEAN](name: "ts_strap").attribute ? 1.0 : 0.0))
+    < 0.999
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  white_noise_texture = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.131)
+  separate_color = SeparateColor(color: white_noise_texture.color)
+  white_noise_texture_2 = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.713)
+  separate_color_2 = SeparateColor(color: white_noise_texture_2.color)
+  math_2 = (separate_color_2.red * 2.0 - 1.0) * stretch_jitter
+  math_3 = (white_noise_texture.value * 2.0 - 1.0) * scale_jitter
+  math_4 = (separate_color.blue * 2.0 - 1.0) * rotation_jitter
+  math_5 = (separate_color.red * 2.0 - 1.0) * position_jitter
+  math_6 = (separate_color.green * 2.0 - 1.0) * position_jitter
+  math_7 = min(
+        max(math * 0.9, 0.0005)
+          / max(
+            length(CombineXYZ(x: math_5, y: math_6))
+              + max(NamedAttribute(name: "ts_psize").attribute * (Scale * 0.72), 1e-06)
+                * (abs(math_2) + abs(math_3) + abs(math_4)),
+            1e-09),
+        1.0)
+      * joint_guard
+    + (1.0 - joint_guard)
+  math_8 = math_2 * math_7
+  math_9 = separate_color_2.green * 3.1415927
+  math_10 = math_4 * math_7 + NamedAttribute(name: "ts_flow").attribute
+  vector_math = CombineXYZ(x: math_5, y: math_6) * math_7
+  separate_color_3 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: Position() * (1.0 / Scale),
+        Vector_001: (0.0078125, 0.0078125, 1.0)),
+      w: Seed + 0.29).color)
+  position = Position()
+  separate_color_4 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.913).color)
+  compare_2 = separate_color_4.red < broken_tiles
+  store_named_attribute = (Strapwork
+      ? extrude_mesh.mesh
+        |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_strap", value: extrude_mesh.side)
+        |> tessera_inset(
+          distance: math,
+          selection: not NamedAttribute[BOOLEAN](name: "ts_strap").attribute)
+      : tessera_inset(delete_geometry, distance: math))
+    |> SetPosition(
+      selection: compare,
+      position: named_attribute.attribute
+        + vector_math
+        + VectorRotate[Z_AXIS](
+          vector: VectorRotate[Z_AXIS](
+              vector: VectorRotate[Z_AXIS](
+                  vector: Position() - named_attribute.attribute,
+                  angle: -math_9)
+                * CombineXYZ(x: 1.0 + math_8, y: 1.0 - math_8, z: 1.0),
+              angle: math_9)
+            * (1.0 + math_3 * math_7),
+          angle: math_10))
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](
+      name: "ts_c2",
+      value: named_attribute.attribute + vector_math)
+    |> StoreNamedAttribute[FACE](name: "ts_alpha", value: math_10)
+    |> SetPosition(
+      selection: compare,
+      offset: CombineXYZ(x: separate_color_3.red * 2.0 - 1.0, y: separate_color_3.green * 2.0 - 1.0)
+        * edge_wobble)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "ts_panel_uv",
+      value: Mapping == 2
+        ? Position() * (1.0 / uv_scale)
+        : CombineXYZ(
+          x: (position.x - region_min.x) / max(region_max.x - region_min.x, 1e-06),
+          y: (position.y - region_min.y) / max(region_max.y - region_min.y, 1e-06)))
+    |> StoreNamedAttribute[FACE](name: "ts_broken", value: compare_2 ? 1.0 : 0.0)
+  math_11 = separate_color_4.green * 6.2831855
+  math_12 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-05)
+  separate_geometry = SeparateGeometry[FACE](
+    store_named_attribute,
+    selection: compare_2 and compare)
+  set_position = SetPosition(
+    separate_geometry.selection,
+    offset: CombineXYZ(z: EvaluateOnDomain[FACE](value: Index()) * 0.01))
+  domain_size = DomainSize(set_position)
+  sample_index = SampleIndex[FLOAT_VECTOR, FACE](
+    set_position,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_c2").attribute,
+    index: Index())
+  separate_color_5 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: SampleIndex[FLOAT_VECTOR, FACE](
+              set_position,
+              value: NamedAttribute[FLOAT_VECTOR](name: "ts_c").attribute,
+              index: Index())
+            * (1.0 / Scale)
+          + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.913).color)
+  math_13 = separate_color_5.green * 6.2831855
+  combine_xyz_2 = CombineXYZ(x: cos(math_13), y: sin(math_13))
+  math_14 = max(
+    SampleIndex[FACE](
+        set_position,
+        value: NamedAttribute(name: "ts_psize").attribute,
+        index: Index())
+      * Scale,
+    1e-05)
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "ts_c2")
+  position_2 = Position()
+  compare_3 = position_2.x < -0.0001
+  math_15 = atan2(position_2.y, position_2.x)
+  named_attribute_3 = NamedAttribute(name: "ts_bsz")
+  position_3 = Position()
+  set_position_2 = Points(
+      count: domain_size.face_count,
+      position: CombineXYZ(x: sample_index.x, y: sample_index.y, z: Index() * 0.01)
+        + combine_xyz_2 * (math_14 * (0.04 + separate_color_5.blue * 0.24)))
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_bn", value: combine_xyz_2)
+    |> StoreNamedAttribute(name: "ts_bsz", value: math_14)
+    |> StoreNamedAttribute(name: "ts_bang", value: math_13)
+    |> InstanceOnPoints(
+      instance: MeshCircle[NGON](vertices: 56)
+        |> StoreNamedAttribute(
+          name: "ts_jag",
+          value: compare_3 ? 1.0 - pow(abs(position_2.y), 6.0) : 0.0)
+        |> SetPosition(
+          position: compare_3
+            ? CombineXYZ(y: (3.1415927 - (math_15 + (math_15 < 0.0) * 6.2831855)) / 1.5707964)
+            : CombineXYZ(x: position_2.x * 1.7, y: position_2.y)),
+      rotation: CombineXYZ(z: NamedAttribute(name: "ts_bang").attribute),
+      scale: CombineXYZ(
+        x: NamedAttribute(name: "ts_bsz").attribute,
+        y: NamedAttribute(name: "ts_bsz").attribute,
+        z: 1.0))
+    |> RealizeInstances()
+    |> SetPosition(
+      offset: NamedAttribute[FLOAT_VECTOR](name: "ts_bn").attribute
+        * (((NoiseTexture(
+                  vector: position_3 * (5.0 / named_attribute_3.attribute),
+                  scale: 1.0).factor
+                - 0.5)
+              * 0.5
+            + (NoiseTexture(
+                  vector: position_3 * (16.0 / named_attribute_3.attribute) + (7.0, 3.0, 1.0),
+                  scale: 1.0,
+                  detail: 1.0).factor
+                - 0.5)
+              * 0.3
+            + (SeparateColor(
+                  color: WhiteNoiseTexture["4D"](
+                    vector: position_3 * (40.0 / named_attribute_3.attribute),
+                    w: Seed + 0.61).color).red
+                - 0.5)
+              * 0.045)
+          * (named_attribute_3.attribute * NamedAttribute(name: "ts_jag").attribute)))
+    |> SetPosition(offset: (0.0, 0.0, -0.004))
+  bounding_box = BoundingBox(set_position)
+  position_4 = Position()
+  switch = broken_tiles > 0.0
+    ? (Switch[GEOMETRY](
+          switch: domain_size.face_count > 0,
+          true_: MeshBoolean[INTERSECT, EXACT](
+              Cube(size: bounding_box.max - bounding_box.min + (0.5, 0.5, 0.04)).mesh
+                |> TransformGeometry(translation: (bounding_box.min + bounding_box.max) * 0.5)
+                |> MeshBoolean[DIFFERENCE, EXACT](
+                  MergeByDistance(
+                    FlipFaces(set_position_2)
+                      + ExtrudeMesh(
+                        set_position_2,
+                        offset: (0.0, 0.0, 1.0),
+                        offset_scale: 0.008,
+                        individual: false).mesh,
+                    distance: 1e-07)).mesh,
+              set_position,
+              hole_tolerant: true).mesh
+            |> SplitEdges()
+            |> SetPosition(position: CombineXYZ(x: position_4.x, y: position_4.y))
+            |> StoreNamedAttribute(
+              name: "ts_frac",
+              value: 1.0
+                - MapRange[SMOOTHSTEP](
+                  value: abs(
+                      (Position() - named_attribute_2.attribute).x * cos(math_11)
+                        + (Position() - named_attribute_2.attribute).y * sin(math_11)
+                        - math_12 * (0.04 + separate_color_4.blue * 0.24))
+                    / math_12,
+                  from_min: 0.12,
+                  from_max: 0.3))
+            |> DeleteGeometry[FACE](selection: FaceArea() < math_12 * 0.16 * (math_12 * 0.16)))
+        |> RemoveNamedAttribute(name: "ts_bn")
+        |> RemoveNamedAttribute(name: "ts_bsz")
+        |> RemoveNamedAttribute(name: "ts_bang")
+        |> RemoveNamedAttribute(name: "ts_jag"))
+      + StoreNamedAttribute(separate_geometry.inverted, name: "ts_frac")
+    : store_named_attribute
+  math_16 = min(Bevel, Thickness * 0.95)
+  switch_2 = IsViewport() and viewport_simplify ? min(bevel_segments, 1.0) : bevel_segments
+  boolean_math = switch_2 > 0 and math_16 > 1e-07
+  switch_3 = boolean_math ? math_16 : 0.0
+  white_noise_texture_3 = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.557)
+  separate_color_6 = SeparateColor(color: white_noise_texture_3.color)
+  separate_color_7 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.389).color)
+  boolean_math_2 = separate_color_6.red < Bites
+    and compare
+    and NamedAttribute(name: "ts_broken").attribute < 0.5
+  math_17 = bite_depth * (0.7 + white_noise_texture_3.value * 0.6)
+  switch_4 = math_17 > 0.92
+    ? 0.0
+    : max(min(Thickness * (1.0 - math_17), Thickness - switch_3 - 0.0003), 0.0002)
+  separate_geometry_2 = switch
+    |> StoreNamedAttribute[FACE](name: "ts_zlo", value: boolean_math_2 ? switch_4 : 0.0)
+    |> StoreNamedAttribute[FACE](
+      name: "ts_zmid",
+      value: boolean_math_2
+        ? max(
+          min(Thickness - (Thickness - switch_4) * 0.38, Thickness - switch_3 - 0.0003),
+          switch_4)
+        : 0.0)
+    |> StoreNamedAttribute[FACE](name: "ts_q2", value: separate_color_7.green)
+    |> SeparateGeometry[FACE](selection: boolean_math_2)
+  math_18 = max(CornersOfFace().total, 1.0)
+  math_19 = floor(separate_color_6.green * math_18)
+  math_20 = floor(separate_color_7.red * math_18)
+  store_named_attribute_2 = separate_geometry_2.selection
+    |> SetPosition(offset: CombineXYZ(z: EvaluateOnDomain[FACE](value: Index()) * 0.01))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qa0",
+      value: VertexOfCorner(corner_index: CornersOfFace(sort_index: math_19).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qb0",
+      value: VertexOfCorner(
+        corner_index: CornersOfFace(
+          sort_index: Math[FLOORED_MODULO](Value: math_19 + 1.0, Value_001: math_18)).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qa1",
+      value: VertexOfCorner(corner_index: CornersOfFace(sort_index: math_20).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qb1",
+      value: VertexOfCorner(
+        corner_index: CornersOfFace(
+          sort_index: Math[FLOORED_MODULO](Value: math_20 + 1.0, Value_001: math_18)).corner_index))
+  domain_size_2 = DomainSize(store_named_attribute_2)
+  index = Index()
+  math_21 = floor(index * 0.5)
+  compare_4 = index - math_21 * 2.0 > 0.5
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    store_named_attribute_2,
+    value: Position(),
+    index: compare_4
+      ? SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qa1").attribute,
+        index: math_21)
+      : SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qa0").attribute,
+        index: math_21))
+  sample_index_3 = SampleIndex[FLOAT_VECTOR](
+    store_named_attribute_2,
+    value: Position(),
+    index: compare_4
+      ? SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qb1").attribute,
+        index: math_21)
+      : SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qb0").attribute,
+        index: math_21))
+  separate_color_8 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](vector: CombineXYZ(x: index, y: 0.37), w: Seed + 0.83).color)
+  vector_math_2 = sample_index_2
+    + (sample_index_3 - sample_index_2)
+      * (separate_color_8.red < 0.4 ? 0.0 : 0.12 + separate_color_8.green * 0.76)
+  vector_math_3 = sample_index_3 - sample_index_2
+  position_5 = Position()
+  math_22 = max(NamedAttribute(name: "ts_qr").attribute, 1e-06)
+  vector_math_4 = Position() - NamedAttribute[FLOAT_VECTOR](name: "ts_qc").attribute
+  set_position_3 = Points(count: domain_size_2.face_count * 2.0, position: vector_math_2)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_qc", value: vector_math_2)
+    |> StoreNamedAttribute(
+      name: "ts_qr",
+      value: min(
+        bite_size
+          * (0.55 + separate_color_8.blue * separate_color_8.blue * separate_color_8.blue * 1.5),
+        max(
+            SampleIndex[FACE](
+                store_named_attribute_2,
+                value: NamedAttribute(name: "ts_psize").attribute,
+                index: math_21)
+              * Scale,
+            1e-05)
+          * 0.42))
+    |> StoreNamedAttribute(name: "ts_qang", value: atan2(vector_math_3.y, vector_math_3.x))
+    |> DeleteGeometry(
+      selection: compare_4
+        and SampleIndex[FACE](
+            store_named_attribute_2,
+            value: NamedAttribute(name: "ts_q2").attribute,
+            index: math_21)
+          > 0.35)
+    |> InstanceOnPoints(
+      instance: MeshCircle[NGON](vertices: 11)
+        |> SetPosition(position: CombineXYZ(x: position_5.x * 1.6, y: position_5.y * 0.7)),
+      rotation: CombineXYZ(z: NamedAttribute(name: "ts_qang").attribute),
+      scale: CombineXYZ(
+        x: NamedAttribute(name: "ts_qr").attribute,
+        y: NamedAttribute(name: "ts_qr").attribute,
+        z: 1.0))
+    |> RealizeInstances()
+    |> SetPosition(
+      offset: normalize(CombineXYZ(x: vector_math_4.x, y: vector_math_4.y))
+        * (((NoiseTexture(vector: Position() * (2.5 / math_22), scale: 1.0).factor - 0.5) * 0.35
+            + (SeparateColor(
+                  color: WhiteNoiseTexture["4D"](
+                    vector: Position() * (25.0 / math_22),
+                    w: Seed + 0.17).color).red
+                - 0.5)
+              * 0.6)
+          * math_22))
+  named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "ts_qc")
+  set_position_4 = SetPosition(set_position_3, offset: (0.0, 0.0, -0.004))
+  remove_named_attribute = FlipFaces(set_position_4)
+      + ExtrudeMesh(
+        set_position_4,
+        offset: (0.0, 0.0, 1.0),
+        offset_scale: 0.008,
+        individual: false).mesh
+    |> MergeByDistance(distance: 1e-07)
+    |> RemoveNamedAttribute(name: "ts_qc")
+    |> RemoveNamedAttribute(name: "ts_qr")
+    |> RemoveNamedAttribute(name: "ts_qang")
+  set_position_5 = set_position_3
+    |> SetPosition(
+      position: named_attribute_4.attribute + (Position() - named_attribute_4.attribute) * 0.55)
+    |> SetPosition(offset: (0.0, 0.0, -0.004))
+  remove_named_attribute_2 = FlipFaces(set_position_5)
+      + ExtrudeMesh(
+        set_position_5,
+        offset: (0.0, 0.0, 1.0),
+        offset_scale: 0.008,
+        individual: false).mesh
+    |> MergeByDistance(distance: 1e-07)
+    |> RemoveNamedAttribute(name: "ts_qc")
+    |> RemoveNamedAttribute(name: "ts_qr")
+    |> RemoveNamedAttribute(name: "ts_qang")
+  bounding_box_2 = BoundingBox(store_named_attribute_2)
+  transform_geometry = Cube(size: bounding_box_2.max - bounding_box_2.min + (0.5, 0.5, 0.04)).mesh
+    |> TransformGeometry(translation: (bounding_box_2.min + bounding_box_2.max) * 0.5)
+  position_6 = Position()
+  position_7 = Position()
+  compare_5 = Bites > 0.0
+  extrude_mesh_2 = ExtrudeMesh(
+    compare_5
+      ? SetPosition(
+        (Switch[GEOMETRY](
+              switch: domain_size_2.face_count > 0,
+              true_: MeshBoolean[INTERSECT, EXACT](
+                  MeshBoolean[DIFFERENCE, EXACT](transform_geometry, remove_named_attribute).mesh,
+                  store_named_attribute_2,
+                  hole_tolerant: true).mesh
+                |> StoreNamedAttribute(
+                  name: "ts_frac",
+                  value: max(
+                    NamedAttribute(name: "ts_frac").attribute,
+                    1.0
+                      - MapRange[SMOOTHSTEP](
+                        value: GeometryProximity(remove_named_attribute).distance,
+                        from_min: 1e-05,
+                        from_max: 4e-05)))
+                |> SplitEdges()
+                |> SetPosition(position: CombineXYZ(x: position_7.x, y: position_7.y))
+                |> DeleteGeometry[FACE](selection: FaceArea() < 1e-08))
+            |> RemoveNamedAttribute(name: "ts_qa0")
+            |> RemoveNamedAttribute(name: "ts_qb0")
+            |> RemoveNamedAttribute(name: "ts_qa1")
+            |> RemoveNamedAttribute(name: "ts_qb1"))
+          + separate_geometry_2.inverted,
+        offset: CombineXYZ(z: NamedAttribute(name: "ts_zmid").attribute))
+      : switch,
+    offset: (0.0, 0.0, 1.0),
+    offset_scale: NamedAttribute[BOOLEAN](name: "ts_strap").attribute
+      ? max(Thickness + strap_height, 1e-05)
+      : max(
+        Thickness
+          - switch_3
+          + (relief_class >= 0 and NamedAttribute[INT](name: "ts_class").attribute == relief_class
+            ? relief_height
+            : 0.0)
+          - NamedAttribute(name: "ts_zmid").attribute,
+        1e-05))
+  math_23 = max(switch_2, 1.0)
+  repeat_output = repeat(
+    boolean_math ? switch_2 : 0,
+    Geometry: extrude_mesh_2.mesh
+      |> StoreNamedAttribute[FACE](selection: extrude_mesh_2.side, name: "ts_bevel", value: 1.0)
+      |> StoreNamedAttribute[BOOLEAN, FACE](
+        name: "ts_top",
+        value: extrude_mesh_2.top and not NamedAttribute[BOOLEAN](name: "ts_strap").attribute)) -> {
+    math_24 = iteration / math_23 * 1.5707964
+    math_25 = (iteration + 1.0) / math_23 * 1.5707964
+    extrude_mesh_3 = ExtrudeMesh(
+      Geometry,
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: switch_3 * (sin(math_25) - sin(math_24)),
+      individual: false)
+    return extrude_mesh_3.mesh
+      |> StoreNamedAttribute[FACE](
+        selection: extrude_mesh_3.side,
+        name: "ts_bevel",
+        value: 1.0 - (iteration + 1.0) / (math_23 + 1.0))
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_3.top)
+      |> tessera_inset(
+        distance: switch_3 * (cos(math_24) - cos(math_25)),
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+  }
+  named_attribute_5 = NamedAttribute(name: "ts_bevel")
+  set_shade_smooth = repeat_output
+    |> SetShadeSmooth(shade_smooth: false)
+    |> SetShadeSmooth(
+      selection: named_attribute_5.attribute > 0.001 and named_attribute_5.attribute < 0.999)
+  compare_6 = chip_rim > 1e-06
+  extrude_mesh_4 = set_shade_smooth
+    |> StoreNamedAttribute(name: "ts_ed")
+    |> ExtrudeMesh(
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: 0.0,
+      individual: false)
+  switch_5 = compare_6
+    ? extrude_mesh_4.mesh
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_4.top)
+      |> tessera_inset(
+        distance: chip_rim,
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+      |> StoreNamedAttribute(
+        selection: EvaluateOnDomain(
+            value: NamedAttribute[BOOLEAN](name: "ts_top").attribute ? 1.0 : 0.0)
+          > 0.2,
+        name: "ts_ed",
+        value: 1.0)
+    : StoreNamedAttribute(set_shade_smooth, name: "ts_ed", value: 1.0)
+  math_26 = max(chip_depth, chip_rim)
+  extrude_mesh_5 = switch_5
+    |> StoreNamedAttribute(
+      name: "ts_ed2",
+      value: compare_6
+        ? NamedAttribute(name: "ts_ed").attribute * (chip_rim / max(math_26, 1e-06))
+        : 0.0)
+    |> ExtrudeMesh(
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: 0.0,
+      individual: false)
+  switch_6 = math_26 - chip_rim > 1e-05
+    ? extrude_mesh_5.mesh
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_5.top)
+      |> tessera_inset(
+        distance: math_26 - chip_rim,
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+      |> StoreNamedAttribute(
+        selection: EvaluateOnDomain(
+            value: NamedAttribute[BOOLEAN](name: "ts_top").attribute ? 1.0 : 0.0)
+          > 0.2,
+        name: "ts_ed2",
+        value: 1.0)
+    : StoreNamedAttribute(
+      switch_5,
+      name: "ts_ed2",
+      value: compare_6 ? NamedAttribute(name: "ts_ed").attribute : 1.0)
+  named_attribute_6 = NamedAttribute[FLOAT_VECTOR](name: "ts_c2")
+  separate_color_9 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.377).color)
+  math_27 = white_noise_texture_2.value * 6.2831855
+  math_28 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-06) * 0.72
+  math_29 = min(max(grout_depth * 0.5 + 0.0002, 0.0003), 0.0015) / math_28
+  math_30 = min(max((separate_color_9.red * 2.0 - 1.0) * tilt_jitter, -math_29), math_29)
+  math_31 = math_28 * abs(sin(math_30))
+  math_32 = math_31 - grout_depth * 0.7
+  math_33 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-06)
+  vector_rotate = VectorRotate[Z_AXIS](
+    vector: Position()
+      - CombineXYZ(x: named_attribute_6.attribute.x, y: named_attribute_6.attribute.y),
+    angle: -(Rotation
+      + NamedAttribute(name: "ts_alpha").attribute
+      + floor(separate_color_9.blue * 4.0) * (quarter_turns ? 1.0 : 0.0) * 1.5707964))
+  position_8 = Position()
+  return (
+    Geometry: (compare_5
+        ? (Switch[GEOMETRY](
+              switch: domain_size_2.face_count > 0,
+              true_: MeshBoolean[INTERSECT, EXACT](
+                  MeshBoolean[DIFFERENCE, EXACT](transform_geometry, remove_named_attribute_2).mesh,
+                  store_named_attribute_2,
+                  hole_tolerant: true).mesh
+                |> StoreNamedAttribute(
+                  name: "ts_frac2",
+                  value: 1.0
+                    - MapRange[SMOOTHSTEP](
+                      value: GeometryProximity(remove_named_attribute_2).distance,
+                      from_min: 1e-05,
+                      from_max: 4e-05))
+                |> SplitEdges()
+                |> SetPosition(position: CombineXYZ(x: position_6.x, y: position_6.y))
+                |> DeleteGeometry[FACE](
+                  selection: FaceArea() < 1e-08
+                    or NamedAttribute(name: "ts_zmid").attribute
+                        - NamedAttribute(name: "ts_zlo").attribute
+                      < 0.0002))
+            |> RemoveNamedAttribute(name: "ts_qa0")
+            |> RemoveNamedAttribute(name: "ts_qb0")
+            |> RemoveNamedAttribute(name: "ts_qa1")
+            |> RemoveNamedAttribute(name: "ts_qb1")
+            |> SetPosition(offset: CombineXYZ(z: NamedAttribute(name: "ts_zlo").attribute))
+            |> ExtrudeMesh(
+              offset: (0.0, 0.0, 1.0),
+              offset_scale: NamedAttribute(name: "ts_zmid").attribute
+                - NamedAttribute(name: "ts_zlo").attribute).mesh
+            |> StoreNamedAttribute[FACE](name: "ts_bevel", value: 1.0)
+            |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top")
+            |> StoreNamedAttribute(name: "ts_ed", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_ed2", value: 1.0)
+            |> StoreNamedAttribute(
+              name: "ts_frac",
+              value: max(
+                NamedAttribute(name: "ts_frac2").attribute,
+                Position().z > NamedAttribute(name: "ts_zlo").attribute + 1e-06 ? 1.0 : 0.0))
+            |> RemoveNamedAttribute(name: "ts_frac2"))
+          + (separate_geometry_2.selection
+            |> DeleteGeometry[FACE](selection: NamedAttribute(name: "ts_zlo").attribute < 1e-06)
+            |> ExtrudeMesh(
+              offset: (0.0, 0.0, 1.0),
+              offset_scale: NamedAttribute(name: "ts_zlo").attribute).mesh
+            |> StoreNamedAttribute[FACE](name: "ts_bevel", value: 1.0)
+            |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top")
+            |> StoreNamedAttribute(name: "ts_ed", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_ed2", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_frac", value: Position().z > 1e-06 ? 1.0 : 0.0))
+          + switch_6
+        : switch_6)
+      |> SetPosition(
+        offset: CombineXYZ(
+          z: NamedAttribute(name: "ts_wz").attribute
+            * weave_depth
+            * min(max(Position().z / max(Thickness, 1e-06), 0.0), 1.0)))
+      |> SetPosition(
+        selection: EvaluateOnDomain[FACE](
+            value: NamedAttribute[BOOLEAN](name: "ts_strap").attribute ? 1.0 : 0.0)
+          < 0.5,
+        position: VectorRotate(
+            vector: Position(),
+            center: CombineXYZ(x: named_attribute_6.attribute.x, y: named_attribute_6.attribute.y),
+            axis: CombineXYZ(x: cos(math_27), y: sin(math_27)),
+            angle: math_30)
+          + CombineXYZ(
+            z: min(
+              max((separate_color_9.green * 2.0 - 1.0) * height_jitter, math_32),
+              max(grout_depth * 0.6 + 0.0008 - math_31, math_32))))
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "ts_tile_uv",
+        value: CombineXYZ(x: vector_rotate.x / math_33 + 0.5, y: vector_rotate.y / math_33 + 0.5))
+      |> StoreNamedAttribute[FLOAT2, CORNER](
+        name: "TesseraTileUV",
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_tile_uv").attribute)
+      |> StoreNamedAttribute[FLOAT2, CORNER](
+        name: "TesseraPanelUV",
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_panel_uv").attribute)
+      |> DeleteGeometry[FACE](
+        selection: Openwork
+          and not (NamedAttribute(name: "ts_band").attribute > 0.5
+            or NamedAttribute[BOOLEAN](name: "ts_strap").attribute))
+      |> RemoveNamedAttribute(name: "ts_zlo")
+      |> RemoveNamedAttribute(name: "ts_zmid")
+      |> RemoveNamedAttribute(name: "ts_q2"),
+    Holes: Switch[GEOMETRY](
+      switch: Mapping == 0,
+      true_: SetPosition(
+        Switch[GEOMETRY](
+            switch: compare_5,
+            true_: separate_geometry_2.selection
+              |> DeleteGeometry[FACE](selection: NamedAttribute(name: "ts_zlo").attribute > 1e-06)
+              |> tessera_inset(distance: 5e-05))
+          + tessera_inset(Gone, distance: math),
+        position: CombineXYZ(x: position_8.x, y: position_8.y))))
+}
+
+geometry graph "Tessera Engine"(
+    Geometry: Geometry,
+    "Pattern" {
+        Motif: Object(
+          description: "Hidden mesh holding one repeat of the pattern (made by the add-on)"),
+        Scale: Float(
+          subtype: DISTANCE,
+          description: "Size of one pattern unit (tile edge or repeat) in metres") = 0.1 in 0.0005..100.0,
+        Rotation: Float(subtype: ANGLE, description: "Rotate the whole pattern"),
+        Offset: Vector(subtype: TRANSLATION, description: "Slide the pattern"),
+        "Center Pattern": Bool(
+          description: "Put a motif centre (e.g. a star) in the middle of the panel") = true,
+        Seed: Int(description: "Random seed for colours and irregularities") in 0..100000,
+        "Fit Repeats": Bool(
+          description: "Adjust the scale so a whole number of repeats fits the width: seamless wraps around columns / rooms and clean panel ends"),
+        "Wrap Width": Float(
+          subtype: DISTANCE,
+          description: "Width to fit (circumference / room perimeter). 0 = panel or UV width") in 0.0..10000.0
+    },
+    "Layout" {
+        Mapping: Menu(
+          description: "Flat panel, project onto a mesh from above, or wrap any UV-mapped surface") = "Flat Panel",
+        Target: Object(description: "Optional surface object (otherwise the modifier's own mesh)"),
+        "UV Map": String(description: "UV map used by Wrap UV") = "UVMap",
+        "UV Scale": Float(
+          subtype: DISTANCE,
+          description: "Metres per UV unit (use 'Measure UV Scale' in the panel)") = 1.0 in 0.001..1000.0,
+        Shape: Menu(description: "Outline of a flat panel") = Rectangle,
+        Width: Float(subtype: DISTANCE, description: "Panel width") = 1.0 in 0.001..1000.0,
+        Height: Float(subtype: DISTANCE, description: "Panel height") = 1.0 in 0.001..1000.0,
+        Sides: Int(description: "Sides of the polygon shape") = 8 in 3..64,
+        "Shape Offset": Vector(
+          subtype: TRANSLATION,
+          description: "Move the shape (e.g. place a band on a column)"),
+        "Clip to Shape": Bool(
+          description: "Also clip Project / Wrap UV layouts to the Shape: bands, dados, friezes on walls and columns"),
+        Region: Menu(
+          description: "Fill the whole shape, only the inner field, or only the border band") = Full,
+        "Border Width": Float(
+          subtype: DISTANCE,
+          description: "Width of the border band") = 0.1 in 0.0..100.0,
+        Edge: Menu(
+          description: "Keep whole tiles, only fully-inside tiles, or cut tiles at the edge") = "Cut to Edge",
+        "Bend to Surface": Bool(
+          description: "Bend every tile to follow curved surfaces (otherwise tiles stay flat and rigid)"),
+        "Single Cell": Bool(description: "Show one repeat only (a single tile or rosette)"),
+        Piece: Int(description: "Only this piece of the motif (-1 = all)") = -1 in -1..9999,
+        "Max Cells": Int(
+          description: "Safety limit on the number of repeats") = 150000 in 1..2000000
+    },
+    "Tiles" {
+        "Grout Width": Float(
+          subtype: DISTANCE,
+          description: "Joint width between tiles") = 0.003 in 0.0..1.0,
+        Thickness: Float(subtype: DISTANCE, description: "Tile thickness") = 0.01 in 0.0001..1.0,
+        Bevel: Float(subtype: DISTANCE, description: "Rounded edge size") = 0.0012 in 0.0..0.5,
+        "Bevel Segments": Int(description: "Steps of the rounded edge (0 = sharp)") = 2 in 0..8,
+        "Grout Depth": Float(
+          subtype: DISTANCE,
+          description: "How far the grout sits below the tile top") = 0.002 in 0.0..1.0,
+        "Grout Bed": Bool(description: "Generate the grout / mortar bed") = true,
+        Strapwork: Bool(
+          description: "Turn the joints into raised straps in the grout material: carved plaster (gebs), brass inlay, leaded glass"),
+        "Strap Height": Float(
+          subtype: DISTANCE,
+          description: "How far the straps stand above the tiles") = 0.004 in -1.0..1.0,
+        "Weave Depth": Float(
+          subtype: DISTANCE,
+          description: "Interlaced bands rise over and dip under each other by this much (patterns with Band Width)") in -0.5..0.5,
+        "Band Joints": Float(
+          subtype: FACTOR,
+          description: "Joint between pieces of the same band, relative to the other joints (0 = touching, 1 = same width)") = 0.05 in 0.0..1.0,
+        Openwork: Bool(
+          description: "Keep only the bands / straps: pierced screens, jali, mashrabiya, lattice windows (no fill pieces, no bed)"),
+        "Relief Class": Int(
+          description: "Raise (or sink) every piece of this shape class: inlay / carved relief (-1 = off)") = -1 in -1..64,
+        "Relief Height": Float(
+          subtype: DISTANCE,
+          description: "Extra height of the relief class (negative = recessed)") = 0.004 in -1.0..1.0,
+        "Viewport Simplify": Bool(
+          description: "Use a single bevel step in the viewport (full quality in renders)") = true,
+        "Keep Original": Bool(description: "Also output the original mesh"),
+        "Tile Material": Material(description: "Material for tiles"),
+        "Grout Material": Material(description: "Material for grout bed")
+    },
+    "Irregularity"(default_closed: true) {
+        "Position Jitter": Float(
+          subtype: DISTANCE,
+          description: "Random shift of each piece") = 0.0003 in 0.0..1.0,
+        "Rotation Jitter": Float(
+          subtype: ANGLE,
+          description: "Random spin of each piece") = 0.010471975 in 0.0..3.1415927,
+        "Scale Jitter": Float(
+          subtype: FACTOR,
+          description: "Random size of each piece") in 0.0..0.9,
+        "Stretch Jitter": Float(
+          subtype: FACTOR,
+          description: "Random squash/stretch (pebbles, chips)") in 0.0..0.9,
+        "Edge Wobble": Float(
+          subtype: DISTANCE,
+          description: "Hand-cut irregular edges") in 0.0..1.0,
+        "Height Jitter": Float(
+          subtype: DISTANCE,
+          description: "Random height of each piece") = 0.0004 in 0.0..1.0,
+        "Tilt Jitter": Float(
+          subtype: ANGLE,
+          description: "Random tilt (glints like handmade zellige / smalti)") = 0.013962634 in 0.0..0.5,
+        Missing: Float(
+          subtype: FACTOR,
+          description: "Fraction of missing pieces (ruins, ancient floors)") in 0.0..1.0,
+        Cobwebs: Float(
+          subtype: FACTOR,
+          description: "Dusty cobwebs fanned from corners into the joints (aged wood, abandoned rooms)") in 0.0..1.0,
+        Debris: Float(
+          subtype: FACTOR,
+          description: "Straw and scraps of faded cloth caught on the carving (barns, ruins, abandoned rooms)") in 0.0..1.0,
+        Splinters: Float(
+          subtype: FACTOR,
+          description: "Slivers peeling up from the edges of old wood") in 0.0..1.0,
+        Hairs: Float(
+          description: "Stray hairs and lint fibres lying on the surface (super close-ups): 1 = a lived-in floor, 3+ = neglected") in 0.0..5.0,
+        "Broken Tiles": Float(
+          subtype: FACTOR,
+          description: "Fraction of tiles with a chunk broken off (the plaster bed shows where it is missing)") in 0.0..1.0,
+        "Chip Rim": Float(
+          subtype: DISTANCE,
+          description: "Rim along every tile edge where the glaze can chip off (Glaze › Chipping); 0 = chips only on the bevel") in 0.0..0.05,
+        "Chip Depth": Float(
+          subtype: DISTANCE,
+          description: "How far chips can bite into the face of a tile (Glaze › Chipping), independent of the Chip Rim") = 0.004 in 0.0..0.05,
+        "Joint Guard": Float(
+          subtype: FACTOR,
+          description: "Keep the joints: big pieces shift, turn and grow less, so they never ride over their neighbours (0 = free jitter: pebbles, terrazzo chips)") = 1.0 in 0.0..1.0,
+        Bites: Float(
+          subtype: FACTOR,
+          description: "Fraction of pieces with chips or chunks knocked out of an edge or a corner: real geometry, the body shows (or the mortar when a bite goes right through)") in 0.0..1.0,
+        "Bite Size": Float(
+          subtype: DISTANCE,
+          description: "Typical radius of a bite; a few are up to twice as big") = 0.006 in 0.0005..0.1,
+        "Bite Depth": Float(
+          subtype: FACTOR,
+          description: "How deep bites go: 0 = just under the glaze, 0.5 = half the tile, 1 = right through to the mortar bed") = 0.35 in 0.0..1.0,
+        "Quarter Turns": Bool(description: "Random 90° turns of per-tile images (Truchet)")
+    },
+    "Color"(default_closed: true) {
+        "Color Mode": Menu(description: "How pieces pick palette colours") = "By Shape",
+        Colors: Int(description: "Number of palette colours used") = 5 in 1..8,
+        "Class Shift": Int(description: "Rotate which shape gets which colour") in -16..16,
+        "Accent Chance": Float(
+          subtype: FACTOR,
+          description: "Chance of a random accent colour (Shape + Accents)") = 0.08 in 0.0..1.0,
+        "Gradient Angle": Float(
+          subtype: ANGLE,
+          description: "Direction of the colour gradient") = 1.5707964,
+        "Band Size": Float(
+          subtype: DISTANCE,
+          description: "Ring width (Rings mode)") = 0.12 in 0.0001..100.0,
+        "Cluster Scale": Float(
+          subtype: DISTANCE,
+          description: "Size of colour clusters") = 0.35 in 0.0001..100.0,
+        Dither: Float(
+          subtype: FACTOR,
+          description: "Blend between bands / clusters") = 0.25 in 0.0..1.0,
+        "Rhythm Class": Int(
+          description: "Rhythm: which shape class cycles colours (-1 = all shapes)") in -1..63,
+        "Rhythm Period": Int(
+          description: "Rhythm: how many colours alternate (2 = checker, 3 = three-colouring)") = 2 in 1..8,
+        "Rhythm Start": Int(
+          description: "Rhythm: first palette slot used by the alternating colours") = 4 in 1..8,
+        Symmetry: Menu(description: "Make random colours symmetric around the panel centre") = None,
+        Folds: Int(description: "Rotational symmetry order") = 8 in 1..64,
+        "Hue Jitter": Float(
+          subtype: FACTOR,
+          description: "Per-piece hue variation") = 0.006 in 0.0..0.5,
+        "Saturation Jitter": Float(
+          subtype: FACTOR,
+          description: "Per-piece saturation variation") = 0.05 in 0.0..1.0,
+        "Value Jitter": Float(
+          subtype: FACTOR,
+          description: "Per-piece brightness variation (glaze depth)") = 0.08 in 0.0..1.0
+    },
+    "Palette"(default_closed: true) {
+        "Color 1": Color = (0.02, 0.1, 0.04),
+        "Color 2": Color = (0.88, 0.85, 0.77),
+        "Color 3": Color = (0.01, 0.05, 0.2),
+        "Color 4": Color = (0.58, 0.27, 0.02),
+        "Color 5": Color = (0.01, 0.01, 0.01),
+        "Color 6": Color = (0.02, 0.26, 0.22),
+        "Color 7": Color = (0.33, 0.04, 0.02),
+        "Color 8": Color = (0.1, 0.04, 0.03),
+        "Weight 1": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 2": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 3": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 4": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 5": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 6": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 7": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Weight 8": Float(description: "Random-pick weight") = 1.0 in 0.0..100.0,
+        "Metal 1": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 2": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 3": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 4": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 5": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 6": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 7": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0,
+        "Metal 8": Float(
+          subtype: FACTOR,
+          description: "Metallic (gold / silver smalti)") in 0.0..1.0
+    },
+    "Image"(default_closed: true) {
+        Image: Image(description: "Picture to turn into tiles"),
+        "Image Fit": Menu(description: "How the picture fits the panel") = Cover,
+        "Image Mix": Float(
+          subtype: FACTOR,
+          description: "Blend palette colour → picture colour") = 1.0 in 0.0..1.0,
+        "Flow Align": Float(
+          subtype: FACTOR,
+          description: "Turn tesserae along image edges (opus vermiculatum)") in 0.0..1.0
+    }
+) -> Geometry {
+  "Tessera mosaic & tile engine (generated by the Tessera add-on)"
+  menu_switch = MenuSwitch(menu: Mapping, "Flat Panel": 0, "Project Down": 1, "Wrap UV": 2)
+  menu_switch_2 = MenuSwitch(menu: Shape, Rectangle: 0, Ellipse: 1, Arch: 2, Polygon: 3)
+  menu_switch_3 = MenuSwitch(
+    menu: color_mode,
+    "By Shape": 0,
+    Random: 1,
+    "Shape + Accents": 2,
+    Gradient: 3,
+    Clusters: 4,
+    Rings: 5,
+    "Cell Checker": 6,
+    Image: 7,
+    "Image → Palette": 8,
+    Rhythm: 9)
+  object_info = ObjectInfo[RELATIVE](object: Target)
+  switch = DomainSize(object_info.geometry).face_count > 0 ? object_info.geometry : Geometry
+  object_info_2 = ObjectInfo(object: Motif)
+  group = tessera_pieces(
+    switch,
+    motif: object_info_2.geometry,
+    scale: Scale,
+    rotation: Rotation,
+    offset: Offset,
+    center_pattern: center_pattern,
+    mapping: menu_switch.output,
+    shape: menu_switch_2.output,
+    width: Width,
+    height: Height,
+    sides: Sides,
+    region: MenuSwitch(menu: Region, Full: 0, Field: 1, Border: 2).output,
+    border_width: border_width,
+    edge: MenuSwitch(menu: Edge, "Whole Tiles": 0, "Inside Only": 1, "Cut to Edge": 2).output,
+    single_cell: single_cell,
+    piece: Piece,
+    max_cells: max_cells,
+    uv_map: uv_map,
+    uv_scale: uv_scale,
+    seed: Seed,
+    missing: Missing,
+    shape_offset: shape_offset,
+    clip_to_shape: clip_to_shape,
+    fit_repeats: fit_repeats,
+    wrap_width: wrap_width,
+    fit_multiple: round(
+      menu_switch_3.output == 9
+        ? rhythm_period
+        : Switch[FLOAT](switch: menu_switch_3.output == 6, false_: 1.0, true_: Colors)))
+  group_2 = group.geometry
+    |> tessera_color(
+      motif: object_info_2.geometry,
+      region_min: group.region_min,
+      region_max: group.region_max,
+      scale: group.scale_out,
+      rotation: Rotation,
+      seed: Seed,
+      mapping: menu_switch.output,
+      uv_scale: uv_scale,
+      color_mode: menu_switch_3.output,
+      colors: Colors,
+      class_shift: class_shift,
+      accent_chance: accent_chance,
+      gradient_angle: gradient_angle,
+      band_size: band_size,
+      cluster_scale: cluster_scale,
+      dither: Dither,
+      symmetry: MenuSwitch(
+        menu: Symmetry,
+        None: 0,
+        "Mirror X": 1,
+        "Mirror XY": 2,
+        Rotational: 3).output,
+      folds: Folds,
+      hue_jitter: hue_jitter,
+      saturation_jitter: saturation_jitter,
+      value_jitter: value_jitter,
+      color_1: color_1,
+      color_2: color_2,
+      color_3: color_3,
+      color_4: color_4,
+      color_5: color_5,
+      color_6: color_6,
+      color_7: color_7,
+      color_8: color_8,
+      weight_1: weight_1,
+      weight_2: weight_2,
+      weight_3: weight_3,
+      weight_4: weight_4,
+      weight_5: weight_5,
+      weight_6: weight_6,
+      weight_7: weight_7,
+      weight_8: weight_8,
+      metal_1: metal_1,
+      metal_2: metal_2,
+      metal_3: metal_3,
+      metal_4: metal_4,
+      metal_5: metal_5,
+      metal_6: metal_6,
+      metal_7: metal_7,
+      metal_8: metal_8,
+      image: Image,
+      image_fit: MenuSwitch(menu: image_fit, Stretch: 0, Contain: 1, Cover: 2).output,
+      image_mix: image_mix,
+      flow_align: flow_align,
+      rhythm_class: rhythm_class,
+      rhythm_period: rhythm_period,
+      rhythm_start: rhythm_start)
+    |> tessera_solidify(
+      region_min: group.region_min,
+      region_max: group.region_max,
+      scale: group.scale_out,
+      rotation: Rotation,
+      seed: Seed,
+      mapping: menu_switch.output,
+      uv_scale: uv_scale,
+      grout_width: grout_width,
+      thickness: Thickness,
+      bevel: Bevel,
+      bevel_segments: bevel_segments,
+      position_jitter: position_jitter,
+      rotation_jitter: rotation_jitter,
+      scale_jitter: scale_jitter,
+      stretch_jitter: stretch_jitter,
+      edge_wobble: edge_wobble,
+      height_jitter: height_jitter,
+      tilt_jitter: tilt_jitter,
+      quarter_turns: quarter_turns,
+      relief_class: relief_class,
+      relief_height: relief_height,
+      viewport_simplify: viewport_simplify,
+      strapwork: Strapwork,
+      strap_height: strap_height,
+      weave_depth: weave_depth,
+      chip_rim: chip_rim,
+      openwork: Openwork,
+      band_joints: band_joints,
+      broken_tiles: broken_tiles,
+      grout_depth: grout_depth,
+      chip_depth: chip_depth,
+      joint_guard: joint_guard,
+      bites: Bites,
+      bite_size: bite_size,
+      bite_depth: bite_depth,
+      gone: group.gone)
+  group_3 = tessera_map(
+    group_2.geometry,
+    surface: switch,
+    mapping: menu_switch.output,
+    uv_map: uv_map,
+    uv_scale: uv_scale,
+    bend_to_surface: bend_to_surface,
+    region_min: group.region_min,
+    fit_repeats: fit_repeats,
+    wrap_width: wrap_width)
+  named_attribute = NamedAttribute[BOOLEAN](name: "ts_top")
+  index = Index()
+  store_named_attribute = group_3
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_fn", value: Normal().normal)
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_fc", value: Position())
+    |> StoreNamedAttribute[FLOAT_VECTOR, CORNER](
+      name: "ts_pn",
+      value: EvaluateAtIndex[FLOAT_VECTOR](
+        value: Position(),
+        index: VertexOfCorner(corner_index: OffsetCornerInFace(corner_index: index, offset: 1))))
+    |> StoreNamedAttribute[FLOAT_VECTOR, CORNER](
+      name: "ts_pp",
+      value: EvaluateAtIndex[FLOAT_VECTOR](
+        value: Position(),
+        index: VertexOfCorner(corner_index: OffsetCornerInFace(corner_index: index, offset: -1))))
+  position = Position()
+  vector_math = length(CombineXYZ(x: position.x, y: position.y))
+  random_value = RandomValue(min: -1.05, max: 1.05, seed: 3)
+  math = sqrt(RandomValue(min: 0.005, seed: 4))
+  position_2 = Position()
+  vector_math_2 = length(CombineXYZ(x: position_2.x, y: position_2.y))
+  position_3 = Position()
+  vector_math_3 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_fn").attribute)
+  vector_math_4 = position_3 - NamedAttribute[FLOAT_VECTOR](name: "ts_fc").attribute
+  compare = (normalize(position_3 - NamedAttribute[FLOAT_VECTOR](name: "ts_pp").attribute)
+        × normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_pn").attribute - position_3))
+      ⋅ vector_math_3
+    > 0.0
+  store_named_attribute_2 = store_named_attribute
+    |> MeshToPoints[CORNERS](
+      selection: named_attribute.attribute
+        and RandomValue[BOOLEAN](probability: Cobwebs * 0.02, seed: Seed + 77.0))
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_wrot_n", value: vector_math_3)
+  align_rotation_to_vector = AlignRotationToVector[axis: X, pivot_axis: Z](
+    rotation: AlignRotationToVector(
+      vector: NamedAttribute[FLOAT_VECTOR](name: "ts_wrot_n").attribute),
+    vector: normalize(vector_math_4 - vector_math_3 * (vector_math_4 ⋅ vector_math_3)))
+  random_value_2 = RandomValue(min: 0.02, max: 0.06, seed: Seed + 91.0)
+  combine_xyz = CombineXYZ(
+    x: random_value_2,
+    y: random_value_2 * RandomValue(min: 0.7, max: 1.1, seed: Seed + 92.0),
+    z: Thickness * 1.05 + 0.001)
+  vector_math_5 = Position() * 70.0
+  vector_math_6 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_wrot_n").attribute)
+  raycast = Raycast(
+    group_3,
+    source_position: Position() + vector_math_6 * 0.03,
+    ray_direction: -vector_math_6,
+    ray_length: 0.06)
+  vector_math_7 = Position() * 70.0
+  vector_math_8 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_wrot_n").attribute)
+  raycast_2 = Raycast(
+    group_3,
+    source_position: Position() + vector_math_8 * 0.03,
+    ray_direction: -vector_math_8,
+    ray_length: 0.06)
+  boolean_math = named_attribute.attribute
+    and Compare[GREATER_THAN](a: NamedAttribute[FLOAT_VECTOR](name: "ts_fn").attribute, b: -2.0)
+  distribute_points_on_faces = DistributePointsOnFaces(
+    store_named_attribute,
+    selection: named_attribute.attribute,
+    density: Debris * 26.0,
+    seed: Seed + 31.0)
+  position_4 = Position()
+  random_value_3 = RandomValue(max: 6.2831855, seed: Seed + 35.0)
+  random_value_4 = RandomValue(min: 0.03, max: 0.085, seed: Seed + 36.0)
+  noise_texture = NoiseTexture(vector: Position() * 60.0, scale: 1.0)
+  vector_math_9 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute)
+  distribute_points_on_faces_2 = DistributePointsOnFaces(
+    store_named_attribute,
+    selection: named_attribute.attribute,
+    density: Debris * 7.0,
+    seed: Seed + 41.0)
+  position_5 = Position()
+  math_2 = atan2(position_5.y, position_5.x)
+  random_value_5 = RandomValue(min: 0.03, max: 0.075, seed: Seed + 45.0)
+  vector_math_10 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute)
+  raycast_3 = Raycast(
+    group_3,
+    source_position: Position() + vector_math_10 * 0.03,
+    ray_direction: -vector_math_10,
+    ray_length: 0.08)
+  distribute_points_on_faces_3 = DistributePointsOnFaces(
+    store_named_attribute,
+    selection: named_attribute.attribute,
+    density: Hairs * 60.0,
+    seed: Seed + 61.0)
+  random_value_6 = RandomValue(max: 6.2831855, seed: Seed + 62.0)
+  random_value_7 = RandomValue(min: 0.025, max: 0.07, seed: Seed + 63.0)
+  vector_math_11 = Position() * 45.0
+  vector_math_12 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute)
+  combine_xyz_2 = CombineXYZ(
+    x: NoiseTexture(vector: vector_math_11, scale: 1.0).factor - 0.5,
+    y: NoiseTexture(vector: vector_math_11 + (13.0, 7.0, 3.0), scale: 1.0).factor - 0.5)
+  raycast_4 = Raycast(
+    group_3,
+    source_position: Position() + vector_math_12 * 0.02,
+    ray_direction: -vector_math_12,
+    ray_length: 0.05)
+  distribute_points_on_faces_4 = DistributePointsOnFaces(
+    store_named_attribute,
+    selection: named_attribute.attribute,
+    density: Hairs * 250.0,
+    seed: Seed + 71.0)
+  random_value_8 = RandomValue(max: 6.2831855, seed: Seed + 72.0)
+  random_value_9 = RandomValue(min: 0.004, max: 0.018, seed: Seed + 73.0)
+  vector_math_13 = Position() * 160.0
+  vector_math_14 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute)
+  combine_xyz_3 = CombineXYZ(
+    x: NoiseTexture(vector: vector_math_13, scale: 1.0).factor - 0.5,
+    y: NoiseTexture(vector: vector_math_13 + (13.0, 7.0, 3.0), scale: 1.0).factor - 0.5)
+  raycast_5 = Raycast(
+    group_3,
+    source_position: Position() + vector_math_14 * 0.02,
+    ray_direction: -vector_math_14,
+    ray_length: 0.05)
+  join_geometry = Switch[GEOMETRY](
+      switch: Debris > 0.0,
+      true_: distribute_points_on_faces_2.points
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: "ts_snrm",
+          value: distribute_points_on_faces_2.normal)
+        |> StoreNamedAttribute(name: "ts_drand", value: RandomValue(seed: Seed + 43.0))
+        |> InstanceOnPoints(
+          instance: Grid(vertices_x: 14, vertices_y: 14).mesh
+            |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_duv", value: Position() * 1.0)
+            |> DeleteGeometry(
+              selection: length(CombineXYZ(x: position_5.x, y: position_5.y))
+                > 0.36
+                  + NoiseTexture(
+                      vector: CombineXYZ(x: cos(math_2), y: sin(math_2)),
+                      scale: 2.5,
+                      roughness: 0.6).factor
+                    * 0.22),
+          rotation: AlignRotationToVector[axis: X, pivot_axis: Z](
+            rotation: AlignRotationToVector(
+              vector: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute),
+            vector: CombineXYZ(x: cos(random_value_5 * 400.0), y: sin(random_value_5 * 400.0))),
+          scale: CombineXYZ(x: random_value_5, y: random_value_5, z: random_value_5))
+        |> RealizeInstances()
+        |> SetPosition(
+          offset: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute
+            * (0.0008
+              + NoiseTexture(
+                  vector: Position() * 70.0,
+                  scale: 1.0,
+                  detail: 3.0,
+                  roughness: 0.6).factor
+                * 0.005))
+        |> SetPosition(
+          offset: vector_math_10
+            * (max((raycast_3.hit_position - Position()) ⋅ vector_math_10 + 0.0006, 0.0)
+              * raycast_3.is_hit))
+        |> DeleteGeometry(selection: not raycast_3.is_hit)
+        |> SetMaterial(material: "Tessera Rag"))
+    + Switch[GEOMETRY](
+      switch: Debris > 0.0,
+      true_: distribute_points_on_faces.points
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: "ts_snrm",
+          value: distribute_points_on_faces.normal)
+        |> StoreNamedAttribute(name: "ts_drand", value: RandomValue(seed: Seed + 33.0))
+        |> InstanceOnPoints(
+          instance: CurveLine(start: (-0.5, 0.0, 0.0), end: (0.5, 0.0, 0.0))
+            |> ResampleCurve(count: 7)
+            |> SetPosition(
+              position: CombineXYZ(
+                x: position_4.x,
+                y: (position_4.x * position_4.x * 4.0 - 1.0) * 0.05)),
+          rotation: AlignRotationToVector[axis: X, pivot_axis: Z](
+            rotation: AlignRotationToVector(
+              vector: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute),
+            vector: CombineXYZ(
+              x: cos(random_value_3),
+              y: sin(random_value_3),
+              z: sin(random_value_3 * 3.1) * 0.3)),
+          scale: CombineXYZ(x: random_value_4, y: random_value_4, z: random_value_4))
+        |> RealizeInstances()
+        |> SetPosition(
+          offset: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute * 0.0009
+            + CombineXYZ(x: noise_texture.factor - 0.5, y: noise_texture.factor - 0.5) * 0.004)
+        |> DeleteGeometry[CURVE](
+          selection: EvaluateOnDomain[CURVE](
+              value: EndpointSelection()
+                  and not Raycast(
+                    group_3,
+                    source_position: Position() + vector_math_9 * 0.03,
+                    ray_direction: -vector_math_9,
+                    ray_length: 0.08).is_hit
+                ? 1.0
+                : 0.0)
+            > 0.0)
+        |> CurveToMesh(profile_curve: CurveCircle(resolution: 6, radius: 0.0007))
+        |> SetMaterial(material: "Tessera Straw"))
+    + Switch[GEOMETRY](
+      switch: Cobwebs > 0.0,
+      true_: (store_named_attribute_2
+          |> InstanceOnPoints(
+            instance: MeshCircle[TRIANGLE_FAN](vertices: 72, radius: 0.95)
+              |> DeleteGeometry(
+                selection: abs(atan2(position_2.y, position_2.x)) > 1.06
+                  and length(CombineXYZ(x: position_2.x, y: position_2.y)) > 0.01)
+              |> SetPosition(
+                position: CombineXYZ(
+                  x: position_2.x,
+                  y: position_2.y,
+                  z: -vector_math_2 - vector_math_2 * 0.08)),
+            rotation: align_rotation_to_vector,
+            scale: combine_xyz)
+          |> RealizeInstances()
+          |> SetPosition(
+            offset: CombineXYZ(
+                x: NoiseTexture(vector: vector_math_7, scale: 1.0).factor - 0.5,
+                y: NoiseTexture(vector: vector_math_7 + (17.0, 3.0, 5.0), scale: 1.0).factor - 0.5,
+                z: NoiseTexture(vector: vector_math_7 + (4.0, 29.0, 11.0), scale: 1.0).factor - 0.5)
+              * 0.014)
+          |> SetPosition(
+            offset: vector_math_8
+              * (max((raycast_2.hit_position - Position()) ⋅ vector_math_8 + 0.0004, 0.0)
+                * raycast_2.is_hit))
+          |> SetMaterial(material: "Tessera Cobweb Gauze"))
+        + (store_named_attribute_2
+          |> InstanceOnPoints(
+            instance: (Points(
+                  count: 44,
+                  position: CombineXYZ(
+                    x: math * cos(random_value),
+                    y: math * sin(random_value),
+                    z: -math))
+                |> PointsToCurves(curve_group_id: floor(Index() / 2.0), weight: Index())
+                |> ResampleCurve(count: 6)
+                |> SetPosition(
+                  offset: CombineXYZ(
+                    z: SplineLength().length * -0.12 * sin(SplineParameter().factor * 3.1415927))))
+              + (Points(count: 3)
+                |> InstanceOnPoints(
+                  instance: Arc(resolution: 14, start_angle: -1.05, sweep_angle: 2.1),
+                  scale: 0.3 + Index() * 0.27)
+                |> RealizeInstances()
+                |> SetPosition(
+                  position: CombineXYZ(
+                    x: position.x,
+                    y: position.y,
+                    z: -vector_math
+                      - vector_math * 0.18 * sin(SplineParameter().factor * 3.1415927))))
+              + (Points(count: 5)
+                |> InstanceOnPoints(
+                  instance: CurveLine(end: (1.0, 0.0, -1.0)) |> ResampleCurve(count: 6),
+                  rotation: CombineXYZ(z: -0.95 + Index() * 0.475),
+                  scale: RandomValue(min: 0.75, seed: Seed + 5.0))
+                |> RealizeInstances()),
+            rotation: align_rotation_to_vector,
+            scale: combine_xyz)
+          |> RealizeInstances()
+          |> SetPosition(
+            offset: CombineXYZ(
+                x: NoiseTexture(vector: vector_math_5, scale: 1.0).factor - 0.5,
+                y: NoiseTexture(vector: vector_math_5 + (17.0, 3.0, 5.0), scale: 1.0).factor - 0.5,
+                z: NoiseTexture(vector: vector_math_5 + (4.0, 29.0, 11.0), scale: 1.0).factor - 0.5)
+              * 0.012)
+          |> SetPosition(
+            offset: vector_math_6
+              * (max((raycast.hit_position - Position()) ⋅ vector_math_6 + 0.0004, 0.0)
+                * raycast.is_hit))
+          |> CurveToMesh(profile_curve: CurveCircle(resolution: 3, radius: 0.00011))
+          |> SetMaterial(material: "Tessera Cobweb")))
+    + Switch[GEOMETRY](
+      switch: Hairs > 0.0,
+      true_: (distribute_points_on_faces_4.points
+          |> StoreNamedAttribute[FLOAT_VECTOR](
+            name: "ts_snrm",
+            value: distribute_points_on_faces_4.normal)
+          |> InstanceOnPoints(
+            instance: CurveLine(start: (-0.5, 0.0, 0.0), end: (0.5, 0.0, 0.0))
+              |> ResampleCurve(count: 24),
+            rotation: AlignRotationToVector[axis: X, pivot_axis: Z](
+              rotation: AlignRotationToVector(
+                vector: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute),
+              vector: CombineXYZ(x: cos(random_value_8), y: sin(random_value_8))),
+            scale: CombineXYZ(x: random_value_9, y: random_value_9, z: random_value_9))
+          |> RealizeInstances()
+          |> SetPosition(
+            offset: (combine_xyz_3 - vector_math_14 * (combine_xyz_3 ⋅ vector_math_14)) * 0.012)
+          |> SetPosition(
+            offset: vector_math_14
+              * (((raycast_5.hit_position - Position()) ⋅ vector_math_14 + 5.4e-05)
+                * raycast_5.is_hit))
+          |> CurveToMesh(profile_curve: CurveCircle(resolution: 3, radius: 4.5e-05))
+          |> SetMaterial(material: "Tessera Lint"))
+        + (distribute_points_on_faces_3.points
+          |> StoreNamedAttribute[FLOAT_VECTOR](
+            name: "ts_snrm",
+            value: distribute_points_on_faces_3.normal)
+          |> InstanceOnPoints(
+            instance: CurveLine(start: (-0.5, 0.0, 0.0), end: (0.5, 0.0, 0.0))
+              |> ResampleCurve(count: 24),
+            rotation: AlignRotationToVector[axis: X, pivot_axis: Z](
+              rotation: AlignRotationToVector(
+                vector: NamedAttribute[FLOAT_VECTOR](name: "ts_snrm").attribute),
+              vector: CombineXYZ(x: cos(random_value_6), y: sin(random_value_6))),
+            scale: CombineXYZ(x: random_value_7, y: random_value_7, z: random_value_7))
+          |> RealizeInstances()
+          |> SetPosition(
+            offset: (combine_xyz_2 - vector_math_12 * (combine_xyz_2 ⋅ vector_math_12)) * 0.012)
+          |> SetPosition(
+            offset: vector_math_12
+              * (((raycast_4.hit_position - Position()) ⋅ vector_math_12 + 4.8e-05)
+                * raycast_4.is_hit))
+          |> CurveToMesh(profile_curve: CurveCircle(resolution: 3, radius: 4e-05))
+          |> SetMaterial(material: "Tessera Hair")))
+  position_6 = Position()
+  vector_math_15 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_fn").attribute)
+  vector_math_16 = position_6 - NamedAttribute[FLOAT_VECTOR](name: "ts_fc").attribute
+  vector_math_17 = normalize(NamedAttribute[FLOAT_VECTOR](name: "ts_pn").attribute - position_6)
+  random_value_10 = RandomValue(min: 0.015, max: 0.045, seed: Seed + 53.0)
+  random_value_11 = RandomValue(min: 0.0025, max: 0.0055, seed: Seed + 55.0)
+  named_attribute_2 = NamedAttribute(name: "ts_spt")
+  return join_geometry
+    + (Switch[GEOMETRY](
+          switch: Splinters > 0.0,
+          true_: store_named_attribute
+            |> MeshToPoints[CORNERS](
+              selection: named_attribute.attribute
+                and RandomValue[BOOLEAN](probability: Splinters * 0.08, seed: Seed + 51.0))
+            |> DeleteGeometry(
+              selection: not (normalize(
+                      position_6 - NamedAttribute[FLOAT_VECTOR](name: "ts_pp").attribute)
+                    × vector_math_17)
+                  ⋅ vector_math_15
+                > 0.0)
+            |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_spn", value: vector_math_15)
+            |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_spe", value: vector_math_17)
+            |> StoreNamedAttribute[FLOAT_VECTOR](
+              name: "ts_spo",
+              value: normalize(vector_math_16 - vector_math_15 * (vector_math_16 ⋅ vector_math_15)))
+            |> StoreNamedAttribute(name: "ts_spl", value: random_value_10)
+            |> StoreNamedAttribute(
+              name: "ts_sptan",
+              value: RandomValue(min: 0.15, max: 0.55, seed: Seed + 54.0))
+            |> SetPosition(
+              offset: NamedAttribute[FLOAT_VECTOR](name: "ts_spo").attribute * -0.0012
+                + NamedAttribute[FLOAT_VECTOR](name: "ts_spn").attribute * -0.0006)
+            |> InstanceOnPoints(
+              instance: Cone(vertices: 4, side_segments: 4, depth: 1.0).mesh
+                |> TransformGeometry(translation: (0.5, 0.0, 0.0), rotation: (0.0, 1.5707964, 0.0))
+                |> StoreNamedAttribute(name: "ts_spt", value: Position().x),
+              rotation: AlignRotationToVector[axis: X, pivot_axis: Z](
+                rotation: AlignRotationToVector(
+                  vector: NamedAttribute[FLOAT_VECTOR](name: "ts_spn").attribute),
+                vector: NamedAttribute[FLOAT_VECTOR](name: "ts_spe").attribute),
+              scale: CombineXYZ(x: random_value_10, y: random_value_11, z: random_value_11 * 0.45))
+            |> RealizeInstances()
+            |> SetPosition(
+              offset: NamedAttribute[FLOAT_VECTOR](name: "ts_spn").attribute
+                * (named_attribute_2.attribute
+                  * named_attribute_2.attribute
+                  * NamedAttribute(name: "ts_spl").attribute
+                  * NamedAttribute(name: "ts_sptan").attribute))
+            |> StoreNamedAttribute(name: "ts_frac", value: named_attribute_2.attribute * 0.55)
+            |> StoreNamedAttribute[FACE](name: "ts_bevel", value: 1.0)
+            |> RemoveNamedAttribute(name: "ts_spn")
+            |> RemoveNamedAttribute(name: "ts_spe")
+            |> RemoveNamedAttribute(name: "ts_spo")
+            |> RemoveNamedAttribute(name: "ts_spl")
+            |> RemoveNamedAttribute(name: "ts_sptan")
+            |> RemoveNamedAttribute(name: "ts_spt")
+            |> RemoveNamedAttribute(name: "ts_fn")
+            |> RemoveNamedAttribute(name: "ts_fc")
+            |> RemoveNamedAttribute(name: "ts_pn")
+            |> RemoveNamedAttribute(name: "ts_pp"))
+        + group_3
+      |> RemoveNamedAttribute(name: "ts_cp")
+      |> RemoveNamedAttribute(name: "ts_k")
+      |> RemoveNamedAttribute(name: "ts_lc")
+      |> RemoveNamedAttribute(name: "ts_psize")
+      |> RemoveNamedAttribute(name: "ts_la")
+      |> RemoveNamedAttribute(name: "ts_lb")
+      |> RemoveNamedAttribute(name: "ts_cc")
+      |> RemoveNamedAttribute(name: "ts_top")
+      |> RemoveNamedAttribute(name: "ts_flow")
+      |> RemoveNamedAttribute(name: "ts_c2")
+      |> RemoveNamedAttribute(name: "ts_alpha")
+      |> SetMaterial(material: tile_material)
+      |> SetMaterial(
+        selection: NamedAttribute[BOOLEAN](name: "ts_strap").attribute,
+        material: grout_material))
+    + (Switch[GEOMETRY](
+        switch: grout_bed and not single_cell and not Openwork,
+        true_: tessera_bed(
+          switch,
+          mapping: menu_switch.output,
+          shape: menu_switch_2.output,
+          width: Width,
+          height: Height,
+          sides: Sides,
+          thickness: Thickness,
+          grout_depth: grout_depth,
+          shape_offset: shape_offset,
+          clip_to_shape: clip_to_shape,
+          region_min: group.region_min,
+          region_max: group.region_max,
+          uv_map: uv_map,
+          uv_scale: uv_scale,
+          holes: group_2.holes))
+      |> SetMaterial(material: grout_material))
+    + Switch[GEOMETRY](switch: keep_original, true_: Geometry)
+}

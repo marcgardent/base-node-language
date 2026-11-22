@@ -1,0 +1,18 @@
+shader graph "CondFresnel.002"(
+    n: Float = 1.0 in -10000.0..10000.0,
+    k: Float in -10000.0..10000.0,
+    Pol: Float(subtype: FACTOR) = 0.5 in 0.0..1.0
+) -> (Value: Float) {
+  geometry = Geometry()
+  Add = geometry.normal ⋅ geometry.incoming
+  math = pow(Add, 2.0)
+  math_3 = Add * n * 2.0
+  math_4 = pow(n, 2.0) + pow(k, 2.0)
+  math_2 = math * math_4
+  return (
+    Value: RGBToBW(
+      color: Mix[RGBA](
+        factor: Pol,
+        a: (math_2 - math_3 + 1.0) / (math_2 + math_3 + 1.0),
+        b: (math_4 - math_3 + math) / (math_4 + math_3 + math))))
+}

@@ -1,0 +1,14 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Symmetry ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (sym_id: Int(description: "Read the `frame_id` attribute from the geometry")) {
+  "Read the `frame_id` attribute, created when multiple frames from a trajectory are merged into a single structure"
+  return (sym_id: attribute_at_index(index: Index, name: "sym_id"))
+}

@@ -1,0 +1,20 @@
+geometry graph "i32 mBeB"() -> (mBits: Int, eBias: Int) {
+  mBits = 32 @ "mBits" #83314a
+  eBias = 65536 @ "eBias" #83314a
+  return (mBits: mBits, eBias: eBias)
+}
+
+geometry graph "i32 2f"(
+    "i32" {
+        Value: Bundle
+    }
+) -> (Value: Float) {
+  group = i32_mbeb() @ #3b5d3d
+  math = (SeparateBundle(Value) -> (m: Int, e: Int, s: Bool)).m
+    * pow(
+      2.0,
+      IntegerMath[SUBTRACT](
+        Value: (SeparateBundle(Value) -> (m: Int, e: Int, s: Bool)).e,
+        Value_001: IntegerMath[ADD](Value: group.mbits, Value_001: group.ebias)))
+  return (Value: (SeparateBundle(Value) -> (m: Int, e: Int, s: Bool)).s ? 0.0 - math : math)
+}

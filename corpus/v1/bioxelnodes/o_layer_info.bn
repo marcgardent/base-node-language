@@ -1,0 +1,17 @@
+geometry graph "O Layer Info"(
+    Layer: Bundle
+) -> (Data: Float, Shape: Vector, Min: Float, Max: Float, Type: String) {
+  separate_bundle = SeparateBundle[define_signature: true](
+    Layer) -> (
+    Data: Float(structure_type: GRID),
+    Shape: Vector(structure_type: SINGLE),
+    Min: Float(structure_type: SINGLE),
+    Max: Float(structure_type: SINGLE),
+    Type: String(structure_type: SINGLE))
+  return (
+    Data: separate_bundle.data,
+    Shape: separate_bundle.shape,
+    Min: separate_bundle.min,
+    Max: separate_bundle.max,
+    Type: separate_bundle.type)
+}

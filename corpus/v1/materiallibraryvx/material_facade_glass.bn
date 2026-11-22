@@ -1,0 +1,23 @@
+shader(material: true) graph Facade_Glass() -> (surface: Shader) {
+  magic_texture = MagicTexture(
+    vector: Mapping(vector: TextureCoordinate().object, rotation: (1.04089, -0.14697, 1.04089)))
+  return (
+    surface: MixShader(
+      factor: LightPath().is_shadow_ray,
+      a: MixShader(
+        factor: 0.00499,
+        a: MixShader(
+          factor: ColorRamp[
+            color_ramp: Ramp((0.0, (0.025, 0.025, 0.025, 1.0)), (1.0, (0.25, 0.25, 0.25, 1.0)))](
+            factor: LayerWeight().facing).color,
+          a: TransparentBSDF(color: (0.833, 0.93589, 0.98, 1.0)),
+          b: GlossyBSDF[GGX](
+            color: (1.25, 1.25, 1.25, 1.0),
+            roughness: 0.0,
+            normal: NormalMap(strength: 0.008, color: magic_texture.color))),
+        b: GlossyBSDF[GGX](
+          color: (1.0, 1.0, 1.0, 1.0),
+          roughness: 0.2236068,
+          normal: NormalMap(strength: 0.02999, color: magic_texture.color))),
+      b: TransparentBSDF(color: (0.94999, 0.94999, 0.94999, 1.0))))
+}

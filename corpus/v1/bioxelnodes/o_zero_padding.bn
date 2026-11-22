@@ -1,0 +1,10 @@
+geometry graph "O Zero Padding"(Value: Float, "Zero Padding": Int = 4 in 1..4) -> String {
+  value_to_string = ValueToString(value: Value)
+  string = "0"
+  repeat_output = repeat(
+    min(zero_padding - StringLength(string: value_to_string), zero_padding - 1.0),
+    Strings: "") -> {
+    return JoinStrings(strings: Strings, strings: string)
+  }
+  return JoinStrings(strings: repeat_output, strings: value_to_string)
+}

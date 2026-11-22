@@ -1,0 +1,110 @@
+geometry graph "O Build Structure"(
+    Solid: Bool(structure_type: GRID),
+    Color: Color,
+    Roughness: Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+    Emission: Color,
+    Bump: Float in -1.0..1.0,
+    Name: String,
+    ID: Int
+) -> (Structure: Bundle) {
+  separate_color = SeparateColor(color: Color)
+  field_to_grid_2 = FieldToGrid[BOOLEAN](topology: Solid, Opacity: separate_color.alpha) @ hide
+  combine_xyz = CombineXYZ(
+    x: separate_color.red,
+    y: separate_color.green,
+    z: separate_color.blue) @ hide
+  field_to_grid = FieldToGrid[BOOLEAN](topology: Solid, Albedo: combine_xyz) @ hide
+  field_to_grid_3 = FieldToGrid[BOOLEAN](topology: Solid, Roughness: Roughness) @ hide
+  field_to_grid_4 = FieldToGrid[BOOLEAN](topology: Solid, Emission: Vector = Emission) @ hide
+  map_range = MapRange(value: Bump, from_min: -1.0) @ hide
+  return (
+    Structure: CombineBundle[define_signature: true](
+      Solid: Solid,
+      Albedo(structure_type: GRID): field_to_grid,
+      Opacity(structure_type: GRID): field_to_grid_2,
+      Roughness: field_to_grid_3,
+      Emission: field_to_grid_4,
+      Bump: FieldToGrid[BOOLEAN](topology: Solid, Bump: map_range),
+      Name: Name,
+      ID: ID))
+}
+
+geometry graph "O Float to Target Digits"(
+    Value: Float in -10000.0..10000.0,
+    Target: Int = 4 in 0..9
+) -> (Output: Float) {
+  return (Output: pow(10.0, Target - ceil(log(abs(Value), 10.0))) * Value)
+}
+
+geometry graph "O Cutout by Hue"(
+    Color: Bundle,
+    Label: Bundle,
+    Hue: Color(force_non_field: true, structure_type: SINGLE) = (1.0, 0.0, 0.0),
+    Tolerance: Float(
+      subtype: FACTOR,
+      force_non_field: true,
+      structure_type: SINGLE) = 0.1 in 0.0..1.0,
+    "Properties"(default_closed: true) {
+        Color as properties_color: Color = (0.6038313, 0.6038313, 0.6038313),
+        Roughness: Float(subtype: FACTOR) = 0.2 in 0.0..1.0,
+        Emission: Color,
+        Bump: Float in -1.0..1.0
+    },
+    "Options"(default_closed: true) {
+        Name: String,
+        Invert: Bool(force_non_field: true, structure_type: SINGLE),
+        Prune: Bool = true
+    }
+) -> (Structure: Bundle) {
+  separate_bundle = SeparateBundle[define_signature: true](
+    Color) -> (
+    Data: Vector(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  separate_bundle_2 = SeparateBundle[define_signature: true](
+    Label) -> (
+    Data: Bool(structure_type: GRID),
+    Shape: Vector(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  match_string = MatchString(
+    string: separate_bundle_2.kind,
+    operation: Contains,
+    key: "label") @ hide
+  sample_grid = SampleGrid[BOOLEAN](grid: separate_bundle_2.data) @ hide
+  switch = match_string ? sample_grid : true @ hide
+  "Color to Hue" {
+    math = Math[LESS_THAN](Value: separate_bundle.data.x, Value_001: separate_bundle.data.y) @ hide
+    math_3 = max(separate_bundle.data.x, separate_bundle.data.y) @ hide
+    math_2 = Math[GREATER_THAN](Value: math_3, Value_001: separate_bundle.data.z) @ hide
+    math_4 = max(separate_bundle.data.x, separate_bundle.data.y) @ hide
+    math_5 = max(math_4, separate_bundle.data.z) @ hide
+    math_6 = min(separate_bundle.data.x, separate_bundle.data.y) @ hide
+    math_7 = min(math_6, separate_bundle.data.z) @ hide
+    math_8 = math_5 - math_7 @ hide
+    mix = Mix(factor: math_2, a: 2.0, b: math)
+    mix_2 = Mix(
+      factor: mix,
+      a: (separate_bundle.data.y - separate_bundle.data.z) / math_8,
+      b: (separate_bundle.data.z - separate_bundle.data.x) / math_8 + 2.0) @ hide
+    math_11 = Math[SUBTRACT, use_clamp: true](Value: mix, Value_001: 1.0) @ hide
+    mix_3 = Mix(
+      factor: math_11,
+      a: mix_2,
+      b: (separate_bundle.data.x - separate_bundle.data.y) / math_8 + 4.0) @ hide
+    math_10 = mix_3 * 0.16666667
+  }
+  math_9 = abs(sin(abs(SeparateColor[HSV](color: Hue).red - math_10) * 3.1415925))
+  boolean_math = switch and (Invert xor Tolerance > math_9) @ hide
+  return (
+    Structure: o_build_structure(
+      solid: Prune ? PruneGrid(grid: math_9 * boolean_math) : boolean_math,
+      color: properties_color,
+      roughness: Roughness,
+      emission: Emission,
+      bump: Bump,
+      name: Name,
+      id: separate_bundle.id - o_float_to_target_digits(value: Tolerance)))
+}

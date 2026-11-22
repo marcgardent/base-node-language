@@ -1,0 +1,15 @@
+shader graph "FresnelRoughness.001"(
+    Fresnel: Float = 0.5999999 in 0.0..1.0,
+    "Fresnel/Facing": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Center: Float(subtype: FACTOR) = 0.3 in 0.0..1.0,
+    Edge: Float(subtype: FACTOR) in 0.0..1.0
+) -> Color {
+  layer_weight = LayerWeight(blend: Fresnel)
+  mix = Mix[RGBA](
+    factor: Mix[RGBA](factor: fresnel_facing, a: layer_weight.fresnel, b: layer_weight.facing),
+    a: Center,
+    b: Edge)
+  "bwide.wordpress.com" {
+    return mix
+  }
+}

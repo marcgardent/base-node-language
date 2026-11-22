@@ -1,0 +1,11 @@
+geometry graph "ov_generated-pos"(
+    Geometry: Geometry,
+    Object: Object
+) -> (Geometry: Geometry, Position: Vector(default_attribute_name: "colPos")) {
+  "Sample Relative Position (Fed to JSON for Min/Max)" {}
+  return (
+    Geometry: Geometry,
+    Position: Position()
+      - (ObjectInfo(object: Object).geometry
+        |> SampleIndex[FLOAT_VECTOR](value: Position(), index: Index())))
+}

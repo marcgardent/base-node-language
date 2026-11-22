@@ -1,0 +1,46 @@
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Select Res ID Range"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    "Res ID" {
+        Min: Int(description: "Minimum of a `res_id` range selection") = 10 in 0..,
+        Max: Int(description: "Maximum of a `res_id` range selection") = 100 in 1..
+    }
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = residue_id()
+  group_2 = boolean_andor(and_: And, or_: Or, boolean: group >= Min and group <= Max)
+  return (Selection: group_2.boolean, Inverted: group_2.inverted)
+}

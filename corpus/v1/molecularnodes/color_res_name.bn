@@ -1,0 +1,135 @@
+geometry graph "Between Integer"(
+    Value: Int(description: "The value to test if it exists within the bounds"),
+    Lower: Int(description: "The lower bounds for the test"),
+    Upper: Int(description: "The upper bounds for the test") = 19
+) -> (
+    Boolean: Bool(
+      description: "Whether the input `Value` is between (and including) the lower and upper bounds")
+) {
+  return (Boolean: Value >= Lower and Value <= Upper)
+}
+
+geometry graph Color(
+    Index: Int = Index() in 0..
+) -> (Color: Color(description: "Read the `Color` attribute from the geometry")) {
+  return (
+    Color: EvaluateAtIndex[FLOAT_COLOR](
+      value: NamedAttribute[FLOAT_COLOR](name: "Color").attribute,
+      index: Index))
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Residue Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_name: Int(description: "Read the `res_name` attribute from the geometry")) {
+  return (res_name: attribute_at_index(index: Index, name: "res_name"))
+}
+
+geometry graph "Color Res Name"(
+    "Peptide"(default_closed: true) {
+        ALA: Color(description: "Set the color for the residue ALA"),
+        ARG: Color(
+          description: "Set the color for the residue ARG") = (0.09462588, 0.09462588, 0.09462588),
+        ASN: Color(
+          description: "Set the color for the residue ASN") = (0.11411894, 0.22025453, 0.18504784),
+        ASP: Color(
+          description: "Set the color for the residue ASP") = (0.14087833, 0.3373804, 0.4292262),
+        CYS: Color(
+          description: "Set the color for the residue CYS") = (0.2810098, 0.15101823, 0.10579018),
+        GLU: Color(
+          description: "Set the color for the residue GLU") = (0.20190106, 0.20190106, 0.20190106),
+        GLN: Color(
+          description: "Set the color for the residue GLN") = (0.12770425, 0.20473987, 0.8),
+        GLY: Color(
+          description: "Set the color for the residue GLY") = (0.8, 0.06895567, 0.06778784),
+        HIS: Color(
+          description: "Set the color for the residue HIS") = (0.1836438, 0.7612732, 0.341103),
+        ILE: Color(
+          description: "Set the color for the residue ILE") = (0.09119512, 0.6266629, 0.1294339),
+        LEU: Color(
+          description: "Set the color for the residue LEU") = (0.03669303, 0.17026514, 0.41093895),
+        LYS: Color(
+          description: "Set the color for the residue LYS") = (0.05221813, 0.05221813, 0.05221813),
+        MET: Color(
+          description: "Set the color for the residue MET") = (0.5277193, 0.45242295, 0.4978911),
+        PHE: Color(
+          description: "Set the color for the residue PHE") = (0.358841, 0.3051302, 0.09418508),
+        PRO: Color(description: "Set the color for the residue PRO") = (0.8, 0.17181273, 0.5252497),
+        SER: Color(description: "Set the color for the residue SER") = (0.8, 0.722058, 0.05199071),
+        THR: Color(
+          description: "Set the color for the residue THR") = (0.10636823, 1.0, 0.11561122),
+        TRP: Color(
+          description: "Set the color for the residue TRP") = (0.5277193, 0.1365669, 0.4106138),
+        TYR: Color(
+          description: "Set the color for the residue TYR") = (0.08601969, 0.3647821, 0.638272),
+        VAL: Color(
+          description: "Set the color for the residue VAL") = (0.0692923, 0.15196387, 0.5596004)
+    },
+    "Nucleic"(default_closed: true) {
+        A: Color(description: "Set the color for the residue A") = (0.273778, 0.547823, 0.8),
+        C: Color(description: "Set the color for the residue C") = (0.294582, 0.8, 0.187789),
+        G: Color(description: "Set the color for the residue G") = (0.85, 0.2514024, 0.17788057),
+        T: Color(description: "Set the color for the residue T") = (0.8, 0.269803, 0.526898),
+        rA: Color(description: "Set the color for the residue rA") = (0.273778, 0.547823, 0.8),
+        rC: Color(description: "Set the color for the residue rC") = (0.294582, 0.8, 0.187789),
+        rG: Color(description: "Set the color for the residue rG") = (0.85, 0.2514024, 0.17788057),
+        rU: Color(description: "Set the color for the residue rU") = (0.8, 0.269803, 0.526898)
+    }
+) -> Color {
+  group = residue_name()
+  return between_integer(value: group, upper: 43)
+    ? IndexSwitch(
+      group,
+      ALA,
+      ARG,
+      ASN,
+      ASP,
+      CYS,
+      GLU,
+      GLN,
+      GLY,
+      HIS,
+      ILE,
+      LEU,
+      LYS,
+      MET,
+      PHE,
+      PRO,
+      SER,
+      THR,
+      TRP,
+      TYR,
+      VAL,
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      A,
+      C,
+      G,
+      T,
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      (0.8, 0.8, 0.8, 1.0),
+      rA,
+      rC,
+      rG,
+      rU)
+    : Color()
+}

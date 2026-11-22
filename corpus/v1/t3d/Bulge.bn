@@ -1,0 +1,89 @@
+geometry graph Bulge(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
+    "X / Y / Z": Int = 3 in 1..3,
+    Strength: Float = 0.5,
+    Offset: Vector,
+    "Limit Lower": Float(subtype: FACTOR) in 0.0..1.0,
+    "Limit Higher": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Smoothness: Float(subtype: FACTOR) in 0.0..1.0
+) -> Geometry {
+  "Center" {
+    bounding_box = BoundingBox(Geometry)
+    store_named_attribute = StoreNamedAttribute[FLOAT_VECTOR](
+      Geometry,
+      name: "Center",
+      value: Mix[VECTOR](factor: 0.5, a: bounding_box.min, b: bounding_box.max) - Offset)
+  }
+  "Vector" {
+    named_attribute = NamedAttribute[FLOAT_VECTOR](name: "Center") @ "Center"
+    named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "Rotation") @ "Rotation"
+    named_attribute_5 = NamedAttribute[FLOAT_VECTOR](name: "Center") @ "Center"
+    vector_math = VectorRotate[EULER_XYZ](
+        vector: Position(),
+        center: named_attribute_5.attribute,
+        rotation: named_attribute_2.attribute)
+      - named_attribute.attribute
+  }
+  "Adding Offsets" {
+    named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "Center") @ "Center"
+    named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "Rotation") @ "Rotation"
+  }
+  "Axis" {
+    store_named_attribute_2 = StoreNamedAttribute[FLOAT_VECTOR](
+      store_named_attribute,
+      name: "Rotation",
+      value: RotationToEuler(
+        rotation: AlignRotationToVector(
+          vector: CombineXYZ(x: x_y_z == 1, y: x_y_z == 2, z: x_y_z == 3))))
+  }
+  "Limits" {
+    attribute_statistic = AttributeStatistic(store_named_attribute_2, attribute: vector_math.z)
+    mix = Mix(factor: limit_lower, a: attribute_statistic.min, b: attribute_statistic.max)
+    mix_2 = Mix(factor: limit_higher, a: attribute_statistic.min, b: attribute_statistic.max)
+  }
+  {
+    math_3 = attribute_statistic.range / 2.0
+    math_2 = attribute_statistic.min / math_3
+    math_4 = math_3 / attribute_statistic.max
+    mix_3 = Mix(
+      factor: Smoothness,
+      a: MapRange(
+        value: vector_math.z,
+        from_min: mix,
+        from_max: mix_2,
+        to_min: math_2,
+        to_max: math_4),
+      b: MapRange[SMOOTHERSTEP, clamp: false](
+        value: vector_math.z,
+        from_min: mix,
+        from_max: mix_2,
+        to_min: math_2,
+        to_max: math_4))
+  }
+  "Deforming" {
+    math = Math[MULTIPLY_ADD](
+      Value: Math[MULTIPLY_ADD](Value: mix_3, Value_001: -mix_3, Value_002: 1.0),
+      Value_001: Strength,
+      Value_002: 1.0)
+    combine_xyz = CombineXYZ(x: vector_math.x * math, y: vector_math.y * math, z: vector_math.z)
+  }
+  "Adding Offsets" .. {
+    vector_rotate = VectorRotate[EULER_XYZ, invert: true](
+      vector: combine_xyz + named_attribute_3.attribute,
+      center: named_attribute_3.attribute,
+      rotation: named_attribute_4.attribute)
+  }
+  {
+    set_position = SetPosition(
+      store_named_attribute_2,
+      selection: Selection,
+      position: vector_rotate)
+  }
+  "Removing Attributes" {
+    remove_named_attribute = set_position
+      |> RemoveNamedAttribute(name: "Center")
+      |> RemoveNamedAttribute(name: "Rotation")
+  }
+  return remove_named_attribute
+}

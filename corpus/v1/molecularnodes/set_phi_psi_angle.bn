@@ -1,0 +1,1139 @@
+geometry graph "Fallback Vector"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Vector(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Output: Vector(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: Name)
+  return (Output: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Group Pick"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(
+      description: "Valid for the point only if there is 1 single `True` for the `Pick` field in the point's group in the `Group ID`"),
+    Index: Int(description: "Index of picked item. Returns -1 if not a valid pick")
+) {
+  "Get the item of the `True` in each `Group ID`, but only if there is a single `True` in each group"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total == 1
+  return (
+    "Is Valid": compare,
+    Index: compare ? AccumulateField[INT](value: Pick ? Index() : 0, group_id: group_id).total : -1)
+}
+
+geometry graph "Group Pick Vector"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true),
+    Position: Vector(
+      description: "Vector field to pick vlaue for, defaults to `Position`",
+      hide_value: true) = Position()
+) -> (
+    "Is Valid": Bool(description: "Whether the pick for the point's `Group ID` is valid"),
+    Index: Int(description: "Picked Index for the Group, -1 if not valid"),
+    Vector: Vector(description: "Picked vector for the group, `(0, 0, 0)` if not valid")
+) {
+  group = group_pick(pick: Pick, group_id: group_id)
+  return (
+    "Is Valid": group.is_valid,
+    Index: group.index,
+    Vector: group.is_valid
+      ? EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: group.index)
+      : (0.0, 0.0, 0.0))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}
+
+geometry graph "Residue Mask"(
+    atom_name: Int(description: "Atom to pick from the group") = 1 in 2..
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(pick: atom_name() == atom_name, group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph ".Backbone Position"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Read,
+    Menu: Menu(
+      description: "the particular backbone residue to read the value from",
+      optional_label: true) = backbone_N
+) -> (Position: Vector) {
+  menu_switch = MenuSwitch(menu: Menu, backbone_N: 1, backbone_CA: 2, backbone_C: 3, backbone_O: 4)
+  index_switch = IndexSwitch(
+    menu_switch.output,
+    "",
+    "backbone_N",
+    "backbone_CA",
+    "backbone_C",
+    "backbone_O")
+  return (
+    Position: MenuSwitch(
+      menu: Method,
+      Read: NamedAttribute[FLOAT_VECTOR](name: index_switch).attribute,
+      Compute: EvaluateAtIndex[FLOAT_VECTOR](
+        value: fallback_vector(
+          name: index_switch,
+          fallback: residue_mask(atom_name: menu_switch.output).position),
+        index: residue_mask(atom_name: 2).index)).output)
+}
+
+geometry graph "Backbone C"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (C: Vector) {
+  return (C: backbone_position(method: Method, menu: backbone_C))
+}
+
+geometry graph "Backbone CA"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (CA: Vector) {
+  return (CA: backbone_position(method: Method, menu: backbone_CA))
+}
+
+geometry graph "Backbone N"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (N: Vector) {
+  return (N: backbone_position(method: Method))
+}
+
+geometry graph "CA Value Float"(Value: Float(hide_value: true)) -> (Value: Float) {
+  return (Value: IndexSwitch(atom_name(), 0.0, 0.0, Value))
+}
+
+geometry graph "CA Value Vector"(Vector: Vector(hide_value: true)) -> Vector {
+  return IndexSwitch(atom_name(), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), Vector)
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph "Group Info"(
+    "Group ID": Int(hide_value: true)
+) -> (Size: Int, "Index in Group": Int, "Index of First": Int, "Index of Last": Int) {
+  index = Index()
+  integer = 1
+  accumulate_field = AccumulateField[INT](value: integer, group_id: group_id)
+  return (
+    Size: accumulate_field.total,
+    "Index in Group": accumulate_field.trailing,
+    "Index of First": AccumulateField[INT](
+      value: accumulate_field.trailing == 0 ? index : 0,
+      group_id: group_id).total,
+    "Index of Last": AccumulateField[INT](
+      value: accumulate_field.leading == accumulate_field.total ? index : 0,
+      group_id: group_id).total)
+}
+
+geometry graph "Index to Factor"(
+    Index: Int(description: "The index starting at 0 within the overall group of size `Size`"),
+    Size: Int(description: "The size of the group that will be used to compute the factor.")
+) -> (Factor: Float(subtype: FACTOR)) {
+  return (
+    Factor: MapRange(value: Index, from_max: IntegerMath[SUBTRACT](Value: Size, Value_001: 1)))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Sub Group Info"(
+    "Sub Group ID": Int(hide_value: true),
+    "Group ID": Int(hide_value: true)
+) -> (
+    Size: Int(description: "Size of each comptued `Group ID`"),
+    "Group ID": Int(
+      description: "A unique `Group ID` that increases whenever `Sub Group ID` or `Group ID` change"),
+    "Index of First": Int(
+      description: "The absolute `Index` of the _first_ point in each computed `Group ID`"),
+    "Index of Last": Int(
+      description: "The absolute `Index` of the _last_ point in each computed `Group ID`"),
+    "Index in Group ID": Int(description: "Index within each computed `Group ID`, starting at 0"),
+    "Sub Group ID": Int,
+    "Sub Group Total": Int
+) {
+  group = integer_run(value: sub_group_id, group_id: group_id)
+  group_2 = group_info(group_id: group.group_id)
+  accumulate_field = AccumulateField[INT](
+    value: group.group_id != offset_integer(integer: group.group_id, offset: 1),
+    group_id: group_id)
+  return (
+    Size: group_2.size,
+    "Group ID": group.group_id,
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last,
+    "Index in Group ID": group_2.index_in_group,
+    "Sub Group ID": accumulate_field.trailing,
+    "Sub Group Total": accumulate_field.total)
+}
+
+geometry graph "Chain Parameter"() -> (
+    Factor: Float(
+      subtype: FACTOR,
+      description: "A residues relative position along a chain. 0 being the first residue in a chain, 1 being the last"),
+    "Residue Count": Int(description: "Number of residues in the chain"),
+    "Residue Index": Int(description: "Res ID along the chain if counting from 1"),
+    "First res_id": Int(
+      description: "The first Res ID in a chain (truncated chains start above 1)"),
+    "Last res_id": Int(
+      description: "The Res ID of the last residue in chain (not equal to Length if chain is truncated)"),
+    "Index of First": Int(description: "Index in whole structure of the first atom in the chain"),
+    "Index of Last": Int(description: "Index in the whole structure the last atom in the chain")
+) {
+  "Information for each residue within the context of the chain"
+  group = chain_id()
+  group_2 = group_info(group_id: group)
+  group_3 = sub_group_info(sub_group_id: residue_id(), group_id: group)
+  return (
+    Factor: index_to_factor(index: group_3.sub_group_id, size: group_3.sub_group_total),
+    "Residue Count": group_3.sub_group_total,
+    "Residue Index": group_3.sub_group_id,
+    "First res_id": residue_id(index: group_3.index_of_first),
+    "Last res_id": residue_id(index: group_3.index_of_last),
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last)
+}
+
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "Dihedral Angle"(
+    A: Vector(description: "First vector for the calculation, which draws a line to B"),
+    B: Vector(
+      description: "Second vector for the calculation, which receives a line from A and draws a line to C"),
+    C: Vector(
+      description: "Third vector for the calculation, which receives a line from B and draws a line to D"),
+    D: Vector(
+      description: "Last vector for the calculation, which is the end point of the line from D")
+) -> (
+    Angle: Float(
+      subtype: ANGLE,
+      description: "The angle between the vectors AB and CD, when made perpendicular to BC."),
+    "BA⟂(BC)": Vector(description: "The vector BA when made perpendicular to  the axis BC"),
+    "CD⟂(BC)": Vector(description: "The Vector CD when makde perpendicular to the axis BC"),
+    BC: Vector(description: "The axis vector BC")
+) {
+  vector_math = D - C
+  vector_math_2 = A - B
+  vector_math_3 = C - B
+  vector_math_4 = vector_math_2
+    - VectorMath[PROJECT](Vector: vector_math_2, Vector_001: vector_math_3)
+  vector_math_5 = vector_math - VectorMath[PROJECT](Vector: vector_math, Vector_001: vector_math_3)
+  return (
+    Angle: vector_angle(a: vector_math_4, b: vector_math_5).angle
+      * sign((vector_math_4 × vector_math_5) ⋅ vector_math_3),
+    "BA⟂(BC)": vector_math_4,
+    "CD⟂(BC)": vector_math_5,
+    BC: vector_math_3)
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Find Connected"(
+    Value: Int(hide_value: true),
+    Match: Int = 2,
+    Distance: Int = 2 in 1..3,
+    Method: Menu(optional_label: true) = Any
+) -> ("Is Valid": Bool, Length: Int, Index: Int) {
+  shortest_edge_paths = ShortestEdgePaths(end_vertex: Value == Match)
+  compare = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 2)
+  compare_2 = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 3)
+  evaluate_at_index = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: shortest_edge_paths.next_vertex_index)
+  evaluate_at_index_2 = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: evaluate_at_index)
+  switch = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 1)
+    ? shortest_edge_paths.next_vertex_index
+    : -1
+  switch_2 = compare ? evaluate_at_index : switch
+  menu_switch = MenuSwitch(
+    menu: Method,
+    Any: IndexSwitch(Distance, 0, switch, switch_2, compare_2 ? evaluate_at_index_2 : switch_2),
+    Exact: IndexSwitch(
+      Distance,
+      0,
+      switch,
+      compare ? evaluate_at_index : -1,
+      compare_2 ? evaluate_at_index_2 : -1))
+  return (
+    "Is Valid": menu_switch.output != -1,
+    Length: FloatToInteger(float: shortest_edge_paths.total_cost),
+    Index: menu_switch.output)
+}
+
+geometry graph "Menu Atom Name"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (atom_name: Int, Selection: Bool, atom_name as atom_name_string: String) {
+  index_switch = IndexSwitch(
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    50,
+    51,
+    51,
+    52,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77)
+  menu_switch = MenuSwitch(
+    menu: atom_name,
+    N: 1,
+    CA: 2,
+    C: 3,
+    O: 4,
+    CB: 5,
+    CG: 6,
+    CG1: 7,
+    CG2: 8,
+    OG: 9,
+    OG1: 10,
+    SG: 11,
+    CD: 12,
+    CD1: 13,
+    CD2: 14,
+    ND1: 15,
+    ND2: 16,
+    OD1: 17,
+    OD2: 18,
+    SD: 19,
+    CE: 20,
+    CE1: 21,
+    CE2: 23,
+    CE3: 24,
+    NE: 25,
+    NE1: 26,
+    NE2: 27,
+    OE1: 28,
+    OE2: 29,
+    CH2: 30,
+    NH1: 31,
+    NH2: 32,
+    OH: 33,
+    CZ: 34,
+    CZ2: 35,
+    CZ3: 36,
+    NZ: 37,
+    OXT: 38,
+    P: 50,
+    O1P: 51,
+    OP1: 51,
+    OP2: 52,
+    O2P: 52,
+    "O5'": 53,
+    "C5'": 54,
+    "C4'": 55,
+    "O4'": 56,
+    "C3'": 57,
+    "O3'": 58,
+    "C2'": 59,
+    "O2'": 60,
+    "C1'": 61,
+    N1: 62,
+    N9: 63,
+    N3: 64,
+    C8: 65,
+    N7: 66,
+    C5: 67,
+    C6: 68,
+    N6: 69,
+    C2: 70,
+    C4: 71,
+    O6: 72,
+    N2: 73,
+    N4: 74,
+    O2: 75,
+    O4: 76,
+    C7: 77)
+  menu_switch_2 = MenuSwitch(
+    menu: N,
+    N: "N",
+    CA: "CA",
+    C: "C",
+    O: "O",
+    CB: "CB",
+    CG: "CG",
+    CG1: "CG1",
+    CG2: "CG2",
+    OG: "OG",
+    OG1: "OG1",
+    SG: "SG",
+    CD: "CD",
+    CD1: "CD1",
+    CD2: "CD2",
+    ND1: "ND1",
+    ND2: "ND2",
+    OD1: "OD1",
+    OD2: "OD2",
+    SD: "SD",
+    CE: "CE",
+    CE1: "CE1",
+    CE2: "CE2",
+    CE3: "CE3",
+    NE: "NE",
+    NE1: "NE1",
+    NE2: "NE2",
+    OE1: "OE1",
+    OE2: "OE2",
+    CH2: "CH2",
+    NH1: "NH1",
+    NH2: "NH2",
+    OH: "OH",
+    CZ: "CZ",
+    CZ2: "CZ2",
+    CZ3: "CZ3",
+    NZ: "NZ",
+    OXT: "OXT",
+    P: "P",
+    O1P: "O1P",
+    OP1: "OP1",
+    OP2: "OP2",
+    O2P: "O2P",
+    "O5'": "O5'",
+    "C5'": "C5'",
+    "C4'": "C4'",
+    "O4'": "O4'",
+    "C3'": "C3'",
+    "O3'": "O3'",
+    "C2'": "C2'",
+    "O2'": "O2'",
+    "C1'": "C1'",
+    N1: "N1",
+    N9: "N9",
+    N3: "N3",
+    C8: "C8",
+    N7: "N7",
+    C5: "C5",
+    C6: "C6",
+    N6: "N6",
+    C2: "C2",
+    C4: "C4",
+    O6: "O6",
+    N2: "N2",
+    N4: "N4",
+    O2: "O2",
+    O4: "O4",
+    C7: "C7")
+  return (
+    atom_name: menu_switch.output,
+    Selection: menu_switch.output == atom_name(),
+    atom_name_string: IndexSwitch(
+      menu_switch.output,
+      "N",
+      "CA",
+      "C",
+      "O",
+      "CB",
+      "CG",
+      "CG1",
+      "CG2",
+      "OG",
+      "OG1",
+      "SG",
+      "CD",
+      "CD1",
+      "CD2",
+      "ND1",
+      "ND2",
+      "OD1",
+      "OD2",
+      "SD",
+      "CE",
+      "CE1",
+      "CE2",
+      "CE3",
+      "NE",
+      "NE1",
+      "NE2",
+      "OE1",
+      "OE2",
+      "CH2",
+      "NH1",
+      "NH2",
+      "OH",
+      "CZ",
+      "CZ2",
+      "CZ3",
+      "NZ",
+      "OXT",
+      "P",
+      "O1P",
+      "OP1",
+      "OP2",
+      "O2P",
+      "O5'",
+      "C5'",
+      "C4'",
+      "O4'",
+      "C3'",
+      "O3'",
+      "C2'",
+      "O2'",
+      "C1'",
+      "N1",
+      "N9",
+      "N3",
+      "C8",
+      "N7",
+      "C5",
+      "C6",
+      "N6",
+      "C2",
+      "C4",
+      "O6",
+      "N2",
+      "N4",
+      "O2",
+      "O4",
+      "C7"))
+}
+
+geometry graph "Find Bonded Atom"(
+    Index: Int = Index() in 0..,
+    Method: Menu(optional_label: true) = Exact,
+    "Atom Name": Menu(optional_label: true) = N,
+    Distance: Int = 2 in 1..3
+) -> ("Is Valid": Bool, Index: Int, Position: Vector) {
+  group = find_connected(
+    value: atom_name(),
+    match: menu_atom_name(atom_name: atom_name).atom_name,
+    distance: Distance,
+    method: Method)
+  evaluate_at_index = EvaluateAtIndex[INT](value: group.index, index: Index)
+  return (
+    "Is Valid": group.is_valid,
+    Index: evaluate_at_index,
+    Position: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_at_index))
+}
+
+geometry graph "Menu Residue Mask"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(
+    pick: menu_atom_name(atom_name: atom_name).selection,
+    group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph "Dihedral Phi"(
+    Menu: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    Phi: Float(
+      subtype: ANGLE,
+      description: "The calculated `Phi` angle for the residue, in the range of `(-pi, pi)`"),
+    Up: Vector(description: "The perpendicular vector from the line of BC to the point A"),
+    Axis: Vector(
+      description: "The vector BC corresponding to the backbone vector around which the angle is calculated")
+) {
+  menu_switch = MenuSwitch(menu: Menu, Read: 0, Compute: 1)
+  group = dihedral_angle(
+    a: backbone_c(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    b: backbone_ca(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    c: backbone_n(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    d: find_bonded_atom(index: menu_residue_mask().index, atom_name: C, distance: 1).position)
+  return (
+    Phi: -(chain_parameter().residue_index
+      ? ca_value_float(value: fallback_float(name: "Phi", fallback: group.angle))
+      : 0.0),
+    Up: ca_value_vector(vector: group.ba_bc),
+    Axis: ca_value_vector(vector: group.bc))
+}
+
+geometry graph "Dihedral Psi"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    Psi: Float(
+      subtype: ANGLE,
+      description: "The calculated `Psi` angle for the residue, in the range of `(-pi, pi)`"),
+    Up: Vector(description: "The perpendicular vector from the line of BC to the point A"),
+    Axis: Vector(
+      description: "The vector BC corresponding to the backbone vector around which the angle is calculated")
+) {
+  menu_switch = MenuSwitch(menu: Method, Read: 0, Compute: 1)
+  group = dihedral_angle(
+    a: backbone_n(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    b: backbone_ca(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    c: backbone_c(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    d: find_bonded_atom(index: menu_residue_mask(atom_name: C).index, distance: 1).position)
+  return (
+    Psi: -ca_value_float(value: fallback_float(name: "Psi", fallback: group.angle)),
+    Up: ca_value_vector(vector: group.ba_bc),
+    Axis: ca_value_vector(vector: group.bc))
+}
+
+geometry graph "Boolean Last"(
+    Boolean: Bool(
+      description: "Value to test for True when tracking `Index` locations",
+      hide_value: true) = true
+) -> (
+    "Index of Last": Int(
+      description: "Accumulating in the point domain, this is the index where the `Boolean` was last `True`. For a point where the `Boolean` is `True`, the index will be of the _previous_ time this was true, but the next point will then reference this point")
+) {
+  "Index of last time the `Boolean` is true for each `Group ID` (not including the current point). "
+  accumulate_field = AccumulateField[INT](value: Boolean)
+  group = offset_integer(
+    integer: AccumulateField[INT](
+      value: AccumulateField[INT](group_id: accumulate_field.leading).trailing == 0 ? Index() : 0,
+      group_id: accumulate_field.trailing).total)
+  return (
+    "Index of Last": accumulate_field.leading > 0
+      ? offset_integer(
+        integer: group_info(group_id: accumulate_field.leading).index_of_first,
+        offset: -1)
+      : -1)
+}
+
+geometry graph "Domain Switch Matrix"(
+    Menu: Menu(optional_label: true) = Point,
+    Point: Matrix,
+    Edge: Matrix,
+    Face: Matrix,
+    "Face Corner": Matrix,
+    Spline: Matrix,
+    Instance: Matrix
+) -> (Output: Matrix) {
+  return (
+    Output: MenuSwitch(
+      menu: Menu,
+      Point: Point,
+      Edge: Edge,
+      Face: Face,
+      "Face Corner": face_corner,
+      Spline: Spline,
+      Instance: Instance).output)
+}
+
+geometry graph ".Accumulate Domain Transform"(
+    Domain: Menu(hide_value: true, optional_label: true) = Point,
+    Transform: Matrix(hide_value: true),
+    "Group ID": Int(hide_value: true)
+) -> (Leading: Matrix, Trailling: Matrix) {
+  accumulate_field = AccumulateField[TRANSFORM](value: Transform, group_id: group_id)
+  accumulate_field_2 = AccumulateField[TRANSFORM, EDGE](value: Transform, group_id: group_id)
+  accumulate_field_3 = AccumulateField[TRANSFORM, FACE](value: Transform, group_id: group_id)
+  accumulate_field_4 = AccumulateField[TRANSFORM, CORNER](value: Transform, group_id: group_id)
+  accumulate_field_5 = AccumulateField[TRANSFORM, CURVE](value: Transform, group_id: group_id)
+  accumulate_field_6 = AccumulateField[TRANSFORM, INSTANCE](value: Transform, group_id: group_id)
+  return (
+    Leading: domain_switch_matrix(
+      menu: Domain,
+      point: accumulate_field.leading,
+      edge: accumulate_field_2.leading,
+      face: accumulate_field_3.leading,
+      face_corner: accumulate_field_4.leading,
+      spline: accumulate_field_5.leading,
+      instance: accumulate_field_6.leading),
+    Trailling: domain_switch_matrix(
+      menu: Domain,
+      point: accumulate_field.trailing,
+      edge: accumulate_field_2.trailing,
+      face: accumulate_field_3.trailing,
+      face_corner: accumulate_field_4.trailing,
+      spline: accumulate_field_5.trailing,
+      instance: accumulate_field_6.trailing))
+}
+
+geometry graph "Transform Accumulate"(
+    Domain: Menu(
+      description: "Domain on which to accumulate transforms",
+      optional_label: true) = Point,
+    Accumulate: Bool(
+      description: "Selected transforms are included in the accumulation, non-selected transforms become identity matrices",
+      hide_value: true) = true,
+    Transform: Matrix(description: "Transform field to accumulate", hide_value: true),
+    "Group ID": Int(
+      description: "Transform field is accumulated individually for each `Group ID`",
+      hide_value: true)
+) -> (Transform: Matrix(description: "The accumulating Transform field")) {
+  return (
+    Transform: accumulate_domain_transform(
+      domain: Domain,
+      transform: Switch[MATRIX](switch: Accumulate, true_: Transform),
+      group_id: group_id).leading)
+}
+
+geometry graph "Transform Local Axis"(
+    Origin: Vector(
+      subtype: TRANSLATION,
+      description: "The vector defining the local space. Defaults to `Position`",
+      hide_value: true) = Position(),
+    Axis: Vector(description: "The axis to rotate around") = (0.0, 0.0, 1.0),
+    Angle: Float(subtype: ANGLE, description: "Amount to rotate around the axis")
+) -> (Transform: Matrix(description: "The Transform around the axis")) {
+  "Create a transform around an axis in local space defined by the `Origin` point"
+  return (
+    Transform: MultiplyMatrices(
+      Matrix: CombineTransform(
+        translation: Origin,
+        rotation: AxisAngleToRotation(axis: Axis, angle: Angle)),
+      Matrix_001: CombineTransform(translation: -Origin)))
+}
+
+geometry graph "Accumulate Axis Rotation"(
+    Position: Vector(description: "Position vector to transform") = Position(),
+    Selection: Bool(hide_value: true) = true,
+    Pivot: Bool(
+      description: "The points at which points where `Accumulate` is true will look to for their axis of transformation.",
+      hide_value: true),
+    Angle: Float(subtype: ANGLE, description: "Amount to rotate around the axis"),
+    "Group ID": Int(
+      description: "Transform field is accumulated individually for each `Group ID`",
+      hide_value: true),
+    "Transform Index": Int(
+      description: "Index at which to evaluate the final transform for the positon. For most cases this will be `Index`, but it might be that some points need to use the accumulated transform from another point instead",
+      hide_value: true) = Index() in 0..
+) -> (
+    Position: Vector(subtype: XYZ, description: "Transformed vector"),
+    Trasnform: Matrix(
+      description: "The accumlated transform, not yet applied to the `Position` vector")
+) {
+  evaluate_at_index = EvaluateAtIndex[FLOAT4X4](
+    value: transform_accumulate(
+      accumulate: Selection,
+      transform: transform_local_axis(
+        origin: Position,
+        axis: EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: boolean_last(boolean: Pivot))
+          - Position,
+        angle: Angle),
+      group_id: group_id),
+    index: transform_index)
+  return (
+    Position: TransformPoint(vector: Position, transform: evaluate_at_index),
+    Trasnform: evaluate_at_index)
+}
+
+geometry graph "Atomic Number"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atomic_number: Int(
+      description: "Read the `atomic_number` attribute from the geometry corresponding to elements")
+) {
+  return (atomic_number: attribute_at_index(index: Index, name: "atomic_number"))
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Is Hydrogen"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "Computed selection that includes Hydrogen atoms"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(and_: And, or_: Or, boolean: atomic_number() == 1)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Hydrogen Bonding Partner"() -> (Index: Int) {
+  edge_vertices = EdgeVertices()
+  edges_of_vertex = EdgesOfVertex()
+  evaluate_at_index = EvaluateAtIndex[EDGE, INT](
+    value: edge_vertices.vertex_index_1,
+    index: edges_of_vertex.edge_index)
+  return (
+    Index: is_hydrogen(and_: EdgesOfVertex().total == 1).selection
+      ? (evaluate_at_index == Index()
+        ? EvaluateAtIndex[EDGE, INT](
+          value: edge_vertices.vertex_index_2,
+          index: edges_of_vertex.edge_index)
+        : evaluate_at_index)
+      : Index())
+}
+
+geometry graph ".MN_constants_atom_name_peptide"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Alpha Carbon": Int
+) {
+  integer = 5
+  integer_2 = 49
+  integer_3 = 4
+  integer_4 = 1
+  integer_5 = 2
+  return (
+    "Backbone Lower": integer_4,
+    "Backbone Upper": integer_3,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Alpha Carbon": integer_5)
+}
+
+geometry graph ".MN_select_peptide"() -> (
+    "Is Backbone": Bool,
+    "Is Side Chain": Bool,
+    "Is Peptide": Bool,
+    "Is Alpha Carbon": Bool
+) {
+  group = mn_constants_atom_name_peptide()
+  group_2 = atom_name()
+  compare = group_2 == group.alpha_carbon
+  return (
+    "Is Backbone": group_2 >= group.backbone_lower and group_2 <= group.backbone_upper,
+    "Is Side Chain": group_2 >= group.side_chain_lower and group_2 <= group.side_chain_upper
+      or compare,
+    "Is Peptide": group_2 >= group.backbone_lower and group_2 <= group.side_chain_upper,
+    "Is Alpha Carbon": compare)
+}
+
+geometry graph "Fallback Boolean"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Bool(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Boolean: Bool(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  "Computes the boolean field if the given attribute doesn't exist. If it doesn't exist it just uses the attribute instead"
+  named_attribute = NamedAttribute[BOOLEAN](name: Name)
+  return (Boolean: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Is Peptide"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(name: "is_peptide", fallback: mn_select_peptide().is_peptide))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph ".MN_constants_atom_name_nucleic"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Side Chain Joint Carbon": Int
+) {
+  integer = 61
+  integer_2 = 77
+  integer_3 = 50
+  integer_4 = 61
+  integer_5 = 54
+  return (
+    "Backbone Lower": integer_3,
+    "Backbone Upper": integer_4,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Side Chain Joint Carbon": integer_5)
+}
+
+geometry graph ".MN_select_nucleic"() -> (
+    "Is Backbone": Bool(
+      description: "True for atoms that are part of the sugar-phosphate backbone for the nucleotides"),
+    "Is Side Chain": Bool(
+      description: "True for atoms that are part of the bases for nucleotides."),
+    "Is Nucleic": Bool(description: "True if the atoms are part of a nucleic acid")
+) {
+  group = mn_constants_atom_name_nucleic()
+  named_attribute = NamedAttribute[INT](name: "atom_name")
+  return (
+    "Is Backbone": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.backbone_upper,
+    "Is Side Chain": named_attribute.attribute >= group.side_chain_lower
+      and named_attribute.attribute <= group.side_chain_upper,
+    "Is Nucleic": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.side_chain_upper)
+}
+
+geometry graph "Is Alpha Carbon"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(
+      name: "is_alpha_carbon",
+      fallback: mn_select_peptide().is_alpha_carbon))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Side Chain"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    "Include CA": Bool(description: "Include the alpha carbon as part of the side chain") = true
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = fallback_boolean(
+    name: "is_side_chain",
+    fallback: mn_select_nucleic().is_side_chain or mn_select_peptide().is_side_chain)
+  group_2 = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: include_ca ? group : nimply(group, is_alpha_carbon().selection))
+  return (Selection: group_2.boolean, Inverted: group_2.inverted)
+}
+
+geometry graph "Override Index"(
+    Selection: Bool(hide_value: true) = true,
+    Index: Int(hide_value: true) = Index(),
+    Override: Int
+) -> (Output: Int) {
+  return (Output: Selection ? Override : Index)
+}
+
+geometry graph "Peptide Dihedral"(
+    Position: Vector(hide_value: true) = Position(),
+    Selection: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Phi: Float(subtype: ANGLE),
+    Psi: Float(subtype: ANGLE)
+) -> (Position: Vector(subtype: XYZ, description: "Transformed vector")) {
+  group = atom_name()
+  boolean = true
+  group_2 = is_peptide(and_: Selection)
+  return (
+    Position: group_2.selection
+      ? accumulate_axis_rotation(
+        position: Position,
+        selection: group_2.selection,
+        pivot: IndexSwitch(group, false, boolean, boolean, boolean),
+        angle: IndexSwitch(
+          group,
+          0.0,
+          0.0,
+          chain_parameter().residue_index ? Phi : 0.0,
+          EvaluateAtIndex(value: Psi, index: menu_residue_mask(atom_name: CA).index),
+          0.0),
+        group_id: chain_id(),
+        transform_index: override_index(
+          selection: is_side_chain(include_ca: false).selection,
+          index: hydrogen_bonding_partner(),
+          override: residue_mask(atom_name: 2).index)).position
+      : Position)
+}
+
+geometry(is_modifier: false) graph "Set Phi Psi Angle"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Phi: Float(subtype: ANGLE) in -10000.0..10000.0,
+    Psi: Float(subtype: ANGLE) in -10000.0..10000.0
+) -> Geometry {
+  return SetPosition(
+    Geometry,
+    position: peptide_dihedral(
+      selection: Selection,
+      phi: Math[MULTIPLY_ADD](Value: dihedral_phi().phi, Value_001: -1.0, Value_002: Phi),
+      psi: Math[MULTIPLY_ADD](Value: dihedral_psi().psi, Value_001: -1.0, Value_002: Psi)))
+}

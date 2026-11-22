@@ -1,0 +1,40 @@
+shader graph PT_HVBoards(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Boards: Int = 4 in 1..,
+    "UV oriented": Bool = true
+) -> (Position: Vector, UV: Vector, "UV center": Vector, Color: Color, Edge: Float, Masks: Int) {
+  combine_xyz = CombineXYZ(x: Boards, y: 1.0)
+  combine_xyz_2 = CombineXYZ(x: 1.0, y: Boards)
+  vector_math_3 = Vector * Scale
+  "checker" {
+    math = Math[FLOORED_MODULO](
+      Value: Math[MULTIPLY](Value: floor(vector_math_3), Value_001: 3.0),
+      Value_001: 2.0)
+  }
+  vector_math_4 = fract(vector_math_3)
+  vector_math = fract(vector_math_4 * combine_xyz) / combine_xyz
+  vector_math_2 = fract(vector_math_4 * combine_xyz_2) / combine_xyz_2
+  mix = Mix[VECTOR](factor: math, a: vector_math_2, b: vector_math)
+  math_2 = 1.0 / Boards
+  mix_2 = Mix[VECTOR](
+    factor: math,
+    a: vector_math_2,
+    b: CombineXYZ(
+      x: vector_math.y,
+      y: MapRange(value: vector_math.x, from_max: math_2, to_min: math_2, to_max: 0.0)))
+  math_3 = math_2 / 2.0 @ hide
+  combine_xyz_3 = CombineXYZ(x: 0.5, y: math_3)
+  vector_math_5 = mix
+    - Mix[VECTOR](factor: math, a: combine_xyz_3, b: CombineXYZ(x: math_3, y: 0.5))
+  vector_math_6 = Vector - vector_math_5 / Scale
+  vector_math_7 = vector_math_6 * Scale + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_6,
+    UV: (uv_oriented ? mix_2 : mix) / Scale,
+    "UV center": (uv_oriented ? mix_2 - combine_xyz_3 : vector_math_5) / Scale,
+    Color: WhiteNoiseTexture(vector: vector_math_7).color,
+    Edge: min(Math[PINGPONG](Value: mix_2.y, Value_001: math_3), Math[PINGPONG](Value: mix_2.x))
+      / Scale,
+    Masks: math)
+}

@@ -1,0 +1,126 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Redistribute Curve Points"(
+    Curves: Geometry,
+    Factor: Float(subtype: FACTOR, description: "Factor to blend overall effect") = 1.0 in 0.0..1.0,
+    "Feature Awareness": Bool(
+      description: "Use simple feature awareness to keep feature definition")
+) -> (Curves: Geometry) {
+  {
+    blur_attribute = BlurAttribute(
+      value: SplineParameter().factor,
+      iterations: 10,
+      weight: (not EndpointSelection())
+        * MapRange[SMOOTHSTEP](value: abs(CurveTangent() ⋅ curve_segment().segment_direction)))
+  }
+  "Equidistant Distribution" {
+    math = PointsOfCurve(curve_index: curve_info().curve_index).total - 1.0 @ hide
+    math_2 = SplineParameter().index / math
+  }
+  {
+    mix = Mix(
+      factor: Factor,
+      a: SplineParameter().factor,
+      b: feature_awareness ? blur_attribute : math_2)
+  }
+  "Mask Selection" {
+    boolean_math = not EndpointSelection() and Factor > 0.0
+  }
+  "Resample Position Along Curves" {
+    set_position = SetPosition(
+      Curves,
+      selection: boolean_math,
+      position: SampleCurve[FLOAT_VECTOR](
+        Curves,
+        factor: mix,
+        curve_index: curve_info().curve_index).position)
+  }
+  return (Curves: set_position)
+}

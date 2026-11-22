@@ -1,0 +1,16 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atomic Number"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atomic_number: Int(
+      description: "Read the `atomic_number` attribute from the geometry corresponding to elements")
+) {
+  return (atomic_number: attribute_at_index(index: Index, name: "atomic_number"))
+}

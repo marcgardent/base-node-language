@@ -1,0 +1,91 @@
+geometry graph "Store Bend Rotation"(
+    Curves: Geometry,
+    "Bend Rotation Name": String(optional_label: true) = "rest_bend_rotation",
+    "Rotation Name": String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  named_attribute = NamedAttribute[QUATERNION](name: rotation_name)
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: bend_rotation_name,
+      value: RotateRotation[LOCAL](
+        rotation: InvertRotation(rotation: named_attribute.attribute),
+        rotate_by: EvaluateAtIndex[QUATERNION](
+          value: named_attribute.attribute,
+          index: OffsetPointInCurve(offset: 1).point_index))))
+}
+
+geometry graph "Edge Length"() -> (Length: Float) {
+  edge_vertices = EdgeVertices()
+  return (
+    Length: EvaluateOnDomain[EDGE](
+      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
+}
+
+geometry graph "Store Edge Length"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_length"
+) -> (Curves: Geometry) {
+  return (Curves: StoreNamedAttribute[EDGE](Curves, name: Name, value: edge_length()))
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to previous point on curve"),
+    "Segment Direction": Vector(
+      description: "Direction from previous neighboring point on segment"),
+    "Neighbor Index": Int(description: "Index of previous neighboring point on segment")
+) {
+  boolean = true
+  evaluate_on_domain = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  position = Position()
+  switch = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  evaluate_on_domain_2 = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch))
+  return (
+    "Segment Length": evaluate_on_domain ? length(evaluate_on_domain_2) : 0.0,
+    "Segment Direction": evaluate_on_domain ? normalize(evaluate_on_domain_2) : (0.0, 0.0, 0.0),
+    "Neighbor Index": evaluate_on_domain ? EvaluateOnDomain[INT](value: switch) : 0)
+}
+
+geometry graph "Store Segment Length"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_length"
+) -> (Curves: Geometry) {
+  return (Curves: StoreNamedAttribute(Curves, name: Name, value: curve_segment().segment_length))
+}
+
+geometry graph "Store Segment Rotation"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  position = Position()
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: Name,
+      value: AxesToRotation(
+        primary_axis: EvaluateAtIndex[FLOAT_VECTOR](
+            value: position,
+            index: OffsetPointInCurve(offset: 1).point_index)
+          - position,
+        secondary_axis: Normal().normal)))
+}
+
+geometry(is_modifier: false) graph "Setup Structural Rest Data"(Geometry: Geometry) -> Geometry {
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  get_geometry_component_2 = GetGeometryComponent(
+    get_geometry_component.geometry,
+    type: "Grease Pencil")
+  get_geometry_component_3 = GetGeometryComponent(get_geometry_component_2.geometry)
+  return get_geometry_component_3.geometry
+    + store_edge_length(get_geometry_component_3.component)
+    + (get_geometry_component_2.component
+      |> store_segment_length()
+      |> store_segment_rotation()
+      |> store_bend_rotation())
+    + (get_geometry_component.component
+      |> store_segment_length()
+      |> store_segment_rotation()
+      |> store_bend_rotation())
+}

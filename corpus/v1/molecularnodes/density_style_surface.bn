@@ -1,0 +1,20 @@
+geometry(is_modifier: false) graph "Density Style Surface"(
+    Volume: Geometry,
+    Threshold: Float = 0.8,
+    "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+    "Hide Dust": Float in -10000.0..10000.0,
+    "Material" {
+        Color: Color = (0.199436, 0.509163, 0.13218),
+        Material: Material(description: "Material to apply to the resulting geometry")
+    }
+) -> (Geometry: Geometry(description: "The generated geometry for the style node group")) {
+  return (
+    Geometry: Volume
+      |> VolumeToMesh(threshold: Threshold)
+      |> DeleteGeometry(
+        selection: AccumulateField(value: FaceArea(), group_id: MeshIsland().island_index).total
+          < hide_dust)
+      |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: Color)
+      |> SetMaterial(material: Material)
+      |> SetShadeSmooth(shade_smooth: shade_smooth))
+}

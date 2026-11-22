@@ -1,0 +1,152 @@
+geometry graph "Curve Rotation"(
+    Normal: Vector(
+      description: "The default direction to use as the Secondary Axis / X axis when computing the rotation") = Normal()
+) -> (Rotation: Rotation(description: "The computed rotation for the point on the curve")) {
+  "Computes the rotation of the point on the curve, by default using the `Normal` attribute and the `Tangent` axis"
+  return (Rotation: AxesToRotation(primary_axis: CurveTangent(), secondary_axis: Normal))
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "MN Units"(
+    Value: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (Angstrom: Float, Nanometre: Float) {
+  math = Value * mn_world_scale()
+  return (Angstrom: math, Nanometre: math * 10.0)
+}
+
+geometry graph "Primitive Arrow"(
+    Vertices: Int = 6 in 3..16,
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0,
+    Ratio: Float(subtype: FACTOR) = 0.7 in 0.0..1.0,
+    Value: Color = (0.8, 0.8, 0.8),
+    Material: Material(description: "Material to apply to the resulting geometry")
+) -> Geometry {
+  math = Height * Ratio
+  math_2 = Height - math
+  return (Cone(vertices: Vertices, radius_bottom: 0.2, depth: math_2).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: Height - math_2)))
+      + (Cylinder(vertices: Vertices, radius: 0.08, depth: math).mesh
+        |> TransformGeometry(translation: CombineXYZ(z: math / 2.0)))
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "Color", value: Value)
+    |> SetMaterial(material: Material)
+}
+
+geometry graph "Primitive Gimbal"(
+    Vertices: Int = 6 in 3..16,
+    X: Color = (0.623968, 0.01033, 0.063011),
+    Y: Color = (0.076185, 0.623968, 0.084375),
+    Z: Color = (0.0, 0.00091, 0.623968),
+    Material: Material(description: "Material to apply to the resulting geometry"),
+    Height: Float(subtype: DISTANCE) = 1.0 in 0.0..10000.0
+) -> Geometry {
+  repeat_output = repeat(3, Geometry: Geometry, Integer: 0) -> {
+    return (
+      Geometry: Geometry
+        + (primitive_arrow(
+            vertices: Vertices,
+            height: Height,
+            value: IndexSwitch(Integer, X, Y, Z),
+            material: Material)
+          |> TransformGeometry(
+            rotation: IndexSwitch[ROTATION](
+              Integer,
+              (0.0, 1.5707964, 0.0),
+              (-1.5707964, 0.0, 0.0),
+              (0.0, 0.0, 0.0)))),
+      Integer: Int = Integer + 1.0)
+  }
+  return repeat_output.geometry
+}
+
+geometry graph "Set Color"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Color: Color(
+      description: "Color to apply to the selected atoms") = (0.161517, 0.623961, 0.195602)
+) -> (Atoms: Geometry(description: "Atomic geometry with an updated `Color` attribute")) {
+  return (
+    Atoms: StoreNamedAttribute[FLOAT_COLOR](
+      Atoms,
+      selection: Selection,
+      name: "Color",
+      value: Color))
+}
+
+geometry graph "Unit Convert"(
+    "Distance Type": Menu(
+      description: "What unit to scale the value to",
+      optional_label: true) = Angstrom,
+    From: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (
+    World: Float(description: "The value that has been scaled appropriately for the world space")
+) {
+  math = From * mn_world_scale()
+  math_2 = math * 10.0
+  return (
+    World: MenuSwitch(
+      menu: distance_type,
+      Angstrom: math,
+      Nanometre: math_2,
+      Micrometre: math_2 * 1000.0).output)
+}
+
+geometry(is_modifier: false) graph "Curve Visualize"(
+    Curve: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Position: Vector(hide_value: true) = Position(),
+    Normal: Vector(hide_value: true) = Normal(),
+    Handles: Bool,
+    Value: Float = 3.0 in -10000.0..10000.0,
+    "Arrow Size": Float = 2.0 in -10000.0..10000.0
+) -> (Instances: Geometry) {
+  capture_attribute = CaptureAttribute(
+    Curve,
+    Selection as selection_2: Selection,
+    Position: Position,
+    Normal: Normal)
+  curve_handle_positions = CurveHandlePositions(relative: true)
+  group = curve_rotation(normal: capture_attribute.normal)
+  set_spline_type = capture_attribute.geometry
+    |> SeparateComponents().curve
+    |> SetSplineType[BEZIER]() @ mute
+  set_handle_type = SetHandleType(set_spline_type) @ mute
+  group_2 = set_color(set_handle_type, color: (0.0, 0.0, 0.0, 1.0))
+  group_3 = unit_convert(from: 2.0)
+  group_4 = unit_convert(from: 2.0)
+  instance_on_points = InstanceOnPoints(
+    group_2,
+    instance: primitive_arrow(
+      vertices: 3,
+      value: (0.1056426, 0.800023, 0.793708, 1.0),
+      material: "Ambient Occlusion"),
+    rotation: AlignRotationToVector(vector: curve_handle_positions.left),
+    scale: CombineXYZ(x: group_3, y: group_3, z: length(curve_handle_positions.left)))
+  join_geometry = instance_on_points
+    + InstanceOnPoints(
+      group_2,
+      instance: primitive_arrow(
+        vertices: 3,
+        value: (0.8000315, 0.49981865, 0.01965215, 1.0),
+        material: "Ambient Occlusion"),
+      rotation: AlignRotationToVector(vector: curve_handle_positions.right),
+      scale: CombineXYZ(x: group_4, y: group_4, z: length(curve_handle_positions.right)))
+  return (
+    Instances: Switch[GEOMETRY](switch: Handles, true_: join_geometry + instance_on_points)
+      + (group_2
+        |> SetPosition(
+          selection: capture_attribute.selection_2,
+          position: capture_attribute.position)
+        |> InstanceOnPoints(
+          instance: primitive_gimbal(vertices: 3, material: "Ambient Occlusion"),
+          rotation: NamedAttribute[QUATERNION](name: "rotation").attribute,
+          scale: mn_units(value: arrow_size).angstrom))
+      + capture_attribute.geometry)
+}

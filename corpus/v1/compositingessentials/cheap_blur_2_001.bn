@@ -1,0 +1,29 @@
+compositor graph "Cheap Blur 2.001"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    Size: Float
+) -> (Image: Color) {
+  math_2 = Size * 0.01
+  clamp = Clamp(
+    value: FloatCurve[
+      mapping: Curve(
+        (0.0, 1.0, VECTOR),
+        (0.1, 1.0, VECTOR),
+        (0.101, 0.6666667, VECTOR),
+        (0.5, 0.666667, VECTOR),
+        (0.75, 0.5, VECTOR),
+        (3.0, 0.33333),
+        (5.0, 0.25, AUTO_CLAMPED),
+        use_clip: false)](value: math_2),
+    min: 0.0625)
+  math = 1.0 / clamp
+  map_range = MapRange(value: Size, from_min: 2.0, from_max: 2.01)
+  viewer = Viewer(math_2)
+  return (
+    Image: Switch(
+      switch: map_range,
+      false_: Switch(switch: map_range, false_: Image) |> Filter(factor: Size * 0.5),
+      true_: Switch(switch: map_range, true_: Image)
+        |> Scale(x: clamp, y: clamp, extension_x: Extend, extension_y: Extend)
+        |> Blur(size: clamp * Size)
+        |> Scale(x: math, y: math)))
+}

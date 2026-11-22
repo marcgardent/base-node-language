@@ -1,0 +1,10 @@
+geometry graph "Seamless Vector"(
+    Position: Vector(hide_value: true) = Position() in -10000.0..10000.0
+) -> (Vector: Vector, W: Float) {
+  "Loop" {
+    vector_math = Position * 6.2831855
+    combine_xyz = CombineXYZ(x: sin(vector_math.x), y: cos(vector_math.x), z: sin(vector_math.y))
+    math = cos(vector_math.y)
+  }
+  return (Vector: combine_xyz, W: math)
+}

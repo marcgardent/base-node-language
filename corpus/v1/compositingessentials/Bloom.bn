@@ -1,0 +1,81 @@
+compositor graph Bloom(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    Type: Menu(optional_label: true) = Bloom,
+    Quality: Menu(optional_label: true) = Medium,
+    "Highlights"(default_closed: true) {
+        Threshold: Float(
+          description: "The brightness level at which pixels are considered part of the highlights that produce a glare") = 1.0 in 0.0..,
+        Smoothness: Float(
+          subtype: FACTOR,
+          description: "The smoothness of the extracted highlights") = 0.1 in 0.0..1.0,
+        "Clamp"(default_closed: true) {
+            Clamp: Bool(description: "Clamp bright highlights"),
+            Maximum: Float(
+              description: "Clamp bright highlights such that their brightness are not larger than this value") = 10.0 in 0.0..
+        }
+    },
+    "Adjust" {
+        Strength: Float(
+          subtype: FACTOR,
+          description: "Adjusts the brightness of the glare") = 1.0 in 0.0..1.0,
+        Saturation: Float(
+          subtype: FACTOR,
+          description: "Adjusts the saturation of the glare") = 1.0 in 0.0..1.0,
+        Tint: Color(
+          description: "Tints the glare. Consider desaturating the glare to more accurate tinting") = (1.0, 1.0, 1.0)
+    },
+    "Glare" {
+        Size: Float(
+          subtype: FACTOR,
+          description: "The size of the glare relative to the image. 1 means the glare covers the entire image, 0.5 means the glare covers half the image, and so on") = 0.5 in 0.0..1.0,
+        Streaks: Int(description: "The number of streaks") = 4 in 1..16,
+        "Streaks Angle": Float(
+          subtype: ANGLE,
+          description: "The angle that the first streak makes with the horizontal axis"),
+        Iterations: Int(
+          description: "The number of ghosts for Ghost glare or the quality and spread of Glare for Streaks and Simple Star") = 3 in 2..5,
+        Fade: Float(subtype: FACTOR, description: "Streak fade-out factor") = 0.9 in 0.75..1.0,
+        "Color Modulation": Float(
+          subtype: FACTOR,
+          description: "Modulates colors of streaks and ghosts for a spectral dispersion effect") = 0.25 in 0.0..1.0,
+        Diagonal: Bool(description: "Align the star diagonally") = true,
+        "Sun Position": Vector(
+          subtype: FACTOR,
+          description: "The position of the source of the rays in normalized coordinates. 0 means lower left corner and 1 means upper right corner") = (0.5, 0.5) in 0.0..1.0,
+        Jitter: Float(
+          subtype: FACTOR,
+          description: "The amount of jitter to introduce while computing rays, higher jitter can be faster but can produce grainy or noisy results") in 0.0..1.0,
+        "Kernel Data Type": Menu(optional_label: true) = Float,
+        Kernel: Float(hide_value: true),
+        Kernel as kernel_color: Color(hide_value: true) = (0.8, 0.8, 0.8)
+    }
+) -> (
+    Image: Color(description: "The image with the generated glare added"),
+    Glare: Color(description: "The generated glare"),
+    Highlights: Color(description: "The extracted highlights from which the glare was generated")
+) {
+  glare = Glare(
+    Image,
+    type: Type,
+    quality: Quality,
+    threshold: Threshold,
+    smoothness: Smoothness,
+    clamp: Clamp,
+    maximum: Maximum,
+    strength: Strength,
+    saturation: Saturation,
+    tint: Tint,
+    size: Size,
+    streaks: Streaks,
+    streaks_angle: streaks_angle,
+    iterations: Iterations,
+    fade: Fade,
+    color_modulation: color_modulation,
+    diagonal: Diagonal,
+    sun_position: sun_position,
+    jitter: Jitter,
+    kernel_data_type: kernel_data_type,
+    "Float Kernel": Kernel,
+    "Color Kernel": kernel_color)
+  return (Image: glare.image, Glare: glare.glare, Highlights: glare.highlights)
+}

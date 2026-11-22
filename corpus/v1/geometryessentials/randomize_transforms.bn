@@ -1,0 +1,73 @@
+geometry(show_modifier_manage_panel: false) graph "Randomize Transforms"(
+    Instances: Geometry(description: "Instances to rotate individually"),
+    Selection: Bool(
+      description: "Selection of instances to randomize",
+      hide_value: true,
+      hide_in_modifier: true) = true,
+    "Local Space": Bool(
+      description: "Randomize instance transforms in their individual local space") = true,
+    Offset: Vector(
+      subtype: XYZ,
+      description: "Offset the instances randomly",
+      structure_type: FIELD) in -10000.0..10000.0,
+    Rotation: Vector(
+      subtype: EULER,
+      description: "Rotate the instances randomly",
+      structure_type: FIELD) in -10000.0..10000.0,
+    "Scale Axes": Menu(
+      description: "Whether to apply random scale uniformly or per axis",
+      force_non_field: true,
+      menu_expanded: true,
+      optional_label: true,
+      structure_type: SINGLE) = Uniform,
+    Scale: Vector(
+      description: "Scale the instances randomly per axis",
+      structure_type: FIELD) in 0.0..1.0,
+    Scale as scale_float: Float(
+      subtype: FACTOR,
+      description: "Scale the instances randomly",
+      structure_type: FIELD) in 0.0..1.0,
+    Flipping: Vector(
+      subtype: FACTOR,
+      description: "Flip a fraction of instances along individual axes",
+      structure_type: FIELD) in 0.0..1.0,
+    Seed: Int(
+      description: "Base value to control random variation in a reproducible way",
+      force_non_field: true,
+      structure_type: SINGLE)
+) -> (Instances: Geometry) {
+  hash_value_2 = HashValue(value: Seed, seed: 465656096)
+  hash_value = HashValue(value: hash_value_2, seed: 76836728)
+  switch = local_space ? (0.0, 0.0, 0.0) : Position()
+  return (
+    Instances: Instances
+      |> RotateInstances(
+        selection: Selection,
+        rotation: RandomValue[FLOAT_VECTOR](
+          min: Rotation * -0.5,
+          max: Rotation * 0.5,
+          seed: hash_value_2),
+        pivot_point: switch,
+        local_space: local_space)
+      |> TranslateInstances(
+        selection: Selection,
+        translation: RandomValue[FLOAT_VECTOR](
+            min: (-1.0, -1.0, -1.0),
+            seed: HashValue(value: hash_value, seed: 587641147))
+          * Offset,
+        local_space: local_space)
+      |> ScaleInstances(
+        selection: Selection,
+        scale: (1.0
+            - IndexSwitch[VECTOR](
+              MenuSwitch(menu: scale_axes, Uniform: 0, Axes: 1).output,
+              RandomValue(max: scale_float, seed: hash_value),
+              RandomValue[FLOAT_VECTOR](max: Scale, seed: hash_value)))
+          * sign(
+            RandomValue[FLOAT_VECTOR](
+              min: 1.0 - Flipping,
+              max: 0.0 - Flipping,
+              seed: HashValue(value: hash_value, seed: 76881592))),
+        center: switch,
+        local_space: local_space))
+}

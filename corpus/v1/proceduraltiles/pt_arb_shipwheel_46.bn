@@ -1,0 +1,87 @@
+shader graph "PT_ARB_ShipWheel(46)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 3.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  combine_xyz = CombineXYZ(x: 0.5)
+  value = 0.0 @ hide
+  "p4m(11)" #7b2a1b {
+    vector_math_12 = Vector * Scale
+    vector_math_13 = fract(vector_math_12) - (0.5, 0.5, 0.0)
+    vector_math_14 = abs(vector_math_13)
+    vector_math_15 = floor(vector_math_12) + (0.5, 0.5, 0.0) @ hide
+    math_14 = sign(vector_math_13.x) @ hide
+    math_15 = sign(vector_math_13.y) @ hide
+    vector_math_16 = (1.0, 0.0, 0.0) * math_14 @ hide
+    vector_math_17 = (0.0, 1.0, 0.0) * math_15 @ hide
+    math_16 = vector_math_14.x - vector_math_14.y < 0.0
+    mix_14 = math_16 ? vector_math_17 : vector_math_16 @ hide
+    mix_15 = math_16 ? vector_math_16 : vector_math_17 @ hide
+    mix_16 = math_16 ? CombineXYZ(x: vector_math_14.y, y: vector_math_14.x) : vector_math_14
+  }
+  vector_math = mix_16 - (0.073223, 0.030330086, 0.0) @ hide
+  vector_math_2 = mix_16 - (0.4267767, 0.17677669, 0.0) @ hide
+  vector_math_3 = mix_16 - (0.4696699, 0.426777, 0.0) @ hide
+  vector_math_4 = vector_math ⋅ (0.9238795, -0.38268343, 0.0) @ #c93535 hide
+  vector_math_5 = vector_math ⋅ (0.382683, 0.92388, 0.0) @ #c93535 hide
+  vector_math_6 = vector_math_2 ⋅ (0.9238795, -0.38268343, 0.0) @ #40b15b hide
+  vector_math_7 = vector_math_3 ⋅ (0.382683, -0.92388, 0.0) @ #3f74b3 hide
+  vector_math_8 = vector_math_3 ⋅ (-0.92388, -0.382683, 0.0) @ #3f74b3 hide
+  vector_math_9 = vector_math_2 ⋅ (0.382683, 0.92388, 0.0) @ #40b15b hide
+  vector_math_10 = mix_16 ⋅ (-0.382683, 0.92388, 0.0) @ hide
+  math = abs(vector_math_10) @ hide
+  math_2 = math - 0.05604269 @ hide
+  vector_math_11 = mix_16 ⋅ (0.92388, 0.382683, 0.0) @ hide
+  math_3 = vector_math_11 - 0.32664075 @ hide
+  math_4 = max(max(vector_math_6, vector_math_9), math_2)
+  math_5 = math_3 < 0.0 @ hide
+  math_6 = math_4 < 0.0 @ hide
+  math_7 = vector_math_6 < 0.0 @ hide
+  math_8 = vector_math_9 < 0.0 @ hide
+  math_9 = vector_math_10 < 0.0 @ hide
+  math_10 = vector_math_7 < 0.0 @ hide
+  math_11 = vector_math_8 < 0.0 @ hide
+  math_12 = vector_math_5 < 0.0 @ hide
+  math_13 = vector_math_4 < 0.0 @ hide
+  mix = math_5
+    ? (math_6
+      ? (math_12
+        ? (math_13 ? (0.0, 0.0, 0.0) : (0.093443364, 0.0, 0.0))
+        : math_13 ? (0.06607444, 0.066074, 0.0) : (0.19989301, 0.0827984, 0.0))
+      : math_9 ? (0.27440777, 0.0, 0.0) : (0.19403559, 0.19403559, 0.0))
+    : math_6
+      ? (0.35245955, 0.14599352, 0.0)
+      : math_7
+        ? (math_9
+          ? combine_xyz
+          : math_10
+            ? (math_11 ? (0.5, 0.5, 0.0) : (0.43392557, 0.43392557, 0.0))
+            : math_11 ? (0.5, 0.40655664, 0.0) : (0.33793873, 0.33793873, 0.0))
+        : math_8 ? combine_xyz : (0.5, 0.22559223, 0.0)
+  mix_6 = math_8 ? value : 3.0 @ hide
+  mix_9 = math_11 ? 5.0 : 4.0 @ hide
+  mix_10 = math_11 ? 7.0 : 6.0 @ hide
+  mix_8 = math_10 ? mix_10 : mix_9 @ hide
+  mix_7 = math_9 ? value : mix_8 @ hide
+  mix_5 = math_7 ? mix_7 : mix_6 @ hide
+  mix_3 = math_6 ? 1.0 : mix_5 @ hide
+  mix_12 = math_13 ? 9.0 : 8.0 @ hide
+  mix_13 = math_13 ? 11.0 : 10.0 @ hide
+  mix_11 = math_12 ? mix_13 : mix_12 @ hide
+  mix_4 = math_6 ? 2.0 : mix_11 @ hide
+  mix_2 = math_5 ? mix_4 : mix_3 @ hide
+  vector_math_19 = mix_14 * mix.x + mix_15 * mix.y + vector_math_15
+  vector_math_18 = vector_math_19 / Scale
+  vector_math_20 = vector_math_19 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_18,
+    UV: Vector - vector_math_18,
+    Color: WhiteNoiseTexture(vector: vector_math_20).color,
+    Edge: min(
+        min(
+          min(abs(vector_math_4), abs(vector_math_5)),
+          min(abs(min(-min(vector_math_6, vector_math_9), math_4)), abs(math_3))),
+        min(abs(vector_math_7), abs(vector_math_8)))
+      / Scale,
+    Masks: mix_2)
+}

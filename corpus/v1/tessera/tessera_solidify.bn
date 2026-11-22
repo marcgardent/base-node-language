@@ -1,0 +1,711 @@
+geometry graph "Tessera · Inset"(
+    Geometry: Geometry,
+    Distance: Float,
+    Selection: Bool(hide_value: true) = true
+) -> Geometry {
+  index = Index()
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: -1))
+  evaluate_at_index_2 = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: 1))
+  vector_math = normalize((position - evaluate_at_index) * (1.0, 1.0, 0.0))
+  vector_math_2 = normalize((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0))
+  combine_xyz = CombineXYZ(x: -vector_math.y, y: vector_math.x)
+  combine_xyz_2 = CombineXYZ(x: -vector_math_2.y, y: vector_math_2.x)
+  vector_math_3 = (combine_xyz + combine_xyz_2)
+    * (Distance / max(combine_xyz ⋅ combine_xyz_2 + 1.0, 0.08))
+  return SetPosition(
+    Geometry,
+    offset: EvaluateOnDomain[CORNER, FLOAT_VECTOR](
+        value: Selection
+          ? vector_math_3
+            * min(
+              1.0,
+              min(
+                  length((position - evaluate_at_index) * (1.0, 1.0, 0.0)),
+                  length((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0)))
+                * 0.45
+                / max(length(vector_math_3), 1e-12))
+          : (0.0, 0.0, 0.0))
+      * VertexNeighbors().face_count)
+}
+
+geometry(is_modifier: false) graph "Tessera · Solidify"(
+    Geometry: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    Scale: Float,
+    Rotation: Float,
+    Seed: Int,
+    Mapping: Int,
+    "UV Scale": Float,
+    "Grout Width": Float,
+    Thickness: Float,
+    Bevel: Float,
+    "Bevel Segments": Int,
+    "Position Jitter": Float,
+    "Rotation Jitter": Float,
+    "Scale Jitter": Float,
+    "Stretch Jitter": Float,
+    "Edge Wobble": Float,
+    "Height Jitter": Float,
+    "Tilt Jitter": Float,
+    "Quarter Turns": Bool,
+    "Relief Class": Int,
+    "Relief Height": Float,
+    "Viewport Simplify": Bool,
+    Strapwork: Bool,
+    "Strap Height": Float,
+    "Weave Depth": Float,
+    "Chip Rim": Float,
+    Openwork: Bool,
+    "Band Joints": Float,
+    "Broken Tiles": Float,
+    "Grout Depth": Float,
+    "Chip Depth": Float,
+    "Joint Guard": Float,
+    Bites: Float,
+    "Bite Size": Float,
+    "Bite Depth": Float,
+    Gone: Geometry
+) -> (Geometry: Geometry, Holes: Geometry) {
+  combine_xyz = CombineXYZ(
+    x: (region_min.x + region_max.x) * 0.5,
+    y: (region_min.y + region_max.y) * 0.5)
+  math = grout_width
+    * 0.5
+    * (AttributeStatistic[FACE](Geometry, attribute: NamedAttribute(name: "ts_band").attribute).max
+        > 0.5
+      ? (NamedAttribute(name: "ts_band").attribute > 0.5 ? band_joints : 2.0 - band_joints)
+      : 1.0)
+  edge_vertices = EdgeVertices()
+  delete_geometry = DeleteGeometry[FACE](
+    Geometry,
+    selection: FaceArea()
+        * 2.0
+        / max(
+          EvaluateOnDomain[FACE](
+              value: EvaluateOnDomain[EDGE](
+                value: length(edge_vertices.position_1 - edge_vertices.position_2)))
+            * FaceNeighbors().vertex_count,
+          1e-09)
+      < (math + Bevel + chip_rim) * 1.15 + 1e-05)
+  extrude_mesh = ExtrudeMesh(
+    delete_geometry,
+    offset: (0.0, 0.0, 1.0),
+    offset_scale: 0.0,
+    individual: false)
+  compare = EvaluateOnDomain(
+      value: EvaluateOnDomain[FACE](
+        value: NamedAttribute[BOOLEAN](name: "ts_strap").attribute ? 1.0 : 0.0))
+    < 0.999
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  white_noise_texture = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.131)
+  separate_color = SeparateColor(color: white_noise_texture.color)
+  white_noise_texture_2 = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.713)
+  separate_color_2 = SeparateColor(color: white_noise_texture_2.color)
+  math_2 = (separate_color_2.red * 2.0 - 1.0) * stretch_jitter
+  math_3 = (white_noise_texture.value * 2.0 - 1.0) * scale_jitter
+  math_4 = (separate_color.blue * 2.0 - 1.0) * rotation_jitter
+  math_5 = (separate_color.red * 2.0 - 1.0) * position_jitter
+  math_6 = (separate_color.green * 2.0 - 1.0) * position_jitter
+  math_7 = min(
+        max(math * 0.9, 0.0005)
+          / max(
+            length(CombineXYZ(x: math_5, y: math_6))
+              + max(NamedAttribute(name: "ts_psize").attribute * (Scale * 0.72), 1e-06)
+                * (abs(math_2) + abs(math_3) + abs(math_4)),
+            1e-09),
+        1.0)
+      * joint_guard
+    + (1.0 - joint_guard)
+  math_8 = math_2 * math_7
+  math_9 = separate_color_2.green * 3.1415927
+  math_10 = math_4 * math_7 + NamedAttribute(name: "ts_flow").attribute
+  vector_math = CombineXYZ(x: math_5, y: math_6) * math_7
+  separate_color_3 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: Position() * (1.0 / Scale),
+        Vector_001: (0.0078125, 0.0078125, 1.0)),
+      w: Seed + 0.29).color)
+  position = Position()
+  separate_color_4 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.913).color)
+  compare_2 = separate_color_4.red < broken_tiles
+  store_named_attribute = (Strapwork
+      ? extrude_mesh.mesh
+        |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_strap", value: extrude_mesh.side)
+        |> tessera_inset(
+          distance: math,
+          selection: not NamedAttribute[BOOLEAN](name: "ts_strap").attribute)
+      : tessera_inset(delete_geometry, distance: math))
+    |> SetPosition(
+      selection: compare,
+      position: named_attribute.attribute
+        + vector_math
+        + VectorRotate[Z_AXIS](
+          vector: VectorRotate[Z_AXIS](
+              vector: VectorRotate[Z_AXIS](
+                  vector: Position() - named_attribute.attribute,
+                  angle: -math_9)
+                * CombineXYZ(x: 1.0 + math_8, y: 1.0 - math_8, z: 1.0),
+              angle: math_9)
+            * (1.0 + math_3 * math_7),
+          angle: math_10))
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](
+      name: "ts_c2",
+      value: named_attribute.attribute + vector_math)
+    |> StoreNamedAttribute[FACE](name: "ts_alpha", value: math_10)
+    |> SetPosition(
+      selection: compare,
+      offset: CombineXYZ(x: separate_color_3.red * 2.0 - 1.0, y: separate_color_3.green * 2.0 - 1.0)
+        * edge_wobble)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "ts_panel_uv",
+      value: Mapping == 2
+        ? Position() * (1.0 / uv_scale)
+        : CombineXYZ(
+          x: (position.x - region_min.x) / max(region_max.x - region_min.x, 1e-06),
+          y: (position.y - region_min.y) / max(region_max.y - region_min.y, 1e-06)))
+    |> StoreNamedAttribute[FACE](name: "ts_broken", value: compare_2 ? 1.0 : 0.0)
+  math_11 = separate_color_4.green * 6.2831855
+  math_12 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-05)
+  separate_geometry = SeparateGeometry[FACE](
+    store_named_attribute,
+    selection: compare_2 and compare)
+  set_position = SetPosition(
+    separate_geometry.selection,
+    offset: CombineXYZ(z: EvaluateOnDomain[FACE](value: Index()) * 0.01))
+  domain_size = DomainSize(set_position)
+  sample_index = SampleIndex[FLOAT_VECTOR, FACE](
+    set_position,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_c2").attribute,
+    index: Index())
+  separate_color_5 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: SampleIndex[FLOAT_VECTOR, FACE](
+              set_position,
+              value: NamedAttribute[FLOAT_VECTOR](name: "ts_c").attribute,
+              index: Index())
+            * (1.0 / Scale)
+          + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.913).color)
+  math_13 = separate_color_5.green * 6.2831855
+  combine_xyz_2 = CombineXYZ(x: cos(math_13), y: sin(math_13))
+  math_14 = max(
+    SampleIndex[FACE](
+        set_position,
+        value: NamedAttribute(name: "ts_psize").attribute,
+        index: Index())
+      * Scale,
+    1e-05)
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "ts_c2")
+  position_2 = Position()
+  compare_3 = position_2.x < -0.0001
+  math_15 = atan2(position_2.y, position_2.x)
+  named_attribute_3 = NamedAttribute(name: "ts_bsz")
+  position_3 = Position()
+  set_position_2 = Points(
+      count: domain_size.face_count,
+      position: CombineXYZ(x: sample_index.x, y: sample_index.y, z: Index() * 0.01)
+        + combine_xyz_2 * (math_14 * (0.04 + separate_color_5.blue * 0.24)))
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_bn", value: combine_xyz_2)
+    |> StoreNamedAttribute(name: "ts_bsz", value: math_14)
+    |> StoreNamedAttribute(name: "ts_bang", value: math_13)
+    |> InstanceOnPoints(
+      instance: MeshCircle[NGON](vertices: 56)
+        |> StoreNamedAttribute(
+          name: "ts_jag",
+          value: compare_3 ? 1.0 - pow(abs(position_2.y), 6.0) : 0.0)
+        |> SetPosition(
+          position: compare_3
+            ? CombineXYZ(y: (3.1415927 - (math_15 + (math_15 < 0.0) * 6.2831855)) / 1.5707964)
+            : CombineXYZ(x: position_2.x * 1.7, y: position_2.y)),
+      rotation: CombineXYZ(z: NamedAttribute(name: "ts_bang").attribute),
+      scale: CombineXYZ(
+        x: NamedAttribute(name: "ts_bsz").attribute,
+        y: NamedAttribute(name: "ts_bsz").attribute,
+        z: 1.0))
+    |> RealizeInstances()
+    |> SetPosition(
+      offset: NamedAttribute[FLOAT_VECTOR](name: "ts_bn").attribute
+        * (((NoiseTexture(
+                  vector: position_3 * (5.0 / named_attribute_3.attribute),
+                  scale: 1.0).factor
+                - 0.5)
+              * 0.5
+            + (NoiseTexture(
+                  vector: position_3 * (16.0 / named_attribute_3.attribute) + (7.0, 3.0, 1.0),
+                  scale: 1.0,
+                  detail: 1.0).factor
+                - 0.5)
+              * 0.3
+            + (SeparateColor(
+                  color: WhiteNoiseTexture["4D"](
+                    vector: position_3 * (40.0 / named_attribute_3.attribute),
+                    w: Seed + 0.61).color).red
+                - 0.5)
+              * 0.045)
+          * (named_attribute_3.attribute * NamedAttribute(name: "ts_jag").attribute)))
+    |> SetPosition(offset: (0.0, 0.0, -0.004))
+  bounding_box = BoundingBox(set_position)
+  position_4 = Position()
+  switch = broken_tiles > 0.0
+    ? (Switch[GEOMETRY](
+          switch: domain_size.face_count > 0,
+          true_: MeshBoolean[INTERSECT, EXACT](
+              Cube(size: bounding_box.max - bounding_box.min + (0.5, 0.5, 0.04)).mesh
+                |> TransformGeometry(translation: (bounding_box.min + bounding_box.max) * 0.5)
+                |> MeshBoolean[DIFFERENCE, EXACT](
+                  MergeByDistance(
+                    FlipFaces(set_position_2)
+                      + ExtrudeMesh(
+                        set_position_2,
+                        offset: (0.0, 0.0, 1.0),
+                        offset_scale: 0.008,
+                        individual: false).mesh,
+                    distance: 1e-07)).mesh,
+              set_position,
+              hole_tolerant: true).mesh
+            |> SplitEdges()
+            |> SetPosition(position: CombineXYZ(x: position_4.x, y: position_4.y))
+            |> StoreNamedAttribute(
+              name: "ts_frac",
+              value: 1.0
+                - MapRange[SMOOTHSTEP](
+                  value: abs(
+                      (Position() - named_attribute_2.attribute).x * cos(math_11)
+                        + (Position() - named_attribute_2.attribute).y * sin(math_11)
+                        - math_12 * (0.04 + separate_color_4.blue * 0.24))
+                    / math_12,
+                  from_min: 0.12,
+                  from_max: 0.3))
+            |> DeleteGeometry[FACE](selection: FaceArea() < math_12 * 0.16 * (math_12 * 0.16)))
+        |> RemoveNamedAttribute(name: "ts_bn")
+        |> RemoveNamedAttribute(name: "ts_bsz")
+        |> RemoveNamedAttribute(name: "ts_bang")
+        |> RemoveNamedAttribute(name: "ts_jag"))
+      + StoreNamedAttribute(separate_geometry.inverted, name: "ts_frac")
+    : store_named_attribute
+  math_16 = min(Bevel, Thickness * 0.95)
+  switch_2 = IsViewport() and viewport_simplify ? min(bevel_segments, 1.0) : bevel_segments
+  boolean_math = switch_2 > 0 and math_16 > 1e-07
+  switch_3 = boolean_math ? math_16 : 0.0
+  white_noise_texture_3 = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.557)
+  separate_color_6 = SeparateColor(color: white_noise_texture_3.color)
+  separate_color_7 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.389).color)
+  boolean_math_2 = separate_color_6.red < Bites
+    and compare
+    and NamedAttribute(name: "ts_broken").attribute < 0.5
+  math_17 = bite_depth * (0.7 + white_noise_texture_3.value * 0.6)
+  switch_4 = math_17 > 0.92
+    ? 0.0
+    : max(min(Thickness * (1.0 - math_17), Thickness - switch_3 - 0.0003), 0.0002)
+  separate_geometry_2 = switch
+    |> StoreNamedAttribute[FACE](name: "ts_zlo", value: boolean_math_2 ? switch_4 : 0.0)
+    |> StoreNamedAttribute[FACE](
+      name: "ts_zmid",
+      value: boolean_math_2
+        ? max(
+          min(Thickness - (Thickness - switch_4) * 0.38, Thickness - switch_3 - 0.0003),
+          switch_4)
+        : 0.0)
+    |> StoreNamedAttribute[FACE](name: "ts_q2", value: separate_color_7.green)
+    |> SeparateGeometry[FACE](selection: boolean_math_2)
+  math_18 = max(CornersOfFace().total, 1.0)
+  math_19 = floor(separate_color_6.green * math_18)
+  math_20 = floor(separate_color_7.red * math_18)
+  store_named_attribute_2 = separate_geometry_2.selection
+    |> SetPosition(offset: CombineXYZ(z: EvaluateOnDomain[FACE](value: Index()) * 0.01))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qa0",
+      value: VertexOfCorner(corner_index: CornersOfFace(sort_index: math_19).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qb0",
+      value: VertexOfCorner(
+        corner_index: CornersOfFace(
+          sort_index: Math[FLOORED_MODULO](Value: math_19 + 1.0, Value_001: math_18)).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qa1",
+      value: VertexOfCorner(corner_index: CornersOfFace(sort_index: math_20).corner_index))
+    |> StoreNamedAttribute[INT, FACE](
+      name: "ts_qb1",
+      value: VertexOfCorner(
+        corner_index: CornersOfFace(
+          sort_index: Math[FLOORED_MODULO](Value: math_20 + 1.0, Value_001: math_18)).corner_index))
+  domain_size_2 = DomainSize(store_named_attribute_2)
+  index = Index()
+  math_21 = floor(index * 0.5)
+  compare_4 = index - math_21 * 2.0 > 0.5
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    store_named_attribute_2,
+    value: Position(),
+    index: compare_4
+      ? SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qa1").attribute,
+        index: math_21)
+      : SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qa0").attribute,
+        index: math_21))
+  sample_index_3 = SampleIndex[FLOAT_VECTOR](
+    store_named_attribute_2,
+    value: Position(),
+    index: compare_4
+      ? SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qb1").attribute,
+        index: math_21)
+      : SampleIndex[INT, FACE](
+        store_named_attribute_2,
+        value: NamedAttribute[INT](name: "ts_qb0").attribute,
+        index: math_21))
+  separate_color_8 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](vector: CombineXYZ(x: index, y: 0.37), w: Seed + 0.83).color)
+  vector_math_2 = sample_index_2
+    + (sample_index_3 - sample_index_2)
+      * (separate_color_8.red < 0.4 ? 0.0 : 0.12 + separate_color_8.green * 0.76)
+  vector_math_3 = sample_index_3 - sample_index_2
+  position_5 = Position()
+  math_22 = max(NamedAttribute(name: "ts_qr").attribute, 1e-06)
+  vector_math_4 = Position() - NamedAttribute[FLOAT_VECTOR](name: "ts_qc").attribute
+  set_position_3 = Points(count: domain_size_2.face_count * 2.0, position: vector_math_2)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "ts_qc", value: vector_math_2)
+    |> StoreNamedAttribute(
+      name: "ts_qr",
+      value: min(
+        bite_size
+          * (0.55 + separate_color_8.blue * separate_color_8.blue * separate_color_8.blue * 1.5),
+        max(
+            SampleIndex[FACE](
+                store_named_attribute_2,
+                value: NamedAttribute(name: "ts_psize").attribute,
+                index: math_21)
+              * Scale,
+            1e-05)
+          * 0.42))
+    |> StoreNamedAttribute(name: "ts_qang", value: atan2(vector_math_3.y, vector_math_3.x))
+    |> DeleteGeometry(
+      selection: compare_4
+        and SampleIndex[FACE](
+            store_named_attribute_2,
+            value: NamedAttribute(name: "ts_q2").attribute,
+            index: math_21)
+          > 0.35)
+    |> InstanceOnPoints(
+      instance: MeshCircle[NGON](vertices: 11)
+        |> SetPosition(position: CombineXYZ(x: position_5.x * 1.6, y: position_5.y * 0.7)),
+      rotation: CombineXYZ(z: NamedAttribute(name: "ts_qang").attribute),
+      scale: CombineXYZ(
+        x: NamedAttribute(name: "ts_qr").attribute,
+        y: NamedAttribute(name: "ts_qr").attribute,
+        z: 1.0))
+    |> RealizeInstances()
+    |> SetPosition(
+      offset: normalize(CombineXYZ(x: vector_math_4.x, y: vector_math_4.y))
+        * (((NoiseTexture(vector: Position() * (2.5 / math_22), scale: 1.0).factor - 0.5) * 0.35
+            + (SeparateColor(
+                  color: WhiteNoiseTexture["4D"](
+                    vector: Position() * (25.0 / math_22),
+                    w: Seed + 0.17).color).red
+                - 0.5)
+              * 0.6)
+          * math_22))
+  named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "ts_qc")
+  set_position_4 = SetPosition(set_position_3, offset: (0.0, 0.0, -0.004))
+  remove_named_attribute = FlipFaces(set_position_4)
+      + ExtrudeMesh(
+        set_position_4,
+        offset: (0.0, 0.0, 1.0),
+        offset_scale: 0.008,
+        individual: false).mesh
+    |> MergeByDistance(distance: 1e-07)
+    |> RemoveNamedAttribute(name: "ts_qc")
+    |> RemoveNamedAttribute(name: "ts_qr")
+    |> RemoveNamedAttribute(name: "ts_qang")
+  set_position_5 = set_position_3
+    |> SetPosition(
+      position: named_attribute_4.attribute + (Position() - named_attribute_4.attribute) * 0.55)
+    |> SetPosition(offset: (0.0, 0.0, -0.004))
+  remove_named_attribute_2 = FlipFaces(set_position_5)
+      + ExtrudeMesh(
+        set_position_5,
+        offset: (0.0, 0.0, 1.0),
+        offset_scale: 0.008,
+        individual: false).mesh
+    |> MergeByDistance(distance: 1e-07)
+    |> RemoveNamedAttribute(name: "ts_qc")
+    |> RemoveNamedAttribute(name: "ts_qr")
+    |> RemoveNamedAttribute(name: "ts_qang")
+  bounding_box_2 = BoundingBox(store_named_attribute_2)
+  transform_geometry = Cube(size: bounding_box_2.max - bounding_box_2.min + (0.5, 0.5, 0.04)).mesh
+    |> TransformGeometry(translation: (bounding_box_2.min + bounding_box_2.max) * 0.5)
+  position_6 = Position()
+  position_7 = Position()
+  compare_5 = Bites > 0.0
+  extrude_mesh_2 = ExtrudeMesh(
+    compare_5
+      ? SetPosition(
+        (Switch[GEOMETRY](
+              switch: domain_size_2.face_count > 0,
+              true_: MeshBoolean[INTERSECT, EXACT](
+                  MeshBoolean[DIFFERENCE, EXACT](transform_geometry, remove_named_attribute).mesh,
+                  store_named_attribute_2,
+                  hole_tolerant: true).mesh
+                |> StoreNamedAttribute(
+                  name: "ts_frac",
+                  value: max(
+                    NamedAttribute(name: "ts_frac").attribute,
+                    1.0
+                      - MapRange[SMOOTHSTEP](
+                        value: GeometryProximity(remove_named_attribute).distance,
+                        from_min: 1e-05,
+                        from_max: 4e-05)))
+                |> SplitEdges()
+                |> SetPosition(position: CombineXYZ(x: position_7.x, y: position_7.y))
+                |> DeleteGeometry[FACE](selection: FaceArea() < 1e-08))
+            |> RemoveNamedAttribute(name: "ts_qa0")
+            |> RemoveNamedAttribute(name: "ts_qb0")
+            |> RemoveNamedAttribute(name: "ts_qa1")
+            |> RemoveNamedAttribute(name: "ts_qb1"))
+          + separate_geometry_2.inverted,
+        offset: CombineXYZ(z: NamedAttribute(name: "ts_zmid").attribute))
+      : switch,
+    offset: (0.0, 0.0, 1.0),
+    offset_scale: NamedAttribute[BOOLEAN](name: "ts_strap").attribute
+      ? max(Thickness + strap_height, 1e-05)
+      : max(
+        Thickness
+          - switch_3
+          + (relief_class >= 0 and NamedAttribute[INT](name: "ts_class").attribute == relief_class
+            ? relief_height
+            : 0.0)
+          - NamedAttribute(name: "ts_zmid").attribute,
+        1e-05))
+  math_23 = max(switch_2, 1.0)
+  repeat_output = repeat(
+    boolean_math ? switch_2 : 0,
+    Geometry: extrude_mesh_2.mesh
+      |> StoreNamedAttribute[FACE](selection: extrude_mesh_2.side, name: "ts_bevel", value: 1.0)
+      |> StoreNamedAttribute[BOOLEAN, FACE](
+        name: "ts_top",
+        value: extrude_mesh_2.top and not NamedAttribute[BOOLEAN](name: "ts_strap").attribute)) -> {
+    math_24 = iteration / math_23 * 1.5707964
+    math_25 = (iteration + 1.0) / math_23 * 1.5707964
+    extrude_mesh_3 = ExtrudeMesh(
+      Geometry,
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: switch_3 * (sin(math_25) - sin(math_24)),
+      individual: false)
+    return extrude_mesh_3.mesh
+      |> StoreNamedAttribute[FACE](
+        selection: extrude_mesh_3.side,
+        name: "ts_bevel",
+        value: 1.0 - (iteration + 1.0) / (math_23 + 1.0))
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_3.top)
+      |> tessera_inset(
+        distance: switch_3 * (cos(math_24) - cos(math_25)),
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+  }
+  named_attribute_5 = NamedAttribute(name: "ts_bevel")
+  set_shade_smooth = repeat_output
+    |> SetShadeSmooth(shade_smooth: false)
+    |> SetShadeSmooth(
+      selection: named_attribute_5.attribute > 0.001 and named_attribute_5.attribute < 0.999)
+  compare_6 = chip_rim > 1e-06
+  extrude_mesh_4 = set_shade_smooth
+    |> StoreNamedAttribute(name: "ts_ed")
+    |> ExtrudeMesh(
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: 0.0,
+      individual: false)
+  switch_5 = compare_6
+    ? extrude_mesh_4.mesh
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_4.top)
+      |> tessera_inset(
+        distance: chip_rim,
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+      |> StoreNamedAttribute(
+        selection: EvaluateOnDomain(
+            value: NamedAttribute[BOOLEAN](name: "ts_top").attribute ? 1.0 : 0.0)
+          > 0.2,
+        name: "ts_ed",
+        value: 1.0)
+    : StoreNamedAttribute(set_shade_smooth, name: "ts_ed", value: 1.0)
+  math_26 = max(chip_depth, chip_rim)
+  extrude_mesh_5 = switch_5
+    |> StoreNamedAttribute(
+      name: "ts_ed2",
+      value: compare_6
+        ? NamedAttribute(name: "ts_ed").attribute * (chip_rim / max(math_26, 1e-06))
+        : 0.0)
+    |> ExtrudeMesh(
+      selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute,
+      offset: (0.0, 0.0, 1.0),
+      offset_scale: 0.0,
+      individual: false)
+  switch_6 = math_26 - chip_rim > 1e-05
+    ? extrude_mesh_5.mesh
+      |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top", value: extrude_mesh_5.top)
+      |> tessera_inset(
+        distance: math_26 - chip_rim,
+        selection: NamedAttribute[BOOLEAN](name: "ts_top").attribute)
+      |> StoreNamedAttribute(
+        selection: EvaluateOnDomain(
+            value: NamedAttribute[BOOLEAN](name: "ts_top").attribute ? 1.0 : 0.0)
+          > 0.2,
+        name: "ts_ed2",
+        value: 1.0)
+    : StoreNamedAttribute(
+      switch_5,
+      name: "ts_ed2",
+      value: compare_6 ? NamedAttribute(name: "ts_ed").attribute : 1.0)
+  named_attribute_6 = NamedAttribute[FLOAT_VECTOR](name: "ts_c2")
+  separate_color_9 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: named_attribute.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.377).color)
+  math_27 = white_noise_texture_2.value * 6.2831855
+  math_28 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-06) * 0.72
+  math_29 = min(max(grout_depth * 0.5 + 0.0002, 0.0003), 0.0015) / math_28
+  math_30 = min(max((separate_color_9.red * 2.0 - 1.0) * tilt_jitter, -math_29), math_29)
+  math_31 = math_28 * abs(sin(math_30))
+  math_32 = math_31 - grout_depth * 0.7
+  math_33 = max(NamedAttribute(name: "ts_psize").attribute * Scale, 1e-06)
+  vector_rotate = VectorRotate[Z_AXIS](
+    vector: Position()
+      - CombineXYZ(x: named_attribute_6.attribute.x, y: named_attribute_6.attribute.y),
+    angle: -(Rotation
+      + NamedAttribute(name: "ts_alpha").attribute
+      + floor(separate_color_9.blue * 4.0) * (quarter_turns ? 1.0 : 0.0) * 1.5707964))
+  position_8 = Position()
+  return (
+    Geometry: (compare_5
+        ? (Switch[GEOMETRY](
+              switch: domain_size_2.face_count > 0,
+              true_: MeshBoolean[INTERSECT, EXACT](
+                  MeshBoolean[DIFFERENCE, EXACT](transform_geometry, remove_named_attribute_2).mesh,
+                  store_named_attribute_2,
+                  hole_tolerant: true).mesh
+                |> StoreNamedAttribute(
+                  name: "ts_frac2",
+                  value: 1.0
+                    - MapRange[SMOOTHSTEP](
+                      value: GeometryProximity(remove_named_attribute_2).distance,
+                      from_min: 1e-05,
+                      from_max: 4e-05))
+                |> SplitEdges()
+                |> SetPosition(position: CombineXYZ(x: position_6.x, y: position_6.y))
+                |> DeleteGeometry[FACE](
+                  selection: FaceArea() < 1e-08
+                    or NamedAttribute(name: "ts_zmid").attribute
+                        - NamedAttribute(name: "ts_zlo").attribute
+                      < 0.0002))
+            |> RemoveNamedAttribute(name: "ts_qa0")
+            |> RemoveNamedAttribute(name: "ts_qb0")
+            |> RemoveNamedAttribute(name: "ts_qa1")
+            |> RemoveNamedAttribute(name: "ts_qb1")
+            |> SetPosition(offset: CombineXYZ(z: NamedAttribute(name: "ts_zlo").attribute))
+            |> ExtrudeMesh(
+              offset: (0.0, 0.0, 1.0),
+              offset_scale: NamedAttribute(name: "ts_zmid").attribute
+                - NamedAttribute(name: "ts_zlo").attribute).mesh
+            |> StoreNamedAttribute[FACE](name: "ts_bevel", value: 1.0)
+            |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top")
+            |> StoreNamedAttribute(name: "ts_ed", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_ed2", value: 1.0)
+            |> StoreNamedAttribute(
+              name: "ts_frac",
+              value: max(
+                NamedAttribute(name: "ts_frac2").attribute,
+                Position().z > NamedAttribute(name: "ts_zlo").attribute + 1e-06 ? 1.0 : 0.0))
+            |> RemoveNamedAttribute(name: "ts_frac2"))
+          + (separate_geometry_2.selection
+            |> DeleteGeometry[FACE](selection: NamedAttribute(name: "ts_zlo").attribute < 1e-06)
+            |> ExtrudeMesh(
+              offset: (0.0, 0.0, 1.0),
+              offset_scale: NamedAttribute(name: "ts_zlo").attribute).mesh
+            |> StoreNamedAttribute[FACE](name: "ts_bevel", value: 1.0)
+            |> StoreNamedAttribute[BOOLEAN, FACE](name: "ts_top")
+            |> StoreNamedAttribute(name: "ts_ed", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_ed2", value: 1.0)
+            |> StoreNamedAttribute(name: "ts_frac", value: Position().z > 1e-06 ? 1.0 : 0.0))
+          + switch_6
+        : switch_6)
+      |> SetPosition(
+        offset: CombineXYZ(
+          z: NamedAttribute(name: "ts_wz").attribute
+            * weave_depth
+            * min(max(Position().z / max(Thickness, 1e-06), 0.0), 1.0)))
+      |> SetPosition(
+        selection: EvaluateOnDomain[FACE](
+            value: NamedAttribute[BOOLEAN](name: "ts_strap").attribute ? 1.0 : 0.0)
+          < 0.5,
+        position: VectorRotate(
+            vector: Position(),
+            center: CombineXYZ(x: named_attribute_6.attribute.x, y: named_attribute_6.attribute.y),
+            axis: CombineXYZ(x: cos(math_27), y: sin(math_27)),
+            angle: math_30)
+          + CombineXYZ(
+            z: min(
+              max((separate_color_9.green * 2.0 - 1.0) * height_jitter, math_32),
+              max(grout_depth * 0.6 + 0.0008 - math_31, math_32))))
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "ts_tile_uv",
+        value: CombineXYZ(x: vector_rotate.x / math_33 + 0.5, y: vector_rotate.y / math_33 + 0.5))
+      |> StoreNamedAttribute[FLOAT2, CORNER](
+        name: "TesseraTileUV",
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_tile_uv").attribute)
+      |> StoreNamedAttribute[FLOAT2, CORNER](
+        name: "TesseraPanelUV",
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_panel_uv").attribute)
+      |> DeleteGeometry[FACE](
+        selection: Openwork
+          and not (NamedAttribute(name: "ts_band").attribute > 0.5
+            or NamedAttribute[BOOLEAN](name: "ts_strap").attribute))
+      |> RemoveNamedAttribute(name: "ts_zlo")
+      |> RemoveNamedAttribute(name: "ts_zmid")
+      |> RemoveNamedAttribute(name: "ts_q2"),
+    Holes: Switch[GEOMETRY](
+      switch: Mapping == 0,
+      true_: SetPosition(
+        Switch[GEOMETRY](
+            switch: compare_5,
+            true_: separate_geometry_2.selection
+              |> DeleteGeometry[FACE](selection: NamedAttribute(name: "ts_zlo").attribute > 1e-06)
+              |> tessera_inset(distance: 5e-05))
+          + tessera_inset(Gone, distance: math),
+        position: CombineXYZ(x: position_8.x, y: position_8.y))))
+}

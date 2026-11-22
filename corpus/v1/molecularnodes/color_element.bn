@@ -1,0 +1,228 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atomic Number"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atomic_number: Int(
+      description: "Read the `atomic_number` attribute from the geometry corresponding to elements")
+) {
+  return (atomic_number: attribute_at_index(index: Index, name: "atomic_number"))
+}
+
+geometry graph "Color Element"(
+    "1-20"(default_closed: true) {
+        H: Color(description: "Set the color for the element H") = (1.0, 1.0, 1.0),
+        He: Color(description: "Set the color for the element He") = (0.8509804, 1.0, 1.0),
+        Li: Color(description: "Set the color for the element Li") = (0.8, 0.5019608, 1.0),
+        Be: Color(description: "Set the color for the element Be") = (0.7607843, 1.0, 0.0),
+        B: Color(description: "Set the color for the element B") = (1.0, 0.709804, 0.709804),
+        C: Color(
+          description: "Set the color for the element C") = (0.5647059, 0.5647059, 0.5647059),
+        N: Color(description: "Set the color for the element N") = (0.1882353, 0.3137255, 0.972549),
+        O: Color(description: "Set the color for the element O") = (1.0, 0.05098039, 0.05098039),
+        F: Color(
+          description: "Set the color for the element F") = (0.5647059, 0.8784314, 0.3137255),
+        Ne: Color(
+          description: "Set the color for the element Ne") = (0.7019608, 0.890196, 0.9607843),
+        Na: Color(
+          description: "Set the color for the element Na") = (0.6705883, 0.3607843, 0.9490196),
+        Mg: Color(description: "Set the color for the element Mg") = (0.5411765, 1.0, 0.0),
+        Al: Color(
+          description: "Set the color for the element Al") = (0.7490196, 0.6509804, 0.6509804),
+        Si: Color(
+          description: "Set the color for the element Si") = (0.9411765, 0.7843137, 0.627451),
+        P: Color(description: "Set the color for the element P") = (1.0, 0.5019608, 0.0),
+        S: Color(description: "Set the color for the element S") = (1.0, 1.0, 0.1882353),
+        Cl: Color(
+          description: "Set the color for the element Cl") = (0.12156863, 0.9411765, 0.12156863),
+        Ar: Color(
+          description: "Set the color for the element Ar") = (0.5019608, 0.819608, 0.890196),
+        K: Color(
+          description: "Set the color for the element K") = (0.5607843, 0.2509804, 0.8313726),
+        Ca: Color(description: "Set the color for the element Ca") = (0.2392157, 1.0, 0.0)
+    },
+    "21-40"(default_closed: true) {
+        Sc: Color(
+          description: "Set the color for the element Sc") = (0.9019608, 0.9019608, 0.9019608),
+        Ti: Color(
+          description: "Set the color for the element Ti") = (0.7490196, 0.7607843, 0.7803922),
+        V: Color(
+          description: "Set the color for the element V") = (0.6509804, 0.6509804, 0.6705883),
+        Cr: Color(description: "Set the color for the element Cr") = (0.5411765, 0.6, 0.7803922),
+        Mn: Color(
+          description: "Set the color for the element Mn") = (0.6117647, 0.4784314, 0.7803922),
+        Fe: Color(description: "Set the color for the element Fe") = (0.8784314, 0.4, 0.2),
+        Co: Color(description: "Set the color for the element Co") = (1.0, 0.8509804, 0.5607843),
+        Ni: Color(
+          description: "Set the color for the element Ni") = (0.7803922, 0.5411765, 0.5411765),
+        Cu: Color(description: "Set the color for the element Cu") = (0.7843137, 0.5019608, 0.2),
+        Zn: Color(
+          description: "Set the color for the element Zn") = (0.4901961, 0.5019608, 0.6901961),
+        Ga: Color(
+          description: "Set the color for the element Ga") = (0.7607843, 0.5607843, 0.5607843),
+        Ge: Color(description: "Set the color for the element Ge") = (0.4, 0.5607843, 0.5607843),
+        As: Color(
+          description: "Set the color for the element As") = (0.7411765, 0.5019608, 0.890196),
+        Se: Color(description: "Set the color for the element Se") = (1.0, 0.6313726, 0.0),
+        Br: Color(
+          description: "Set the color for the element Br") = (0.6509804, 0.1607843, 0.1607843),
+        Kr: Color(
+          description: "Set the color for the element Kr") = (0.3607843, 0.7215686, 0.819608),
+        Rb: Color(
+          description: "Set the color for the element Rb") = (0.4392157, 0.18039216, 0.6901961),
+        Sr: Color(description: "Set the color for the element Sr") = (0.0, 1.0, 0.0),
+        Y: Color(description: "Set the color for the element Y") = (0.5803922, 1.0, 1.0),
+        Zr: Color(
+          description: "Set the color for the element Zr") = (0.5803922, 0.8784314, 0.8784314)
+    },
+    "41-60"(default_closed: true) {
+        Nb: Color(
+          description: "Set the color for the element Nb") = (0.4509804, 0.7607843, 0.7882353),
+        Mo: Color(
+          description: "Set the color for the element Mo") = (0.3294118, 0.709804, 0.709804),
+        Tc: Color(
+          description: "Set the color for the element Tc") = (0.23137255, 0.619608, 0.619608),
+        Ru: Color(
+          description: "Set the color for the element Ru") = (0.14117648, 0.4901961, 0.4901961),
+        Rh: Color(
+          description: "Set the color for the element Rh") = (0.03921569, 0.4901961, 0.5490196),
+        Pd: Color(description: "Set the color for the element Pd") = (0.0, 0.4117647, 0.5215687),
+        Ag: Color(
+          description: "Set the color for the element Ag") = (0.7529412, 0.7529412, 0.7529412),
+        Cd: Color(description: "Set the color for the element Cd") = (1.0, 0.8509804, 0.5607843),
+        In: Color(
+          description: "Set the color for the element In") = (0.6509804, 0.4588235, 0.4509804),
+        Sn: Color(description: "Set the color for the element Sn") = (0.4, 0.5019608, 0.5019608),
+        Sb: Color(
+          description: "Set the color for the element Sb") = (0.619608, 0.3882353, 0.709804),
+        Te: Color(description: "Set the color for the element Te") = (0.8313726, 0.4784314, 0.0),
+        I: Color(description: "Set the color for the element I") = (0.5803922, 0.0, 0.5803922),
+        Xe: Color(
+          description: "Set the color for the element Xe") = (0.2588235, 0.619608, 0.6901961),
+        Cs: Color(
+          description: "Set the color for the element Cs") = (0.3411765, 0.09019608, 0.5607843),
+        Ba: Color(description: "Set the color for the element Ba") = (0.0, 0.7882353, 0.0),
+        La: Color(description: "Set the color for the element La") = (0.4392157, 0.8313726, 1.0),
+        Ce: Color(description: "Set the color for the element Ce") = (1.0, 1.0, 0.7803922),
+        Pr: Color(description: "Set the color for the element Pr") = (0.8509804, 1.0, 0.7803922),
+        Nd: Color(description: "Set the color for the element Nd") = (0.7803922, 1.0, 0.7803922)
+    },
+    "61-80"(default_closed: true) {
+        Pm: Color(description: "Set the color for the element Pm") = (0.6392157, 1.0, 0.7803922),
+        Sm: Color(description: "Set the color for the element Sm") = (0.5607843, 1.0, 0.7803922),
+        Eu: Color(description: "Set the color for the element Eu") = (0.3803922, 1.0, 0.7803922),
+        Gd: Color(description: "Set the color for the element Gd") = (0.27058825, 1.0, 0.7803922),
+        Tb: Color(description: "Set the color for the element Tb") = (0.1882353, 1.0, 0.7803922),
+        Dy: Color(description: "Set the color for the element Dy") = (0.12156863, 1.0, 0.7803922),
+        Ho: Color(description: "Set the color for the element Ho") = (0.0, 1.0, 0.6117647),
+        Er: Color(description: "Set the color for the element Er") = (0.0, 0.9019608, 0.4588235),
+        Tm: Color(description: "Set the color for the element Tm") = (0.0, 0.8313726, 0.3215686),
+        Yb: Color(description: "Set the color for the element Yb") = (0.0, 0.7490196, 0.21960784),
+        Lu: Color(description: "Set the color for the element Lu") = (0.0, 0.6705883, 0.14117648),
+        Hf: Color(description: "Set the color for the element Hf") = (0.3019608, 0.7607843, 1.0),
+        Ta: Color(description: "Set the color for the element Ta") = (0.3019608, 0.6509804, 1.0),
+        W: Color(
+          description: "Set the color for the element W") = (0.12941177, 0.5803922, 0.8392157),
+        Re: Color(
+          description: "Set the color for the element Re") = (0.1490196, 0.4901961, 0.6705883),
+        Os: Color(description: "Set the color for the element Os") = (0.1490196, 0.4, 0.5882353),
+        Ir: Color(
+          description: "Set the color for the element Ir") = (0.09019608, 0.3294118, 0.5294118),
+        Pt: Color(
+          description: "Set the color for the element Pt") = (0.8156863, 0.8156863, 0.8784314),
+        Au: Color(description: "Set the color for the element Au") = (1.0, 0.819608, 0.1372549),
+        Hg: Color(
+          description: "Set the color for the element Hg") = (0.7215686, 0.7215686, 0.8156863)
+    }
+) -> (Color: Color(description: "The selected colors based on the `atomic_number`")) {
+  return (
+    Color: IndexSwitch(
+      atomic_number(),
+      (0.8000075, 0.18144128, 0.5491766, 1.0),
+      H,
+      He,
+      Li,
+      Be,
+      B,
+      C,
+      N,
+      O,
+      F,
+      Ne,
+      Na,
+      Mg,
+      Al,
+      Si,
+      P,
+      S,
+      Cl,
+      Ar,
+      K,
+      Ca,
+      Sc,
+      Ti,
+      V,
+      Cr,
+      Mn,
+      Fe,
+      Co,
+      Ni,
+      Cu,
+      Zn,
+      Ga,
+      Ge,
+      As,
+      Se,
+      Br,
+      Kr,
+      Rb,
+      Sr,
+      Y,
+      Zr,
+      Nb,
+      Mo,
+      Tc,
+      Ru,
+      Rh,
+      Pd,
+      Ag,
+      Cd,
+      In,
+      Sn,
+      Sb,
+      Te,
+      I,
+      Xe,
+      Cs,
+      Ba,
+      La,
+      Ce,
+      Pr,
+      Nd,
+      Pm,
+      Sm,
+      Eu,
+      Gd,
+      Tb,
+      Dy,
+      Ho,
+      Er,
+      Tm,
+      Yb,
+      Lu,
+      Hf,
+      Ta,
+      W,
+      Re,
+      Os,
+      Ir,
+      Pt,
+      Au,
+      Hg))
+}

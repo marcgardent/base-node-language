@@ -1,0 +1,6 @@
+shader graph SDF_Exclude(
+    Value: Float = 0.5 in -10000.0..10000.0,
+    Value as value_float: Float = 0.5 in -10000.0..10000.0
+) -> (Value: Float) {
+  return (Value: -max(min(-Value, value_float), min(-value_float, Value)))
+}

@@ -1,0 +1,1922 @@
+geometry graph "Object Effector"(Object: Object(optional_label: true)) -> (Effector: Bundle) {
+  return (
+    Effector: GetBundleItem[BUNDLE](
+      bundle: ObjectInfo(object: Object).geometry |> GetGeometryBundle().bundle,
+      path: "effectors").item)
+}
+
+geometry graph "Collection Effector"(
+    Collection: Collection(optional_label: true),
+    "Naming"(default_closed: true) {
+        "Name Pattern": String(optional_label: true) = "effector_{}"
+    }
+) -> (Effectors: Bundle) {
+  collection_children = CollectionChildren(collection: Collection, recursive: true)
+  repeat_output = repeat(ListLength[OBJECT](list: collection_children.objects), Bundle: Bundle) -> {
+    return StoreBundleItem[BUNDLE](
+      bundle: Bundle,
+      path: FormatString(format: name_pattern, i: iteration),
+      item: object_effector(
+        object: GetListItem[OBJECT](list: collection_children.objects, index: iteration)))
+  }
+  return (Effectors: repeat_output)
+}
+
+geometry graph "Set Effector"(
+    Geometry: Geometry(
+      description: "Geometry to add the effector to.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Effector: Bundle(
+      description: "The actual bundle containing one or multiple effectors.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Name: String(
+      description: "Name of the effector in the geometry bundle.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE)
+) -> (
+    Geometry: Geometry(description: "The same geometry but with additional effector information.")
+) {
+  "Add effector information to the geometry bundle."
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  string = "effectors"
+  return (
+    Geometry: SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: StoreBundleItem[BUNDLE](
+        bundle: get_geometry_bundle.bundle,
+        path: JoinStrings("/", string, Name == "" ? "default" : Name),
+        item: Effector)))
+}
+
+geometry graph "Softness to Compliance"(
+    Softness: Float(subtype: FACTOR) in 0.0..1.0
+) -> (Compliance: Float) {
+  return (Compliance: pow(max(Softness, 0.0), 5.0))
+}
+
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph Collider(
+    Geometry: Geometry(
+      description: "The collider geometry.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Deforming: Bool(
+      description: "Whether the collider geometry is changing.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Boundary: Bool(
+      description: "If true, the simulated geometry should stay within the mesh instead of it being pushed out of it.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    "Edge Contacts": Bool(
+      description: "Increased collision accuracy (only for collisions with curves/hair currently).",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Margin: Float(
+      subtype: DISTANCE,
+      description: "Additional margin around the collider to prevent penetration.",
+      force_non_field: true,
+      structure_type: SINGLE) in 0.0..,
+    Friction: Float(
+      subtype: FACTOR,
+      description: "Friction coefficient for this collider.",
+      force_non_field: true,
+      structure_type: SINGLE) = 0.2 in 0.0..1.0,
+    Softness: Float(
+      subtype: FACTOR,
+      description: "Increasing softness allows some penetration.",
+      force_non_field: true,
+      structure_type: SINGLE) in 0.0..1.0,
+    "Filter"(description: "Filter settings.", default_closed: true) {
+        Filter: String(
+          description: "Comma-separated list of tags this collider should apply to.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE)
+    },
+    "Debug"(description: "Debug settings.", default_closed: true) {
+        "Error Threshold": Float(
+          subtype: DISTANCE,
+          description: "Used to compute a relative error of this constraint to determine solve quality.",
+          force_non_field: true,
+          structure_type: SINGLE) = 0.001 in 1e-05..
+    }
+) -> (
+    Geometry: Geometry(
+      description: "The input geometry with additional collider information attached."),
+    Collider: Bundle(
+      description: "The collider effector bundle that can be passed into a simulation.")
+) {
+  "Turn a geometry into a collider."
+  "Prepare collider geometry" {
+    transform_geometry = GeometryToInstance(Geometry)
+      |> TransformGeometry(mode: Matrix, transform: ObjectInfo(object: SelfObject()).transform)
+    string = "By convention, collider geometries are always in world space."
+  }
+  combine_bundle = CombineBundle(
+    Type: "Blender.Collider.Mesh",
+    filter: Filter,
+    geometry: transform_geometry,
+    margin: Margin,
+    friction: Friction,
+    compliance: softness_to_compliance(softness: Softness),
+    deforming: Deforming,
+    use_edge_contacts: edge_contacts,
+    is_boundary: Boundary,
+    error_threshold: error_threshold)
+  return (
+    Geometry: set_effector(Geometry, effector: combine_bundle, name: "collider"),
+    Collider: combine_bundle)
+}
+
+geometry graph "Custom/World/Object Space"(
+    Space: Menu(optional_label: true) = "Custom Space"
+) -> (
+    "Custom = 0,World = 1, Object = 2": Int,
+    "Is Custom Space": Bool(description: "True if this item is chosen by the menu input"),
+    "Is World Space": Bool(description: "True if this item is chosen by the menu input"),
+    "Is Object Space": Bool(description: "True if this item is chosen by the menu input")
+) {
+  menu_switch = MenuSwitch(
+    menu: Space,
+    "Custom Space"(description: "Use a user-defined space."): 0,
+    "World Space"(description: "Use world-space coordinates."): 1,
+    "Object Space"(description: "Use the coordinates in object space of the provided object."): 2)
+  return (
+    "Custom = 0,World = 1, Object = 2": menu_switch.output,
+    "Is Custom Space": menu_switch.custom_space,
+    "Is World Space": menu_switch.world_space,
+    "Is Object Space": menu_switch.object_space)
+}
+
+geometry graph "Convert Space Transform"(
+    "From Space": Menu(optional_label: true) = "World Space",
+    "From Object": Object(optional_label: true),
+    "To Space": Menu(optional_label: true) = "World Space",
+    "To Object": Object(optional_label: true),
+    "Custom to World": Matrix
+) -> (
+    Transform: Matrix,
+    Inverted: Matrix(
+      description: "The inverted matrix or the identity matrix if the input is not invertible")
+) {
+  "'From' to world space" {
+    index_switch = IndexSwitch(
+      custom_world_object_space(space: from_space).custom_0_world_1_object_2,
+      custom_to_world,
+      _,
+      ObjectInfo(object: from_object).transform)
+  }
+  "World to 'To' space" {
+    index_switch_2 = IndexSwitch(
+      custom_world_object_space(space: to_space).custom_0_world_1_object_2,
+      InvertMatrix(matrix: custom_to_world).matrix,
+      _,
+      InvertMatrix(matrix: ObjectInfo(object: to_object).transform).matrix)
+  }
+  multiply_matrices = MultiplyMatrices(Matrix: index_switch_2, Matrix_001: index_switch)
+  return (Transform: multiply_matrices, Inverted: InvertMatrix(matrix: multiply_matrices).matrix)
+}
+
+geometry graph "Curve Bending Compliance"(
+    Softness: Float(subtype: FACTOR) in 0.0..1.0
+) -> ("Constraint Compliance": Float) {
+  "Parameters from longest Curve" {
+    named_attribute = NamedAttribute(name: "rest_length")
+    curve_of_point = CurveOfPoint()
+    accumulate_field = AccumulateField(
+      value: NamedAttribute(name: "mass").attribute,
+      group_id: curve_of_point.curve_index)
+    accumulate_field_2 = AccumulateField(
+      value: named_attribute.attribute,
+      group_id: curve_of_point.curve_index)
+  }
+  "Clamp softness to valid range" {
+    clamp = Clamp(value: Softness)
+  }
+  "Map to Beam Deflection" {
+    math_3 = clamp * -1.5708 @ "-x*pi/2"
+    math = tan(math_3) @ hide
+    math_2 = math * accumulate_field_2.total @ hide
+  }
+  "Static Cantilever Beam Stiffness from Deflection" {
+    math_6 = pow(accumulate_field_2.total, 3.0) @ "L^3" hide
+    math_7 = math_2 * 8.0 @ "8*x" hide
+  }
+  "Edge length factor for discrete constraints" {
+    integer_math = IntegerMath[ADD](Value: Index(), Value_001: 1) @ "+1" hide
+    math_10 = EvaluateAtIndex(value: named_attribute.attribute, index: integer_math)
+      * 0.5 @ "x/2" hide
+  }
+  "Total Curve Weight" {
+    value = -9.81 @ "Gravity"
+    math_4 = accumulate_field.total * value @ hide
+  }
+  "Static Cantilever Beam Stiffness from Deflection" .. {
+    math_5 = math_4 * math_6 @ hide
+    math_8 = math_7 / math_5 @ hide
+  }
+  "Edge length factor for discrete constraints" .. {
+    math_9 = math_8 * math_10 @ hide
+  }
+  string = "Stiffness model based on static beam deflection:  A representative hair curve is described by a cantilever beam, fixed at one end, with a uniform load. The maximum deflection at the other end can be computed based on the material stiffness (Bernoulli model). Inverting this relationship yields a formula for stiffness based on a simple geometric parameter (maximum deflection, expressed as an angle).  The stiffness of each constraint is dependent on the length of the adjacent segments.  Technically the Bernoulli model is only accurate for small deflections, but it works well enough to provide a simple parameterization of 'softness' to constraint compliance."
+  return ("Constraint Compliance": math_9)
+}
+
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry graph "Curve Stretching Compliance"(
+    Softness: Float(subtype: FACTOR) in 0.0..1.0
+) -> ("Constraint Compliance": Float) {
+  "Parameters from longest Curve" {
+    named_attribute = NamedAttribute(name: "rest_length")
+    curve_of_point = CurveOfPoint()
+    accumulate_field = AccumulateField(
+      value: NamedAttribute(name: "mass").attribute,
+      group_id: curve_of_point.curve_index)
+    accumulate_field_2 = AccumulateField(
+      value: named_attribute.attribute,
+      group_id: curve_of_point.curve_index)
+  }
+  "Clamp Softness to valid range" {
+    clamp = Clamp(value: Softness)
+  }
+  "Edge length factor for discrete constraints" {
+    integer_math = IntegerMath[ADD](Value: Index(), Value_001: 1) @ "+1" hide
+    math_4 = EvaluateAtIndex(value: named_attribute.attribute, index: integer_math)
+      * 0.5 @ "x/2" hide mute
+  }
+  "Map softness to Elongation" {
+    math_6 = 1.0 - clamp @ "1-x" hide
+    value = -2.0 @ "Slope"
+    math_8 = max(math_6, 1e-09) @ "max(x, epsilon)" hide
+    math_5 = log(math_8, 2.7182817) @ "ln(x)" hide
+    math_7 = math_5 / value @ hide
+  }
+  "Hooke's Law" {
+    math_10 = math_7 * 2.0 @ "2x" hide
+  }
+  "Total Curve Weight" {
+    value_2 = -9.81 @ "Gravity"
+    math_9 = abs(value_2) @ hide
+    math = accumulate_field.total * math_9 @ hide
+  }
+  "Hooke's Law" .. {
+    math_2 = math_10 / math @ hide
+  }
+  "Edge length factor for discrete constraints" .. {
+    math_3 = math_2 * math_4 @ hide
+  }
+  string = "Parameterization of constraint compliance using 'Softness', based on Hooke's law.  A representative curve (longest curve) is stretched by some factor based on the total weight of the curve and the stiffness of the material. The inverse of this relationship yields the stiffness based on a desired maximum geometric stretch factor, computed from the softness parameter.  Constraint stiffness includes the length of adjacent segments."
+  return ("Constraint Compliance": math_3)
+}
+
+geometry graph Damping(
+    Linear: Float(structure_type: FIELD) = 2.0 in 0.0..,
+    Angular: Float(structure_type: FIELD) = 2.0 in 0.0..,
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Damping: Bundle) {
+  return (
+    Damping: CombineBundle(
+      Type: "Blender.Damping",
+      filter: Filter,
+      linear_damping: Linear,
+      angular_damping: Angular))
+}
+
+geometry graph "Get Attachment Surface"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  separate_bundle = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_geometry: Geometry, surface_uv_map: Vector)
+  compare = DomainSize(separate_bundle.surface_geometry).point_count == 0
+  separate_bundle_2 = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_object: Object, surface_uv_map_name: String)
+  switch = compare
+    ? ObjectInfo[RELATIVE](object: separate_bundle_2.surface_object).geometry
+    : separate_bundle.surface_geometry
+  return (
+    "Surface Geometry": switch,
+    "Surface UV Map": compare
+      ? NamedAttribute[FLOAT_VECTOR](name: separate_bundle_2.surface_uv_map_name).attribute
+      : separate_bundle.surface_uv_map,
+    Exists: not Warning(
+      show: DomainSize(switch).point_count == 0,
+      message: "Missing surface geometry"))
+}
+
+geometry graph "Custom Force"(
+    Mode: Menu(
+      description: "How the force field is defined.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE) = Field,
+    Closure: Closure(
+      description: "The closure computing the force at each point of the input geometry.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Selection: Bool(
+      description: "Selection of points this force is applied to.",
+      hide_value: true,
+      structure_type: FIELD) = true,
+    Force: Vector(subtype: XYZ, description: "The actual force vector.", structure_type: FIELD),
+    "Geometry Space"(description: "Geometry space settings.", default_closed: true) {
+        "Geometry Space": Menu(
+          description: "The space the geometry is transformed to before the field is evaluated.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = "World Space",
+        "Geometry Space" as geometry_space_matrix: Matrix(
+          description: "Custom geometry space.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        Object: Object(
+          description: "Object to take the geometry space from.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = SelfObject()
+    },
+    "Force Space"(description: "Force space settings.", default_closed: true) {
+        "Force Space": Menu(
+          description: "The space the provided force vector is in.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = "World Space",
+        "Force Space" as force_space_matrix: Matrix(
+          description: "Custom force space.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        Object as force_space_object: Object(
+          description: "Object to take the force space from.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = SelfObject()
+    },
+    "Filter"(description: "Filter settings.", default_closed: true) {
+        Filter: String(
+          description: "Comma-separated list of tags this effector should be applied to.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE)
+    }
+) -> (Force: Bundle(description: "A bundle containing all information about this effector.")) {
+  "Create a custom force field to be used in simulations."
+  "Used for type inferencing" {
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      Closure,
+      Geometry(structure_type: SINGLE): Geometry = _,
+      "To World Transform"(structure_type: SINGLE): Matrix) -> (
+      Geometry: Geometry(structure_type: SINGLE),
+      Selection: Bool(structure_type: FIELD),
+      Force: Vector(structure_type: FIELD))
+  }
+  "World space to geometry space" {
+    invert_matrix = InvertMatrix(
+      matrix: IndexSwitch(
+        custom_world_object_space(space: geometry_space).custom_0_world_1_object_2,
+        InvertMatrix(matrix: geometry_space_matrix).matrix,
+        _,
+        ObjectInfo(object: Object).transform))
+    string = "The geometry nodes to be transformed into the space requested by the user before evaluating the fields."
+  }
+  "Force space to world space" {
+    index_switch = IndexSwitch(
+      custom_world_object_space(space: force_space).custom_0_world_1_object_2,
+      force_space_matrix,
+      _,
+      ObjectInfo(object: force_space_object).transform)
+    string_2 = "The computed force field needs to be transformed back into the space of the simulation."
+  }
+  closure_output = graph(
+    Geometry: Geometry,
+    "To World Transform": Matrix
+  ) -> (Geometry: Geometry, Selection: Bool, Force: Vector) {
+    return (
+      Geometry: TransformGeometry(
+        Geometry,
+        mode: Matrix,
+        transform: MultiplyMatrices(Matrix: invert_matrix.matrix, Matrix_001: to_world_transform)),
+      Selection: Selection,
+      Force: TransformDirection(
+        direction: Force,
+        transform: MultiplyMatrices(
+          Matrix: InvertMatrix(matrix: to_world_transform).matrix,
+          Matrix_001: index_switch)))
+  }
+  return (
+    Force: CombineBundle(
+      Type: "Blender.Force",
+      filter: Filter,
+      closure: MenuSwitch(
+        menu: Mode,
+        Field(
+          description: "Create the force just by providing a field and specifying the relevant spaces."): closure_output,
+        Closure(
+          description: "Create a force by providing a closure that computes it."): Closure).output))
+}
+
+geometry graph Gravity(
+    Selection: Bool(hide_value: true) = true,
+    Gravity: Vector(subtype: ACCELERATION, structure_type: FIELD) = (0.0, 0.0, -9.81),
+    "Space"(default_closed: true) {
+        Space: Menu(optional_label: true) = "World Space",
+        "Geometry Space": Matrix(force_non_field: true, structure_type: SINGLE),
+        "Force Space": Matrix(force_non_field: true, structure_type: SINGLE)
+    },
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    }
+) -> (Gravity: Bundle) {
+  named_attribute = NamedAttribute(name: "mass")
+  return (
+    Gravity: custom_force(
+      selection: Selection,
+      force: Gravity * (named_attribute.exists ? named_attribute.attribute : 1.0),
+      geometry_space: Space,
+      geometry_space_matrix: geometry_space,
+      force_space: Space,
+      force_space_matrix: force_space,
+      filter: Filter))
+}
+
+geometry graph "Pin Positions"(
+    Selection: Bool(hide_value: true, structure_type: FIELD) = true,
+    Position: Vector(structure_type: FIELD),
+    Compliance: Float(structure_type: FIELD) in 0.0..,
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    },
+    "Debug"(default_closed: true) {
+        "Error Threshold": Float(
+          subtype: DISTANCE,
+          force_non_field: true,
+          structure_type: SINGLE) = 0.001 in 1e-05..,
+        Lambda: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    }
+) -> (Constraint: Bundle) {
+  return (
+    Constraint: CombineBundle(
+      Type: "Blender.Constraint.PinPosition",
+      filter: Filter,
+      selection: Selection,
+      position: Position,
+      compliance: Compliance,
+      error_threshold: error_threshold,
+      lambda_attribute: Lambda))
+}
+
+geometry graph "Pin Rotation"(
+    Selection: Bool(structure_type: FIELD) = true,
+    Rotation: Rotation(structure_type: FIELD),
+    Compliance: Float(structure_type: FIELD) in 0.0..,
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    },
+    "Debug"(default_closed: true) {
+        "Error Threshold": Float(subtype: ANGLE) = 0.01 in 1e-05..
+    }
+) -> (Constraint: Bundle) {
+  return (
+    Constraint: CombineBundle(
+      Type: "Blender.Constraint.PinRotation",
+      filter: Filter,
+      selection: Selection,
+      rotation: Rotation,
+      compliance: Compliance,
+      error_threshold: error_threshold))
+}
+
+geometry graph "Randomize Float"(
+    Value: Float(subtype: FACTOR) in 0.0..1.0,
+    Enable: Bool = true,
+    Randomness: Float(subtype: FACTOR) in 0.0..1.0,
+    ID: Int(hide_value: true) = ID(),
+    Seed: Int in -10000..10000
+) -> (Value: Float) {
+  return (Value: Enable ? Value * RandomValue(min: 1.0 - Randomness, id: ID, seed: Seed) : Value)
+}
+
+geometry graph "Rod Bend/Twist Constraint"(
+    Compliance: Float(structure_type: FIELD) = 0.0001 in 0.0..,
+    "Custom Bend Rotation"(default_closed: true) {
+        "Custom Bend Rotation": Bool(is_panel_toggle: true, structure_type: FIELD),
+        "Bend Rotation": Rotation(structure_type: FIELD)
+    },
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    },
+    "Debug"(default_closed: true) {
+        "Error Threshold": Float(
+          subtype: ANGLE,
+          force_non_field: true,
+          structure_type: SINGLE) = 0.01 in 1e-05..
+    }
+) -> (Constraint: Bundle) {
+  "Rest rotation" {
+    switch = custom_bend_rotation
+      ? bend_rotation
+      : NamedAttribute[QUATERNION](name: "rest_bend_rotation").attribute
+  }
+  return (
+    Constraint: CombineBundle(
+      Type: "Blender.Constraint.RodBendTwist",
+      filter: Filter,
+      rest_bend_rotation: switch,
+      compliance: Compliance,
+      error_threshold: error_threshold))
+}
+
+geometry graph "Rod Stretch/Shear Constraint"(
+    Compliance: Float(structure_type: FIELD) = 0.0001 in 0.0..,
+    "Custom Length"(default_closed: true) {
+        "Custom Length": Bool(is_panel_toggle: true),
+        Length: Float(structure_type: FIELD)
+    },
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    },
+    "Debug"(default_closed: true) {
+        "Error Threshold": Float(
+          subtype: DISTANCE,
+          force_non_field: true,
+          structure_type: SINGLE) = 0.001 in 1e-05..,
+        "Position Lambda": String(
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE),
+        "Rotation Lambda": String(
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE)
+    }
+) -> (Constraint: Bundle) {
+  "Rest length" {
+    switch = custom_length ? Length : NamedAttribute(name: "rest_length").attribute
+  }
+  return (
+    Constraint: CombineBundle(
+      Type: "Blender.Constraint.RodStretchShear",
+      filter: Filter,
+      rest_length: switch,
+      compliance: Compliance,
+      error_threshold: error_threshold,
+      lambda_position_attribute: position_lambda,
+      lambda_rotation_attribute: rotation_lambda))
+}
+
+geometry graph "Get Rest Geometry"(
+    Geometry: Geometry
+) -> ("Rest Geometry": Geometry, "Rest Geometry Found": Bool, "Rest Attribute Found": Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: "rest_geometry",
+    remove: true)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  return (
+    "Rest Geometry": Warning[WARNING](
+        show: not get_bundle_item.exists,
+        message: "Missing rest geometry. Use 'Capture Rest Geometry'.")
+      ? SetPosition(
+        get_geometry_bundle.geometry,
+        selection: named_attribute.exists,
+        position: named_attribute.attribute)
+      : get_bundle_item.item,
+    "Rest Geometry Found": get_bundle_item.exists,
+    "Rest Attribute Found": SampleIndex[BOOLEAN](
+      get_geometry_bundle.geometry,
+      value: AccumulateField[INT](value: named_attribute.exists).total))
+}
+
+geometry graph "Rest Surface"(Surface: Geometry) -> ("Rest Surface": Geometry, Exists: Bool) {
+  group = get_rest_geometry(Surface)
+  return (
+    "Rest Surface": Warning[WARNING](
+        show: not (group.rest_geometry_found or group.rest_attribute_found),
+        message: "Missing rest geometry on surface. Use 'Capture Rest Geometry' or enable 'Add Rest Position'.")
+      ? Surface
+      : group.rest_geometry,
+    Exists: group.rest_geometry_found)
+}
+
+geometry graph "Sample Surface Transform"(
+    Mesh: Geometry,
+    "UV Map": Vector(hide_value: true),
+    "Sample UV": Vector = (0.0, 0.0)
+) -> (Translation: Vector, Rotation: Rotation, Normal: Vector, Tangent: Vector, Valid: Bool) {
+  "Sample Position" {
+    sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: Position(),
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  "Sample UV Tangent" {
+    sample_uvsurface_2 = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: UVTangent(uv: uv_map),
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  "Sample Normal" {
+    sample_uvsurface_3 = SampleUVSurface[FLOAT_VECTOR](
+      Mesh,
+      value: Normal().normal,
+      uv_map: uv_map,
+      sample_uv: sample_uv)
+  }
+  return (
+    Translation: sample_uvsurface.value,
+    Rotation: AxesToRotation(
+      primary_axis: sample_uvsurface_3.value,
+      secondary_axis: sample_uvsurface_2.value),
+    Normal: sample_uvsurface_3.value,
+    Tangent: sample_uvsurface_2.value,
+    Valid: sample_uvsurface.is_valid)
+}
+
+geometry graph "Sample Surface Deformation"(
+    Mesh: Geometry,
+    "Surface UV Map": Vector(hide_value: true),
+    "Sample UV": Vector = (0.0, 0.0),
+    "Rest" {},
+    "Deformed" {}
+) -> (Transform: Matrix, Rotation: Rotation, Valid: Bool) {
+  group = Mesh
+    |> rest_surface().rest_surface
+    |> sample_surface_transform(uv_map: surface_uv_map, sample_uv: sample_uv)
+  group_2 = sample_surface_transform(Mesh, uv_map: surface_uv_map, sample_uv: sample_uv)
+  rotate_rotation = RotateRotation(
+    rotation: InvertRotation(rotation: group.rotation),
+    rotate_by: group_2.rotation)
+  return (
+    Transform: MultiplyMatrices(
+      Matrix: CombineTransform(translation: group_2.translation),
+      Matrix_001: MultiplyMatrices(
+        Matrix: CombineTransform(rotation: rotate_rotation),
+        Matrix_001: CombineTransform(translation: 0.0 - group.translation))),
+    Rotation: rotate_rotation,
+    Valid: group.valid and group_2.valid)
+}
+
+geometry graph "Set Friction"(
+    Geometry: Geometry(description: "Geometry to store a new attribute with the given name on"),
+    Static: Float = 0.5 in 0.0..,
+    Dynamic: Float = 0.5 in 0.0..
+) -> Geometry {
+  return Geometry
+    |> StoreNamedAttribute(name: "static_friction", value: Static)
+    |> StoreNamedAttribute(name: "dynamic_friction", value: Dynamic)
+}
+
+geometry graph "Apply Geo Cache - Deform Only"(
+    "New Geometry": Geometry,
+    "Cache Geometry": Geometry,
+    "Sim Attributes": String(
+      description: "List of attribute names (not) to transfer. A wildcard (*) at the end is allowed",
+      optional_label: true),
+    "Post Sim": Bool
+) -> ("Mixed Geometry": Geometry) {
+  return (
+    "Mixed Geometry": post_sim
+      ? TransferAttributes(
+        new_geometry,
+        source: cache_geometry,
+        attribute_names: FieldToList(Value: "*")).target
+      : TransferAttributes(
+        new_geometry,
+        source: cache_geometry,
+        attribute_names: sim_attributes).target)
+}
+
+geometry graph "String to List"(
+    String: String(optional_label: true),
+    Separator: String(optional_label: true) = ","
+) -> (List: String) {
+  return (List: TrimString(string: SplitString(string: String, separator: Separator)))
+}
+
+geometry graph "Sim Attributes"(Extra: String) -> ("Sim Attributes": String) {
+  string = "position, rotation, velocity, angular_velocity, sim:*"
+  return ("Sim Attributes": string_to_list(string: JoinStrings(",", string, Extra)))
+}
+
+geometry graph "Set Geo Updater - Deform Only"(
+    Geometry: Geometry,
+    "Extra Sim Attributes": String(optional_label: true)
+) -> Geometry {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  closure_output = graph(Geometry: Geometry, Cache: Geometry, "Post Sim": Bool) -> Geometry {
+    return apply_geo_cache_deform_only(
+      Geometry,
+      cache_geometry: Cache,
+      sim_attributes: sim_attributes(extra: extra_sim_attributes),
+      post_sim: post_sim)
+  }
+  return SetGeometryBundle(
+    get_geometry_bundle.geometry,
+    bundle: StoreBundleItem[CLOSURE, SINGLE](
+      bundle: get_geometry_bundle.bundle,
+      path: "sim_apply_cache",
+      item: closure_output))
+}
+
+geometry graph "Set Geometry Tags"(
+    Geometry: Geometry(description: "Geometry to get the bundle of"),
+    Tags: String(optional_label: true)
+) -> Geometry {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  return SetGeometryBundle(
+    get_geometry_bundle.geometry,
+    bundle: StoreBundleItem[STRING](
+      bundle: get_geometry_bundle.bundle,
+      path: "tags",
+      item: string_to_list(string: Tags)))
+}
+
+geometry graph "Thin Rod Moment of Inertia"(
+    Mass: Float(hide_value: true)
+) -> ("Moment of Inertia": Vector) {
+  position = Position()
+  offset_point_in_curve = OffsetPointInCurve(offset: 1)
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
+    value: position,
+    index: offset_point_in_curve.point_index) @ hide
+  vector_math = evaluate_at_index - position @ hide
+  vector_math_2 = vector_math ⋅ vector_math @ hide
+  evaluate_at_index_2 = EvaluateAtIndex(
+    value: Mass,
+    index: offset_point_in_curve.point_index) @ hide
+  math = Mass + evaluate_at_index_2 @ hide
+  math_2 = math * vector_math_2 @ hide
+  math_3 = math_2 * 0.083333336 @ "1/12" hide
+  return ("Moment of Inertia": CombineXYZ(x: math_3, y: math_3))
+}
+
+geometry graph "Set Mass"(
+    Geometry: Geometry,
+    Mass: Float(subtype: MASS, structure_type: FIELD) = 1.0 in 0.0..,
+    "Moment of Inertia"(default_closed: true) {
+        "Moment of Inertia": Bool(
+          is_panel_toggle: true,
+          force_non_field: true,
+          structure_type: SINGLE),
+        "Moment of Inertia Mode": Menu(optional_label: true) = Custom,
+        "Moment of Inertia" as moment_of_inertia_vector: Vector(
+          optional_label: true) = (1.0, 1.0, 1.0)
+    }
+) -> Geometry {
+  store_named_attribute = StoreNamedAttribute(Geometry, name: "mass", value: Mass)
+  "Simple Rod Model for Moments of Inertia" {
+    named_attribute = NamedAttribute(name: "mass")
+  }
+  return moment_of_inertia
+    ? StoreNamedAttribute[FLOAT_VECTOR](
+      store_named_attribute,
+      name: "moment_of_inertia",
+      value: MenuSwitch(
+        menu: moment_of_inertia_mode,
+        Custom: moment_of_inertia_vector,
+        "Thin Rod": thin_rod_moment_of_inertia(
+          mass: NamedAttribute(name: "mass").attribute)).output)
+    : store_named_attribute
+}
+
+geometry graph "Store Bend Rotation"(
+    Curves: Geometry,
+    "Bend Rotation Name": String(optional_label: true) = "rest_bend_rotation",
+    "Rotation Name": String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  named_attribute = NamedAttribute[QUATERNION](name: rotation_name)
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: bend_rotation_name,
+      value: RotateRotation[LOCAL](
+        rotation: InvertRotation(rotation: named_attribute.attribute),
+        rotate_by: EvaluateAtIndex[QUATERNION](
+          value: named_attribute.attribute,
+          index: OffsetPointInCurve(offset: 1).point_index))))
+}
+
+geometry graph "Edge Length"() -> (Length: Float) {
+  edge_vertices = EdgeVertices()
+  return (
+    Length: EvaluateOnDomain[EDGE](
+      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
+}
+
+geometry graph "Store Edge Length"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_length"
+) -> (Curves: Geometry) {
+  return (Curves: StoreNamedAttribute[EDGE](Curves, name: Name, value: edge_length()))
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry graph "Store Segment Length"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_length"
+) -> (Curves: Geometry) {
+  return (Curves: StoreNamedAttribute(Curves, name: Name, value: curve_segment().segment_length))
+}
+
+geometry graph "Store Segment Rotation"(
+    Curves: Geometry,
+    Name: String(optional_label: true) = "rest_rotation"
+) -> (Curves: Geometry) {
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
+    value: position,
+    index: OffsetPointInCurve(offset: 1).point_index) @ hide
+  vector_math = evaluate_at_index - position @ hide
+  return (
+    Curves: StoreNamedAttribute[QUATERNION](
+      Curves,
+      name: Name,
+      value: AxesToRotation(primary_axis: vector_math, secondary_axis: Normal().normal)))
+}
+
+geometry graph "Setup Structural Rest Data"(Geometry: Geometry) -> Geometry {
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  get_geometry_component_2 = GetGeometryComponent(
+    get_geometry_component.geometry,
+    type: "Grease Pencil")
+  get_geometry_component_3 = GetGeometryComponent(get_geometry_component_2.geometry)
+  return get_geometry_component_3.geometry
+    + store_edge_length(get_geometry_component_3.component)
+    + (get_geometry_component_2.component
+      |> store_segment_length()
+      |> store_segment_rotation()
+      |> store_bend_rotation())
+    + (get_geometry_component.component
+      |> store_segment_length()
+      |> store_segment_rotation()
+      |> store_bend_rotation())
+}
+
+geometry graph "For Each Sim Geometry"(World: Bundle, Closure: Closure) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Data Type",
+    data_type: Geometry)
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  repeat_output = repeat(list_length, World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration) @ hide
+    get_bundle_item = GetBundleItem[GEOMETRY](bundle: World, path: get_list_item, remove: true)
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      Closure,
+      World(structure_type: SINGLE): get_bundle_item.bundle,
+      Geometry(structure_type: SINGLE): get_bundle_item.item,
+      Path(structure_type: SINGLE): get_list_item) -> (
+      World: Bundle(structure_type: SINGLE),
+      Geometry: Geometry(structure_type: SINGLE))
+    return StoreBundleItem[GEOMETRY](
+      bundle: evaluate_closure.world,
+      path: get_list_item,
+      item: evaluate_closure.geometry)
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Apply Each Geometry Cache"(
+    World: Bundle,
+    Cache: Bundle,
+    "Post Sim": Bool
+) -> (World: Bundle) {
+  closure_output = graph(
+    World: Bundle(structure_type: SINGLE),
+    Geometry: Geometry(structure_type: SINGLE),
+    Path: String(structure_type: SINGLE)
+  ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+    get_bundle_item = GetBundleItem[GEOMETRY](bundle: Cache, path: Path)
+    get_geometry_bundle = GetGeometryBundle(Geometry)
+    return (
+      World: World,
+      Geometry: get_bundle_item.exists
+        ? EvaluateClosure(
+          GetBundleItem[CLOSURE](bundle: get_geometry_bundle.bundle, path: "sim_apply_cache").item,
+          Geometry: get_geometry_bundle.geometry,
+          Cache: get_bundle_item.item,
+          "Post Sim": post_sim) -> Geometry
+        : get_geometry_bundle.geometry)
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output))
+}
+
+geometry graph "Clear Previous World Items"(World: Bundle) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    pattern_mode: Wildcard,
+    bundle_type: "*",
+    data_type: Bundle)
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  string = "previous"
+  repeat_output = repeat(list_length, World: World) -> {
+    return GetBundleItem[BUNDLE](
+      bundle: World,
+      path: JoinStrings(
+        "/",
+        GetListItem[STRING](list: get_nested_bundle_paths, index: iteration),
+        string),
+      remove: true).bundle
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Copy Solver Data"(World: Bundle, Cache: Bundle) -> (World: Bundle) {
+  "Copy solver output data bundle from simulation cache into a world bundle"
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: Cache,
+    mode: "Bundle Type",
+    bundle_type: "Blender.XPBDSolverData")
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  repeat_output = repeat(list_length, World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration) @ hide
+    return StoreBundleItem[BUNDLE](
+      bundle: World,
+      path: get_list_item,
+      item: GetBundleItem[BUNDLE](bundle: Cache, path: get_list_item).item)
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Is Effector for Geometry"(
+    Effector: Bundle,
+    "Effector Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE),
+    Geometry: Geometry,
+    "Geometry Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+) -> ("Affects Geometry": Bool) {
+  return (
+    "Affects Geometry": TagFilter(
+      tag_filter: SeparateBundle(Effector) -> (filter: String),
+      tags: GetBundleItem[STRING](bundle: GetGeometryBundle(Geometry).bundle, path: "tags").item))
+}
+
+geometry graph "Evaluate Custom Effectors"(
+    World: Bundle(force_non_field: true, structure_type: SINGLE),
+    Stage: String(force_non_field: true, optional_label: true, structure_type: SINGLE),
+    "To World Transform": Matrix(force_non_field: true, structure_type: SINGLE)
+) -> (World: Bundle) {
+  "Evaluate Geometry Effectors" {
+    get_nested_bundle_paths = GetNestedBundlePaths(
+      bundle: World,
+      mode: "Bundle Type",
+      bundle_type: "Blender.CustomEffector.Geometry")
+    list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+    repeat_output_2 = repeat(list_length, World: World) -> {
+      get_list_item_2 = GetListItem[STRING, SINGLE](list: get_nested_bundle_paths, index: iteration)
+      get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item_2)
+      separate_bundle_2 = SeparateBundle(get_bundle_item.item) -> (closure: Closure, stage: String)
+      closure_output = graph(
+        World: Bundle(structure_type: SINGLE),
+        Geometry: Geometry(structure_type: SINGLE),
+        Path: String(structure_type: SINGLE)
+      ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+        return (
+          World: World,
+          Geometry: is_effector_for_geometry(
+              effector: get_bundle_item.item,
+              effector_path: get_list_item_2,
+              geometry: Geometry,
+              geometry_path: Path)
+            ? EvaluateClosure(
+              separate_bundle_2.closure,
+              Geometry(structure_type: SINGLE): Geometry,
+              "To World Transform"(structure_type: SINGLE): to_world_transform) -> (
+              Geometry: Geometry(structure_type: SINGLE))
+            : Geometry)
+      }
+      return separate_bundle_2.stage == Stage
+        ? for_each_sim_geometry(world: World, closure: closure_output)
+        : World
+    }
+  }
+  "Evaluate World Effectors" {
+    get_nested_bundle_paths_2 = GetNestedBundlePaths(
+      bundle: repeat_output_2,
+      mode: "Bundle Type",
+      bundle_type: "Blender.CustomEffector.World")
+    list_length_2 = ListLength[STRING](list: get_nested_bundle_paths_2) @ hide
+    repeat_output = repeat(list_length_2, World: repeat_output_2) -> {
+      get_list_item = GetListItem[STRING, SINGLE](
+        list: get_nested_bundle_paths_2,
+        index: iteration) @ hide
+      separate_bundle = SeparateBundle(
+        GetBundleItem[BUNDLE](
+          bundle: World,
+          path: get_list_item).item) -> (stage: String(structure_type: SINGLE), closure: Closure)
+      return Stage == separate_bundle.stage
+        ? EvaluateClosure(
+          separate_bundle.closure,
+          World(structure_type: SINGLE): World,
+          "To World Transform": to_world_transform) -> (World: Bundle(structure_type: SINGLE))
+        : World
+    }
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Evaluate Effector Attributes"(World: Bundle) -> (World: Bundle) {
+  "Pin Position Constraint" {
+    string = "Blender.Constraint.PinPosition"
+    closure_output = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle = SeparateBundle(
+        Effector) -> (selection: Bool, position: Vector, compliance: Float)
+      capture_attribute = CaptureAttribute(
+        Geometry,
+        selection: separate_bundle.selection,
+        position: separate_bundle.position,
+        compliance: separate_bundle.compliance)
+      return capture_attribute.geometry
+        |> StoreNamedAttribute[BOOLEAN](
+          name: FormatString(format: "sim:prop:{}:selection", p: effector_path),
+          value: capture_attribute.selection)
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: FormatString(format: "sim:prop:{}:position", p: effector_path),
+          value: capture_attribute.position)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute.compliance)
+    }
+    combine_bundle = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string,
+      closure: closure_output)
+  }
+  "Pin Rotation Constraint" {
+    string_2 = "Blender.Constraint.PinRotation"
+    closure_output_3 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_3 = SeparateBundle(
+        Effector) -> (selection: Bool, rotation: Rotation, compliance: Float)
+      capture_attribute_2 = CaptureAttribute(
+        Geometry,
+        selection: separate_bundle_3.selection,
+        position: separate_bundle_3.rotation,
+        compliance: separate_bundle_3.compliance)
+      return capture_attribute_2.geometry
+        |> StoreNamedAttribute[BOOLEAN](
+          name: FormatString(format: "sim:prop:{}:selection", p: effector_path),
+          value: capture_attribute_2.selection)
+        |> StoreNamedAttribute[QUATERNION](
+          name: FormatString(format: "sim:prop:{}:rotation", p: effector_path),
+          value: capture_attribute_2.position)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_2.compliance)
+    }
+    combine_bundle_3 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_2,
+      closure: closure_output_3)
+  }
+  "Damping" {
+    string_3 = "Blender.Damping"
+    closure_output_4 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_4 = SeparateBundle(
+        Effector) -> (linear_damping: Float, angular_damping: Float)
+      capture_attribute_3 = CaptureAttribute(
+        Geometry,
+        linear_damping: separate_bundle_4.linear_damping,
+        angular_damping: separate_bundle_4.angular_damping)
+      return capture_attribute_3.geometry
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:linear", p: effector_path),
+          value: capture_attribute_3.linear_damping)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:angular", p: effector_path),
+          value: capture_attribute_3.angular_damping)
+    }
+    combine_bundle_4 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_3,
+      closure: closure_output_4)
+  }
+  "Edge Length Constraint" {
+    string_4 = "Blender.Constraint.EdgeLength"
+    closure_output_5 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_5 = SeparateBundle(Effector) -> (rest_length: Float, compliance: Float)
+      capture_attribute_4 = CaptureAttribute[EDGE](
+        Geometry,
+        rest_length: separate_bundle_5.rest_length,
+        compliance: separate_bundle_5.compliance)
+      return capture_attribute_4.geometry
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:rest_length", p: effector_path),
+          value: capture_attribute_4.rest_length)
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_4.compliance)
+    }
+    combine_bundle_5 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_4,
+      closure: closure_output_5)
+  }
+  "Rod Stretch Shear Constraint" {
+    string_5 = "Blender.Constraint.RodStretchShear"
+    closure_output_6 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_6 = SeparateBundle(Effector) -> (rest_length: Float, compliance: Float)
+      capture_attribute_5 = CaptureAttribute(
+        Geometry,
+        rest_length: separate_bundle_6.rest_length,
+        compliance: separate_bundle_6.compliance)
+      return capture_attribute_5.geometry
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:rest_length", p: effector_path),
+          value: capture_attribute_5.rest_length)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_5.compliance)
+    }
+    combine_bundle_6 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_5,
+      closure: closure_output_6)
+  }
+  "Rod Bend Twist Constraint" {
+    string_6 = "Blender.Constraint.RodBendTwist"
+    closure_output_7 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_7 = SeparateBundle(
+        Effector) -> (rest_bend_rotation: Rotation, compliance: Float)
+      capture_attribute_6 = CaptureAttribute(
+        Geometry,
+        rest_bend_rotation: separate_bundle_7.rest_bend_rotation,
+        compliance: separate_bundle_7.compliance)
+      return capture_attribute_6.geometry
+        |> StoreNamedAttribute[QUATERNION](
+          name: FormatString(format: "sim:prop:{}:rest_bend_rotation", p: effector_path),
+          value: capture_attribute_6.rest_bend_rotation)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_6.compliance)
+    }
+    combine_bundle_7 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_6,
+      closure: closure_output_7)
+  }
+  "Cross Edge Length Constraint" {
+    string_7 = "Blender.Constraint.CrossEdgeLength"
+    closure_output_8 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_8 = SeparateBundle(Effector) -> (rest_position: Vector, compliance: Float)
+      capture_attribute_7 = CaptureAttribute(
+        Geometry,
+        rest_position: separate_bundle_8.rest_position,
+        compliance: separate_bundle_8.compliance)
+      return capture_attribute_7.geometry
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: FormatString(format: "sim:prop:{}:rest_position", p: effector_path),
+          value: capture_attribute_7.rest_position)
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_7.compliance)
+    }
+    combine_bundle_8 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_7,
+      closure: closure_output_8)
+  }
+  combine_bundle_2 = CombineBundle(
+    "Pin Position": combine_bundle,
+    "Pin Rotation": combine_bundle_3,
+    Damping: combine_bundle_4,
+    "Edge Length": combine_bundle_5,
+    "Rod Stretch Shear": combine_bundle_6,
+    "Rod Bend Twist": combine_bundle_7,
+    "Cross Edge Length": combine_bundle_8)
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: combine_bundle_2,
+    mode: "Bundle Type",
+    bundle_type: "Blender.FieldPreEvaluation")
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  "For each geomery > for each effector type > for each effector" {
+    closure_output_2 = graph(
+      World: Bundle(structure_type: SINGLE),
+      Geometry: Geometry(structure_type: SINGLE),
+      Path: String(structure_type: SINGLE)
+    ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+      repeat_output = repeat(list_length, Geometry: Geometry) -> {
+        separate_bundle_2 = SeparateBundle(
+          GetBundleItem[BUNDLE](
+            bundle: combine_bundle_2,
+            path: GetListItem[STRING](
+              list: get_nested_bundle_paths,
+              index: iteration)).item) -> (effector_type: String, closure: Closure)
+        get_nested_bundle_paths_2 = GetNestedBundlePaths(
+          bundle: World,
+          mode: "Bundle Type",
+          bundle_type: separate_bundle_2.effector_type)
+        list_length_2 = ListLength[STRING](list: get_nested_bundle_paths_2) @ hide
+        repeat_output_2 = repeat(list_length_2, Geometry: Geometry) -> {
+          get_list_item = GetListItem[STRING](list: get_nested_bundle_paths_2, index: iteration)
+          get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item)
+          return is_effector_for_geometry(
+              effector: get_bundle_item.item,
+              effector_path: get_list_item,
+              geometry: Geometry,
+              geometry_path: Path)
+            ? EvaluateClosure(
+              separate_bundle_2.closure,
+              Geometry: Geometry,
+              Effector: get_bundle_item.item,
+              "Effector Path": get_list_item) -> Geometry
+            : Geometry
+        }
+        return repeat_output_2
+      }
+      return (World: World, Geometry: repeat_output)
+    }
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output_2))
+}
+
+geometry graph "Evaluate Forces"(
+    World: Bundle,
+    "To World Transform": Matrix,
+    Name: String(optional_label: true) = "external_force"
+) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    bundle_type: "Blender.Force")
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  closure_output = graph(
+    World: Bundle(structure_type: SINGLE),
+    Geometry: Geometry(structure_type: SINGLE),
+    Path: String(structure_type: SINGLE)
+  ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+    repeat_output = repeat(list_length, "Total Force": (0.0, 0.0, 0.0)) -> {
+      get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+      get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item)
+      evaluate_closure = EvaluateClosure(
+        SeparateBundle(get_bundle_item.item) -> (closure: Closure),
+        Geometry: Geometry,
+        "To World Transform": to_world_transform) -> (
+        Geometry: Geometry,
+        Selection: Bool,
+        Force: Vector)
+      capture_attribute = CaptureAttribute(
+        evaluate_closure.geometry,
+        selection: evaluate_closure.selection,
+        Force: evaluate_closure.force)
+      return is_effector_for_geometry(
+          effector: get_bundle_item.item,
+          effector_path: get_list_item,
+          geometry: Geometry,
+          geometry_path: Path)
+        ? total_force
+          + SampleIndex[FLOAT_VECTOR](
+            capture_attribute.geometry,
+            value: capture_attribute.force,
+            index: Index())
+        : total_force
+    }
+    return (
+      World: World,
+      Geometry: StoreNamedAttribute[FLOAT_VECTOR](Geometry, name: Name, value: repeat_output))
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output))
+}
+
+geometry graph "Remove Sim Attributes"(
+    World: Bundle,
+    Mode: Menu(optional_label: true) = Exact,
+    Name: String(optional_label: true)
+) -> (World: Bundle) {
+  closure_output = graph(
+    World: Bundle(structure_type: SINGLE),
+    Geometry: Geometry(structure_type: SINGLE),
+    Path: String(structure_type: SINGLE)
+  ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+    return (World: World, Geometry: RemoveNamedAttribute(Geometry, pattern_mode: Mode, name: Name))
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output))
+}
+
+geometry graph "Rename Sim Attributes"(
+    World: Bundle,
+    Mode: Menu(optional_label: true) = Single,
+    Old: String(optional_label: true),
+    New: String(optional_label: true)
+) -> (World: Bundle) {
+  closure_output = graph(
+    World: Bundle(structure_type: SINGLE),
+    Geometry: Geometry(structure_type: SINGLE),
+    Path: String(structure_type: SINGLE)
+  ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+    return (
+      World: World,
+      Geometry: RenameAttribute(Geometry, mode: Mode, old: Old, new: New, overwrite: true))
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output))
+}
+
+geometry graph "Set Previous World Items"(World: Bundle, Cache: Bundle) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    pattern_mode: Wildcard,
+    bundle_type: "*",
+    data_type: Bundle)
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  repeat_output = repeat(list_length, World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+    get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item, remove: true)
+    get_bundle_item_2 = GetBundleItem[BUNDLE](bundle: Cache, path: get_list_item)
+    boolean_math = get_bundle_item.exists and get_bundle_item_2.exists @ hide
+    return boolean_math
+      ? StoreBundleItem[BUNDLE](
+        bundle: World,
+        path: get_list_item,
+        item: StoreBundleItem[BUNDLE](
+          bundle: get_bundle_item.item,
+          path: "previous",
+          item: get_bundle_item_2.item))
+      : World
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "For Each Typed Bundle"(
+    World: Bundle,
+    Type: String(optional_label: true),
+    Closure: Closure
+) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    bundle_type: Type)
+  list_length = ListLength[STRING](list: get_nested_bundle_paths) @ hide
+  repeat_output = repeat(list_length, World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration) @ hide
+    get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item, remove: true)
+    evaluate_closure = EvaluateClosure(
+      Closure,
+      World: get_bundle_item.bundle,
+      Item: get_bundle_item.item,
+      Path: get_list_item) -> (World: Bundle, Item: Bundle)
+    return StoreBundleItem[BUNDLE](
+      bundle: evaluate_closure.world,
+      path: get_list_item,
+      item: evaluate_closure.item)
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Simplify Cached Collider Info"(World: Bundle) -> (World: Bundle) {
+  "Delete points when the collider doens't deform" {
+    closure_output = graph(
+      World: Bundle,
+      Item: Bundle,
+      Path: String
+    ) -> (World: Bundle, Item: Bundle) {
+      separate_bundle = SeparateBundle(Item) -> (deforming: Bool, geometry: Geometry)
+      return (
+        World: World,
+        Item: CombineBundle(
+          geometry: RemoveNamedAttribute(
+            separate_bundle.deforming
+              ? DeleteGeometry[EDGE_FACE](separate_bundle.geometry)
+              : DeleteGeometry(separate_bundle.geometry),
+            pattern_mode: Wildcard,
+            name: "*")))
+    }
+    group = for_each_typed_bundle(
+      world: World,
+      type: "Blender.Collider.Mesh",
+      closure: closure_output)
+  }
+  return (World: group)
+}
+
+geometry graph "XPBD Solver"(
+    World: Bundle(description: "World state that is updated by the solver"),
+    "Delta Time": Float(subtype: TIME_ABSOLUTE) = 0.04 in 0.0..,
+    Filter: String(
+      description: "Filters the geometry sets to process based on their tags",
+      optional_label: true),
+    "Simulation to World": Matrix,
+    "Solver"(default_closed: true) {
+        Substeps: Int = 10 in 1..,
+        "Constraint Iterations": Int = 1 in 1..,
+        "Solver Output Path": String(
+          description: "Optional output path in the world bundle for solver data",
+          optional_label: true)
+    }
+) -> (World: Bundle) {
+  "Evaluate all substeps at once" {
+    xpbdsolver = XPBDSolver(
+      world: World,
+      delta_time: delta_time,
+      filter: Filter,
+      simulation_to_world: simulation_to_world,
+      substeps: Substeps,
+      constraint_iterations: constraint_iterations,
+      solver_path: solver_output_path)
+  }
+  "Evaluate substeps one at a time" {
+    math = delta_time / Substeps @ hide
+    math_2 = 1.0 / Substeps
+    repeat_output = repeat(Substeps, World: World) -> {
+      math_3 = iteration * math_2 @ hide
+      math_4 = math_3 + math_2 @ hide
+      return XPBDSolver(
+        world: World,
+        delta_time: math,
+        filter: Filter,
+        simulation_to_world: simulation_to_world,
+        substeps: 1,
+        constraint_iterations: constraint_iterations,
+        solver_path: solver_output_path,
+        begin: math_3,
+        end: math_4)
+    }
+  }
+  "The result of approaches should be equal" {
+    switch = Switch[BUNDLE](false_: xpbdsolver, true_: repeat_output)
+  }
+  return (World: switch)
+}
+
+geometry graph "XPBD Simulation"(
+    World: Bundle,
+    Substeps: Int = 10 in 1..,
+    "Constraint Steps": Int = 1 in 1..,
+    "Simulation to World": Matrix,
+    "Time Scale": Float = 1.0 in 0.0..10.0,
+    "Solver Output Path": String(
+      description: "Optional output path in the world bundle for solver data",
+      optional_label: true)
+) -> (World: Bundle) {
+  simulation_output = simulate(Cache: Bundle) -> {
+    group = rename_sim_attributes(
+      world: Cache,
+      mode: Prefix,
+      old: "sim:prop:",
+      new: "sim:prop_prev:")
+    return remove_sim_attributes(
+      world: clear_previous_world_items(
+        world: simplify_cached_collider_info(
+          world: evaluate_custom_effectors(
+            world: evaluate_custom_effectors(
+              world: xpbd_solver(
+                world: evaluate_forces(
+                  world: evaluate_effector_attributes(
+                    world: evaluate_custom_effectors(
+                      world: apply_each_geometry_cache(
+                        world: set_previous_world_items(
+                          world: evaluate_custom_effectors(
+                            world: World,
+                            stage: "PRE_SIMULATION",
+                            to_world_transform: simulation_to_world),
+                          cache: group),
+                        cache: group),
+                      stage: "PRE_SOLVE",
+                      to_world_transform: simulation_to_world)),
+                  to_world_transform: simulation_to_world),
+                delta_time: delta_time * time_scale,
+                simulation_to_world: simulation_to_world,
+                substeps: Substeps,
+                constraint_iterations: constraint_steps,
+                solver_output_path: solver_output_path),
+              stage: "POST_SOLVE",
+              to_world_transform: simulation_to_world),
+            stage: "DEFAULT",
+            to_world_transform: simulation_to_world))),
+      mode: Wildcard,
+      name: "sim:prop_prev:*")
+  }
+  group_2 = remove_sim_attributes(world: simulation_output, mode: Wildcard, name: "sim:prop:*")
+  return (
+    World: copy_solver_data(
+      world: apply_each_geometry_cache(world: World, cache: group_2, post_sim: true),
+      cache: group_2))
+}
+
+geometry graph "Hair Dynamics"(
+    Hair: Geometry(
+      description: "Input hair curves.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Mode: Menu(
+      description: "Either use proper simulation or just animation based on surface deformation.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE) = Animation,
+    "Solver"(description: "Solver settings affecting speed and quality.", default_closed: true) {
+        Substeps: Int(
+          description: "Number of simulation steps per frame.",
+          force_non_field: true,
+          structure_type: SINGLE) = 10 in 1..10000,
+        "Constraint Steps": Int(
+          description: "Number of steps done to solve constraints in each substep.",
+          force_non_field: true,
+          structure_type: SINGLE) = 15 in 1..,
+        "Time Scale": Float(
+          description: "Multiplied to the delta time in each time step.",
+          force_non_field: true,
+          structure_type: SINGLE) = 1.0 in 0.0..10.0,
+        "Simulation to World": Matrix(
+          description: "Custom simulation space (by default, simulation space is world space).",
+          force_non_field: true,
+          structure_type: SINGLE)
+    },
+    "Structure"(description: "Settings for structural constraints.", default_closed: true) {
+        Mass: Float(
+          subtype: MASS,
+          description: "Mass assigned to each point in the simulation.",
+          structure_type: FIELD) = 0.01 in 0.001..,
+        Friction: Float(
+          description: "Friction coefficient for each vertex.",
+          structure_type: FIELD) = 0.1 in 0.0..,
+        Stretchiness: Float(
+          subtype: FACTOR,
+          description: "Higher values make the hair more stretchy.",
+          structure_type: FIELD) in 0.0..1.0,
+        Bendiness: Float(
+          subtype: FACTOR,
+          description: "Higher values allow the hair to bend more.",
+          structure_type: FIELD) = 0.5 in 0.0..1.0,
+        "Root Bendiness": Float(
+          subtype: FACTOR,
+          description: "Higher values allow the root points (which are attached to the surface) to rotate more.",
+          structure_type: FIELD) = 0.2 in 0.0..1.0,
+        "Randomness"(description: "Randomize the structural constraints.", default_closed: true) {
+            Randomness: Bool(
+              is_panel_toggle: true,
+              description: "Add variation to the structural constraints.",
+              structure_type: FIELD),
+            "Randomness Stretchiness": Float(
+              subtype: FACTOR,
+              description: "How much to randomize the stretchiness.",
+              structure_type: FIELD) = 0.5 in 0.0..1.0,
+            "Randomness Bendiness": Float(
+              subtype: FACTOR,
+              description: "How much to randomize the bendiness.",
+              structure_type: FIELD) = 0.5 in 0.0..1.0,
+            "Randomness Root Bendiness": Float(
+              subtype: FACTOR,
+              description: "How much to randomize the root bendiness.",
+              structure_type: FIELD) = 0.5 in 0.0..1.0
+        }
+    },
+    "Damping"(description: "Damping settings.", default_closed: true) {
+        Linear: Float(
+          description: "Simulation stability increases with more linear damping.",
+          structure_type: FIELD) = 3.0 in 0.0..,
+        Angular: Float(
+          description: "Simulation stability increases with more angular damping.",
+          structure_type: FIELD) = 3.0 in 0.0..
+    },
+    "Surface Collision"(
+      description: "Settings for collisions with the surface mesh.",
+      default_closed: true) {
+        "Surface Collision": Bool(
+          is_panel_toggle: true,
+          description: "Collide with the surface mesh the hair is attached to.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        Deforming: Bool(
+          description: "The surface mesh is deforming.",
+          force_non_field: true,
+          structure_type: SINGLE) = true,
+        "Edge Contacts": Bool(
+          description: "Take edge contacts into account for more accurate collision avoidance.",
+          force_non_field: true,
+          structure_type: SINGLE),
+        "Surface Friction": Float(
+          subtype: FACTOR,
+          description: "Friction coefficient of the surface.",
+          force_non_field: true,
+          structure_type: SINGLE) = 0.2 in 0.0..1.0
+    },
+    "Gravity"(description: "Gravity settings", default_closed: true) {
+        Gravity: Bool(
+          is_panel_toggle: true,
+          description: "Use gravity in the simulation.",
+          structure_type: FIELD) = true,
+        Gravity as gravity_vector: Vector(
+          subtype: ACCELERATION,
+          description: "Direction and strength of the gravity.",
+          structure_type: FIELD) = (0.0, 0.0, -9.81)
+    },
+    "Effectors"(description: "Additional effectors for the simulation.", default_closed: true) {
+        "Effectors Collection": Collection(
+          description: "A collection containing effectors for the simulation. This includes e.g. forces, colliders and custom effectors.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE),
+        "Hair Tags": String(
+          description: "Comma-separated list of tags which can be used to apply only a subset of effectors to this cloth.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE),
+        Effectors: Bundle(
+          description: "Additional effectors for the simulation.",
+          force_non_field: true,
+          structure_type: SINGLE)
+    }
+) -> (
+    Hair: Geometry(description: "The deformed hair curves."),
+    "Residual Error": Float(
+      description: "Average relative constraint error. 1 is good, higher is worse.")
+) {
+  "Simulate hair attached to a surface while taking effectors such as forces and colliders into account."
+  "Simulation" {
+    "Damping" {
+      Damping = Damping(linear: Linear, angular: Angular)
+      combine_bundle_4 = CombineBundle(Damping: Damping)
+    }
+    "Curve Root Pinning" {
+      endpoint_selection = EndpointSelection(end_size: 0)
+    }
+    "Gravity" {
+      Gravity_2 = Gravity(gravity: gravity_vector)
+      switch_2 = Switch[BUNDLE](switch: Gravity, true_: CombineBundle(Gravity: Gravity_2))
+    }
+    "Effector Collection" {
+      group_4 = collection_effector(collection: effectors_collection)
+    }
+    "Rod Constraints" {
+      group_9 = curve_info()
+      combine_bundle_3 = CombineBundle(
+        Stretch_Shear: rod_stretch_shear_constraint(
+          compliance: curve_stretching_compliance(
+            softness: randomize_float(
+              value: Stretchiness,
+              enable: Randomness,
+              randomness: randomness_stretchiness,
+              id: group_9.curve_id,
+              seed: 1)),
+          length: 0.29999998),
+        Bend_Twist: rod_bend_twist_constraint(
+          compliance: curve_bending_compliance(
+            softness: randomize_float(
+              value: Bendiness,
+              enable: Randomness,
+              randomness: randomness_bendiness,
+              id: group_9.curve_id,
+              seed: 2))))
+    }
+  }
+  "Animation for Physics" {
+    "Sample Surface Deformation" {
+      group_3 = get_attachment_surface(Hair)
+      group_2 = sample_surface_deformation(
+        group_3.surface_geometry,
+        surface_uv_map: group_3.surface_uv_map,
+        sample_uv: NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+      group_6 = convert_space_transform(
+        from_space: "Object Space",
+        from_object: SelfObject(),
+        to_space: "Custom Space",
+        custom_to_world: simulation_to_world)
+    }
+  }
+  "Just Animation" {
+    "Sample Surface Deformation" {
+      group_8 = get_attachment_surface(Hair)
+      group_7 = sample_surface_deformation(
+        group_8.surface_geometry,
+        surface_uv_map: group_8.surface_uv_map,
+        sample_uv: NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+    }
+  }
+  get_geometry_component = GetGeometryComponent(Hair, type: Curve)
+  "Setup Rest Data" {
+    group = setup_structural_rest_data(get_geometry_component.component)
+  }
+  "Animation for Physics" .. {
+    "Sample Surface Deformation" .. {
+      capture_attribute = CaptureAttribute[CURVE](
+        group,
+        "Curve Deform": MultiplyMatrices(Matrix: group_6.transform, Matrix_001: group_2.transform),
+        Rotation: RotateRotation(
+          rotation: group_2.rotation,
+          rotate_by: SeparateTransform(transform: group_6.transform).rotation))
+    }
+    "Deform curves based on surface" {
+      store_named_attribute = capture_attribute.geometry
+        |> SetPosition(
+          position: TransformPoint(vector: Position(), transform: capture_attribute.curve_deform))
+        |> StoreNamedAttribute[QUATERNION](
+          name: "rotation",
+          value: RotateRotation(
+            rotation: NamedAttribute[QUATERNION](name: "rest_rotation").attribute,
+            rotate_by: capture_attribute.rotation))
+    }
+  }
+  "Simulation" .. {
+    "Capture Animated" {
+      capture_attribute_2 = CaptureAttribute(
+        store_named_attribute,
+        Position: Position(),
+        Rotation: NamedAttribute[QUATERNION](name: "rotation").attribute)
+    }
+    "Curve Root Pinning" .. {
+      combine_bundle = CombineBundle(
+        "Pin Position": pin_positions(
+          selection: endpoint_selection,
+          position: capture_attribute_2.position),
+        "Pin Rotation": pin_rotation(
+          selection: endpoint_selection,
+          rotation: capture_attribute_2.rotation,
+          compliance: curve_bending_compliance(
+            softness: randomize_float(
+              value: root_bendiness,
+              enable: Randomness,
+              randomness: randomness_root_bendiness))))
+    }
+    "Setup Hair Geometry for Simulation" {
+      combine_bundle_2 = CombineBundle(
+        Hair: capture_attribute_2.geometry
+          |> set_geometry_tags(tags: hair_tags)
+          |> set_friction(static: Friction, dynamic: Friction)
+          |> set_mass(mass: Mass, moment_of_inertia: true, moment_of_inertia_mode: "Thin Rod")
+          |> set_geo_updater_deform_only())
+    }
+    "Surface Collision" {
+      Collider = Collider(
+        group_3.surface_geometry,
+        deforming: Deforming,
+        edge_contacts: edge_contacts,
+        friction: surface_friction)
+      switch = Switch[BUNDLE](
+        switch: surface_collision,
+        true_: CombineBundle("Surface Collider": Collider.collider))
+    }
+    group_5 = xpbd_simulation(
+      world: CombineBundle(
+        Hair: JoinBundle(
+          combine_bundle_2,
+          combine_bundle,
+          combine_bundle_3,
+          combine_bundle_4,
+          switch,
+          switch_2,
+          group_4),
+        Effectors: Effectors),
+      substeps: Substeps,
+      constraint_steps: constraint_steps,
+      simulation_to_world: simulation_to_world,
+      time_scale: time_scale,
+      solver_output_path: "SolverData")
+    get_bundle_item = GetBundleItem[GEOMETRY](bundle: group_5, path: "Hair/Hair")
+    get_bundle_item_2 = GetBundleItem[SINGLE](bundle: group_5, path: "SolverData/residual_error")
+  }
+  "Transform back to object space" {
+    transform_geometry = TransformGeometry(
+      get_bundle_item.item,
+      mode: Matrix,
+      transform: convert_space_transform(
+        from_space: "Custom Space",
+        to_space: "Object Space",
+        to_object: SelfObject(),
+        custom_to_world: simulation_to_world).transform)
+  }
+  "Just Animation" .. {
+    "Sample Surface Deformation" .. {
+      capture_attribute_3 = CaptureAttribute[CURVE](
+        get_geometry_component.component,
+        "Curve Deform": group_7.transform,
+        Rotation: group_7.rotation)
+    }
+    "Deform curves based on surface" {
+      set_position = SetPosition(
+        capture_attribute_3.geometry,
+        position: TransformPoint(vector: Position(), transform: capture_attribute_3.curve_deform))
+    }
+  }
+  menu_switch = MenuSwitch(
+    menu: Mode,
+    Animation(
+      description: "Simply deform the hair based on the current surface, without simulation."): set_position,
+    "Physics (Experimental)"(
+      description: "Simulate physics on top of the deformed hair."): transform_geometry)
+  return (
+    Hair: get_geometry_component.geometry + menu_switch.output,
+    "Residual Error": EnableOutput(
+      enable: menu_switch.physics_experimental,
+      value: get_bundle_item_2.item))
+}

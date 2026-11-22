@@ -1,0 +1,17 @@
+geometry graph "Box Selection"(
+    Center: Vector(subtype: TRANSLATION, description: "Center position of box selection"),
+    Size: Vector(
+      subtype: TRANSLATION,
+      description: "Edge length of box selection") = (1.0, 1.0, 1.0) in 0.0..
+) -> (Selection: Bool(description: "Elements inside the box")) {
+  position = Position()
+  vector_math = Size * 0.5
+  transform_gizmo = TransformGizmo[
+    use_rotation_x: false,
+    use_rotation_y: false,
+    use_rotation_z: false,
+    use_scale_x: false,
+    use_scale_y: false,
+    use_scale_z: false](CombineTransform(translation: Center), position: Center)
+  return (Selection: position >= Center - vector_math and position <= Center + vector_math)
+}

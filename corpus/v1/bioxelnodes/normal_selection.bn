@@ -1,0 +1,10 @@
+geometry graph "Normal Selection"(
+    Direction: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    Threshold: Float(subtype: ANGLE) = 0.0872665
+) -> (Selection: Bool) {
+  return (
+    Selection: Compare[LESS_EQUAL, VECTOR, DIRECTION](
+      a: Direction,
+      b: Normal().normal,
+      angle: Threshold))
+}

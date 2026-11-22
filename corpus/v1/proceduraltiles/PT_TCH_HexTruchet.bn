@@ -1,0 +1,141 @@
+shader graph PT_TCH_HexTruchet(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Thickness: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Seed: Int,
+    "UV oriented": Bool
+) -> (
+    Position: Vector,
+    UV: Vector,
+    "Wraped UV": Vector,
+    Color: Color,
+    Edge: Float,
+    RealEdge: Float,
+    "Signed edge": Float,
+    Masks: Int
+) {
+  "HexagonalTiling" {
+    vector_math = Vector * Scale
+    combine_xyz = CombineXYZ(x: 1.7320508, y: 1.0)
+    vector_math_2 = vector_math / combine_xyz
+    mix = (abs((fract(vector_math_2) - (0.5, 0.5, 0.0)) * combine_xyz) - (0.57735026, 0.0, 0.0))
+          ⋅ combine_xyz
+        > 0.0
+      ? floor((vector_math - combine_xyz * 0.5) / combine_xyz) * combine_xyz + combine_xyz
+      : floor(vector_math_2) * combine_xyz + combine_xyz * 0.5
+    vector_math_10 = vector_math - mix
+    combine_xyz_5 = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k" hide
+    vector_math_11 = abs(vector_math_10) @ hide
+    separate_xyz_5 = SeparateXYZ(vector: combine_xyz_5) @ hide
+    math_21 = -separate_xyz_5.z @ hide
+    vector_math_18 = combine_xyz_5 * (1.0, 1.0, 0.0) @ hide
+    vector_math_13 = vector_math_18 ⋅ vector_math_11 @ hide
+    math_20 = min(vector_math_13, 0.0) @ hide
+    vector_math_14 = vector_math_18 * math_20 @ hide
+    vector_math_15 = vector_math_14 * 2.0 @ hide
+    vector_math_12 = vector_math_11 - vector_math_15 @ hide
+    separate_xyz_4 = SeparateXYZ(vector: vector_math_12) @ hide
+    clamp = Clamp(value: separate_xyz_4.x, min: math_21, max: separate_xyz_5.z) @ hide
+    combine_xyz_6 = CombineXYZ(x: clamp, y: 0.5) @ "k" hide
+    vector_math_16 = vector_math_12 - combine_xyz_6 @ hide
+    vector_math_17 = length(vector_math_16) @ hide
+    separate_xyz_6 = SeparateXYZ(vector: vector_math_16) @ hide
+  }
+  "uPT_Roulette" {
+    value = 3.0 @ "Vertices"
+    value_2 = 0.57735026 @ "Radius"
+    value_3 = 1.0 @ "Centered UV (Bool)"
+    value_4 = 0.0 @ "Align Edge (Bool)"
+    value_5 = 0.0 @ "Vertex dist as Radius (Bool)"
+    math_3 = 6.2831855 / (value * 2.0)
+    mix_2 = Mix[VECTOR](
+      factor: value_4,
+      a: vector_math_10,
+      b: VectorRotate(vector: vector_math_10, angle: math_3))
+    math = (atan2(mix_2.y, mix_2.x) + (mix_2.y < 0.0) * 6.2831855) / 6.2831855
+    math_2 = floor(math * value)
+    math_4 = cos(math_3) * value_2 @ hide
+    mix_3 = Mix(factor: value_5, a: value_2, b: math_4)
+    vector_math_3 = (VectorRotate(vector: mix_2, angle: -((math_2 + 0.5) / value * 6.28319))
+        - CombineXYZ(x: mix_3, y: Mix(factor: value_3, a: -mix_3)))
+      * (-1.0, 1.0, 0.0)
+    combine_xyz_2 = CombineXYZ(x: vector_math_3.y, y: vector_math_3.x)
+    math_12 = math + 0.16666667
+    math_11 = floor(math_12 * 3.0)
+  }
+  math_7 = WhiteNoiseTexture["2D"](vector: mix + Seed).value > 0.5
+  vector_math_4 = combine_xyz_2 - (0.5, 0.288675, 0.0)
+  vector_math_5 = combine_xyz_2 - (-0.5, 0.288675, 0.0)
+  mix_4 = math_7 ? min(length(vector_math_4), length(vector_math_5)) : length(combine_xyz_2)
+  math_5 = mix_4 - 0.288675
+  math_6 = abs(math_5) - MapRange(value: Thickness, to_max: 0.211325)
+  math_8 = math_6 > 0.0
+  {
+    math_9 = math_5 > 0.0
+    combine_xyz_3 = CombineXYZ(x: 0.15115, y: 0.261799)
+  }
+  math_13 = math_11 + -0.5
+  .. {
+    math_10 = (math_7 ? math_13 : math_2) * 2.0943952
+    vector_rotate = VectorRotate(
+      vector: (math_7
+          ? (math_8 ? (math_9 ? (0.0, 0.0, 0.0) : (0.28867513, 0.5, 0.0)) : combine_xyz_3)
+          : math_8
+            ? (math_9 ? (0.0, 0.0, 0.0) : (0.28867513, 0.5, 0.0))
+            : (0.5, 0.8660254, 0.0) - combine_xyz_3)
+        * 0.57735026,
+      angle: math_10)
+  }
+  vector_math_6 = mix + vector_rotate * 1.7320508
+  vector_math_7 = vector_math_6 / Scale
+  vector_math_8 = Vector - vector_math_7
+  vector_math_9 = vector_math_6 + (1000.0, 1000.0, 0.0) @ hide
+  {
+    separate_xyz = SeparateXYZ(vector: combine_xyz_2) @ hide
+    math_15 = -separate_xyz.x @ hide
+    math_14 = atan2(separate_xyz.y, math_15) @ hide
+    map_range = MapRange(value: math_14, from_min: 0.5235988, from_max: 2.6179938) @ hide
+    separate_xyz_2 = SeparateXYZ(vector: vector_math_4) @ hide
+    math_17 = -separate_xyz_2.x @ hide
+    math_16 = atan2(separate_xyz_2.y, math_17) @ hide
+    map_range_2 = MapRange(
+      value: math_16,
+      from_min: -0.523599,
+      from_max: 0.5235988,
+      to_max: 0.5) @ hide
+    separate_xyz_3 = SeparateXYZ(vector: vector_math_5) @ hide
+    math_18 = atan2(separate_xyz_3.y, separate_xyz_3.x) @ hide
+    map_range_3 = MapRange(
+      value: math_18,
+      from_min: -0.523599,
+      from_max: 0.5235988,
+      to_min: 1.0,
+      to_max: 0.5) @ hide
+  }
+  mix_5 = Mix(
+    factor: Math[FLOORED_MODULO](Value: floor(math_12 * 6.0), Value_001: 2.0),
+    a: map_range_2,
+    b: map_range_3) @ hide
+  mix_6 = math_7 ? mix_5 : map_range @ hide
+  combine_xyz_4 = CombineXYZ(x: mix_4, y: mix_6)
+  math_19 = -combine_xyz_4.y @ hide
+  map_range_4 = MapRange(
+    value: combine_xyz_4.x,
+    from_max: 0.57735026,
+    to_min: 0.57735,
+    to_max: 0.0) @ hide
+  math_22 = min(abs(combine_xyz_2.x), abs(math_6)) / Scale @ hide
+  math_23 = min(abs(math_6), vector_math_17) / Scale @ hide
+  math_24 = math_6 / Scale @ hide
+  return (
+    Position: vector_math_7,
+    UV: uv_oriented
+      ? VectorRotate[invert: true](vector: vector_math_8, angle: math_10 + 1.0471976)
+      : vector_math_8,
+    "Wraped UV": math_7 ? CombineXYZ(x: map_range_4, y: math_19) : combine_xyz_4,
+    Color: WhiteNoiseTexture(vector: vector_math_9).color,
+    Edge: math_22,
+    RealEdge: math_23,
+    "Signed edge": math_24,
+    Masks: math_8)
+}

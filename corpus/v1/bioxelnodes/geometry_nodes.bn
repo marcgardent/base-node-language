@@ -1,0 +1,743 @@
+geometry graph "Box Selection"(
+    Center: Vector(subtype: TRANSLATION, description: "Center position of box selection"),
+    Size: Vector(
+      subtype: TRANSLATION,
+      description: "Edge length of box selection") = (1.0, 1.0, 1.0) in 0.0..
+) -> (Selection: Bool(description: "Elements inside the box")) {
+  position = Position()
+  vector_math = Size * 0.5
+  transform_gizmo = TransformGizmo[
+    use_rotation_x: false,
+    use_rotation_y: false,
+    use_rotation_z: false,
+    use_scale_x: false,
+    use_scale_y: false,
+    use_scale_z: false](CombineTransform(translation: Center), position: Center)
+  return (Selection: position >= Center - vector_math and position <= Center + vector_math)
+}
+
+geometry graph "O Cut Structure"(
+    Structure: Bundle,
+    Selection: Bool(hide_value: true),
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Structure: Bundle) {
+  separate_bundle = SeparateBundle(
+    Structure) -> (
+    Solid: Bool(structure_type: GRID),
+    Albedo: Vector(structure_type: GRID),
+    Opacity: Float(structure_type: GRID),
+    Roughness: Float(structure_type: GRID),
+    Emission: Vector(structure_type: GRID),
+    Bump: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  boolean_math = separate_bundle.solid and xnor(Selection, Invert) @ hide
+  return (
+    Structure: CombineBundle(
+      Solid(structure_type: GRID): boolean_math,
+      Albedo(structure_type: GRID): separate_bundle.albedo,
+      Opacity(structure_type: GRID): separate_bundle.opacity,
+      Roughness(structure_type: GRID): separate_bundle.roughness,
+      Emission(structure_type: GRID): separate_bundle.emission,
+      Bump(structure_type: GRID): separate_bundle.bump,
+      Name(structure_type: SINGLE): separate_bundle.name,
+      ID(structure_type: SINGLE): separate_bundle.id))
+}
+
+geometry graph "O Region Selection"("Region Mesh": Geometry, Invert: Bool) -> (Selection: Bool) {
+  vector_math = (0.0, 0.0, -1.0) ⋅ Raycast(region_mesh).hit_normal
+  return (Selection: Switch[BOOLEAN](switch: Invert, false_: vector_math, true_: not vector_math))
+}
+
+geometry graph "O Cut to Region"(
+    Structure: Bundle,
+    "Region Mesh": Geometry,
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Structure: Bundle) {
+  return (
+    Structure: o_cut_structure(
+      structure: Structure,
+      selection: DomainSize(region_mesh).point_count
+        ? o_region_selection(region_mesh, invert: not Invert)
+        : false))
+}
+
+geometry(is_modifier: true) graph "O Delete Small Parts"(
+    Mesh: Geometry,
+    Threshold: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in 0.0..
+) -> (Mesh: Geometry) {
+  return (
+    Mesh: DeleteGeometry(
+      Mesh,
+      selection: AccumulateField(value: FaceArea(), group_id: MeshIsland().island_index).total
+        < Threshold))
+}
+
+geometry graph "O Cut Small Parts"(
+    Structure: Bundle,
+    Threshold: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in 0.0..,
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE),
+        "Mesh Threshold": Float(
+          subtype: FACTOR,
+          description: "Values larger than the threshold are inside the generated mesh") = 0.1 in 0.0..1.0
+    }
+) -> (Structure: Bundle) {
+  return (
+    Structure: o_cut_to_region(
+      structure: Structure,
+      region_mesh: GridToMesh(
+          grid: (SeparateBundle(
+            Structure) -> (
+            Solid: Bool(structure_type: GRID),
+            Albedo: Vector(structure_type: GRID),
+            Opacity: Float(structure_type: GRID),
+            Roughness: Float(structure_type: GRID),
+            Emission: Vector(structure_type: GRID),
+            Bump: Float(structure_type: GRID),
+            Name: String(structure_type: SINGLE),
+            ID: Int(structure_type: DYNAMIC))).solid,
+          threshold: mesh_threshold)
+        |> o_delete_small_parts(threshold: Threshold * 0.01),
+      invert: Invert))
+}
+
+geometry graph "O Build Structure"(
+    Solid: Bool(structure_type: GRID),
+    Color: Color,
+    Roughness: Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+    Emission: Color,
+    Bump: Float in -1.0..1.0,
+    Name: String,
+    ID: Int
+) -> (Structure: Bundle) {
+  separate_color = SeparateColor(color: Color)
+  field_to_grid_2 = FieldToGrid[BOOLEAN](topology: Solid, Opacity: separate_color.alpha) @ hide
+  combine_xyz = CombineXYZ(
+    x: separate_color.red,
+    y: separate_color.green,
+    z: separate_color.blue) @ hide
+  field_to_grid = FieldToGrid[BOOLEAN](topology: Solid, Albedo: combine_xyz) @ hide
+  field_to_grid_3 = FieldToGrid[BOOLEAN](topology: Solid, Roughness: Roughness) @ hide
+  field_to_grid_4 = FieldToGrid[BOOLEAN](topology: Solid, Emission: Vector = Emission) @ hide
+  map_range = MapRange(value: Bump, from_min: -1.0) @ hide
+  return (
+    Structure: CombineBundle[define_signature: true](
+      Solid: Solid,
+      Albedo(structure_type: GRID): field_to_grid,
+      Opacity(structure_type: GRID): field_to_grid_2,
+      Roughness: field_to_grid_3,
+      Emission: field_to_grid_4,
+      Bump: FieldToGrid[BOOLEAN](topology: Solid, Bump: map_range),
+      Name: Name,
+      ID: ID))
+}
+
+geometry graph "O Float to Target Digits"(
+    Value: Float in -10000.0..10000.0,
+    Target: Int = 4 in 0..9
+) -> (Output: Float) {
+  return (Output: pow(10.0, Target - ceil(log(abs(Value), 10.0))) * Value)
+}
+
+geometry graph "O Cutout by Threshold"(
+    Scalar: Bundle,
+    Label: Bundle,
+    Threshold: Float in -10000.0..10000.0,
+    "Properties"(default_closed: true) {
+        Color: Color = (0.6038313, 0.6038313, 0.6038313),
+        Roughness: Float(subtype: FACTOR) = 0.2 in 0.0..1.0,
+        Emission: Color,
+        Bump: Float in -1.0..1.0
+    },
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE),
+        Name: String,
+        Prune: Bool = true
+    }
+) -> (Structure: Bundle) {
+  separate_bundle = SeparateBundle[define_signature: true](
+    Scalar) -> (
+    Data: Float(structure_type: GRID),
+    Shape: Vector(structure_type: SINGLE),
+    Min: Float(structure_type: SINGLE),
+    Max: Float(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  separate_bundle_2 = SeparateBundle[define_signature: true](
+    Label) -> (
+    Data: Bool(structure_type: GRID),
+    Shape: Vector(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  match_string = MatchString(
+    string: separate_bundle_2.kind,
+    operation: Contains,
+    key: "label") @ hide
+  sample_grid = SampleGrid[BOOLEAN](grid: separate_bundle_2.data) @ hide
+  switch = match_string ? sample_grid : true @ hide
+  boolean_math_2 = Invert xor separate_bundle.data > Threshold @ hide
+  boolean_math = switch and boolean_math_2 @ hide
+  return (
+    Structure: o_build_structure(
+      solid: Prune
+        ? PruneGrid(grid: (separate_bundle.data - separate_bundle.min) * boolean_math)
+        : boolean_math,
+      color: Color,
+      roughness: Roughness,
+      emission: Emission,
+      bump: Bump,
+      name: Name,
+      id: separate_bundle.id + o_float_to_target_digits(value: Threshold)))
+}
+
+geometry graph "O Resample Layer"(
+    Grid: Float(structure_type: GRID),
+    "Old Shape": Vector(
+      description: "Maximum boundary of volume",
+      hide_value: true) = (100.0, 100.0, 100.0) in 1.0..512.0,
+    "New Shape": Vector(hide_value: true) = (100.0, 100.0, 100.0) in 1.0..512.0
+) -> (Topology: Float) {
+  grid_info = GridInfo(grid: Grid)
+  separate_xyz = SeparateXYZ(vector: new_shape) @ hide
+  return (
+    Topology: VoxelizeGrid(
+      grid: VolumeCube(
+          background: grid_info.background_value,
+          min: (0.0, 0.0, 0.0),
+          max: old_shape,
+          resolution_x: separate_xyz.x,
+          resolution_y: separate_xyz.y,
+          resolution_z: separate_xyz.z)
+        |> TransformGeometry(mode: Matrix, transform: grid_info.transform)
+        |> GetNamedGrid(name: "density").grid))
+}
+
+geometry graph "O Grid Info"(
+    Grid: Float(hide_value: true),
+    Shape: Vector(
+      subtype: TRANSLATION,
+      description: "Side length along each axis",
+      hide_value: true) = (100.0, 100.0, 100.0) in 1.0..512.0
+) -> ("Voxel Size": Vector(subtype: XYZ), "Median Point": Vector) {
+  grid_info = GridInfo(grid: Grid) @ hide
+  cube = Cube(size: Shape) @ hide
+  vector_math_3 = Shape * 0.5 @ hide
+  transform_geometry_2 = TransformGeometry(cube.mesh, translation: vector_math_3) @ hide
+  transform_geometry = TransformGeometry(
+    transform_geometry_2,
+    mode: Matrix,
+    transform: grid_info.transform) @ hide
+  bounding_box = BoundingBox(transform_geometry) @ hide
+  vector_math_2 = bounding_box.min + bounding_box.max @ hide
+  vector_math = vector_math_2 * 0.5 @ hide
+  combine_transform = CombineTransform(translation: vector_math) @ hide
+  return (
+    "Voxel Size": SeparateTransform(transform: grid_info.transform).scale,
+    "Median Point": vector_math)
+}
+
+geometry graph "O Transform Layer"(
+    Menu: Menu(optional_label: true) = Scalar,
+    Scalar: Bundle,
+    Label: Bundle,
+    Color: Bundle,
+    Menu as menu_menu: Menu(optional_label: true) = Center,
+    Translation: Vector(subtype: TRANSLATION),
+    Rotation: Rotation,
+    Scale: Vector(subtype: XYZ) = (1.0, 1.0, 1.0),
+    Matrix: Matrix(description: "Becomes the output value if it is chosen by the menu input")
+) -> (Layer: Bundle, Matrix: Matrix) {
+  separate_bundle = SeparateBundle[define_signature: true](
+    Scalar) -> (
+    Data: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE),
+    Min: Float(structure_type: SINGLE),
+    Max: Float(structure_type: SINGLE))
+  menu_switch = MenuSwitch(menu: Menu, Scalar: 0, Label: 1, Color: 2)
+  separate_bundle_2 = SeparateBundle[define_signature: true](
+    Label) -> (
+    Data: Bool(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  grid_info = GridInfo[BOOLEAN](grid: separate_bundle_2.data) @ hide
+  menu_switch_2 = MenuSwitch(menu: menu_menu, Transform: 0, Matrix: 1, Center: 2)
+  combine_transform = CombineTransform(
+    translation: Translation,
+    rotation: Rotation,
+    scale: Scale) @ hide
+  separate_bundle_3 = SeparateBundle[define_signature: true](
+    Color) -> (
+    Data: Vector(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    Kind: String(structure_type: SINGLE),
+    Shape: Vector(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  grid_info_2 = GridInfo(grid: separate_bundle.data) @ hide
+  vector_math = -o_grid_info(
+    grid: separate_bundle.data,
+    shape: separate_bundle.shape).median_point @ hide
+  combine_transform_2 = CombineTransform(translation: vector_math) @ hide
+  index_switch = IndexSwitch(menu_switch_2.output, combine_transform, Matrix, combine_transform_2)
+  vector_math_2 = -o_grid_info(
+    grid: separate_bundle_2.data,
+    shape: separate_bundle_2.shape).median_point @ hide
+  combine_transform_3 = CombineTransform(translation: vector_math_2) @ hide
+  index_switch_2 = IndexSwitch(menu_switch_2.output, combine_transform, Matrix, combine_transform_3)
+  grid_info_3 = GridInfo[BOOLEAN](grid: separate_bundle_3.data) @ hide
+  vector_math_3 = -o_grid_info(
+    grid: separate_bundle_3.data,
+    shape: separate_bundle_3.shape).median_point @ hide
+  combine_transform_4 = CombineTransform(translation: vector_math_3) @ hide
+  return (
+    Layer: IndexSwitch(
+      menu_switch.output,
+      CombineBundle[define_signature: true](
+        Data(
+          structure_type: GRID): SetGridTransform(
+            grid: separate_bundle.data,
+            transform: MultiplyMatrices(
+              Matrix: index_switch,
+              Matrix_001: grid_info_2.transform)).grid,
+        Name: separate_bundle.name,
+        Kind(structure_type: SINGLE): "scalar",
+        Shape(structure_type: SINGLE): separate_bundle.shape,
+        ID(structure_type: SINGLE): separate_bundle.id,
+        Min(structure_type: SINGLE): separate_bundle.min,
+        Max(structure_type: SINGLE): separate_bundle.max),
+      CombineBundle(
+        Data(
+          structure_type: GRID): SetGridTransform[BOOLEAN](
+            grid: separate_bundle_2.data,
+            transform: MultiplyMatrices(
+              Matrix: index_switch_2,
+              Matrix_001: grid_info.transform)).grid,
+        Name: separate_bundle_2.name,
+        Kind(structure_type: SINGLE): "label",
+        Shape(structure_type: SINGLE): separate_bundle_2.shape,
+        ID(structure_type: SINGLE): separate_bundle_2.id),
+      CombineBundle(
+        Data(
+          structure_type: GRID): SetGridTransform[VECTOR](
+            grid: separate_bundle_3.data,
+            transform: MultiplyMatrices(
+              Matrix: IndexSwitch(
+                menu_switch_2.output,
+                combine_transform,
+                Matrix,
+                combine_transform_4),
+              Matrix_001: grid_info_3.transform)).grid,
+        Name: separate_bundle_3.name,
+        Kind(structure_type: SINGLE): "color",
+        Shape(structure_type: SINGLE): separate_bundle_3.shape,
+        ID(structure_type: SINGLE): separate_bundle_3.id)),
+    Matrix: IndexSwitch(menu_switch.output, index_switch, index_switch_2))
+}
+
+geometry graph "O Zero Padding"(Value: Float, "Zero Padding": Int = 4 in 1..4) -> String {
+  value_to_string = ValueToString(value: Value)
+  string = "0"
+  repeat_output = repeat(
+    min(zero_padding - StringLength(string: value_to_string), zero_padding - 1.0),
+    Strings: "") -> {
+    return JoinStrings(strings: Strings, strings: string)
+  }
+  return JoinStrings(strings: repeat_output, strings: value_to_string)
+}
+
+geometry graph "O Layer"(
+    Name: String = "Scalar",
+    Center: Bool,
+    "Animation" {
+        Cycle: Bool = true,
+        "Frame Count": Float = 10.0 in 1.0..120.0,
+        "Frame Offset": Float in 0.0..0.0
+    },
+    "Resample" {
+        Resample: Bool(is_panel_toggle: true) = true,
+        "Bioxel Scale": Float(force_non_field: true, structure_type: SINGLE) = 2.0 in 1.0..10.0
+    },
+    "Hidden"(default_closed: true) {
+        Path: String(
+          subtype: FILE_PATH,
+          description: "Path to a OpenVDB file",
+          optional_label: true),
+        Shape: Vector(force_non_field: true, structure_type: SINGLE) = (1.0, 1.0, 1.0),
+        ID: String(force_non_field: true, structure_type: SINGLE),
+        Min: Float(force_non_field: true, structure_type: SINGLE),
+        Max: Float(force_non_field: true, structure_type: SINGLE),
+        Animation: Bool
+    }
+) -> (Scalar: Bundle, Label: Bundle, Color: Bundle) {
+  math = 1.0 / bioxel_scale @ hide
+  vector_math = Shape * math @ hide
+  math_3 = min(Min, 0.0) @ hide
+  get_named_grid_3 = GetNamedGrid[VECTOR](name: "vector")
+  string = "data.vdb"
+  string_2 = "data"
+  string_3 = "vdb"
+  math_4 = SceneTime().frame + frame_offset
+  transform_geometry = ImportVDB(
+      path: JoinStrings(
+        "/",
+        Path,
+        Animation
+          ? JoinStrings(
+            ".",
+            string_2,
+            o_zero_padding(
+              value: Cycle
+                ? mod(math_4 - 1.0, frame_count) + 1.0
+                : Clamp(value: math_4, min: 1.0, max: frame_count)),
+            string_3)
+          : string))
+    |> TransformGeometry(rotation: (1.5707964, 0.0, 0.0), scale: (0.01, 0.01, 0.01)) @ hide
+  math_2 = GetNamedGrid(transform_geometry, name: "scalar").grid + math_3
+  sample_grid = SampleGrid(grid: math_2) @ hide
+  get_named_grid = GetNamedGrid(transform_geometry, name: "label")
+  get_named_grid_2 = GetNamedGrid[VECTOR](transform_geometry, name: "color")
+  sample_grid_2 = SampleGrid[BOOLEAN](grid: get_named_grid.grid) @ hide
+  sample_grid_3 = SampleGrid[VECTOR](grid: get_named_grid_2.grid) @ hide
+  vector_math_2 = ceil(vector_math) @ hide
+  switch = Resample ? vector_math_2 : Shape @ hide
+  slice_string = SliceString(string: ID, position: 2, length: 9) @ hide
+  string_to_value = StringToValue[INT](string: slice_string) @ hide
+  combine_bundle = CombineBundle[define_signature: true](
+    Data(
+      structure_type: GRID): Resample
+        ? FieldToGrid(
+          topology: o_resample_layer(grid: math_2, old_shape: Shape, new_shape: vector_math_2),
+          Float: sample_grid)
+        : math_2,
+    Name: Name,
+    Kind(structure_type: SINGLE): "scalar",
+    Shape(structure_type: SINGLE): switch,
+    ID(structure_type: SINGLE): string_to_value.value,
+    Min(structure_type: SINGLE): Min,
+    Max(structure_type: SINGLE): Max)
+  combine_bundle_2 = CombineBundle[define_signature: true](
+    Data(
+      structure_type: GRID): Switch[BOOLEAN](
+        switch: Resample,
+        false_: get_named_grid.grid,
+        true_: FieldToGrid(
+          topology: o_resample_layer(
+            grid: get_named_grid.grid,
+            old_shape: Shape,
+            new_shape: vector_math_2),
+          Float: sample_grid_2)),
+    Name: Name,
+    Kind(structure_type: SINGLE): "label",
+    Shape(structure_type: SINGLE): switch,
+    ID(structure_type: SINGLE): string_to_value.value)
+  combine_bundle_3 = CombineBundle[define_signature: true](
+    Data(
+      structure_type: GRID): Resample
+        ? FieldToGrid(
+          topology: o_resample_layer(
+            grid: get_named_grid_2.grid,
+            old_shape: Shape,
+            new_shape: vector_math_2),
+          Float: sample_grid_3)
+        : get_named_grid_2.grid,
+    Name: Name,
+    Kind(structure_type: SINGLE): "color",
+    Shape(structure_type: SINGLE): switch,
+    ID(structure_type: SINGLE): string_to_value.value)
+  return (
+    Scalar: Center ? o_transform_layer(scalar: combine_bundle).layer : combine_bundle,
+    Label: Center
+      ? o_transform_layer(Menu: Label, label: combine_bundle_2).layer
+      : combine_bundle_2,
+    Color: Center
+      ? o_transform_layer(Menu: Color, color: combine_bundle_3).layer
+      : combine_bundle_3)
+}
+
+geometry(is_modifier: true) graph "O Displace Geometry"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Strength: Float = 1.0 in -10000.0..10000.0,
+    Direction: Menu(menu_expanded: true, optional_label: true) = Normal,
+    Height: Float(subtype: DISTANCE) = 1.0,
+    Vector: Vector(subtype: TRANSLATION) = (1.0, 1.0, 1.0),
+    "Options"(default_closed: true) {
+        Midlevel: Float(subtype: DISTANCE) in 0.0..1.0
+    }
+) -> Geometry {
+  return SetPosition(
+    Geometry,
+    selection: Selection,
+    offset: MenuSwitch(
+      menu: Direction,
+      Normal: Normal[legacy_corner_normals: true]().normal * ((Height - Midlevel) * Strength),
+      Vector: (Vector - Midlevel) * Strength).output)
+}
+
+geometry graph "O Is Edge Boundary"() -> ("Is Edge Boundary": Bool) {
+  return (
+    "Is Edge Boundary": EvaluateOnDomain[EDGE, BOOLEAN](value: EdgeNeighbors() == 1)
+      or VertexNeighbors().vertex_count == 1)
+}
+
+geometry graph "O Project Geometry"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Source: Geometry,
+    Menu: Menu(optional_label: true) = "Minimum Distance",
+    "Positive Weight": Float(
+      subtype: FACTOR,
+      description: "Amount of mixing between the A and B inputs") = 1.0 in 0.0..1.0,
+    "Negative Weight": Float(
+      subtype: FACTOR,
+      description: "Amount of mixing between the A and B inputs") = 1.0 in 0.0..1.0,
+    "Options" {
+        Weight: Float(
+          subtype: FACTOR,
+          description: "Amount of mixing between the A and B inputs") = 1.0 in 0.0..1.0,
+        "Max Distance": Float = 5.0 in -10000.0..10000.0
+    }
+) -> Geometry {
+  normal = Normal()
+  sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](Source, value: normal.normal) @ hide
+  vector_math = -normal.normal @ hide
+  math = sqrt(FaceArea()) * max_distance
+  raycast = Raycast(Source, ray_direction: normal.normal, ray_length: math)
+  raycast_2 = Raycast(Source, ray_direction: vector_math, ray_length: math)
+  normal_2 = Normal() @ hide
+  vector_math_2 = raycast_2.hit_normal ⋅ normal_2.normal @ hide
+  compare = vector_math_2 > 0.0 @ hide
+  boolean_math = raycast_2.is_hit and compare @ hide
+  normal_3 = Normal() @ hide
+  vector_math_3 = raycast.hit_normal ⋅ normal_3.normal @ hide
+  compare_2 = vector_math_3 > 0.0 @ hide
+  boolean_math_2 = raycast.is_hit and compare_2 @ hide
+  position = Position()
+  math_2 = boolean_math * negative_weight @ hide
+  mix = Mix[VECTOR](factor: math_2, a: position, b: raycast_2.hit_position) @ hide
+  math_3 = boolean_math_2 * positive_weight @ hide
+  mix_2 = Mix[VECTOR](factor: math_3, a: position, b: raycast.hit_position) @ hide
+  set_position = SetPosition(
+    Geometry,
+    selection: Selection,
+    position: Mix[VECTOR, clamp_factor: false](
+      factor: Weight,
+      a: Position(),
+      b: MenuSwitch(
+        menu: Menu,
+        "Minimum Distance": GeometryProximity(Source).position,
+        Project: raycast.is_hit ? mix_2 : mix).output)) @ hide
+  return set_position
+}
+
+geometry(is_modifier: true) graph "O Smooth Geometry"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Iterations: Int(description: "How many times to blur the values for all elements") = 5 in 1..20,
+    Weight: Float(
+      subtype: FACTOR,
+      description: "Relative mix weight of neighboring elements") = 1.0 in 0.0..1.0,
+    "Pin Sharp": Float(
+      subtype: FACTOR,
+      description: "Relative mix weight of neighboring elements") in 0.0..1.0,
+    "Pin Boundary": Float(
+      subtype: FACTOR,
+      description: "Relative mix weight of neighboring elements") in 0.0..0.9999,
+    "Project"(default_closed: true) {
+        Project: Bool(is_panel_toggle: true),
+        "Positive Weight": Float(
+          subtype: FACTOR,
+          description: "Amount of mixing between the A and B inputs") = 1.0 in 0.0..1.0,
+        "Negative Weight": Float(
+          subtype: FACTOR,
+          description: "Amount of mixing between the A and B inputs") = 1.0 in 0.0..1.0,
+        "Max Distance": Float = 2.0 in 1.0..5.0,
+        Source: Menu(menu_expanded: true, optional_label: true) = Original,
+        Source as source_geometry: Geometry,
+        "Mesh Island": Int(
+          description: "Splits the faces of the input mesh into groups which can be sampled individually",
+          hide_value: true)
+    }
+) -> Geometry {
+  position = Position() @ hide
+  blur_attribute = BlurAttribute[FLOAT_VECTOR](value: position) @ hide
+  position_2 = Position() @ hide
+  blur_attribute_2 = BlurAttribute[FLOAT_VECTOR](value: position_2, weight: 0.5) @ hide
+  normal = Normal() @ hide
+  menu_switch = MenuSwitch(menu: Source, Original: 0, Custom: 1)
+  index_switch = IndexSwitch(menu_switch.output, Geometry, source_geometry) @ hide
+  index_switch_2 = IndexSwitch(menu_switch.output, MeshIsland().island_index, mesh_island) @ hide
+  repeat_output = repeat(Iterations, Geometry: Geometry) -> {
+    separate_geometry = SeparateGeometry(
+      Geometry,
+      selection: EvaluateOnDomain[BOOLEAN](value: o_is_edge_boundary())) @ hide
+    sample_nearest = SampleNearest(separate_geometry.selection) @ hide
+    sample_index = SampleIndex[FLOAT_VECTOR](
+      separate_geometry.selection,
+      value: blur_attribute_2,
+      index: sample_nearest) @ hide
+    mix = Mix[VECTOR](
+      factor: pin_boundary,
+      a: blur_attribute,
+      b: o_is_edge_boundary() ? sample_index : blur_attribute) @ hide
+    set_position = SetPosition(
+      Geometry,
+      selection: Selection,
+      position: Mix[VECTOR](
+        factor: Weight
+          * (pin_sharp
+            ? length(
+              BlurAttribute[FLOAT_VECTOR](value: normal.normal, iterations: 10, weight: pin_sharp))
+            : 1.0),
+        a: Position(),
+        b: pin_boundary ? mix : blur_attribute)) @ hide
+    split_to_instances = SplitToInstances(set_position, group_id: MeshIsland().island_index)
+    foreach_output = foreach[INSTANCE](
+      split_to_instances.instances,
+      "Group ID": split_to_instances.group_id) -> {
+      separate_geometry_2 = SeparateGeometry(
+        index_switch,
+        selection: group_id == index_switch_2) @ hide
+      return (
+        Geometry: element
+          |> RealizeInstances[realize_to_point_domain: true]()
+          |> o_project_geometry(
+            selection: Selection,
+            source: separate_geometry_2.selection,
+            menu: "Project",
+            positive_weight: positive_weight,
+            negative_weight: negative_weight,
+            max_distance: max_distance))
+    }
+    return Project ? foreach_output.Geometry : set_position
+  }
+  return repeat_output
+}
+
+geometry graph "O Realize Structure"(
+    Structure: Bundle,
+    Density: Float = 10.0 in 0.0..100.0,
+    "Surface"(default_closed: true) {
+        Surface: Bool(is_panel_toggle: true),
+        Sepcular: Float = 0.5 in 0.0..1.0,
+        "Bump Scale": Float(force_non_field: true, structure_type: SINGLE) in 0.0..10.0
+    },
+    "Options"(default_closed: true) {
+        "Random Offset": Float = 0.001 in 0.0001..0.01
+    }
+) -> Geometry {
+  separate_bundle = SeparateBundle[define_signature: true](
+    Structure) -> (
+    Solid: Bool(structure_type: GRID),
+    Albedo: Vector(structure_type: GRID),
+    Opacity: Float(structure_type: GRID),
+    Roughness: Float(structure_type: GRID),
+    Emission: Vector(structure_type: GRID),
+    Bump: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    ID: Int(structure_type: DYNAMIC))
+  sample_grid = SampleGrid[BOOLEAN](grid: separate_bundle.solid) @ hide
+  math = separate_bundle.opacity * sample_grid @ hide
+  sample_grid_2 = SampleGrid(grid: separate_bundle.roughness) @ hide
+  math_2 = -random_offset @ hide
+  sample_grid_3 = SampleGrid(grid: separate_bundle.bump) @ hide
+  math_3 = bump_scale * 0.01 @ hide
+  math_4 = sample_grid_3 - 0.5 @ hide
+  capture_attribute = GridToMesh(grid: separate_bundle.solid)
+    |> CaptureAttribute(Value: math_4)
+  math_5 = capture_attribute.value * math_3
+  group = capture_attribute.geometry
+    |> StoreNamedAttribute(name: "o_bump", value: math_5)
+    |> StoreNamedAttribute(name: "o_roughness", value: sample_grid_2)
+    |> StoreNamedAttribute(name: "o_opacity", value: Sepcular)
+    |> o_smooth_geometry(iterations: 1)
+  return GeometryToInstance(
+    Switch[GEOMETRY](
+          switch: Surface,
+          true_: (bump_scale ? o_displace_geometry(group, height: math_5) : group)
+            |> SetShadeSmooth()
+            |> SetMaterial(material: "O Surface"))
+        + (StoreNamedGrid(name: "o_density", grid: math * Density)
+          |> StoreNamedGrid[VECTOR_FLOAT](name: "o_albedo", grid: separate_bundle.albedo)
+          |> StoreNamedGrid[VECTOR_FLOAT](name: "o_emission", grid: separate_bundle.emission)
+          |> SetMaterial(material: "O Volume"))
+      |> SetGeometryName(name: separate_bundle.name)
+      |> TransformGeometry(
+        translation: RandomValue[FLOAT_VECTOR](
+          min: math_2,
+          max: random_offset,
+          id: separate_bundle.id)))
+}
+
+geometry graph "O Scalar Layer to Color"(
+    Scalar: Bundle,
+    "From Min": Float in -10000.0..10000.0,
+    "From Max": Float = 1.0 in -10000.0..10000.0,
+    Custom: Closure
+) -> Color {
+  return EvaluateClosure[define_signature: true](
+    Custom,
+    Color: MapRange(
+      value: SampleGrid(
+        grid: (SeparateBundle(
+          Scalar) -> (
+          Data: Float(structure_type: GRID),
+          Name: String(structure_type: SINGLE),
+          Kind: String(structure_type: SINGLE),
+          Shape: Vector(structure_type: SINGLE),
+          ID: Int(structure_type: SINGLE),
+          Min: Float(structure_type: SINGLE),
+          Max: Float(structure_type: SINGLE))).data),
+      from_min: from_min,
+      from_max: from_max)) -> Color
+}
+
+geometry graph "Geometry Nodes"(Geometry: Geometry) -> Geometry {
+  group = o_layer(
+    name: "CT",
+    center: true,
+    path: "C:\Users\icrdr\.bioxel\layers\17796963050",
+    shape: (270.0, 270.0, 231.0),
+    id: "17796963050",
+    min: -1035.0,
+    max: 3071.0)
+  group_2 = o_cutout_by_threshold(
+    scalar: group.scalar,
+    threshold: -72.1,
+    color: (0.60383725, 0.3106675, 0.37235665, 1.0),
+    roughness: 0.48571432)
+  group_3 = o_cut_structure(
+    structure: group_2,
+    selection: box_selection(center: (0.49999997, 0.0, 0.0)),
+    invert: true)
+  compare = Position() > 0.0
+  group_4 = o_cut_to_region(
+    structure: group_2,
+    region_mesh: ObjectInfo[RELATIVE](object: "Suzanne").geometry)
+  position = Position()
+  closure_output = graph(
+    Color: Float(structure_type: DYNAMIC)
+  ) -> (Color: Color(structure_type: DYNAMIC)) {
+    return ColorRamp[
+      color_ramp: Ramp(
+        (0.0, (0.09633246, 0.15404524, 0.32000923, 1.0)),
+        (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: Color).color
+  }
+  group_5 = o_scalar_layer_to_color(
+    scalar: group.scalar,
+    from_max: 141.29999,
+    custom: closure_output)
+  group_6 = o_scalar_layer_to_color(scalar: group.scalar, from_min: 37.199997, from_max: 80.0)
+  return o_realize_structure(
+    structure: o_cut_small_parts(structure: group_2, threshold: 177.49998),
+    surface: true)
+}

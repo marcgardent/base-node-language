@@ -1,0 +1,12 @@
+geometry graph "O Color Layer to Color"(Color: Bundle, Custom: Closure) -> Color {
+  return EvaluateClosure[define_signature: true](
+    Custom,
+    Color: Color = SampleGrid[VECTOR](
+      grid: (SeparateBundle(
+        Color) -> (
+        Data: Vector(structure_type: GRID),
+        Name: String(structure_type: SINGLE),
+        Kind: String(structure_type: SINGLE),
+        Shape: Vector(structure_type: SINGLE),
+        ID: Int(structure_type: SINGLE))).data)) -> Color
+}

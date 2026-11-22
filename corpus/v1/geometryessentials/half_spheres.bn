@@ -1,0 +1,64 @@
+geometry graph ".UV_sphere_corrected"(
+    Segments: Int(description: "Horizontal resolution of the sphere") = 32 in 3..1024,
+    Rings: Int(description: "The number of horizontal rings") = 16 in 2..1024
+) -> (Mesh: Geometry, "UV Map": Vector(dimensions: 2), Equator: Bool) {
+  uvsphere = UVSphere(segments: Segments, rings: Rings)
+  math = 1.0 / Segments
+  capture_attribute = CaptureAttribute(
+    uvsphere.mesh,
+    Result: Compare[EQUAL](a: abs(Position().z), epsilon: 1e-05))
+  return (
+    Mesh: capture_attribute.geometry,
+    "UV Map": CombineXYZ(
+      x: uvsphere.uv_map.x
+        + (EvaluateOnDomain[FACE, BOOLEAN](
+            value: IntegerMath[MODULO](
+                Value: IntegerMath[ADD](Value: Index(), Value_001: 1),
+                Value_001: Segments)
+              <= 0)
+          ? -1.0 + math
+          : math),
+      y: uvsphere.uv_map.y),
+    Equator: capture_attribute.result)
+}
+
+geometry graph ".half_spheres"(
+    Resolution: Int = 8 in 3..10000,
+    "Shade Smooth": Bool,
+    "UV Map": Bool,
+    "UV Name": String,
+    "Align Normals": Bool
+) -> (Top: Geometry, Bottom: Geometry, Boolean: Bool) {
+  boolean_math = not shade_smooth
+  group = uv_sphere_corrected(
+    segments: Resolution,
+    rings: IntegerMath[MULTIPLY](
+      Value: IntegerMath[DIVIDE_ROUND](Value: Resolution, Value_001: 2),
+      Value_001: 2))
+  separate_xyz = SeparateXYZ(vector: Position()) @ hide
+  capture_attribute_2 = group.mesh
+    |> TransformGeometry()
+    |> CaptureAttribute[FACE](Top: separate_xyz.z > 0.0)
+  capture_attribute = CaptureAttribute(capture_attribute_2.geometry, Normal: Normal().normal)
+  set_mesh_normal = SetMeshNormal(
+    capture_attribute.geometry,
+    edge_sharpness: boolean_math,
+    face_sharpness: boolean_math)
+  switch = align_normals
+    ? SetMeshNormal[FREE](set_mesh_normal, custom_normal: capture_attribute.normal)
+    : set_mesh_normal
+  separate_geometry = SeparateGeometry[FACE](
+    uv_map
+      ? StoreNamedAttribute[FLOAT2, CORNER](
+        switch,
+        name: uv_name,
+        value: RotateVector(
+          vector: group.uv_map + (capture_attribute_2.top ? (-1.0, -1.5, 0.0) : (-1.0, -0.5, 0.0)),
+          rotation: (0.0, 3.1415927, 1.5707964)))
+      : switch,
+    selection: capture_attribute_2.top)
+  return (
+    Top: separate_geometry.selection,
+    Bottom: separate_geometry.inverted,
+    Boolean: group.equator)
+}

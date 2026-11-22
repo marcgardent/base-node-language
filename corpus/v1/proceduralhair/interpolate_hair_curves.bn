@@ -1,0 +1,396 @@
+geometry graph "Get Attachment Surface"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  separate_bundle = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_geometry: Geometry, surface_uv_map: Vector)
+  compare = DomainSize(separate_bundle.surface_geometry).point_count == 0
+  separate_bundle_2 = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_object: Object, surface_uv_map_name: String)
+  switch = compare
+    ? ObjectInfo[RELATIVE](object: separate_bundle_2.surface_object).geometry
+    : separate_bundle.surface_geometry
+  return (
+    "Surface Geometry": switch,
+    "Surface UV Map": compare
+      ? NamedAttribute[FLOAT_VECTOR](name: separate_bundle_2.surface_uv_map_name).attribute
+      : separate_bundle.surface_uv_map,
+    Exists: not Warning(
+      show: DomainSize(switch).point_count == 0,
+      message: "Missing surface geometry"))
+}
+
+geometry graph "Attachment Info"(
+    "Hair Curves": Geometry(description: "Surface geometry of the curve attachment")
+) -> (
+    "Surface Geometry": Geometry,
+    "Surface Exists": Bool,
+    "Attachment UV": Vector(description: "Surface attachment UV coordinates stored on each curve"),
+    "Attachment Is Valid": Bool(
+      description: "Whether the stored attachment UV coordinate is valid"),
+    "Surface Normal": Vector(
+      description: "Normal direction of the surface mesh at the attachment point")
+) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "surface_normal")
+  group = get_attachment_surface(hair_curves)
+  "Smooth Normals" {
+    capture_attribute = CaptureAttribute(
+      group.surface_geometry,
+      Value: Normal[legacy_corner_normals: true]().normal) @ hide
+  }
+  sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: capture_attribute.value,
+    uv_map: group.surface_uv_map,
+    sample_uv: NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+  switch = Switch[GEOMETRY](
+    switch: Warning[WARNING](show: not group.exists, message: "Missing hair surface geometry."),
+    false_: group.surface_geometry) @ hide
+  return (
+    "Surface Geometry": switch,
+    "Surface Exists": group.exists,
+    "Attachment UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute,
+    "Attachment Is Valid": sample_uvsurface.is_valid,
+    "Surface Normal": EvaluateOnDomain[FLOAT_VECTOR](
+      value: named_attribute.exists ? named_attribute.attribute : sample_uvsurface.value))
+}
+
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry graph "Get Hair Surface Geometry"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  group = get_attachment_surface(Geometry)
+  warning = Warning(
+    show: not group.exists,
+    message: "Missing hair surface geometry. Use 'Attach Hair Curves to Surface'.")
+  return (
+    "Surface Geometry": group.surface_geometry,
+    "Surface UV Map": group.surface_uv_map,
+    Exists: group.exists)
+}
+
+geometry graph "Get Rest Geometry"(
+    Geometry: Geometry
+) -> ("Rest Geometry": Geometry, "Rest Geometry Found": Bool, "Rest Attribute Found": Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: "rest_geometry",
+    remove: true)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  return (
+    "Rest Geometry": Warning[WARNING](
+        show: not get_bundle_item.exists,
+        message: "Missing rest geometry. Use 'Capture Rest Geometry'.")
+      ? SetPosition(
+        get_geometry_bundle.geometry,
+        selection: named_attribute.exists,
+        position: named_attribute.attribute)
+      : get_bundle_item.item,
+    "Rest Geometry Found": get_bundle_item.exists,
+    "Rest Attribute Found": SampleIndex[BOOLEAN](
+      get_geometry_bundle.geometry,
+      value: AccumulateField[INT](value: named_attribute.exists).total))
+}
+
+geometry graph "Rest Surface"(Surface: Geometry) -> ("Rest Surface": Geometry, Exists: Bool) {
+  group = get_rest_geometry(Surface)
+  return (
+    "Rest Surface": Warning[WARNING](
+        show: not (group.rest_geometry_found or group.rest_attribute_found),
+        message: "Missing rest geometry on surface. Use 'Capture Rest Geometry' or enable 'Add Rest Position'.")
+      ? Surface
+      : group.rest_geometry,
+    Exists: group.rest_geometry_found)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Interpolate Hair Curves"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    "Resting Surface": Bool(
+      description: "Use the surface's resting state to preserve stability under deformation") = true,
+    "Follow Surface Normal": Bool(
+      description: "Align the interpolated curves to the surface normal"),
+    "Part by Mesh Islands": Bool(
+      description: "Use mesh islands of the surface geometry for parting") = true,
+    "Interpolation Guides": Int(
+      description: "Amount of guides to be used for interpolation per curve") = 4 in 1..8,
+    "Distance to Guides": Float(
+      subtype: DISTANCE,
+      description: "Distance around each guide to spawn interpolated curves") in 0.0..,
+    "Distribution" {
+        "Distribution Method": Menu(menu_expanded: true, optional_label: true) = Random,
+        Density: Float(
+          description: "Surface density of generated hair curves") = 10.0 in 0.0..10000.0,
+        "Density Mask": Float(
+          subtype: FACTOR,
+          description: "Factor applied on the density for curve distribution") = 1.0 in 0.0..1.0,
+        "Mask Texture": Image(
+          description: "Discard points based on a mask texture after distribution",
+          optional_label: true),
+        "Viewport Amount": Float(
+          subtype: FACTOR,
+          description: "Factor applied on the density for the viewport") = 1.0 in 0.0..1.0,
+        Seed: Int(description: "Random seed for the operation")
+    }
+) -> (
+    Geometry: Geometry,
+    "Guide Index": Int(
+      description: "Index of the main guide curve per curve",
+      attribute_domain: CURVE,
+      default_attribute_name: "guide_curve_index"),
+    "Surface Normal": Vector(
+      description: "Normal direction of the surface mesh at the attachment point",
+      attribute_domain: CURVE,
+      default_attribute_name: "surface_normal")
+) {
+  "Density Texture" {
+    image_info = ImageInfo(image: mask_texture) @ hide
+    compare = image_info.width > 0 @ hide
+  }
+  "Distance Culling" {
+    compare_3 = Compare[NOT_EQUAL](a: distance_to_guides, epsilon: 0.0) @ hide
+    accumulate_field = AccumulateField[INT](value: compare_3) @ hide
+    compare_4 = accumulate_field.total == 0 @ hide
+  }
+  "Base Point Distribution" {
+    clamp = Clamp(value: viewport_amount) @ hide
+    switch_6 = IsViewport() ? clamp : 1.0
+    math_3 = Density * 2.0 @ hide
+    math_2 = math_3 * switch_6 @ hide
+    math_5 = 0.3 / Density @ hide
+    math_4 = sqrt(math_5) @ hide
+    math_6 = Density * (switch_6 * density_mask) @ hide
+    menu_switch = MenuSwitch[GEOMETRY](menu: distribution_method, Random: _, "Poisson Disk": _)
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  curve_to_points = CurveToPoints(get_geometry_component.component, count: 1)
+  "Select New Guides by Distance" {
+    sample_nearest_2 = SampleNearest(curve_to_points.points) @ hide
+  }
+  group = get_hair_surface_geometry(get_geometry_component.component)
+  "Surface Geometry" {
+    switch = resting_surface
+      ? rest_surface(group.surface_geometry).rest_surface
+      : group.surface_geometry
+  }
+  "Remove Based on Density" {
+    sample_index = SampleIndex[BOOLEAN, CURVE](
+      get_geometry_component.component,
+      value: RandomValue(max: 0.01, id: curve_info().curve_id)
+        > SampleUVSurface(
+          switch,
+          value: density_mask,
+          uv_map: group.surface_uv_map,
+          sample_uv: attachment_info().attachment_uv).value,
+      index: SampleNearest(curve_to_points.points))
+  }
+  "Sample Normals" {
+    capture_attribute_4 = CaptureAttribute(
+      switch,
+      Value: Normal[legacy_corner_normals: true]().normal)
+    sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+      capture_attribute_4.geometry,
+      value: capture_attribute_4.value,
+      uv_map: group.surface_uv_map,
+      sample_uv: NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+  }
+  "Base Point Distribution" .. {
+    capture_attribute_6 = CaptureAttribute(switch, Value: MeshIsland().island_index)
+    distribute_points_on_faces = DistributePointsOnFaces[POISSON](
+      capture_attribute_6.geometry,
+      distance_min: math_4,
+      density_max: math_2,
+      density_factor: density_mask,
+      seed: Seed)
+    distribute_points_on_faces_2 = DistributePointsOnFaces(
+      capture_attribute_6.geometry,
+      density: math_6,
+      seed: Seed)
+    switch_4 = menu_switch.poisson_disk
+      ? distribute_points_on_faces.points
+      : distribute_points_on_faces_2.points
+    switch_5 = menu_switch.poisson_disk
+      ? distribute_points_on_faces.normal
+      : distribute_points_on_faces_2.normal
+  }
+  "Distance Culling" .. {
+    sample_index_2 = SampleIndex[BOOLEAN](switch_4, value: compare_4) @ hide
+    switch_3 = sample_index_2
+      ? switch_4
+      : DeleteGeometry(
+        switch_4,
+        selection: compare_3
+          and GeometryProximity[POINTS](curve_to_points.points).distance > distance_to_guides)
+  }
+  capture_attribute_5 = CaptureAttribute(switch_3, Value: switch_5)
+  "Density Texture" .. {
+    capture_attribute_2 = CaptureAttribute(
+      capture_attribute_5.geometry,
+      Value: group.surface_uv_map)
+    image_texture = ImageTexture(image: mask_texture, vector: capture_attribute_2.value) @ hide
+    switch_2 = compare
+      ? DeleteGeometry(
+        capture_attribute_2.geometry,
+        selection: not RandomValue[BOOLEAN](probability: image_texture.color, seed: Seed))
+      : capture_attribute_2.geometry
+  }
+  "Select New Guides by Distance" .. {
+    sample_nearest = SampleNearest(switch_2) @ hide
+    compare_2 = SampleIndex[INT](
+        curve_to_points.points,
+        value: sample_nearest,
+        index: sample_nearest_2)
+      == Index()
+  }
+  separate_geometry = SeparateGeometry(switch_2, selection: compare_2)
+  {
+    vector_math = (100.0, 100.0, 100.0) * capture_attribute_6.value
+  }
+  {
+    delete_geometry = separate_geometry.selection
+      |> SetPosition(
+        position: SampleIndex[FLOAT_VECTOR](
+          curve_to_points.points,
+          value: Position(),
+          index: sample_nearest_2))
+      |> DeleteGeometry(selection: sample_index)
+  }
+  "New Guides" {
+    interpolate_curves = InterpolateCurves(
+      get_geometry_component.component,
+      points: delete_geometry,
+      max_neighbors: 1)
+  }
+  capture_attribute = CaptureAttribute[CURVE](
+    interpolate_curves.curves,
+    Value: interpolate_curves.closest_index) @ hide
+  capture_attribute_7 = CaptureAttribute[CURVE](capture_attribute.geometry, Value: Index())
+  "Join Guides and Interpolated Curves" {
+    capture_attribute_3 = CaptureAttribute[CURVE](capture_attribute_7.geometry, Value: true)
+  }
+  {
+    sample_nearest_3 = delete_geometry
+      |> SetPosition(offset: vector_math)
+      |> SampleNearest(sample_position: Position() + vector_math)
+  }
+  switch_7 = part_by_mesh_islands ? sample_nearest_3 : SampleNearest(delete_geometry)
+  "Interpolate Guide Curves on Points" {
+    switch_8 = follow_surface_normal ? sample_uvsurface.value : (0.0, 0.0, 1.0) @ hide
+    switch_9 = follow_surface_normal ? capture_attribute_5.value : (0.0, 0.0, 1.0) @ hide
+    capture_attribute_8 = CaptureAttribute(separate_geometry.inverted, Value: ID()) @ hide
+    capture_attribute_9 = CaptureAttribute(capture_attribute_8.geometry, Value: switch_7) @ hide
+  }
+  "Join Guides and Interpolated Curves" .. {
+    math = capture_attribute_9.value + capture_attribute_7.value
+  }
+  "Parting IDs" {
+    sample_nearest_4 = SampleNearest(switch_2) @ hide
+    sample_index_3 = SampleIndex[INT](
+      switch_2,
+      value: capture_attribute_6.value,
+      index: sample_nearest_4) @ hide
+    sample_index_4 = SampleIndex[INT](
+      curve_to_points.points,
+      value: sample_index_3,
+      index: Index()) @ hide
+    switch_10 = part_by_mesh_islands ? sample_index_4 : 0
+    switch_11 = part_by_mesh_islands ? capture_attribute_6.value : 0
+  }
+  "Interpolate Guide Curves on Points" .. {
+    interpolate_curves_2 = InterpolateCurves(
+      get_geometry_component.component,
+      guide_up: switch_8,
+      guide_group_id: switch_10,
+      points: capture_attribute_9.geometry,
+      point_up: switch_9,
+      point_group_id: switch_11,
+      max_neighbors: interpolation_guides)
+  }
+  "Join Guides and Interpolated Curves" .. {
+    join_geometry = capture_attribute_3.geometry
+      + StoreNamedAttribute[FLOAT2, CURVE](
+        interpolate_curves_2.curves,
+        name: "surface_uv_coordinate",
+        value: capture_attribute_2.value)
+  }
+  "Stable IDs" {
+    set_id = SetID(
+      join_geometry,
+      id: HashValue(
+        value: capture_attribute_3.value ? capture_attribute.value : capture_attribute_8.value,
+        seed: CurveOfPoint().index_in_curve))
+  }
+  return (
+    Geometry: group.exists ? get_geometry_component.geometry + set_id : Geometry,
+    "Guide Index": math,
+    "Surface Normal": capture_attribute_5.value)
+}

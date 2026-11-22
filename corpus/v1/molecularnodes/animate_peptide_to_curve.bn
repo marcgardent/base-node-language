@@ -1,0 +1,164 @@
+geometry graph ".utils_group_field_at_selection"(
+    Selection: Bool(description: "Selection of atoms to apply this node to"),
+    "Group Index": Int,
+    Float: Float(hide_value: true),
+    Vector: Vector(hide_value: true),
+    Boolean: Bool(hide_value: true),
+    Color: Color(hide_value: true) = (0.0, 0.0, 0.0, 0.0),
+    Integer: Int(hide_value: true)
+) -> ("Group Index": Int, Float: Float, Vector: Vector, Boolean: Bool, Color: Color, Integer: Int) {
+  accumulate_field = AccumulateField[INT](value: Selection ? Index() : 0, group_id: group_index)
+  return (
+    "Group Index": accumulate_field.total,
+    Float: EvaluateAtIndex(value: Float, index: accumulate_field.total),
+    Vector: EvaluateAtIndex[FLOAT_VECTOR](value: Vector, index: accumulate_field.total),
+    Boolean: EvaluateAtIndex[BOOLEAN](value: Boolean, index: accumulate_field.total),
+    Color: EvaluateAtIndex[FLOAT_COLOR](value: Color, index: accumulate_field.total),
+    Integer: EvaluateAtIndex[INT](value: Integer, index: accumulate_field.total))
+}
+
+geometry graph ".MN_utils_aa_atom_pos"(
+    atom_name: Int = 5
+) -> (Position: Vector, "Group Index": Int, b_factor: Float, Integer: Int) {
+  named_attribute = NamedAttribute[INT](name: "atom_name")
+  accumulate_field = AccumulateField[INT](value: named_attribute.attribute == 1)
+  group = utils_group_field_at_selection(
+    selection: named_attribute.attribute == atom_name,
+    group_index: accumulate_field.leading,
+    float: NamedAttribute(name: "b_factor").attribute,
+    vector: Position(),
+    integer: EdgesOfVertex(vertex_index: Index()).total)
+  "If atom_name is 0, return midpoint of backbone N and C" {
+    position = Position()
+    switch = atom_name != 0
+      ? group.vector
+      : Mix[VECTOR](
+        factor: 0.5,
+        a: utils_group_field_at_selection(
+          selection: named_attribute.attribute == 1,
+          group_index: accumulate_field.leading,
+          vector: position).vector,
+        b: utils_group_field_at_selection(
+          selection: named_attribute.attribute == 3,
+          group_index: accumulate_field.leading,
+          vector: position).vector)
+  }
+  return (
+    Position: switch,
+    "Group Index": accumulate_field.leading,
+    b_factor: group.float,
+    Integer: group.integer)
+}
+
+geometry graph ".MN_utils_curve_resample"(
+    Geometry: Geometry,
+    Offset: Float = 2.3 in -10000.0..10000.0,
+    Length: Float(subtype: DISTANCE) = 0.36 in 0.01..,
+    "Field Float": Float(hide_value: true),
+    "Field Int": Int(hide_value: true),
+    "Field Vec": Vector(hide_value: true)
+) -> (
+    Geometry: Geometry,
+    Position: Vector,
+    Tangent: Vector,
+    Normal: Vector,
+    "Field Float": Float,
+    "Field Int": Int,
+    "Field Vec": Vector
+) {
+  capture_attribute = Geometry
+    |> ResampleCurve[keep_last_segment: false](mode: "Length", count: 18, length: Length)
+    |> CaptureAttribute[CURVE](Value: Index())
+  accumulate_field = AccumulateField(value: Length, group_id: capture_attribute.value)
+  switch = Offset == 0.0
+    ? accumulate_field.trailing
+    : Math[WRAP](
+      Value: accumulate_field.trailing + Offset,
+      Value_001: SplineLength().length,
+      Value_002: 0.0)
+  sample_curve = SampleCurve[LENGTH](
+    capture_attribute.geometry,
+    value: field_float,
+    length: switch,
+    curve_index: capture_attribute.value)
+  return (
+    Geometry: capture_attribute.geometry
+      |> ResampleCurve[keep_last_segment: false](count: SplineLength().point_count - 1.0)
+      |> SetPosition(position: sample_curve.position),
+    Position: sample_curve.position,
+    Tangent: sample_curve.tangent,
+    Normal: sample_curve.normal,
+    "Field Float": sample_curve.value,
+    "Field Int": SampleCurve[LENGTH, INT](
+      capture_attribute.geometry,
+      value: field_int,
+      length: switch,
+      curve_index: capture_attribute.value).value,
+    "Field Vec": SampleCurve[LENGTH, FLOAT_VECTOR](
+      capture_attribute.geometry,
+      value: field_vec,
+      length: switch,
+      curve_index: capture_attribute.value).value)
+}
+
+geometry(is_modifier: false) graph "Animate Peptide to Curve"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Curve: Geometry,
+    Offset: Float in -10000.0..10000.0,
+    Start: Float(subtype: FACTOR) in 0.0..1.0,
+    End: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Rotate: Float = 0.5 in -10000.0..10000.0,
+    Twist: Float = 1.0 in -10000.0..10000.0
+) -> (Atoms: Geometry) {
+  group = Curve
+    |> TrimCurve(start: Start, end: End)
+    |> mn_utils_curve_resample(offset: Offset, length: 3.13 / 100.0)
+  domain_size = DomainSize[CURVE](group.geometry)
+  "Initial setup and alignment of amino acids" {
+    group_2 = mn_utils_aa_atom_pos(atom_name: 1)
+    position = Position()
+    set_position = Atoms
+      |> SeparateGeometry(selection: group_2.group_index < domain_size.point_count).selection
+      |> SetPosition(offset: -group_2.position)
+      |> SetPosition(
+        position: VectorRotate[EULER_XYZ, invert: true](
+          vector: position,
+          rotation: AlignRotationToVector[axis: X](
+            vector: group_2.position - mn_utils_aa_atom_pos(atom_name: 3).position)))
+      |> SetPosition(
+        position: VectorRotate[EULER_XYZ, invert: true](
+          vector: position,
+          rotation: AlignRotationToVector[pivot_axis: X](
+            vector: mn_utils_aa_atom_pos(atom_name: 4).position)))
+      |> SetPosition(
+        position: VectorRotate[Y_AXIS, invert: true](vector: position, angle: -0.5574582))
+  }
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    group.geometry,
+    value: group.position,
+    index: group_2.group_index)
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    group.geometry,
+    value: group.tangent,
+    index: group_2.group_index)
+  sample_index_3 = group.geometry
+    |> SetCurveTilt(tilt: AccumulateField(value: 1.5707964 * Twist).leading + Rotate)
+    |> SampleIndex(value: CurveTilt(), index: group_2.group_index)
+  "Placing and Aligning AA Along the Curve" {
+    position_2 = Position()
+    set_position_2 = set_position
+      |> SetPosition(offset: sample_index - group_2.position)
+      |> SetPosition(
+        position: VectorRotate[EULER_XYZ](
+          vector: position_2,
+          center: group_2.position,
+          rotation: AlignRotationToVector[axis: X](vector: -sample_index_2)))
+      |> SetPosition(
+        position: VectorRotate(
+          vector: position_2,
+          center: group_2.position,
+          axis: sample_index_2,
+          angle: sample_index_3))
+  }
+  return (Atoms: set_position_2)
+}

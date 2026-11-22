@@ -1,0 +1,11 @@
+geometry graph "Geometry Size"(
+    Geometry: Geometry
+) -> ("Bound Size": Vector, "Bound Center": Vector, "Max size": Float) {
+  {
+    bounding_box = BoundingBox(Geometry)
+    mix = Mix[VECTOR](factor: 0.5, a: bounding_box.min, b: bounding_box.max)
+    vector_math = bounding_box.max - bounding_box.min
+    math = max(max(vector_math.x, vector_math.y), vector_math.z)
+  }
+  return ("Bound Size": vector_math, "Bound Center": mix, "Max size": math)
+}

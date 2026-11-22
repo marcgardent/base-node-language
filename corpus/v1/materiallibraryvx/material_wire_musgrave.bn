@@ -1,0 +1,19 @@
+shader(material: true) graph "Wire Musgrave"() -> (surface: Shader) {
+  geometry = Geometry()
+  math = Math[MAXIMUM](Value: geometry.parametric, Value_001: -1e-05) @ hide
+  math_2 = -math @ hide
+  math_3 = pow(1.0, math_2) @ hide
+  noise_texture = NoiseTexture(
+    scale: NoiseTexture[normalize: false](detail: 1.0, roughness: math_3, lacunarity: 1.0).factor,
+    distortion: 0.049995)
+  return (
+    surface: MixShader(
+      factor: Wireframe(
+        size: CheckerTexture(
+          vector: noise_texture.factor,
+          color1: VectorTransform[NORMAL, convert_from: OBJECT, convert_to: WORLD](
+            vector: Mapping(vector: geometry.position, scale: (0.1, 0.0, -0.19999))),
+          scale: 11.79999).factor),
+      a: TransparentBSDF(),
+      b: DiffuseBSDF(color: noise_texture.color)))
+}

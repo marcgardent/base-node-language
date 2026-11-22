@@ -1,0 +1,17 @@
+geometry(show_modifier_manage_panel: false) graph "Capture Rest Geometry"(
+    Geometry: Geometry(description: "Points to modify the positions of"),
+    "Rest Position": Bool(force_non_field: true, structure_type: SINGLE) = true
+) -> Geometry {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  return SetGeometryBundle(
+    get_geometry_bundle.geometry,
+    bundle: StoreBundleItem[GEOMETRY](
+      bundle: get_geometry_bundle.bundle,
+      path: "rest_geometry",
+      item: rest_position
+        ? SetPosition(
+          Geometry,
+          position: named_attribute.exists ? named_attribute.attribute : Position())
+        : Geometry))
+}

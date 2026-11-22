@@ -1,0 +1,16 @@
+geometry graph "Lattice Grid"(
+    A: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    B: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    C: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    "Count" {
+        X: Int(description: "Number of images along the a vector") = 3 in 1..10000,
+        Y: Int(description: "Number of images along the b vector") = 3 in 1..10000,
+        Z: Int(description: "Number of images along the c vector") = 3 in 1..10000
+    }
+) -> (Grid: Geometry) {
+  return (
+    Grid: MeshLine(count: X, offset: A)
+      |> InstanceOnPoints(instance: MeshLine(count: Y, offset: B))
+      |> InstanceOnPoints(instance: MeshLine(count: Z, offset: C))
+      |> RealizeInstances[realize_to_point_domain: true]())
+}

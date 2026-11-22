@@ -1,0 +1,14 @@
+geometry graph "Thin Rod Moment of Inertia"(
+    Mass: Float(hide_value: true)
+) -> ("Moment of Inertia": Vector) {
+  offset_point_in_curve = OffsetPointInCurve(offset: 1)
+  position = Position()
+  vector_math = EvaluateAtIndex[FLOAT_VECTOR](
+      value: position,
+      index: offset_point_in_curve.point_index)
+    - position
+  math = (Mass + EvaluateAtIndex(value: Mass, index: offset_point_in_curve.point_index))
+    * (vector_math ⋅ vector_math)
+    * 0.08333334
+  return ("Moment of Inertia": CombineXYZ(x: math, y: math))
+}

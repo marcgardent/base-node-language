@@ -1,0 +1,140 @@
+compositor graph ".Multisample Displace Group 2.010"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    "X Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    "Y Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    Displacement: Vector = (0.0, 0.0),
+    "Sample per pixel": Float = 0.5 in 0.0001..4.0
+) -> ("Result ": Color) {
+  math = 1.0 / sample_per_pixel
+  return (
+    "Result ": Image
+      |> Scale(x: sample_per_pixel, y: sample_per_pixel, extension_x: Extend, extension_y: Extend)
+      |> Displace(displacement: Displacement, extension_x: Extend, extension_y: Extend)
+      |> Scale(x: math, y: math, interpolation: Bicubic, extension_x: Extend, extension_y: Extend))
+}
+
+compositor graph "Cheap Blur 2.001"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    Size: Float
+) -> (Image: Color) {
+  math_2 = Size * 0.01
+  clamp = Clamp(
+    value: FloatCurve[
+      mapping: Curve(
+        (0.0, 1.0, VECTOR),
+        (0.1, 1.0, VECTOR),
+        (0.101, 0.6666667, VECTOR),
+        (0.5, 0.666667, VECTOR),
+        (0.75, 0.5, VECTOR),
+        (3.0, 0.33333),
+        (5.0, 0.25, AUTO_CLAMPED),
+        use_clip: false)](value: math_2),
+    min: 0.0625)
+  math = 1.0 / clamp
+  map_range = MapRange(value: Size, from_min: 2.0, from_max: 2.01)
+  viewer = Viewer(math_2)
+  return (
+    Image: Switch(
+      switch: map_range,
+      false_: Switch(switch: map_range, false_: Image) |> Filter(factor: Size * 0.5),
+      true_: Switch(switch: map_range, true_: Image)
+        |> Scale(x: clamp, y: clamp, extension_x: Extend, extension_y: Extend)
+        |> Blur(size: clamp * Size)
+        |> Scale(x: math, y: math)))
+}
+
+compositor graph ".Halation 3.021"(
+    "Image gamma mapped": Color,
+    "Displacement Sampels per pixel ": Float in 0.1..4.0,
+    "Halation Scale": Float(
+      description: "Value of the second floating number input") in -10000.0..10000.0,
+    "X Image Dimensions ": Float,
+    "Y Image Dimensions ": Float,
+    "Image Coodinaes": Vector,
+    "MtF Sharpen": Float(
+      subtype: FACTOR,
+      description: "Amount of mixing between the A and B inputs") = 0.1 in 0.0..1.0,
+    "Film Gauge ": Float
+) -> (Result: Color) {
+  "Needs Gamma maped input γ=2.2"
+  math = Math[COMPARE](Value: mtf_sharpen, Value_001: 0.0, Value_002: 0.02)
+  white_noise_texture = WhiteNoiseTexture(vector: image_coodinaes)
+  "Box-Muller Transform" {
+    "Radial Distance" {
+      math_2 = log(white_noise_texture.color.y, 2.7182817) @ "this is danger! ln(0) = NaN"
+      math_4 = sqrt(math_2 * -2.0) @ "prob. fixes NaN"
+    }
+    "Angle " {
+      math_3 = white_noise_texture.color.z * 6.28319
+      math_5 = cos(math_3)
+      math_6 = sin(math_3)
+    }
+  }
+  math_7 = halation_scale * 0.3
+  "Box-Muller Transform" .. {
+    combine_xyz = CombineXYZ(x: math_4 * math_6 * math_7, y: math_4 * math_5 * math_7)
+  }
+  "displecment" {
+    mix_2 = Mix[RGBA](
+      factor: 0.25,
+      a: multisample_displace_group_2_010(
+        image_gamma_mapped,
+        x_image_dimensions: x_image_dimensions,
+        y_image_dimensions: y_image_dimensions,
+        displacement: combine_xyz,
+        sample_per_pixel: displacement_sampels_per_pixel),
+      b: multisample_displace_group_2_010(
+        image_gamma_mapped,
+        x_image_dimensions: x_image_dimensions,
+        y_image_dimensions: y_image_dimensions,
+        displacement: combine_xyz * 1.15734,
+        sample_per_pixel: displacement_sampels_per_pixel * 0.5555556))
+  }
+  gamma = Gamma(image_gamma_mapped, gamma: 0.5)
+  group = cheap_blur_2_001(gamma, size: pow(halation_scale * 0.5, 0.8000001))
+  math_8 = RelativeToPixel[Smaller](
+      value: FloatCurve[
+          mapping: Curve(
+            (-1.0104163, 0.6),
+            (-0.00025214255, 0.3, VECTOR),
+            (0.0, 1.0, VECTOR),
+            (0.5036253, 1.503625),
+            (0.9855013, 1.694922),
+            use_clip: false)](value: mtf_sharpen)
+        * pow(film_gauge, 0.70000005),
+      image: gamma)
+    * 0.00045
+    * 87.552
+  switch = Switch(switch: math, false_: gamma)
+  mix = Mix[RGBA](
+    factor: MapRange(value: mtf_sharpen, from_min: -1.0, from_max: 0.3, to_min: 0.5, to_max: 0.15),
+    a: cheap_blur_2_001(switch, size: math_8 * 0.2),
+    b: cheap_blur_2_001(switch, size: math_8 * 1.5))
+  float_curve = FloatCurve[
+    mapping: Curve(
+      (-1.7318537, -0.72955596),
+      (-0.84507096, -0.5920981),
+      (-0.2477806, -0.264),
+      (0.0, 0.0, VECTOR),
+      (0.16946477, 0.52833045),
+      (0.85665846, 1.1563929),
+      (1.7828612, 1.4633561),
+      use_clip: false)](value: mtf_sharpen)
+  mix_4 = Math[GREATER_THAN](Value: float_curve, Value_001: 0.0)
+    ? float_curve * pow(0.85, film_gauge)
+    : float_curve
+  "Unsharp mask" {
+    mix_3 = Mix[RGBA, ADD, clamp_factor: false](
+      factor: mix_4,
+      a: group,
+      b: Mix[RGBA, SUBTRACT](a: group, b: mix))
+  }
+  return (
+    Result: Mix[RGBA](
+      factor: Math[MULTIPLY_ADD](
+        Value: white_noise_texture.value,
+        Value_001: 0.20000002,
+        Value_002: 0.39999992),
+      a: mix_2,
+      b: Switch(switch: math, false_: mix_3, true_: group) |> Gamma(gamma: 2.0)))
+}

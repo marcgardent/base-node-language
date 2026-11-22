@@ -1,0 +1,14 @@
+compositor graph ".Multisample Displace Group 2.010"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    "X Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    "Y Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    Displacement: Vector = (0.0, 0.0),
+    "Sample per pixel": Float = 0.5 in 0.0001..4.0
+) -> ("Result ": Color) {
+  math = 1.0 / sample_per_pixel
+  return (
+    "Result ": Image
+      |> Scale(x: sample_per_pixel, y: sample_per_pixel, extension_x: Extend, extension_y: Extend)
+      |> Displace(displacement: Displacement, extension_x: Extend, extension_y: Extend)
+      |> Scale(x: math, y: math, interpolation: Bicubic, extension_x: Extend, extension_y: Extend))
+}

@@ -1,0 +1,15 @@
+geometry(show_modifier_manage_panel: false) graph "Smooth by Angle"(
+    Mesh: Geometry,
+    Angle: Float(
+      subtype: ANGLE,
+      description: "Maximum face angle for smooth edges",
+      structure_type: FIELD) = 0.5235988 in 0.0..3.1415927,
+    "Ignore Sharpness": Bool(force_non_field: true, structure_type: SINGLE)
+) -> (Mesh: Geometry) {
+  return (
+    Mesh: Mesh
+      |> SetShadeSmooth[EDGE](
+        selection: IsEdgeSmooth() or ignore_sharpness,
+        shade_smooth: EdgeAngle().unsigned_angle <= Angle and (IsFaceSmooth() or ignore_sharpness))
+      |> SetShadeSmooth())
+}

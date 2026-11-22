@@ -1,0 +1,51 @@
+geometry graph "i32 dAddSub"(
+    Menu: Menu(optional_label: true) = Add,
+    "c" {},
+    "a" {
+        "a Value": Bundle
+    },
+    "b" {
+        "b Value": Bundle
+    }
+) -> (
+    "c" {
+        "c Value": Bundle
+    }
+) {
+  integer_math_2 = IntegerMath[SUBTRACT](
+    Value: (SeparateBundle(a_value) -> (m: Int, e: Int, s: Bool)).e,
+    Value_001: (SeparateBundle(b_value) -> (m: Int, e: Int, s: Bool)).e)
+  compare_2 = integer_math_2 >= 0
+  bit_math_2 = BitMath[SHIFT](
+    a: (SeparateBundle(b_value) -> (m: Int, e: Int, s: Bool)).m,
+    shift: IntegerMath[NEGATE](value: integer_math_2)) @ #83314a
+  switch_3 = integer_math_2 > 0
+    ? bit_math_2
+    : (SeparateBundle(b_value) -> (m: Int, e: Int, s: Bool)).m
+  bit_math_3 = BitMath[SHIFT](
+    a: (SeparateBundle(a_value) -> (m: Int, e: Int, s: Bool)).m,
+    shift: integer_math_2) @ #83314a
+  switch = compare_2 ? (SeparateBundle(a_value) -> (m: Int, e: Int, s: Bool)).m : bit_math_3
+  separate_bundle = SeparateBundle(a_value) -> (m: Int, e: Int, s: Bool)
+  switch_2 = compare_2
+    ? separate_bundle.e
+    : (SeparateBundle(b_value) -> (m: Int, e: Int, s: Bool)).e
+  integer_math = IntegerMath[ADD](Value: switch_2, Value_001: 1) @ #3b5d3d
+  separate_bundle_2 = SeparateBundle(a_value) -> (m: Int, e: Int, s: Bool)
+  compare_3 = switch < switch_3
+  boolean_math = separate_bundle.s
+    xor (SeparateBundle(b_value) -> (m: Int, e: Int, s: Bool)).s
+    xor MenuSwitch(menu: Menu, Add: false, Subtract: true).output
+  switch_4 = boolean_math
+    ? (compare_3
+      ? IntegerMath[SUBTRACT](Value: switch_3, Value_001: switch)
+      : IntegerMath[SUBTRACT](Value: switch, Value_001: switch_3))
+    : IntegerMath[ADD](Value: switch, Value_001: switch_3)
+  compare = switch_4 < 0
+  bit_math = BitMath[SHIFT](a: switch_4, shift: -1) @ #83314a
+  return (
+    "c Value": CombineBundle(
+      m: compare ? bit_math : switch_4,
+      e: compare ? integer_math : switch_2,
+      s: compare_3 and boolean_math ? nimply(true, separate_bundle_2.s) : separate_bundle_2.s))
+}

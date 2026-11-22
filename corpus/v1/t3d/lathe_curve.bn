@@ -1,0 +1,18 @@
+geometry graph "Lathe Curve"(
+    Curve: Geometry,
+    Resolution: Int = 12 in 3..100000,
+    "Preview Curve": Bool = true
+) -> (Mesh: Geometry) {
+  {
+    Transform = TransformGeometry(Curve, rotation: (1.5707964, 0.0, 0.0))
+    named_attribute = NamedAttribute(name: "radius")
+    curve_to_mesh = CurveCircle(resolution: Resolution, radius: 0.0001)
+      |> CurveToMesh(
+        profile_curve: ResampleCurve[keep_last_segment: false](Transform, mode: Evaluated),
+        scale: named_attribute.exists ? named_attribute.attribute : 1.0)
+  }
+  {
+    switch = preview_curve and IsViewport() ? curve_to_mesh + Curve : curve_to_mesh
+  }
+  return (Mesh: switch)
+}

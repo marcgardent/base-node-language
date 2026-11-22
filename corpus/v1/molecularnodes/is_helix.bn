@@ -1,0 +1,46 @@
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph ".MN_select_sec_struct_id"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    id: Int(description: "Secondary structure component to select") = 1
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: id == NamedAttribute[INT](name: "sec_struct").attribute)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Helix"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or)
+  return (Selection: group.selection, Inverted: group.inverted)
+}

@@ -1,0 +1,63 @@
+geometry graph "ov_vat-decoder-vs"(
+    Geometry: Geometry,
+    UV: Vector(
+      description: "Generate VAT UV map",
+      hide_value: true,
+      default_attribute_name: "VAT_UV"),
+    x_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
+    x_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,
+    y_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
+    y_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,
+    z_min: Float(force_non_field: true, structure_type: SINGLE) = -10.0,
+    z_max: Float(force_non_field: true, structure_type: SINGLE) = 10.0,
+    framecount: Int(force_non_field: true, structure_type: SINGLE) = 64,
+    resY: Int(force_non_field: true, structure_type: SINGLE) = 512,
+    Image: Image,
+    frame_start: Float = 1.0 in -10000.0..10000.0
+) -> Geometry {
+  math_3 = 1.0 / resY @ "1 / Resolution" hide
+  value = 0.0 @ "const (0)" hide
+  value_2 = 0.0 @ "const (1)" hide
+  value_3 = 0.0 @ "const (-1)" hide
+  separate_xyz = SeparateXYZ()
+  combine_xyz_2 = CombineXYZ(x: separate_xyz.x, y: separate_xyz.y + 0.5, z: separate_xyz.z)
+  image_texture_2 = ImageTexture() @ "VAT  (or VNRM if not packed)"
+  map_range = MapRange[FLOAT_VECTOR](
+    vector: image_texture_2.color,
+    from_min: value,
+    from_max: value_2,
+    to_min: value_3,
+    to_max: value_2)
+  "Convert to target space (flip channels if needed)" {
+    vector = (-1.0, 1.0, 1.0) @ "Blender > Unity Example"
+    vector_math = map_range * vector
+  }
+  "Slide UV's on Y Over Time Within Range" {
+    math_7 = frame_start - 1.0 @ hide
+    math_6 = SceneTime().frame - math_7 @ hide
+  }
+  math_5 = Math[WRAP](
+    Value: math_6,
+    Value_001: 0.0,
+    Value_002: framecount) @ "Wrap Outside FrameRange"
+  math_4 = math_5 - 1.0 @ "- 1" hide
+  math_2 = math_3 * math_4 @ hide
+  math = UV.y - math_2 @ hide
+  image_texture = ImageTexture(image: Image, vector: CombineXYZ(x: UV.x, y: math, z: UV.z))
+  "Decode Per-Channel Color Range From Calculated Min/Max" #00249b {
+    combine_xyz = CombineXYZ(
+      x: MapRange[clamp: false](value: image_texture.color.x, to_min: x_min, to_max: x_max),
+      y: MapRange[clamp: false](value: image_texture.color.y, to_min: y_min, to_max: y_max),
+      z: MapRange[clamp: false](value: image_texture.color.z, to_min: z_min, to_max: z_max))
+  }
+  #9b1200 {}
+  "Packed Normals Example (shift Y 0.5)" #330801 {}
+  "Separate Normals (_vnrm) Use same calculated position" #330801 {}
+  "Used in Mock Normals Example" #9b0d00 {}
+  "UV Position For Normals Data" {}
+  "Normals Always Remapped (0-1) > (-1, 1)" {}
+  "Remainder of Normals decoding is same packed/unpacked" #330801 {}
+  "Example Setup For Normals Handling" {}
+  "Offset based on decoded values" {}
+  return SetPosition(Geometry, offset: combine_xyz)
+}

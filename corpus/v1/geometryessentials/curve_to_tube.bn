@@ -1,0 +1,703 @@
+geometry graph ".curve_UV"(
+    Menu: Menu(optional_label: true) = Factor
+) -> (
+    Factor: Float(
+      description: "For points, the portion of the spline's total length at the control point. For Splines, the factor of that spline within the entire curve"),
+    Length: Bool
+) {
+  spline_parameter = SplineParameter()
+  menu_switch = MenuSwitch(
+    menu: Menu,
+    Factor(description: "Use the portion of the curve's total length"): spline_parameter.factor,
+    Length(
+      description: "Use the curve length at each point as the UV map coordinate directly"): spline_parameter.factor,
+    Index(
+      description: "Use the portion of the total evaluated points along the curve as the UV coordinate"): spline_parameter.index
+        / IntegerMath[SUBTRACT](Value: SplineLength().point_count, Value_001: not IsSplineCyclic()))
+  return (Factor: menu_switch.output, Length: menu_switch.length)
+}
+
+geometry graph ".curve_UV_factor_propagate"(Input: Float) -> (Output: Float) {
+  return (
+    Output: Compare[EQUAL](a: Input, epsilon: 0.0)
+        and (EvaluateAtIndex[CORNER](value: Input, index: OffsetCornerInFace(offset: -1)) > 0.5
+          or EvaluateAtIndex[CORNER](value: Input, index: OffsetCornerInFace(offset: 1)) > 0.5)
+      ? 1.0
+      : Input)
+}
+
+geometry graph ".UV_sphere_corrected"(
+    Segments: Int(description: "Horizontal resolution of the sphere") = 32 in 3..1024,
+    Rings: Int(description: "The number of horizontal rings") = 16 in 2..1024
+) -> (Mesh: Geometry, "UV Map": Vector(dimensions: 2), Equator: Bool) {
+  uvsphere = UVSphere(segments: Segments, rings: Rings)
+  math = 1.0 / Segments
+  capture_attribute = CaptureAttribute(
+    uvsphere.mesh,
+    Result: Compare[EQUAL](a: abs(Position().z), epsilon: 1e-05))
+  return (
+    Mesh: capture_attribute.geometry,
+    "UV Map": CombineXYZ(
+      x: uvsphere.uv_map.x
+        + (EvaluateOnDomain[FACE, BOOLEAN](
+            value: IntegerMath[MODULO](
+                Value: IntegerMath[ADD](Value: Index(), Value_001: 1),
+                Value_001: Segments)
+              <= 0)
+          ? -1.0 + math
+          : math),
+      y: uvsphere.uv_map.y),
+    Equator: capture_attribute.result)
+}
+
+geometry graph ".half_spheres"(
+    Resolution: Int = 8 in 3..10000,
+    "Shade Smooth": Bool,
+    "UV Map": Bool,
+    "UV Name": String,
+    "Align Normals": Bool
+) -> (Top: Geometry, Bottom: Geometry, Boolean: Bool) {
+  boolean_math = not shade_smooth
+  group = uv_sphere_corrected(
+    segments: Resolution,
+    rings: IntegerMath[MULTIPLY](
+      Value: IntegerMath[DIVIDE_ROUND](Value: Resolution, Value_001: 2),
+      Value_001: 2))
+  separate_xyz = SeparateXYZ(vector: Position()) @ hide
+  capture_attribute_2 = group.mesh
+    |> TransformGeometry()
+    |> CaptureAttribute[FACE](Top: separate_xyz.z > 0.0)
+  capture_attribute = CaptureAttribute(capture_attribute_2.geometry, Normal: Normal().normal)
+  set_mesh_normal = SetMeshNormal(
+    capture_attribute.geometry,
+    edge_sharpness: boolean_math,
+    face_sharpness: boolean_math)
+  switch = align_normals
+    ? SetMeshNormal[FREE](set_mesh_normal, custom_normal: capture_attribute.normal)
+    : set_mesh_normal
+  separate_geometry = SeparateGeometry[FACE](
+    uv_map
+      ? StoreNamedAttribute[FLOAT2, CORNER](
+        switch,
+        name: uv_name,
+        value: RotateVector(
+          vector: group.uv_map + (capture_attribute_2.top ? (-1.0, -1.5, 0.0) : (-1.0, -0.5, 0.0)),
+          rotation: (0.0, 3.1415927, 1.5707964)))
+      : switch,
+    selection: capture_attribute_2.top)
+  return (
+    Top: separate_geometry.selection,
+    Bottom: separate_geometry.inverted,
+    Boolean: group.equator)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Curve to Tube"(
+    Curve: Geometry(description: "Curve geometry defining the curve path"),
+    Scale: Float(
+      subtype: DISTANCE,
+      description: "Distance factor multiplied with the curve's radius attribute to define the resulting tube radius") = 0.1 in 0.0..,
+    "Profile"(description: "Controls for the shape of the tube profile") {
+        "Profile Mode": Menu(
+          description: "Method used to define the profile shape",
+          force_non_field: true,
+          menu_expanded: true,
+          optional_label: true,
+          structure_type: SINGLE) = Round,
+        "Profile Input": Menu(
+          description: "How the profile geometry input should be exposed",
+          hide_in_modifier: true,
+          menu_expanded: true,
+          optional_label: true) = Object,
+        "Profile Object": Object(
+          description: "Shape defining a section of the tube, using the XY plane"),
+        "Profile Geometry": Geometry(
+          description: "Shape defining a section of the tube, using the XY plane"),
+        "Profile Resolution": Int(
+          description: "Number of points on the profile circle. Also defines the round cap resolution.") = 8 in 3..512,
+        "Shade Smooth": Bool(
+          description: "Use smooth vertex normals instead of face normals for the result mesh") = true,
+        "Miter Scale"(
+          description: "Scale the profile along the axis of the corner's turn to maintain a constant visual width",
+          default_closed: true) {
+            "Miter Scale": Bool(
+              is_panel_toggle: true,
+              description: "Scale the profile along the axis of the corner's turn to maintain a constant visual width") = true,
+            "Miter Scale Limit": Float(
+              subtype: ANGLE,
+              description: "Angle at which the miter scale stops increasing") = 2.3561945 in 0.0..3.1415927
+        }
+    },
+    "Resample"(description: "Resample the input curve before meshing", default_closed: true) {
+        Resample: Bool(
+          is_panel_toggle: true,
+          description: "Resample the input curve before meshing") = true,
+        "Resample Mode": Menu(
+          description: "How to specify the number of samples",
+          optional_label: true) = Evaluated,
+        "Resample Count": Int(
+          description: "Number of sample points on the curve") = 10 in 2..100000,
+        "Resample Length": Float(
+          subtype: DISTANCE,
+          description: "Distance between two sample points along the curve") = 0.1 in 0.01..,
+        "Resample Scale": Float(
+          description: "Scale factor applied on the automatically derived resample length",
+          structure_type: FIELD) = 1.0 in 0.1..10000.0
+    },
+    "Caps"(description: "Fill the holes at the tube ends with cap geometry", default_closed: true) {
+        Caps: Bool(
+          is_panel_toggle: true,
+          description: "Fill the holes at the tube ends with cap geometry") = true,
+        "Caps Type": Menu(
+          description: "Method used to build the start and end geometry",
+          optional_label: true) = Flat,
+        "Caps Input": Menu(
+          description: "How the cap geometry input should be exposed",
+          hide_in_modifier: true,
+          menu_expanded: true,
+          optional_label: true) = Object,
+        "Caps Start": Object(description: "Geometry to add to the start of each curve"),
+        "Caps End": Object(description: "Geometry to add to the end of each curve"),
+        "Caps Start" as caps_start_geometry: Geometry(
+          description: "Geometry to add to the start of each curve"),
+        "Caps End" as caps_end_geometry: Geometry(
+          description: "Geometry to add to the end of each curve"),
+        "Caps Resolution": Int(
+          description: "Amount of edge loops the round caps are generated with") = 12 in 1..256,
+        "Caps Smooth": Bool(
+          description: "Make border edges between the caps and the tube shape smooth instead of sharp",
+          force_non_field: true,
+          structure_type: SINGLE),
+        "Caps Merge": Bool(
+          description: "Combine the cap geometry with the base mesh (realizing instances and merging vertices)",
+          force_non_field: true,
+          structure_type: SINGLE) = true,
+        "Caps Align Normals": Bool(
+          description: "Build custom normals on the caps for more continuous shading borders with the tube shape",
+          force_non_field: true,
+          structure_type: SINGLE),
+        "Caps Extrapolate Radius": Bool(
+          description: "Adjust the shape of the cap to follow the change in radius towards the curve ends",
+          force_non_field: true,
+          structure_type: SINGLE) = true
+    },
+    "UV Map"(
+      description: "Generate UV attribute data on the curve geometry",
+      default_closed: true) {
+        "UV Map": Bool(
+          is_panel_toggle: true,
+          description: "Generate UV attribute data on the curve geometry") = true,
+        "UV Map Name": String(description: "Name of the UV map attribute to generate") = "UVMap",
+        "UV Map Parameter U": Menu(
+          description: "Method to generate the map's X coordinate along the main curve") = Length,
+        "UV Map Parameter V": Menu(
+          description: "Method to generate the map's Y coordinate along the profile curve") = Factor,
+        "Consider Curve Radius": Bool(
+          description: "Consider the main curve's radius attribute as a factor when mapping the V component by the profile curve's length parameter",
+          force_non_field: true,
+          structure_type: SINGLE) = true
+    }
+) -> (Mesh: Geometry(description: "Tube mesh")) {
+  menu_switch_2 = MenuSwitch(
+    menu: caps_type,
+    Flat(description: "Use a single Ngon for the caps"): 1,
+    Round(description: "Use a half-circle for each cap"): 2,
+    Custom(description: "Use custom objects to define the cap shapes"): 3)
+  "Round / Object Caps" {
+    group = half_spheres(
+      resolution: profile_resolution,
+      shade_smooth: shade_smooth,
+      uv_map: uv_map,
+      uv_name: uv_map_name,
+      align_normals: shade_smooth ? (caps_merge ? false : caps_align_normals) : false)
+    endpoint_selection = EndpointSelection(start_size: 0)
+    menu_switch_3 = MenuSwitch(
+      menu: caps_input,
+      Object: GeometryToInstance(
+        ObjectInfo(object: caps_start).geometry,
+        ObjectInfo(object: caps_end).geometry),
+      Geometry: GeometryToInstance(caps_start_geometry, caps_end_geometry))
+    endpoint_selection_2 = EndpointSelection(end_size: 0) @ hide
+    endpoint_selection_3 = EndpointSelection(start_size: 0) @ hide
+    "Double for single point curves" {
+      switch_19 = SplineLength().point_count == 1 ? 2 : 1
+    }
+  }
+  "Tube Mesh & UVs" {
+    group_3 = curve_uv(menu: uv_map_parameter_u)
+    group_4 = curve_uv(menu: uv_map_parameter_v)
+    endpoint_selection_4 = EndpointSelection(end_size: 0) @ hide
+    endpoint_selection_5 = EndpointSelection(start_size: 0) @ hide
+  }
+  "Flip curve based on winding direction" {
+    curve_tangent = CurveTangent()
+    compare = AccumulateField(
+        value: (EvaluateAtIndex[FLOAT_VECTOR](
+            value: curve_tangent,
+            index: OffsetPointInCurve(offset: -1).point_index)
+          × curve_tangent).z,
+        group_id: EvaluateOnDomain[CURVE, INT](value: Index())).total
+      <= 0.0
+  }
+  "Estimate merge distance" {
+    "round" {
+      math_3 = (NamedAttribute(name: "radius").exists ? Radius() : 1.0) * Scale
+      attribute_statistic = AttributeStatistic(
+        Curve,
+        selection: EndpointSelection() and Compare[NOT_EQUAL](a: math_3, epsilon: 0.0),
+        attribute: math_3)
+      math = attribute_statistic.min
+        * 6.2831855
+        / IntegerMath[SUBTRACT](Value: profile_resolution, Value_001: 1)
+    }
+  }
+  "segment length" {
+    offset_point_in_curve = OffsetPointInCurve(offset: -1)
+    position = Position()
+    vector_math_2 = length(
+      EvaluateOnDomain[FLOAT_VECTOR](
+        value: position
+          - EvaluateAtIndex[FLOAT_VECTOR](
+            value: position,
+            index: offset_point_in_curve.is_valid_offset
+              ? offset_point_in_curve.point_index
+              : Index())))
+  }
+  "Round Caps Custom Profile" {
+    capture_attribute_7 = CurveLine(end: (1.0, 0.0, 0.0))
+      |> ResampleCurve(count: IntegerMath[ADD](Value: caps_resolution, Value_001: 1))
+      |> CaptureAttribute(Factor: SplineParameter().factor)
+    "redistribute circular" {
+      math_6 = sin(capture_attribute_7.factor * 1.5707964)
+    }
+    "circular profile" {
+      math_5 = sqrt(1.0 - pow(math_6, 2.0))
+    }
+    boolean_math_2 = not shade_smooth
+    math_15 = 1.0 - math_6
+  }
+  "Pre-Processing" {
+    spline_parameter = SplineParameter()
+  }
+  capture_attribute_11 = MenuSwitch(
+      menu: profile_input,
+      Object: ObjectInfo(object: profile_object).geometry,
+      Geometry: profile_geometry).output
+    |> ResampleCurve(mode: Evaluated)
+    |> CaptureAttribute[CURVE](Flip: compare, "Flip and Cyclic": compare and IsSplineCyclic())
+  reverse_curve = ReverseCurve(capture_attribute_11.geometry, selection: capture_attribute_11.flip)
+  "Pre-Processing" .. {
+    capture_attribute_9 = reverse_curve
+      |> SetCurveNormal(mode: Free)
+      |> CaptureAttribute(
+        Factor: capture_attribute_11.flip_and_cyclic
+          ? EvaluateAtIndex(
+            value: spline_parameter.factor,
+            index: OffsetPointInCurve(offset: 1).point_index)
+          : spline_parameter.factor)
+    capture_attribute_8 = CaptureAttribute[CURVE](
+      capture_attribute_9.geometry,
+      "Spline Position": Position(),
+      "Spline Length": SplineLength().length)
+  }
+  menu_switch = MenuSwitch(
+    menu: profile_mode,
+    Round(
+      description: "Use a circle to define the profile"): CurveCircle(
+        resolution: profile_resolution),
+    Custom(description: "Use a custom object to define the profile"): capture_attribute_8.geometry)
+  "Tube Mesh & UVs" .. {
+    capture_attribute_2 = CaptureAttribute(
+      menu_switch.output,
+      Factor: menu_switch.custom
+        ? (capture_attribute_11.flip_and_cyclic
+          ? EvaluateAtIndex(value: group_4.factor, index: OffsetPointInCurve(offset: 1).point_index)
+          : group_4.factor)
+        : group_4.factor)
+  }
+  "Round Caps Custom Profile" .. {
+    vector_math_3 = Position() - capture_attribute_8.spline_position
+    vector_math_4 = vector_math_3 * CombineXYZ(x: math_5, y: math_5)
+      + capture_attribute_8.spline_position
+    math_7 = -vector_math_3.z @ hide
+    math_8 = capture_attribute_8.spline_length / 6.2831855
+    math_9 = math_6 * math_8
+    "UV" {
+      vector_math_5 = CombineXYZ(
+          x: capture_attribute_7.factor,
+          y: 1.0 - curve_uv_factor_propagate(input: capture_attribute_9.factor))
+        * (0.5, 1.0, 1.0)
+    }
+    math_19 = capture_attribute_7.factor * math_8
+    math_13 = vector_math_3.z - math_19 @ hide
+    math_14 = math_13 * math_15 @ hide
+    math_12 = math_9 + math_14 @ hide
+    capture_attribute_10 = capture_attribute_8.geometry
+      |> CurveToMesh(profile_curve: ReverseCurve(capture_attribute_7.geometry), scale: math_8)
+      |> SetPosition(position: vector_math_4 + CombineXYZ(z: math_12))
+      |> CaptureAttribute[FACE](Boolean: true)
+    "UV" .. {
+      switch_6 = capture_attribute_10.boolean
+        ? vector_math_5 + (1.0, 0.0, 0.0)
+        : vector_math_5 * (-1.0, 1.0, 1.0)
+    }
+    math_17 = math_7 - math_19 @ hide
+    math_18 = math_17 * math_15 @ hide
+    math_16 = math_9 + math_18 @ hide
+    capture_attribute_14 = capture_attribute_8.geometry
+      |> CurveToMesh(
+        profile_curve: TransformGeometry(
+          capture_attribute_7.geometry,
+          rotation: (0.0, 0.0, 3.1415927)),
+        scale: math_8)
+      |> SetPosition(position: vector_math_4 - CombineXYZ(z: math_16))
+      |> CaptureAttribute[FACE](Boolean: true)
+    set_mesh_normal_2 = GeometryToInstance(
+        capture_attribute_10.geometry,
+        capture_attribute_14.geometry)
+      |> SetMeshNormal(edge_sharpness: boolean_math_2, face_sharpness: boolean_math_2)
+    merge_by_distance = MergeByDistance(
+      uv_map
+        ? StoreNamedAttribute[FLOAT2, CORNER](set_mesh_normal_2, name: uv_map_name, value: switch_6)
+        : set_mesh_normal_2,
+      selection: capture_attribute_7.factor == 1.0)
+  }
+  "Adjust UVs - V" {
+    math_10 = 1.0 * (menu_switch.custom ? capture_attribute_8.spline_length : 6.2831855)
+  }
+  "Calculate Radius Derivatives" {
+    evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index())
+    value = 0.001 @ "Delta"
+    math_28 = (NamedAttribute(name: "radius").exists ? Radius() : 1.0) * Scale @ hide
+  }
+  switch_11 = uv_map ? group_3.length : false
+  "Select Cap Endpoints" {
+    boolean_math_3 = capture_attribute_7.factor == 0.0
+      and (capture_attribute_10.boolean or capture_attribute_14.boolean)
+  }
+  switch_5 = menu_switch.custom ? boolean_math_3 : group.boolean
+  "Segment Length" {
+    offset_point_in_curve_2 = OffsetPointInCurve(offset: -1)
+    position_2 = Position()
+    vector_math_7 = length(
+      EvaluateOnDomain[FLOAT_VECTOR](
+        value: position_2
+          - EvaluateAtIndex[FLOAT_VECTOR](
+            value: position_2,
+            index: offset_point_in_curve_2.is_valid_offset
+              ? offset_point_in_curve_2.point_index
+              : Index())))
+  }
+  menu_switch_4 = MenuSwitch(menu: resample_mode, Evaluated: 0, Auto: 1, Count: 2, Length: 3)
+  switch_15 = Caps ? menu_switch_2.flat : false
+  switch_16 = Caps ? menu_switch_2.round : false
+  "Estimate Count" {
+    float_to_integer = FloatToInteger[CEILING](float: SplineLength().length / resample_length)
+  }
+  "Resample" {
+    separate_components = SeparateComponents(Curve)
+    compare_3 = SplineLength().point_count > 1
+  }
+  "Averaged radius estimation" {
+    field_average = FieldAverage(
+      value: (NamedAttribute(name: "radius").exists ? Radius() : 1.0) * Scale,
+      group_id: EvaluateOnDomain[CURVE, INT](value: Index()))
+  }
+  "Estimate round segment length" {
+    math_25 = field_average.mean * 2.0 * sin(3.1415927 / profile_resolution)
+  }
+  "Custom Segment Length" {
+    attribute_statistic_2 = AttributeStatistic(
+      menu_switch.output,
+      attribute: vector_math_7 * field_average.mean)
+  }
+  math_26 = abs(menu_switch.custom ? attribute_statistic_2.mean : math_25) * resample_scale
+  "Estimate Count" .. {
+    float_to_integer_2 = FloatToInteger[CEILING](float: SplineLength().length / math_26)
+  }
+  index_switch = IndexSwitch(
+    menu_switch_4.output,
+    0,
+    float_to_integer_2,
+    resample_count,
+    float_to_integer)
+  "Resample" .. {
+    "Pre-Sample Resolution" {
+      integer_math = IntegerMath[DIVIDE](
+        Value: index_switch,
+        Value_001: IntegerMath[SUBTRACT](Value: SplineLength().point_count, Value_001: 1))
+      compare_2 = integer_math > SplineResolution() @ hide
+    }
+    switch_13 = Resample
+      ? IndexSwitch(
+        menu_switch_4.output,
+        ResampleCurve(separate_components.curve, mode: Evaluated),
+        separate_components.curve
+          |> SetSplineResolution(selection: compare_2, resolution: integer_math)
+          |> ResampleCurve(selection: compare_3, mode: Length, length: math_26),
+        separate_components.curve
+          |> SetSplineResolution(selection: compare_2, resolution: integer_math)
+          |> ResampleCurve(selection: compare_3, count: resample_count),
+        separate_components.curve
+          |> SetSplineResolution(selection: compare_2, resolution: integer_math)
+          |> ResampleCurve(selection: compare_3, mode: Length, length: resample_length))
+      : separate_components.curve
+  }
+  "Calculate Radius Derivatives" .. {
+    sample_index = SampleIndex(
+      switch_13,
+      value: math_28,
+      index: EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index))
+    sample_index_2 = SampleIndex(
+      switch_13,
+      value: math_28,
+      index: EvaluateOnDomain[CURVE, INT](value: PointsOfCurve(sort_index: -1).point_index))
+    capture_attribute_13 = CaptureAttribute[CURVE](
+      switch_13,
+      "Radius Start": sample_index,
+      "Radius End": sample_index_2,
+      "Radius Derivative Start": (sample_index
+          - SampleCurve[LENGTH](
+            switch_13,
+            value: math_28,
+            length: value,
+            curve_index: evaluate_on_domain).value)
+        / value,
+      "Radius Derivative End": (sample_index_2
+          - SampleCurve[LENGTH](
+            switch_13,
+            value: math_28,
+            length: SplineLength().length - value,
+            curve_index: evaluate_on_domain).value)
+        / value)
+  }
+  capture_attribute_12 = CaptureAttribute(
+    capture_attribute_13.geometry,
+    Radius: abs((NamedAttribute(name: "radius").exists ? Radius() : 1.0) * Scale))
+  "Tube Mesh & UVs" .. {
+    capture_attribute_4 = CaptureAttribute[CURVE](
+      capture_attribute_12.geometry,
+      "Use Length": group_3.length,
+      Length: SplineLength().length)
+    capture_attribute = CaptureAttribute(
+      capture_attribute_4.geometry,
+      Factor: group_3.factor,
+      "Start Point": endpoint_selection_4,
+      "End Point": endpoint_selection_5)
+    curve_to_mesh = CurveToMesh(
+      capture_attribute.geometry,
+      profile_curve: capture_attribute_2.geometry,
+      scale: capture_attribute_12.radius,
+      fill_caps: switch_15,
+      miter_scale: miter_scale,
+      miter_scale_limit: miter_scale_limit)
+    group_2 = curve_uv_factor_propagate(input: capture_attribute.factor)
+    switch_12 = uv_map
+      ? StoreNamedAttribute[FLOAT2, CORNER](
+        curve_to_mesh,
+        name: uv_map_name,
+        value: CombineXYZ(
+          x: capture_attribute_4.use_length ? group_2 * capture_attribute_4.length : group_2,
+          y: 1.0 - curve_uv_factor_propagate(input: capture_attribute_2.factor)))
+      : curve_to_mesh
+  }
+  "Shade Smooth and Flat Caps Smooth" {
+    set_mesh_normal = SetMeshNormal(
+      switch_12,
+      edge_sharpness: Caps
+        ? not IsEdgeSmooth() and not (menu_switch_2.flat ? caps_smooth : false)
+        : false,
+      face_sharpness: not shade_smooth)
+  }
+  capture_attribute_6 = CaptureAttribute(
+    capture_attribute_4.geometry,
+    Radius: capture_attribute_12.radius,
+    Selection as selection_2: EndpointSelection())
+  "Adjust UVs - V" .. {
+    math_11 = math_10 * capture_attribute_12.radius
+  }
+  "Extrapolate Radius" {
+    switch_8 = (Caps ? caps_merge : false)
+      ? BlurAttribute(value: capture_attribute_6.selection_2) == 1.0
+      : capture_attribute_6.selection_2
+    math_22 = capture_attribute_13.radius_derivative_start
+      / capture_attribute_13.radius_start @ hide
+    math_23 = capture_attribute_13.radius_derivative_end / capture_attribute_13.radius_end @ hide
+  }
+  "Estimate merge distance" .. {
+    compare_4 = vector_math_2 > 0.0
+    "custom" {
+      math_4 = AttributeStatistic(
+          capture_attribute_8.geometry,
+          selection: compare_4,
+          attribute: vector_math_2).min
+        * attribute_statistic.min
+    }
+    math_2 = (menu_switch.custom ? math_4 : math) * 0.5
+    switch_20 = math_2 > 0.0 ? math_2 : 1e-05
+  }
+  "Round / Object Caps" .. {
+    capture_attribute_15 = CaptureAttribute[CURVE](capture_attribute_6.geometry, Index: Index())
+    capture_attribute_5 = CaptureAttribute(
+      capture_attribute_15.geometry,
+      "Start Point": endpoint_selection_2,
+      "End Point": endpoint_selection_3)
+    duplicate_elements = DuplicateElements[SPLINE](capture_attribute_5.geometry, amount: switch_19)
+    sample_curve = SampleCurve(
+      capture_attribute_15.geometry,
+      factor: endpoint_selection ? 1.0 : 0.0,
+      curve_index: capture_attribute_15.index)
+    instance_on_points = InstanceOnPoints(
+      duplicate_elements.geometry,
+      selection: (capture_attribute_5.start_point or capture_attribute_5.end_point)
+        and not IsSplineCyclic(),
+      instance: IndexSwitch(
+        menu_switch_2.output,
+        _,
+        _,
+        menu_switch.custom ? merge_by_distance : GeometryToInstance(group.top, group.bottom),
+        menu_switch_3.output),
+      pick_instance: true,
+      instance_index: IntegerMath[ADD](
+        Value: Switch[INT](
+          switch: switch_16,
+          false_: endpoint_selection,
+          true_: endpoint_selection ? 0 : 1),
+        Value_001: duplicate_elements.duplicate_index),
+      rotation: AxesToRotation(
+        primary_axis: sample_curve.tangent,
+        secondary_axis: sample_curve.normal),
+      scale: capture_attribute_12.radius)
+  }
+  "Realize" {
+    capture_attribute_3 = CaptureAttribute[INSTANCE](
+      set_mesh_normal + instance_on_points,
+      Index: Index(),
+      Transform: InstanceTransform())
+    realize_instances = RealizeInstances[realize_to_point_domain: true](
+      capture_attribute_3.geometry)
+    switch = (Caps ? caps_merge : false)
+      ? realize_instances
+      : switch_16 ? realize_instances : capture_attribute_3.geometry
+  }
+  "Adjust UVs - U" {
+    switch_4 = capture_attribute_5.end_point ? (1.0, 0.0, 0.0) : (0.0, 0.0, 0.0) @ hide
+    vector_math = (NamedAttribute[FLOAT_VECTOR](name: uv_map_name).attribute - switch_4)
+      * CombineXYZ(
+        x: capture_attribute_6.radius
+          * 4.0
+          * (menu_switch.custom ? capture_attribute_8.spline_length / 6.2831855 : 1.0),
+        y: 1.0)
+    switch_3 = switch_11
+      ? StoreNamedAttribute[FLOAT2, CORNER](
+        switch,
+        selection: capture_attribute_6.selection_2,
+        name: uv_map_name,
+        value: capture_attribute_5.end_point
+          ? vector_math + CombineXYZ(x: capture_attribute_4.length)
+          : vector_math)
+      : switch
+  }
+  "Extrapolate Radius" .. {
+    separate_transform = SeparateTransform(transform: capture_attribute_3.transform)
+    combine_transform = CombineTransform(
+      translation: separate_transform.translation,
+      rotation: separate_transform.rotation)
+    invert_matrix = InvertMatrix(matrix: combine_transform)
+    transform_point = TransformPoint(vector: Position(), transform: invert_matrix.matrix)
+    math_24 = math_6 * separate_transform.scale.z @ hide
+    transform_point_2 = TransformPoint(
+      vector: TransformPoint(
+        vector: capture_attribute_8.spline_position,
+        transform: capture_attribute_3.transform),
+      transform: invert_matrix.matrix)
+    math_27 = abs(transform_point.z) @ hide
+    math_20 = (menu_switch.custom ? math_24 : math_27)
+      * (capture_attribute_5.end_point ? math_23 : math_22) @ hide
+    math_21 = math_20 + 1.0
+    combine_xyz = CombineXYZ(x: math_21, y: math_21, z: Mix(factor: 0.5, a: math_21, b: 1.0))
+    vector_math_6 = transform_point * combine_xyz
+  }
+  "Custom Cap Merging" {
+    separate_geometry = SeparateGeometry[INSTANCE](menu_switch_3.output, selection: Index() == 0)
+  }
+  switch_21 = Caps ? menu_switch_2.custom : false
+  "Custom Cap Merging" .. {
+    boolean_math = switch_5
+      or (switch_21
+        ? capture_attribute.start_point
+            and (separate_geometry.selection |> RealizeInstances() |> DomainSize().face_count) > 0
+          or capture_attribute.end_point
+            and (separate_geometry.inverted |> RealizeInstances() |> DomainSize().face_count) > 0
+        : capture_attribute.start_point or capture_attribute.end_point)
+  }
+  switch_10 = (Caps ? caps_merge : false)
+    ? MergeByDistance(
+      switch_3,
+      selection: boolean_math or capture_attribute_3.selection,
+      distance: switch_20)
+    : switch_3
+  "Material Transfer" {
+    switch_2 = Compare[EQUAL, INT](
+        a: AttributeStatistic[CURVE](capture_attribute_6.geometry, attribute: MaterialIndex()).max)
+      ? SetMaterialIndex(
+        switch_10,
+        material_index: SampleIndex[INT, CURVE](
+          capture_attribute_6.geometry,
+          value: MaterialIndex(),
+          index: IntegerMath[DIVIDE](Value: capture_attribute_3.index, Value_001: 2)))
+      : switch_10
+  }
+  "Extrapolate Radius" .. {
+    switch_9 = caps_extrapolate_radius
+      ? SetPosition(
+        switch_2,
+        selection: switch_8,
+        position: TransformPoint(
+          vector: menu_switch.custom
+            ? Mix[VECTOR](
+              factor: 0.5,
+              a: vector_math_6,
+              b: (transform_point - transform_point_2) * combine_xyz + transform_point_2)
+            : vector_math_6,
+          transform: combine_transform))
+      : switch_2
+  }
+  switch_14 = Caps
+    ? IndexSwitch(menu_switch_2.output, _, set_mesh_normal, switch_9, switch_10)
+    : set_mesh_normal
+  "Adjust UVs - V" .. {
+    switch_7 = (uv_map ? group_4.length : false)
+      ? StoreNamedAttribute[FLOAT2, CORNER](
+        switch_14,
+        name: uv_map_name,
+        value: NamedAttribute[FLOAT_VECTOR](name: uv_map_name).attribute
+          * CombineXYZ(
+            x: 1.0,
+            y: consider_curve_radius
+              ? (Caps
+                ? ((not menu_switch_2.flat ? caps_extrapolate_radius : false)
+                  ? math_11 * (EvaluateOnDomain(value: switch_8) ? math_21 : 1.0)
+                  : math_11)
+                : math_11)
+              : math_10,
+            z: 1.0))
+      : switch_14
+  }
+  "Pass-Through" {
+    "Scale is 0" {
+      switch_17 = Warning[WARNING](
+          show: Compare[EQUAL](a: AttributeStatistic(Curve, attribute: Scale).max, epsilon: 0.0),
+          message: "Scale is 0")
+        ? Curve
+        : switch_7
+    }
+    "No Curves" {
+      switch_18 = Warning[WARNING](
+          show: DomainSize[CURVE](Curve).spline_count == 0,
+          message: "No curve data in input")
+        ? Curve
+        : switch_17
+    }
+  }
+  return (Mesh: switch_18)
+}

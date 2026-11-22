@@ -1,0 +1,16 @@
+geometry graph "Transform Relative"(
+    A: Vector(description: "The final position") in -10000.0..10000.0,
+    B: Vector(description: "The position moving from"),
+    C: Vector(description: "The position defining the axis of CB") in -10000.0..10000.0
+) -> (
+    Transform: Matrix(
+      description: "The `Transform` to move from B to A, relative to the axis of C to B")
+) {
+  vector_math = A - B
+  return (
+    Transform: CombineTransform(
+      translation: CombineXYZ(z: length(vector_math)),
+      rotation: RotateRotation(
+        rotation: AlignRotationToVector(vector: vector_math),
+        rotate_by: InvertRotation(rotation: AlignRotationToVector(vector: B - C)))))
+}

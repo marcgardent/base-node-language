@@ -1,0 +1,96 @@
+shader graph "PT_ARB_CircularMaze(103)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 3.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  vector_math_7 = normalize((1.7320508, -1.0, 0.0)) @ hide
+  vector_math_9 = normalize((-1.0, -1.7320508, 0.0)) @ hide
+  "p6(16)" #311b4e {
+    vector_math_11 = Vector * Scale
+    combine_xyz = CombineXYZ(x: 1.0, y: 1.73205)
+    vector_math_13 = vector_math_11 / combine_xyz @ hide
+    vector_math_12 = fract(vector_math_13) @ hide
+    vector_math_10 = vector_math_12 - (0.5, 0.5, 0.0) @ hide
+    vector_math_14 = vector_math_10 * combine_xyz @ hide
+    vector_math_17 = combine_xyz * 0.5 @ hide
+    vector_math_15 = vector_math_11 - vector_math_17 @ hide
+    vector_math_16 = vector_math_15 / combine_xyz @ hide
+    vector_math_18 = floor(vector_math_13) @ hide
+    vector_math_19 = vector_math_18 * combine_xyz @ hide
+    vector_math_20 = floor(vector_math_16) @ hide
+    vector_math_21 = vector_math_20 * combine_xyz @ hide
+    vector_math_22 = vector_math_21 + combine_xyz @ hide
+    vector_math_24 = combine_xyz * 0.5 @ hide
+    vector_math_23 = vector_math_19 + vector_math_24 @ hide
+    vector_math_25 = abs(vector_math_14) @ hide
+    vector_math_27 = vector_math_25 - (1.0, 0.0, 0.0) @ hide
+    vector_math_26 = vector_math_27 ⋅ combine_xyz @ hide
+    math_27 = vector_math_26 > 0.0 @ hide
+    mix_2 = math_27 ? vector_math_22 : vector_math_23
+    vector_rotate = VectorRotate[Z_AXIS](vector: vector_math_11 - mix_2, angle: 1.0471976) @ hide
+    math_28 = atan2(vector_rotate.y, vector_rotate.x) @ hide
+    math_30 = vector_rotate.y < 0.0 @ hide
+    math_32 = math_30 * 6.2831855 @ hide
+    math_31 = math_28 + math_32 @ hide
+    math_29 = floor(MapRange(value: math_31, from_max: 6.2831855, to_max: 6.0)) @ hide
+    math_33 = math_29 * 5.2359877
+    vector_rotate_2 = VectorRotate[Z_AXIS](vector: vector_rotate, angle: math_33)
+    math_34 = math_33 + 1.0471976
+    math_35 = cos(math_34) @ hide
+    math_36 = sin(math_34) @ hide
+    combine_xyz_3 = CombineXYZ(x: math_36, y: math_35) @ hide
+    math_37 = -math_36 @ hide
+    combine_xyz_2 = CombineXYZ(x: math_35, y: math_37) @ hide
+  }
+  vector_math = vector_rotate_2 - (1.0, 0.0, 0.0) @ hide
+  vector_math_2 = length(vector_math) @ hide
+  math = vector_math_2 - 0.75 @ hide
+  vector_math_3 = vector_rotate_2 - (0.5, 0.8660254, 0.0) @ hide
+  vector_math_4 = length(vector_math_3) @ hide
+  math_2 = vector_math_4 - 0.75 @ hide
+  math_3 = vector_math_2 - 0.625 @ hide
+  math_4 = vector_math_4 - 0.625 @ hide
+  vector_math_5 = vector_rotate_2 - (0.5, 0.28867513, 0.0) @ hide
+  separate_xyz = SeparateXYZ(vector: vector_rotate_2) @ hide
+  vector_math_6 = vector_rotate_2 ⋅ vector_math_7 @ hide
+  math_5 = min(separate_xyz.y, vector_math_6) @ hide
+  vector_math_8 = vector_math_5 ⋅ vector_math_9 @ hide
+  separate_xyz_2 = SeparateXYZ(vector: vector_math_5) @ hide
+  math_6 = -separate_xyz_2.x @ hide
+  math_7 = min(vector_math_8, math_6) @ hide
+  math_8 = min(math_5, math_7) @ hide
+  math_11 = min(math_3, math_4) @ hide
+  math_10 = max(math_8, math_11) @ hide
+  math_12 = max(math, math_2) @ hide
+  math_9 = -math_12 @ hide
+  math_13 = max(math_10, math_9) @ hide
+  math_15 = abs(math) @ hide
+  math_14 = min(math_4, math_15) @ hide
+  math_17 = abs(math_2) @ hide
+  math_16 = min(math_14, math_17) @ hide
+  math_18 = abs(math_3) @ hide
+  math_19 = -math_16 @ hide
+  math_20 = min(math_18, math_19) @ hide
+  math_21 = abs(math_20) @ hide
+  math_22 = min(math_21, math_13) @ hide
+  math_23 = math_4 < 0.0 @ hide
+  math_24 = math_3 < 0.0 @ hide
+  math_25 = math_2 < 0.0 @ hide
+  math_26 = math < 0.0 @ hide
+  mix = math_23
+    ? (math_24 ? (0.5, 0.28867513, 0.0) : (0.3958773, 0.3826107, 0.0))
+    : math_25
+      ? (math_26 ? (0.4706361, 0.1514698, 0.0) : (0.16065226, 0.31506228, 0.0))
+      : math_26 ? (0.35128978, 0.016602788, 0.0) : (0.0, 0.0, 0.0)
+  vector_math_28 = combine_xyz_2 * mix.x + combine_xyz_3 * mix.y + mix_2
+  vector_math_29 = vector_math_28 / Scale
+  vector_math_30 = vector_math_28 * 10.06 @ hide
+  vector_math_31 = floor(vector_math_30) @ hide
+  vector_math_32 = vector_math_31 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_29,
+    UV: Vector - vector_math_29,
+    Color: WhiteNoiseTexture(vector: vector_math_32).color,
+    Edge: math_22 / Scale,
+    Masks: math_23 ? (math_24 ? 3.0 : 2.0) : math_25 ? (math_26 ? 2.0 : 1.0) : math_26 ? 1.0 : 0.0)
+}

@@ -1,0 +1,44 @@
+geometry graph "RBD Select"(
+    Type: Menu(
+      description: "Below Height: pieces that reach down to a height, to hold the bottom of a wall in place. Box, Sphere: pieces whose centre is inside. Attribute: a vertex group or attribute") = "Below Height",
+    Height: Float(subtype: DISTANCE, description: "In the space of the object") = 0.1,
+    Center: Vector(subtype: TRANSLATION, description: "In the space of the object"),
+    Size: Vector(subtype: XYZ) = (1.0, 1.0, 1.0) in 0.0..,
+    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    Attribute: String(
+      description: "Name of a vertex group or attribute. After a fracture: one named in its Keep Vertex Group"),
+    Threshold: Float(description: "Selected where the attribute is at least this") = 0.5,
+    "Whole Pieces": Bool(
+      description: "Decide per piece: by its lowest point, its centre, the average of the attribute. Off: per vertex (a piece then counts as selected when most of it is)") = true,
+    Invert: Bool
+) -> (Selection: Bool(description: "True on the selected pieces")) {
+  menu_switch = MenuSwitch(menu: Type, "Below Height": 0, Box: 1, Sphere: 2, Attribute: 3)
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  boolean_math = whole_pieces and named_attribute_2.exists
+  switch = boolean_math ? named_attribute_2.attribute : Position()
+  position = Position()
+  vector_math = abs(switch - Center)
+  vector_math_2 = Size * 0.5
+  named_attribute_3 = NamedAttribute(name: Attribute)
+  return (
+    Selection: (menu_switch.attribute
+        ? (boolean_math
+            ? AccumulateField(
+                value: named_attribute_3.attribute,
+                group_id: named_attribute.attribute).total
+              / AccumulateField(group_id: named_attribute.attribute).total
+            : named_attribute_3.attribute)
+          >= Threshold
+        : menu_switch.sphere
+          ? length(switch - Center) <= Radius
+          : menu_switch.box
+            ? vector_math.x <= vector_math_2.x
+              and vector_math.y <= vector_math_2.y
+              and vector_math.z <= vector_math_2.z
+            : (boolean_math
+                ? FieldMinAndMax(value: position.z, group_id: named_attribute.attribute).min
+                : position.z)
+              <= Height)
+      xor Invert)
+}

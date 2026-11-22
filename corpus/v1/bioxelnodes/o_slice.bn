@@ -1,0 +1,42 @@
+geometry graph "Normal Selection"(
+    Direction: Vector(subtype: XYZ) = (0.0, 0.0, 1.0),
+    Threshold: Float(subtype: ANGLE) = 0.0872665
+) -> (Selection: Bool) {
+  return (
+    Selection: Compare[LESS_EQUAL, VECTOR, DIRECTION](
+      a: Direction,
+      b: Normal().normal,
+      angle: Threshold))
+}
+
+geometry graph "O Slice"(
+    Index: Int in 0..2,
+    Shape: Vector(
+      description: "Side length along each axis",
+      hide_value: true) = (1.0, 1.0, 1.0) in 0.0..,
+    Position: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Space: Float = 2.0 in 1.0..5.0
+) -> ("Slice Mesh": Geometry) {
+  vector_math = Shape * 0.5 @ hide
+  separate_xyz = SeparateXYZ(vector: Math[DIVIDE](Value: Shape, Value_001: Space)) @ hide
+  cube = Cube(
+    size: Shape,
+    vertices_x: separate_xyz.x,
+    vertices_y: separate_xyz.y,
+    vertices_z: separate_xyz.z) @ hide
+  math = Shape.x * Position @ hide
+  combine_xyz = CombineXYZ(x: math) @ hide
+  math_2 = Shape.y * Position @ hide
+  combine_xyz_2 = CombineXYZ(y: math_2) @ hide
+  math_3 = Shape.z * Position @ hide
+  combine_xyz_3 = CombineXYZ(z: math_3) @ hide
+  group = normal_selection(direction: (-1.0, 0.0, 0.0)) @ hide
+  group_2 = normal_selection(direction: (0.0, -1.0, 0.0)) @ hide
+  group_3 = normal_selection(direction: (0.0, 0.0, -1.0)) @ hide
+  transform_geometry = cube.mesh
+    |> SeparateGeometry[FACE](selection: IndexSwitch(Index, group, group_2, group_3)).selection
+    |> TransformGeometry(
+      translation: vector_math
+        + IndexSwitch(Index, combine_xyz, combine_xyz_2, combine_xyz_3)) @ hide
+  return ("Slice Mesh": transform_geometry)
+}

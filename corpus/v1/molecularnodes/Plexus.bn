@@ -1,0 +1,53 @@
+geometry graph "Sample Position"(
+    Geometry: Geometry(description: "The geometry to sample the `Position` from"),
+    Position: Vector(
+      description: "The `Position` field to sample the values from",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to sample the `Position` field from") = Index()
+) -> (Position: Vector(description: "The sampled `Position` field")) {
+  "A convenience wrapper around the `Sample Index` and `Position` nodes"
+  return (Position: SampleIndex[FLOAT_VECTOR, clamp: true](Geometry, value: Position, index: Index))
+}
+
+geometry(is_modifier: false) graph Plexus(
+    Points: Geometry,
+    Sort: Bool(
+      description: "Sort the resulting points so their `Index` matches the input geometry") = true,
+    Distance: Float(subtype: DISTANCE) = 0.5 in -10000.0..10000.0,
+    Radius: Float = 1.0
+) -> Geometry {
+  "Create a clean set of points for instancing on" {
+    index = Index()
+    points = Points(
+      count: DomainSize(Points).point_count,
+      position: SampleIndex[FLOAT_VECTOR](Points, value: Position(), index: index),
+      radius: SampleIndex(Points, value: Distance, index: index)
+        * SampleIndex(Points, value: Radius, index: index))
+  }
+  "Create Distance Probe" {
+    ico_sphere = IcoSphere()
+    merge_by_distance = ico_sphere.mesh
+      |> InstanceOnPoints(
+        instance: MeshLine(count: 2),
+        rotation: AxesToRotation(
+          primary_axis: SampleIndex[FLOAT_VECTOR](
+            ico_sphere.mesh,
+            value: -Position(),
+            index: Index())))
+      |> RealizeInstances[realize_to_point_domain: true]()
+      |> MergeByDistance()
+  }
+  "Apply the distance probe" {
+    capture_attribute = points
+      |> InstanceOnPoints(instance: merge_by_distance, scale: Radius())
+      |> RealizeInstances[realize_to_point_domain: true]()
+      |> CaptureAttribute(Index: SampleNearest(points))
+    merge_points = capture_attribute.geometry
+      |> SetPosition(position: sample_position(points, index: capture_attribute.index))
+      |> MergePoints(merge_id: capture_attribute.index)
+  }
+  "Potentially sort the results into same order" {
+    switch = Sort ? SortElements(merge_points, sort_weight: SampleNearest(Points)) : merge_points
+  }
+  return switch
+}

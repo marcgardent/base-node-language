@@ -1,0 +1,277 @@
+geometry graph "For Each Sim Geometry"(World: Bundle, Closure: Closure) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Data Type",
+    data_type: Geometry)
+  repeat_output = repeat(ListLength[STRING](list: get_nested_bundle_paths), World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+    get_bundle_item = GetBundleItem[GEOMETRY](bundle: World, path: get_list_item, remove: true)
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      Closure,
+      World(structure_type: SINGLE): get_bundle_item.bundle,
+      Geometry(structure_type: SINGLE): get_bundle_item.item,
+      Path(structure_type: SINGLE): get_list_item) -> (
+      World: Bundle(structure_type: SINGLE),
+      Geometry: Geometry(structure_type: SINGLE))
+    return StoreBundleItem[GEOMETRY](
+      bundle: evaluate_closure.world,
+      path: get_list_item,
+      item: evaluate_closure.geometry)
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Is Effector for Geometry"(
+    Effector: Bundle,
+    "Effector Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE),
+    Geometry: Geometry,
+    "Geometry Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+) -> ("Affects Geometry": Bool) {
+  return (
+    "Affects Geometry": TagFilter(
+      tag_filter: SeparateBundle(Effector) -> (filter: String),
+      tags: GetBundleItem[STRING](bundle: GetGeometryBundle(Geometry).bundle, path: "tags").item))
+}
+
+geometry graph "Evaluate Effector Attributes"(World: Bundle) -> (World: Bundle) {
+  "Pin Position Constraint" {
+    closure_output = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle = SeparateBundle(
+        Effector) -> (selection: Bool, position: Vector, compliance: Float)
+      capture_attribute = CaptureAttribute(
+        Geometry,
+        selection: separate_bundle.selection,
+        position: separate_bundle.position,
+        compliance: separate_bundle.compliance)
+      return capture_attribute.geometry
+        |> StoreNamedAttribute[BOOLEAN](
+          name: FormatString(format: "sim:prop:{}:selection", p: effector_path),
+          value: capture_attribute.selection)
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: FormatString(format: "sim:prop:{}:position", p: effector_path),
+          value: capture_attribute.position)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute.compliance)
+    }
+    string = "Blender.Constraint.PinPosition"
+    combine_bundle = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string,
+      closure: closure_output)
+  }
+  "Pin Rotation Constraint" {
+    closure_output_2 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_2 = SeparateBundle(
+        Effector) -> (selection: Bool, rotation: Rotation, compliance: Float)
+      capture_attribute_2 = CaptureAttribute(
+        Geometry,
+        selection: separate_bundle_2.selection,
+        position: separate_bundle_2.rotation,
+        compliance: separate_bundle_2.compliance)
+      return capture_attribute_2.geometry
+        |> StoreNamedAttribute[BOOLEAN](
+          name: FormatString(format: "sim:prop:{}:selection", p: effector_path),
+          value: capture_attribute_2.selection)
+        |> StoreNamedAttribute[QUATERNION](
+          name: FormatString(format: "sim:prop:{}:rotation", p: effector_path),
+          value: capture_attribute_2.position)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_2.compliance)
+    }
+    string_2 = "Blender.Constraint.PinRotation"
+    combine_bundle_2 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_2,
+      closure: closure_output_2)
+  }
+  "Damping" {
+    closure_output_3 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_3 = SeparateBundle(
+        Effector) -> (linear_damping: Float, angular_damping: Float)
+      capture_attribute_3 = CaptureAttribute(
+        Geometry,
+        linear_damping: separate_bundle_3.linear_damping,
+        angular_damping: separate_bundle_3.angular_damping)
+      return capture_attribute_3.geometry
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:linear", p: effector_path),
+          value: capture_attribute_3.linear_damping)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:angular", p: effector_path),
+          value: capture_attribute_3.angular_damping)
+    }
+    string_3 = "Blender.Damping"
+    combine_bundle_3 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_3,
+      closure: closure_output_3)
+  }
+  "Edge Length Constraint" {
+    closure_output_4 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_4 = SeparateBundle(Effector) -> (rest_length: Float, compliance: Float)
+      capture_attribute_4 = CaptureAttribute[EDGE](
+        Geometry,
+        rest_length: separate_bundle_4.rest_length,
+        compliance: separate_bundle_4.compliance)
+      return capture_attribute_4.geometry
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:rest_length", p: effector_path),
+          value: capture_attribute_4.rest_length)
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_4.compliance)
+    }
+    string_4 = "Blender.Constraint.EdgeLength"
+    combine_bundle_4 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_4,
+      closure: closure_output_4)
+  }
+  "Rod Stretch Shear Constraint" {
+    closure_output_5 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_5 = SeparateBundle(Effector) -> (rest_length: Float, compliance: Float)
+      capture_attribute_5 = CaptureAttribute(
+        Geometry,
+        rest_length: separate_bundle_5.rest_length,
+        compliance: separate_bundle_5.compliance)
+      return capture_attribute_5.geometry
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:rest_length", p: effector_path),
+          value: capture_attribute_5.rest_length)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_5.compliance)
+    }
+    string_5 = "Blender.Constraint.RodStretchShear"
+    combine_bundle_5 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_5,
+      closure: closure_output_5)
+  }
+  "Rod Bend Twist Constraint" {
+    closure_output_6 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_6 = SeparateBundle(
+        Effector) -> (rest_bend_rotation: Rotation, compliance: Float)
+      capture_attribute_6 = CaptureAttribute(
+        Geometry,
+        rest_bend_rotation: separate_bundle_6.rest_bend_rotation,
+        compliance: separate_bundle_6.compliance)
+      return capture_attribute_6.geometry
+        |> StoreNamedAttribute[QUATERNION](
+          name: FormatString(format: "sim:prop:{}:rest_bend_rotation", p: effector_path),
+          value: capture_attribute_6.rest_bend_rotation)
+        |> StoreNamedAttribute(
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_6.compliance)
+    }
+    string_6 = "Blender.Constraint.RodBendTwist"
+    combine_bundle_6 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_6,
+      closure: closure_output_6)
+  }
+  "Cross Edge Length Constraint" {
+    closure_output_7 = graph(
+      Geometry: Geometry,
+      Effector: Bundle,
+      "Effector Path": String
+    ) -> Geometry {
+      separate_bundle_7 = SeparateBundle(Effector) -> (rest_position: Vector, compliance: Float)
+      capture_attribute_7 = CaptureAttribute(
+        Geometry,
+        rest_position: separate_bundle_7.rest_position,
+        compliance: separate_bundle_7.compliance)
+      return capture_attribute_7.geometry
+        |> StoreNamedAttribute[FLOAT_VECTOR](
+          name: FormatString(format: "sim:prop:{}:rest_position", p: effector_path),
+          value: capture_attribute_7.rest_position)
+        |> StoreNamedAttribute[EDGE](
+          name: FormatString(format: "sim:prop:{}:compliance", p: effector_path),
+          value: capture_attribute_7.compliance)
+    }
+    string_7 = "Blender.Constraint.CrossEdgeLength"
+    combine_bundle_7 = CombineBundle(
+      Type: "Blender.FieldPreEvaluation",
+      effector_type: string_7,
+      closure: closure_output_7)
+  }
+  combine_bundle_8 = CombineBundle(
+    "Pin Position": combine_bundle,
+    "Pin Rotation": combine_bundle_2,
+    Damping: combine_bundle_3,
+    "Edge Length": combine_bundle_4,
+    "Rod Stretch Shear": combine_bundle_5,
+    "Rod Bend Twist": combine_bundle_6,
+    "Cross Edge Length": combine_bundle_7)
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: combine_bundle_8,
+    mode: "Bundle Type",
+    bundle_type: "Blender.FieldPreEvaluation")
+  list_length = ListLength[STRING](list: get_nested_bundle_paths)
+  "For each geomery > for each effector type > for each effector" {
+    closure_output_8 = graph(
+      World: Bundle(structure_type: SINGLE),
+      Geometry: Geometry(structure_type: SINGLE),
+      Path: String(structure_type: SINGLE)
+    ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+      repeat_output = repeat(list_length, Geometry: Geometry) -> {
+        separate_bundle_8 = SeparateBundle(
+          GetBundleItem[BUNDLE](
+            bundle: combine_bundle_8,
+            path: GetListItem[STRING](
+              list: get_nested_bundle_paths,
+              index: iteration)).item) -> (effector_type: String, closure: Closure)
+        get_nested_bundle_paths_2 = GetNestedBundlePaths(
+          bundle: World,
+          mode: "Bundle Type",
+          bundle_type: separate_bundle_8.effector_type)
+        repeat_output_2 = repeat(
+          ListLength[STRING](list: get_nested_bundle_paths_2),
+          Geometry: Geometry) -> {
+          get_list_item = GetListItem[STRING](list: get_nested_bundle_paths_2, index: iteration)
+          get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item)
+          return is_effector_for_geometry(
+              effector: get_bundle_item.item,
+              effector_path: get_list_item,
+              geometry: Geometry,
+              geometry_path: Path)
+            ? EvaluateClosure(
+              separate_bundle_8.closure,
+              Geometry: Geometry,
+              Effector: get_bundle_item.item,
+              "Effector Path": get_list_item) -> Geometry
+            : Geometry
+        }
+        return repeat_output_2
+      }
+      return (World: World, Geometry: repeat_output)
+    }
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output_8))
+}

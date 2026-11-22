@@ -1,0 +1,47 @@
+geometry graph "Thin Rod Moment of Inertia"(
+    Mass: Float(hide_value: true)
+) -> ("Moment of Inertia": Vector) {
+  position = Position()
+  offset_point_in_curve = OffsetPointInCurve(offset: 1)
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
+    value: position,
+    index: offset_point_in_curve.point_index) @ hide
+  vector_math = evaluate_at_index - position @ hide
+  vector_math_2 = vector_math ⋅ vector_math @ hide
+  evaluate_at_index_2 = EvaluateAtIndex(
+    value: Mass,
+    index: offset_point_in_curve.point_index) @ hide
+  math = Mass + evaluate_at_index_2 @ hide
+  math_2 = math * vector_math_2 @ hide
+  math_3 = math_2 * 0.083333336 @ "1/12" hide
+  return ("Moment of Inertia": CombineXYZ(x: math_3, y: math_3))
+}
+
+geometry(is_modifier: false) graph "Set Mass"(
+    Geometry: Geometry,
+    Mass: Float(subtype: MASS, structure_type: FIELD) = 1.0 in 0.0..,
+    "Moment of Inertia"(default_closed: true) {
+        "Moment of Inertia": Bool(
+          is_panel_toggle: true,
+          force_non_field: true,
+          structure_type: SINGLE),
+        "Moment of Inertia Mode": Menu(optional_label: true) = Custom,
+        "Moment of Inertia" as moment_of_inertia_vector: Vector(
+          optional_label: true) = (1.0, 1.0, 1.0)
+    }
+) -> Geometry {
+  store_named_attribute = StoreNamedAttribute(Geometry, name: "mass", value: Mass)
+  "Simple Rod Model for Moments of Inertia" {
+    named_attribute = NamedAttribute(name: "mass")
+  }
+  return moment_of_inertia
+    ? StoreNamedAttribute[FLOAT_VECTOR](
+      store_named_attribute,
+      name: "moment_of_inertia",
+      value: MenuSwitch(
+        menu: moment_of_inertia_mode,
+        Custom: moment_of_inertia_vector,
+        "Thin Rod": thin_rod_moment_of_inertia(
+          mass: NamedAttribute(name: "mass").attribute)).output)
+    : store_named_attribute
+}

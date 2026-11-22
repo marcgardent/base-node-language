@@ -1,0 +1,11 @@
+geometry graph "Diagonal Matrix"(Matrix: Matrix) -> Matrix {
+  {
+    separate_matrix = SeparateMatrix(matrix: Matrix)
+    combine_matrix = CombineMatrix(
+      column_1_row_1: separate_matrix.column_1_row_1,
+      column_2_row_2: separate_matrix.column_2_row_2,
+      column_3_row_3: separate_matrix.column_3_row_3,
+      column_4_row_4: separate_matrix.column_4_row_4)
+  }
+  return combine_matrix
+}

@@ -1,0 +1,50 @@
+shader graph PT_StarInOctagon(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "Star size": Float(subtype: FACTOR) = 0.33333334 in 0.0..1.0,
+    "Join stars": Bool
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  map_range = MapRange(value: star_size, to_min: -0.7853982, to_max: 0.0)
+  vector_math_6 = Vector * Scale
+  vector_math = fract(vector_math_6) - (0.5, 0.5, 0.0)
+  vector_math_4 = abs(vector_math)
+  vector_math_5 = -vector_math_4
+  vector_math_2 = vector_math_5 ⋅ normalize(CombineXYZ(x: cos(map_range), y: sin(map_range)))
+  vector_math_3 = vector_math_5 ⋅ normalize(CombineXYZ(x: sin(map_range), y: cos(map_range)))
+  math = max(vector_math_2, vector_math_3)
+  math_2 = min(abs(vector_math_2), abs(vector_math_3))
+  map_range_2 = MapRange(value: vector_math_4.x, from_max: 0.5, to_min: 0.5, to_max: 0.0) @ hide
+  map_range_3 = MapRange(value: vector_math_4.y, from_max: 0.5, to_min: 0.5, to_max: 0.0) @ hide
+  math_3 = 0.5 - abs(tan(map_range)) * 0.5
+  math_4 = vector_math_2 > 0.0
+  math_5 = vector_math_3 > 0.0
+  math_6 = vector_math.x > 0.0 @ hide
+  math_7 = vector_math.y > 0.0 @ hide
+  map_range_4 = MapRange(value: math_6, to_min: -1.0) @ hide
+  map_range_5 = MapRange(value: math_7, to_min: -1.0) @ hide
+  math_9 = abs(map_range)
+  math_8 = -tan(3.1415927 / 4.0 - math_9 / 2.0)
+  mix = join_stars ? 0.5 : (tan(math_9) - math_8) * 0.5 / (1.0 - math_8)
+  vector_math_7 = floor(vector_math_6)
+    + (0.5, 0.5, 0.0)
+    + CombineXYZ(x: map_range_4, y: map_range_5)
+      * (math_5 ? (0.5, 0.0, 0.0) : math_4 ? (0.0, 0.5, 0.0) : CombineXYZ(x: mix, y: mix))
+  vector_math_8 = vector_math_7 / Scale
+  vector_math_9 = vector_math_7 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_8,
+    UV: Vector - vector_math_8,
+    Color: WhiteNoiseTexture(vector: vector_math_9).color,
+    Edge: (join_stars
+        ? math_2
+        : min(
+          Mix(
+            factor: Math[ADD, use_clamp: true](
+              Value: map_range_2 > math_3,
+              Value_001: map_range_3 > math_3),
+            a: min(map_range_2, map_range_3),
+            b: 0.9),
+          math_2))
+      / Scale,
+    Masks: max(math_4, math_5))
+}

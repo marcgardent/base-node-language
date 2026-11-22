@@ -1,0 +1,435 @@
+geometry graph "Tessera · Region"(
+    Position: Vector,
+    Shape: Int,
+    "Half Size": Vector,
+    Margin: Float,
+    Region: Int,
+    Sides: Int = 8
+) -> (Inside: Bool, Clamped: Vector) {
+  math = max(half_size.x - Margin, 1e-05)
+  math_2 = max(half_size.y - Margin, 1e-05)
+  math_3 = 6.2831855 / max(Sides, 3.0)
+  math_4 = abs(Position.x)
+  math_5 = abs(Position.y)
+  math_6 = length(CombineXYZ(x: Position.x, y: Position.y))
+    * cos(
+      Math[FLOORED_MODULO](
+          Value: atan2(Position.y, Position.x) + 1.5707964 + math_3 * 0.5,
+          Value_001: math_3)
+        - math_3 * 0.5)
+  math_7 = half_size.y - half_size.x
+  index_switch = IndexSwitch(
+    Shape,
+    math_4 <= half_size.x and math_5 <= half_size.y,
+    pow(Position.x / half_size.x, 2.0) + pow(Position.y / half_size.y, 2.0) <= 1.0,
+    math_4 <= half_size.x and Position.y >= -half_size.y and Position.y <= math_7
+      or Position.y > math_7
+        and length(CombineXYZ(x: Position.x, y: Position.y - math_7)) <= half_size.x,
+    math_6 <= min(half_size.x, half_size.y))
+  math_8 = math_2 - math
+  index_switch_2 = IndexSwitch(
+    Shape,
+    math_4 <= math and math_5 <= math_2,
+    pow(Position.x / math, 2.0) + pow(Position.y / math_2, 2.0) <= 1.0,
+    math_4 <= math and Position.y >= -math_2 and Position.y <= math_8
+      or Position.y > math_8 and length(CombineXYZ(x: Position.x, y: Position.y - math_8)) <= math,
+    math_6 <= min(math, math_2))
+  compare = Region == 1
+  switch = compare ? math : half_size.x
+  switch_2 = compare ? math_2 : half_size.y
+  math_9 = switch_2 - switch
+  combine_xyz = CombineXYZ(x: Position.x, y: Position.y - math_9)
+  switch_3 = Position.y > math_9
+    ? CombineXYZ(y: math_9) + combine_xyz * min(1.0, switch / max(length(combine_xyz), 1e-09))
+    : CombineXYZ(x: Position.x, y: Position.y)
+  return (
+    Inside: IndexSwitch(Region, index_switch, index_switch_2, index_switch and not index_switch_2),
+    Clamped: IndexSwitch(
+      Shape,
+      CombineXYZ(
+        x: min(max(Position.x, -switch), switch),
+        y: min(max(Position.y, -switch_2), switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y)
+        * (1.0 / max(sqrt(pow(Position.x / switch, 2.0) + pow(Position.y / switch_2, 2.0)), 1.0)),
+      CombineXYZ(x: min(max(switch_3.x, -switch), switch), y: max(switch_3.y, -switch_2)),
+      CombineXYZ(x: Position.x, y: Position.y) * (1.0 / max(math_6 / min(switch, switch_2), 1.0))))
+}
+
+geometry(is_modifier: false) graph "Tessera · Pieces"(
+    Surface: Geometry,
+    Motif: Geometry,
+    Scale: Float,
+    Rotation: Float,
+    Offset: Vector,
+    "Center Pattern": Bool,
+    Mapping: Int,
+    Shape: Int,
+    Width: Float,
+    Height: Float,
+    Sides: Int,
+    Region: Int,
+    "Border Width": Float,
+    Edge: Int,
+    "Single Cell": Bool,
+    Piece: Int,
+    "Max Cells": Int,
+    "UV Map": String,
+    "UV Scale": Float,
+    Seed: Int,
+    Missing: Float,
+    "Shape Offset": Vector,
+    "Clip to Shape": Bool,
+    "Fit Repeats": Bool,
+    "Wrap Width": Float,
+    "Fit Multiple": Int
+) -> (
+    Geometry: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    "Scale Out": Float,
+    Gone: Geometry
+) {
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_la").attribute)
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_lb").attribute)
+  math = sample_index.x * sample_index_2.y - sample_index.y * sample_index_2.x
+  switch = abs(math) > 1e-09 ? math : 1.0
+  math_2 = Width * 0.5
+  math_3 = Height * 0.5
+  bounding_box = BoundingBox(Surface)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: uv_map)
+  attribute_statistic = AttributeStatistic[FLOAT_VECTOR, CORNER](
+    Surface,
+    attribute: named_attribute.attribute)
+  index_switch = IndexSwitch(
+    Mapping,
+    CombineXYZ(x: -math_2, y: -math_3),
+    bounding_box.min,
+    attribute_statistic.min * uv_scale)
+  index_switch_2 = IndexSwitch(
+    Mapping,
+    CombineXYZ(x: math_2, y: math_3),
+    bounding_box.max,
+    attribute_statistic.max * uv_scale)
+  combine_xyz = CombineXYZ(
+    x: (index_switch.x + index_switch_2.x) * 0.5,
+    y: (index_switch.y + index_switch_2.y) * 0.5)
+  sample_index_3 = SampleIndex(Motif, value: NamedAttribute(name: "ts_hp").attribute)
+  switch_2 = wrap_width > 1e-06 ? wrap_width : max(index_switch_2.x - index_switch.x, 1e-06)
+  math_4 = max(fit_multiple, 1.0)
+  switch_3 = fit_repeats and sample_index_3 > 1e-06
+    ? switch_2
+      / (max(round(switch_2 / max(sample_index_3 * Scale * math_4, 1e-09)), 1.0)
+        * math_4
+        * max(sample_index_3, 1e-09))
+    : Scale
+  vector_math = (center_pattern ? combine_xyz : (0.0, 0.0, 0.0)) + Offset
+  math_5 = cos(Rotation)
+  math_6 = sin(Rotation)
+  math_7 = index_switch.x - vector_math.x
+  math_8 = index_switch.y - vector_math.y
+  math_9 = (math_5 * math_7 + math_6 * math_8) / switch_3
+  math_10 = (math_5 * math_8 - math_6 * math_7) / switch_3
+  math_11 = (math_9 * sample_index_2.y - math_10 * sample_index_2.x) / switch
+  math_12 = (sample_index.x * math_10 - sample_index.y * math_9) / switch
+  math_13 = index_switch_2.x - vector_math.x
+  math_14 = index_switch.y - vector_math.y
+  math_15 = (math_5 * math_13 + math_6 * math_14) / switch_3
+  math_16 = (math_5 * math_14 - math_6 * math_13) / switch_3
+  math_17 = (math_15 * sample_index_2.y - math_16 * sample_index_2.x) / switch
+  math_18 = (sample_index.x * math_16 - sample_index.y * math_15) / switch
+  math_19 = index_switch_2.x - vector_math.x
+  math_20 = index_switch_2.y - vector_math.y
+  math_21 = (math_5 * math_19 + math_6 * math_20) / switch_3
+  math_22 = (math_5 * math_20 - math_6 * math_19) / switch_3
+  math_23 = (math_21 * sample_index_2.y - math_22 * sample_index_2.x) / switch
+  math_24 = (sample_index.x * math_22 - sample_index.y * math_21) / switch
+  math_25 = index_switch.x - vector_math.x
+  math_26 = index_switch_2.y - vector_math.y
+  math_27 = (math_5 * math_25 + math_6 * math_26) / switch_3
+  math_28 = (math_5 * math_26 - math_6 * math_25) / switch_3
+  math_29 = (math_27 * sample_index_2.y - math_28 * sample_index_2.x) / switch
+  math_30 = (sample_index.x * math_28 - sample_index.y * math_27) / switch
+  math_31 = floor(min(min(math_11, math_17), min(math_23, math_29))) - 2.0
+  math_32 = floor(min(min(math_12, math_18), min(math_24, math_30))) - 2.0
+  math_33 = max(ceil(max(max(math_11, math_17), max(math_23, math_29))) + 2.0 - math_31 + 1.0, 1.0)
+  boolean_math = single_cell
+    or not SampleIndex[FLOAT_VECTOR](
+        Motif,
+        value: NamedAttribute[FLOAT_VECTOR](name: "ts_cc").attribute).z
+      > 0.5
+  index = Index()
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  combine_xyz_2 = CombineXYZ(x: math_2, y: math_3)
+  vector_math_2 = combine_xyz + shape_offset * (1.0, 1.0, 0.0)
+  math_34 = bounding_box.max.z - bounding_box.min.z + 2.0
+  group = tessera_region(
+    position: named_attribute_2.attribute - vector_math_2,
+    shape: Shape,
+    half_size: combine_xyz_2,
+    margin: border_width,
+    region: Region,
+    sides: Sides)
+  vector_math_3 = group.clamped + vector_math_2
+  boolean_math_2 = group.inside or not clip_to_shape
+  index_switch_3 = IndexSwitch(
+    Mapping,
+    group.inside,
+    Raycast(
+        Surface,
+        source_position: CombineXYZ(
+          x: named_attribute_2.attribute.x,
+          y: named_attribute_2.attribute.y,
+          z: bounding_box.max.z + 1.0),
+        ray_length: math_34).is_hit
+      and boolean_math_2,
+    SampleUVSurface[FLOAT_VECTOR](
+        Surface,
+        value: Position(),
+        uv_map: named_attribute.attribute,
+        sample_uv: named_attribute_2.attribute * (1.0 / uv_scale)).is_valid
+      and boolean_math_2)
+  position = Position()
+  group_2 = tessera_region(
+    position: position - vector_math_2,
+    shape: Shape,
+    half_size: combine_xyz_2,
+    margin: border_width,
+    region: Region,
+    sides: Sides)
+  vector_math_4 = group_2.clamped + vector_math_2
+  boolean_math_3 = group_2.inside or not clip_to_shape
+  evaluate_on_domain = EvaluateOnDomain[FACE](
+    value: EvaluateOnDomain(
+      value: IndexSwitch(
+          Mapping,
+          group_2.inside,
+          Raycast(
+              Surface,
+              source_position: CombineXYZ(
+                x: position.x,
+                y: position.y,
+                z: bounding_box.max.z + 1.0),
+              ray_length: math_34).is_hit
+            and boolean_math_3,
+          SampleUVSurface[FLOAT_VECTOR](
+              Surface,
+              value: Position(),
+              uv_map: named_attribute.attribute,
+              sample_uv: position * (1.0 / uv_scale)).is_valid
+            and boolean_math_3)
+        ? 1.0
+        : 0.0))
+  math_35 = max(math_2 - border_width, 1e-05)
+  math_36 = max(math_3 - border_width, 1e-05)
+  transform_geometry = Cube(size: CombineXYZ(x: math_35 * 2.0, y: math_36 * 2.0, z: 8.0)).mesh
+    |> TransformGeometry(
+      translation: CombineXYZ(),
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  math_37 = max(Sides, 3.0)
+  math_38 = 6.2831855 / math_37
+  math_39 = math_36 - math_35
+  math_40 = max(math_39 + math_36, 0.0001)
+  transform_geometry_2 = IndexSwitch(
+      Shape,
+      transform_geometry,
+      Cylinder(vertices: 160, depth: 8.0).mesh
+        |> TransformGeometry(
+          translation: CombineXYZ(),
+          rotation: CombineXYZ(),
+          scale: CombineXYZ(x: math_35, y: math_36, z: 1.0)),
+      MeshBoolean[INTERSECT, EXACT](
+        transform_geometry,
+        MeshBoolean[UNION, EXACT](
+          Cylinder(vertices: 160, radius: math_35, depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(y: math_39),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+          Cube(size: CombineXYZ(x: math_35 * 2.0, y: math_40, z: 8.0)).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(y: -math_36 + math_40 * 0.5),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+          hole_tolerant: true).mesh,
+        hole_tolerant: true).mesh,
+      Cylinder(
+          vertices: round(math_37),
+          radius: min(math_35, math_36) / cos(math_38 * 0.5),
+          depth: 8.0).mesh
+        |> TransformGeometry(
+          translation: CombineXYZ(),
+          rotation: CombineXYZ(z: -1.5707964 + math_38 * 0.5),
+          scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)))
+    |> TransformGeometry(
+      translation: vector_math_2,
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  transform_geometry_3 = Cube(size: CombineXYZ(x: math_2 * 2.0, y: math_3 * 2.0, z: 8.0)).mesh
+    |> TransformGeometry(
+      translation: CombineXYZ(),
+      rotation: CombineXYZ(),
+      scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
+  math_41 = max(Sides, 3.0)
+  math_42 = 6.2831855 / math_41
+  math_43 = math_3 - math_2
+  math_44 = max(math_43 + math_3, 0.0001)
+  separate_geometry = Points(
+      count: round(
+        boolean_math
+          ? 1.0
+          : min(
+            math_33
+              * max(
+                ceil(max(max(math_12, math_18), max(math_24, math_30))) + 2.0 - math_32 + 1.0,
+                1.0),
+            max_cells)),
+      position: sample_index
+          * (boolean_math ? 0.0 : math_31 + Math[FLOORED_MODULO](Value: index, Value_001: math_33))
+        + sample_index_2 * (boolean_math ? 0.0 : math_32 + floor(index / math_33)))
+    |> InstanceOnPoints(instance: Motif)
+    |> RealizeInstances()
+    |> DeleteGeometry[FACE](
+      selection: Piece >= 0 and NamedAttribute[INT](name: "ts_k").attribute != Piece)
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_cp", value: Position())
+    |> TransformGeometry(
+      translation: vector_math,
+      rotation: CombineXYZ(z: Rotation),
+      scale: CombineXYZ(x: switch_3, y: switch_3, z: switch_3))
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_c", value: Position())
+    |> DeleteGeometry[FACE](
+      selection: not (IndexSwitch(
+          Edge,
+          index_switch_3,
+          evaluate_on_domain > 0.999,
+          index_switch_3 or evaluate_on_domain > 0.001)
+        or single_cell))
+    |> SeparateGeometry[FACE](
+      selection: Edge == 2
+        and (Mapping == 0 or clip_to_shape)
+        and not single_cell
+        and EvaluateOnDomain[FACE](value: EvaluateOnDomain(value: group_2.inside ? 0.0 : 1.0))
+          > 1e-06)
+  mesh_boolean = MeshBoolean[INTERSECT, EXACT](
+    Region == 1
+      ? transform_geometry_2
+      : IndexSwitch(
+          Shape,
+          transform_geometry_3,
+          Cylinder(vertices: 160, depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(),
+              rotation: CombineXYZ(),
+              scale: CombineXYZ(x: math_2, y: math_3, z: 1.0)),
+          MeshBoolean[INTERSECT, EXACT](
+            transform_geometry_3,
+            MeshBoolean[UNION, EXACT](
+              Cylinder(vertices: 160, radius: math_2, depth: 8.0).mesh
+                |> TransformGeometry(
+                  translation: CombineXYZ(y: math_43),
+                  rotation: CombineXYZ(),
+                  scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+              Cube(size: CombineXYZ(x: math_2 * 2.0, y: math_44, z: 8.0)).mesh
+                |> TransformGeometry(
+                  translation: CombineXYZ(y: -math_3 + math_44 * 0.5),
+                  rotation: CombineXYZ(),
+                  scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+              hole_tolerant: true).mesh,
+            hole_tolerant: true).mesh,
+          Cylinder(
+              vertices: round(math_41),
+              radius: min(math_2, math_3) / cos(math_42 * 0.5),
+              depth: 8.0).mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(),
+              rotation: CombineXYZ(z: -1.5707964 + math_42 * 0.5),
+              scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)))
+        |> TransformGeometry(
+          translation: vector_math_2,
+          rotation: CombineXYZ(),
+          scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+    separate_geometry.selection,
+    hole_tolerant: true)
+  boolean_math_4 = fit_repeats and wrap_width > 1e-06
+  position_2 = Position()
+  separate_geometry_2 = SeparateGeometry[FACE](
+    Switch[GEOMETRY](
+        switch: DomainSize(separate_geometry.selection).face_count > 0,
+        true_: SplitEdges(
+          Region == 2
+            ? MeshBoolean[DIFFERENCE, EXACT](
+              mesh_boolean.mesh,
+              transform_geometry_2,
+              hole_tolerant: true).mesh
+            : mesh_boolean.mesh))
+      + separate_geometry.inverted,
+    selection: Edge == 2
+      and Mapping == 2
+      and not clip_to_shape
+      and not single_cell
+      and EvaluateOnDomain[FACE](
+          value: EvaluateOnDomain(
+            value: position_2.y < index_switch.y - 1e-06
+                or position_2.y > index_switch_2.y + 1e-06
+                or (position_2.x < index_switch.x - 1e-06
+                    or position_2.x > index_switch_2.x + 1e-06)
+                  and not boolean_math_4
+              ? 1.0
+              : 0.0))
+        > 1e-06)
+  named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  separate_geometry_3 = Switch[GEOMETRY](
+        switch: DomainSize(separate_geometry_2.selection).face_count > 0,
+        true_: MeshBoolean[INTERSECT, EXACT](
+            Cube(
+                size: CombineXYZ(
+                  x: boolean_math_4 ? 10000.0 : index_switch_2.x - index_switch.x,
+                  y: index_switch_2.y - index_switch.y,
+                  z: 8.0)).mesh
+              |> TransformGeometry(
+                translation: CombineXYZ(
+                  x: (index_switch.x + index_switch_2.x) * 0.5,
+                  y: (index_switch.y + index_switch_2.y) * 0.5),
+                rotation: CombineXYZ(),
+                scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0)),
+            separate_geometry_2.selection,
+            hole_tolerant: true).mesh
+          |> SplitEdges())
+      + separate_geometry_2.inverted
+    |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "ts_c", value: Position())
+    |> DeleteGeometry[FACE](
+      selection: not IndexSwitch(
+          Mapping,
+          true,
+          Raycast(
+            Surface,
+            source_position: CombineXYZ(
+              x: named_attribute_3.attribute.x,
+              y: named_attribute_3.attribute.y,
+              z: bounding_box.max.z + 1.0),
+            ray_length: math_34).is_hit,
+          SampleUVSurface[FLOAT_VECTOR](
+            Surface,
+            value: Position(),
+            uv_map: named_attribute.attribute,
+            sample_uv: named_attribute_3.attribute * (1.0 / uv_scale)).is_valid)
+        and not single_cell)
+    |> SeparateGeometry[FACE](
+      selection: SeparateColor(
+          color: WhiteNoiseTexture["4D"](
+            vector: VectorMath[SNAP](
+              Vector: named_attribute_2.attribute * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+              Vector_001: (0.0625, 0.0625, 1.0)),
+            w: Seed + 0.713).color).blue
+        < Missing)
+  return (
+    Geometry: separate_geometry_3.inverted,
+    "Region Min": index_switch,
+    "Region Max": index_switch_2,
+    "Scale Out": switch_3,
+    Gone: separate_geometry_3.selection)
+}

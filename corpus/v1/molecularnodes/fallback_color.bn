@@ -1,0 +1,13 @@
+geometry graph "Fallback Color"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true) = "Color",
+    Fallback: Color(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry") = (0.0716495, 0.2954248, 0.23565927)
+) -> (
+    Color: Color(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT_COLOR](name: Name)
+  return (Color: named_attribute.exists ? named_attribute.attribute : Fallback)
+}

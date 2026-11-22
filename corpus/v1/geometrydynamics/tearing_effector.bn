@@ -1,0 +1,124 @@
+geometry graph "Custom Effector"(
+    Type: Menu(
+      description: "The type of effector to create.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE) = Geometry,
+    Stage: Menu(
+      description: "At which stage the custom effector should be evaluated.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE) = Default,
+    Stage as stage_string: String(
+      description: "Custom stage name.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE),
+    "Geometry Effector": Closure(
+      description: "Closure effecting one geometry at a time.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    "World Effector": Closure(
+      description: "Closure modifying an entire (simulation) world at once.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    "Filter"(description: "Filter settings.", default_closed: true) {
+        Filter: String(
+          description: "Comma-separated list of tags this effector should apply to.",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE)
+    }
+) -> (Effector: Bundle(description: "A bundle containing all information about this effector.")) {
+  "Create a custom effector that can be injected into e.g. simulations."
+  menu_switch = MenuSwitch(
+    menu: Stage,
+    Default(description: "Evaluate the effector at the default stage."): "DEFAULT",
+    "Pre-Simulation"(
+      description: "Evaluate the effector on the geometry before it is simulated."): "PRE_SIMULATION",
+    "Pre-Solve"(description: "Evaluate the effector before the actual solver runs."): "PRE_SOLVE",
+    "Post-Solve"(description: "Evaluate the effector after the solver ran."): "POST_SOLVE",
+    Custom(
+      description: "Evaluate the effector at a custom stage supported by the solver."): stage_string)
+  "Helps with closure type inferencing" {
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      geometry_effector,
+      Geometry(structure_type: SINGLE): Geometry,
+      "To World Transform"(
+        structure_type: SINGLE): Matrix) -> (Geometry: Geometry(structure_type: SINGLE))
+    evaluate_closure_2 = EvaluateClosure[define_signature: true](
+      world_effector,
+      World(structure_type: SINGLE): Bundle,
+      "To World Transform"(
+        structure_type: SINGLE): Matrix) -> (World: Bundle(structure_type: SINGLE))
+  }
+  return (
+    Effector: MenuSwitch(
+      menu: Type,
+      Geometry(
+        description: "A geometry effector evaluates a closure on each geometry individually, while taking some filter into account."): CombineBundle(
+          Type: "Blender.CustomEffector.Geometry",
+          filter: Filter,
+          stage: menu_switch.output,
+          closure: geometry_effector),
+      World(
+        description: "A world effector evaluates a closure on world bundle."): CombineBundle(
+          Type: "Blender.CustomEffector.World",
+          stage: menu_switch.output,
+          closure: world_effector)).output)
+}
+
+geometry graph "Edge Length"() -> (Length: Float) {
+  edge_vertices = EdgeVertices()
+  return (
+    Length: EvaluateOnDomain[EDGE](
+      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
+}
+
+geometry graph "Tearing Effector"(
+    Threshold: Float(structure_type: FIELD) = 1.8 in -10000.0..10000.0,
+    Mode: Menu(force_non_field: true, optional_label: true, structure_type: SINGLE) = All,
+    "Tearing Edges": Bool(hide_value: true, structure_type: FIELD) = true,
+    "Voronoi"(default_closed: true) {
+        "Voronoi Rest Position": Vector(hide_value: true, structure_type: FIELD) = Position(),
+        "Voronoi Scale": Float(structure_type: FIELD) = 5.0 in -1000.0..1000.0
+    },
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Effector: Bundle) {
+  math = edge_length() / NamedAttribute(name: "rest_length").attribute
+  closure_output = graph(
+    Geometry: Geometry(structure_type: SINGLE),
+    "To World Transform": Matrix(structure_type: SINGLE)
+  ) -> (Geometry: Geometry(structure_type: SINGLE)) {
+    "Todo: Figure out a better way to process mesh for tearing" {
+      capture_attribute = CaptureAttribute[EDGE](Geometry, Value: math)
+      capture_attribute_2 = CaptureAttribute(
+        capture_attribute.geometry,
+        Value: capture_attribute.value)
+      capture_attribute_3 = CaptureAttribute[EDGE](
+        capture_attribute_2.geometry,
+        Value: capture_attribute_2.value)
+    }
+    capture_attribute_4 = CaptureAttribute(
+      capture_attribute_3.geometry,
+      Hash: HashValue[VECTOR](
+        value: VoronoiTexture(vector: voronoi_rest_position, scale: voronoi_scale).position))
+    return SplitEdges(
+      capture_attribute_4.geometry,
+      selection: capture_attribute_3.value > Threshold
+        and MenuSwitch(
+          menu: Mode,
+          All(description: "All edges can tear."): true,
+          Custom(description: "All edges in a custom edge selection can tear."): tearing_edges,
+          Voronoi(
+            description: "Tearable edges are computed based on voronoi noise cells."): FaceGroupBoundaries(
+              face_group_id: capture_attribute_4.hash)).output)
+  }
+  return (
+    Effector: custom_effector(
+      Stage: "Post-Solve",
+      geometry_effector: closure_output,
+      filter: Filter))
+}

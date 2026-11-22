@@ -1,0 +1,35 @@
+geometry graph "Boolean First"(
+    Boolean: Bool(description: "The `Boolean` field to test", hide_value: true),
+    "Group ID": Int(
+      description: "Each `Group ID` to find the first `True` element for",
+      hide_value: true)
+) -> ("Is First": Bool(description: "`True` for the first true element in each `Group ID`")) {
+  "Only the first `True` in each `Group ID` remains `True`, all others become `False`"
+  return (
+    "Is First": AccumulateField[INT](
+        value: AccumulateField[INT](value: Boolean, group_id: group_id).leading,
+        group_id: group_id).leading
+      == 1)
+}
+
+geometry graph "Group Pick First"(
+    Pick: Bool(
+      description: "Index of the first `True` item in this field will be returned",
+      hide_value: true),
+    "Group ID": Int(
+      description: "The first `True` item for each `Group ID` will be returned",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(description: "Valid if as least 1 `True` for the `Group ID`"),
+    Index: Int(description: "Index of first picked item, returns `-1` if nothing picked")
+) {
+  "Get the `Index` of the first `True` item for each `Group ID`"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total >= 1
+  return (
+    "Is Valid": compare,
+    Index: compare
+      ? AccumulateField[INT](
+        value: boolean_first(boolean: Pick, group_id: group_id) ? Index() : 0,
+        group_id: group_id).total
+      : -1)
+}

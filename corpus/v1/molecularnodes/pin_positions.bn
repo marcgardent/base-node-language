@@ -1,0 +1,25 @@
+geometry graph "Pin Positions"(
+    Selection: Bool(hide_value: true, structure_type: FIELD) = true,
+    Position: Vector(structure_type: FIELD),
+    Compliance: Float(structure_type: FIELD) in 0.0..,
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    },
+    "Debug"(default_closed: true) {
+        "Error Threshold": Float(
+          subtype: DISTANCE,
+          force_non_field: true,
+          structure_type: SINGLE) = 0.001 in 1e-05..,
+        Lambda: String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+    }
+) -> (Constraint: Bundle) {
+  return (
+    Constraint: CombineBundle(
+      Type: "Blender.Constraint.PinPosition",
+      filter: Filter,
+      selection: Selection,
+      position: Position,
+      compliance: Compliance,
+      error_threshold: error_threshold,
+      lambda_attribute: Lambda))
+}

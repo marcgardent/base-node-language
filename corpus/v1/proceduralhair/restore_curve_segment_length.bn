@@ -1,0 +1,101 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Restore Curve Segment Length"(
+    Curves: Geometry,
+    Selection: Bool(description: "Only affect selected elements", hide_value: true) = true,
+    Factor: Float(subtype: FACTOR, description: "Factor to blend overall effect") = 1.0 in 0.0..1.0,
+    "Reference Position": Vector(
+      description: "Reference position before deformation",
+      hide_value: true,
+      default_attribute_name: "rest_position") = (8.14654, 4.96987, 9.87454),
+    "Pin at Parameter": Float(
+      subtype: FACTOR,
+      description: "Pin each curve at a certain point for the operation") in 0.0..1.0
+) -> (Curves: Geometry) {
+  "Restore Segment Lengths" {
+    index = Index()
+    math = index - 1.0 @ hide
+    compare = CurveOfPoint().index_in_curve == 0 @ hide
+    group = curve_segment()
+  }
+  "Default Fallback" {
+    named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+    switch_2 = Compare[EQUAL, VECTOR](
+        a: reference_position,
+        b: (8.14654, 4.96987, 9.87454),
+        epsilon: 0.0)
+      ? (named_attribute.exists ? named_attribute.attribute : Position())
+      : reference_position
+  }
+  "Restore Segment Lengths" .. {
+    set_position = SetPosition(
+      Curves,
+      selection: Factor > 0.0 and Selection,
+      position: curve_root().root_position,
+      offset: AccumulateField[FLOAT_VECTOR](
+        value: group.segment_direction
+          * Mix(
+            factor: Factor,
+            a: group.segment_length,
+            b: distance(
+              EvaluateAtIndex[FLOAT_VECTOR](
+                value: switch_2,
+                index: Switch[INT](switch: compare, false_: math, true_: index)),
+              switch_2)),
+        group_id: CurveOfPoint().curve_index).leading)
+  }
+  "Pin at Parameter" {
+    sample_curve = SampleCurve[FLOAT_VECTOR](
+      set_position,
+      value: switch_2,
+      factor: pin_at_parameter,
+      curve_index: Index())
+    vector_math = sample_curve.value - sample_curve.position @ hide
+    evaluate_on_domain = EvaluateOnDomain[CURVE, FLOAT_VECTOR](value: vector_math) @ hide
+    compare_2 = Compare[NOT_EQUAL](a: pin_at_parameter, epsilon: 0.0) @ hide
+    boolean_math = compare_2 and Selection @ hide
+    attribute_statistic = AttributeStatistic[CURVE](set_position, attribute: boolean_math) @ hide
+    compare_3 = attribute_statistic.max > 0.0 @ hide
+    switch = compare_3
+      ? SetPosition(set_position, selection: boolean_math, offset: evaluate_on_domain)
+      : set_position
+  }
+  return (Curves: switch)
+}

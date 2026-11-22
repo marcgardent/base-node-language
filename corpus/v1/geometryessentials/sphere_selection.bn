@@ -1,0 +1,15 @@
+geometry graph "Sphere Selection"(
+    Center: Vector(subtype: TRANSLATION, description: "Center position of the sphere selection"),
+    Radius: Float(
+      subtype: DISTANCE,
+      description: "Maximum distance of the element from the selection center") = 1.0
+) -> (Selection: Bool(description: "Selection of elements within a sphere")) {
+  transform_gizmo = TransformGizmo[
+    use_rotation_x: false,
+    use_rotation_y: false,
+    use_rotation_z: false,
+    use_scale_x: false,
+    use_scale_y: false,
+    use_scale_z: false](CombineTransform(translation: Center), position: Center)
+  return (Selection: distance(Position(), Center) <= Radius)
+}

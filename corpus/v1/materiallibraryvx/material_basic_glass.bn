@@ -1,0 +1,7 @@
+shader(material: true) graph "Basic Glass"() -> (surface: Shader) {
+  return (
+    surface: MixShader(
+      factor: 0.15,
+      a: MixShader(factor: Fresnel(ior: 1.04999), a: TransparentBSDF(), b: TranslucentBSDF()),
+      b: GlossyBSDF[GGX](roughness: 0.0)))
+}

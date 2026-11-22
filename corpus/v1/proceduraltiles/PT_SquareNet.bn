@@ -1,0 +1,86 @@
+shader graph PT_SquareNet(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "Board ratio": Float(subtype: FACTOR) = 0.33 in 0.0..1.0,
+    "UV Oriented": Bool = true
+) -> (Position: Vector, UV: Vector, "UV center": Vector, Color: Color, Edge: Float, Masks: Int) {
+  math_10 = board_ratio / 2.0
+  math_11 = Math[MULTIPLY_ADD](Value: board_ratio)
+  vector_math = Vector * Scale
+  vector_math_2 = fract(vector_math)
+  map_range = MapRange[FLOAT_VECTOR](
+    vector: vector_math_2,
+    from_max: (1.0, 1.0, 0.0),
+    to_min: (1.0, 1.0, 0.0),
+    to_max: (0.0, 0.0, 0.0))
+  math = min(vector_math_2.x, vector_math_2.y)
+  math_2 = min(map_range.x, map_range.y)
+  math_3 = vector_math_2.x - board_ratio
+  math_4 = vector_math_2.y - board_ratio
+  math_5 = abs(math_3)
+  math_6 = abs(math_4)
+  math_7 = min(0.5, min(math, math_2))
+  math_8 = math_3 > 0.0
+  math_9 = math_4 > 0.0
+  "checker" {
+    math_12 = Math[FLOORED_MODULO](
+      Value: Math[MULTIPLY](Value: floor(vector_math), Value_001: 3.0),
+      Value_001: 2.0)
+  }
+  combine_xyz = CombineXYZ(x: math_11, y: math_11)
+  math_13 = 1.0 + math_10
+  vector_math_3 = floor(vector_math)
+    + Mix[VECTOR](
+      factor: math_12,
+      a: math_9
+        ? (math_8 ? combine_xyz : CombineXYZ(x: math_10, y: math_13))
+        : CombineXYZ(x: math_10, y: math_10),
+      b: math_8
+        ? (math_9 ? combine_xyz : CombineXYZ(x: math_13, y: math_10))
+        : CombineXYZ(x: math_10, y: math_10))
+  vector_math_4 = vector_math_3 / Scale
+  math_14 = math_2 + (math < board_ratio)
+  vector_math_5 = Vector - vector_math_4
+  math_15 = math_4 < 0.0 @ hide
+  math_16 = Math[ADD, use_clamp: true](Value: math_8, Value_001: math_15) @ hide
+  mix = Mix(factor: math_12, a: math_16, b: math_8)
+  map_range_2 = MapRange(value: mix, to_min: 1.0, to_max: 0.0)
+  vector_rotate = VectorRotate[invert: true](
+    vector: vector_math_5,
+    angle: map_range_2 * 1.5707964) @ hide
+  math_17 = math_3 < 0.0 @ hide
+  math_18 = Math[ADD, use_clamp: true](Value: math_9, Value_001: math_17) @ hide
+  mix_2 = Mix(factor: math_12, a: math_9, b: math_18)
+  math_19 = map_range_2 * 2.0
+  math_20 = 2.0 - board_ratio @ hide
+  math_21 = math_20 / 2.0 @ hide
+  vector_math_6 = vector_rotate + CombineXYZ(x: math_21, y: board_ratio / 2.0) / Scale @ hide
+  mix_3 = Mix[VECTOR](
+    factor: Math[MINIMUM, use_clamp: true](Value: mix_2, Value_001: mix),
+    a: vector_math_6,
+    b: vector_math_5)
+  separate_xyz = SeparateXYZ(vector: mix_3) @ hide
+  combine_xyz_2 = CombineXYZ(x: separate_xyz.y, y: separate_xyz.x) @ hide
+  mix_4 = Mix[VECTOR](factor: math_19, a: mix_3, b: combine_xyz_2) @ hide
+  math_22 = 1.0 - board_ratio
+  return (
+    Position: vector_math_4,
+    UV: uv_oriented ? mix_3 : mix_4,
+    "UV center": uv_oriented ? vector_rotate : vector_math_5,
+    Color: WhiteNoiseTexture(vector: vector_math_3 + (1000.0, 1000.0, 0.0)).color,
+    Edge: min(
+        Mix(
+          factor: math_12,
+          a: min(
+            min(min(math_5 + (vector_math_2.y < board_ratio), math_6), math_14),
+            vector_math_2.x + math_22),
+          b: min(
+            min(min(math_5, math_6 + (vector_math_2.x < board_ratio)), math_14),
+            vector_math_2.y + math_22)),
+        Mix(
+          factor: math_12,
+          a: min(vector_math_2.y < board_ratio ? map_range.x : vector_math_2.x, vector_math_2.y),
+          b: min(vector_math_2.x < board_ratio ? vector_math_2.x : vector_math_2.y, map_range.y)))
+      / Scale,
+    Masks: MapRange(value: mix_2, to_min: 1.0, to_max: 0.0) * 1.0 + math_19)
+}

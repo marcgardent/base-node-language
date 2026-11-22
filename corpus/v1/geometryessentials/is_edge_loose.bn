@@ -1,0 +1,5 @@
+geometry graph "Is Edge Loose"() -> (
+    "Is Edge Loose": Bool(description: "Selection of edges that are not connected to a face")
+) {
+  return ("Is Edge Loose": EvaluateOnDomain[EDGE, BOOLEAN](value: CornersOfEdge().total == 0))
+}

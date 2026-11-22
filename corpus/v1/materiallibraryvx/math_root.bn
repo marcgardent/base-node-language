@@ -1,0 +1,6 @@
+shader graph "Math.Root"(
+    Value: Float = 0.5 in -10000.0..10000.0,
+    Root: Float = 0.5 in -10000.0..10000.0
+) -> (Value: Float) {
+  return (Value: pow(Value, 1.0 / Root))
+}

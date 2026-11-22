@@ -1,0 +1,46 @@
+shader(material: true) graph "1970_tiles"() -> (surface: Shader, displacement: Vector) {
+  vector_math = Mapping(vector: TextureCoordinate().object, rotation: (0.0, -0.0, 0.78539))
+    + 0.0 * 0.03
+  brick_texture = BrickTexture[offset: 0.0](
+    vector: vector_math,
+    color1: (0.8000001, 0.6244911, 0.6686707, 1.0),
+    color2: (0.15907712, 0.15907712, 0.15907712, 1.0),
+    mortar: (0.017717144, 0.017717144, 0.017717144, 1.0),
+    scale: 2.0000002,
+    mortar_size: 0.00999,
+    mortar_smooth: 0.0,
+    brick_width: 0.4,
+    row_height: 0.4)
+  math = Math[SUBTRACT, use_clamp: true](Value: 1.0, Value_001: brick_texture.factor)
+  return (
+    surface: PrincipledBSDF[GGX, BURLEY](
+      base_color: ColorRamp[
+        color_ramp: Ramp(
+          (0.01382, (0.07231, 0.0686, 0.06974, 1.0)),
+          (0.02235, (0.08925, 0.01347, 0.0, 1.0)),
+          (0.14225087, (0.2274382, 0.02439558, 0.0019738374, 1.0)),
+          (0.26215172, (0.1641489, 0.016769156, 0.0030022948, 1.0)),
+          (0.5019534, (0.10586, 0.00886, 0.00478, 1.0)),
+          (0.61775875, (0.12957022, 0.023244314, 0.019804012, 1.0)),
+          (0.7243475, (0.18820322, 0.042983357, 0.039283965, 1.0)),
+          (0.93752486, (0.31098714, 0.11540592, 0.029821755, 1.0)),
+          (0.97678316, (0.16880906, 0.04369325, 0.0022635162, 1.0)),
+          (1.0, (0.27149, 0.08796, 0.0, 1.0)))](
+        factor: Math[ADD](
+          Value: NoiseTexture(vector: vector_math, scale: 67.07226).factor * 0.00999,
+          Value_001: brick_texture.color)).color,
+      ior: 1.45,
+      normal: Bump(
+        strength: 0.049999997,
+        distance: 0.05,
+        filter_width: 1.0,
+        height: math
+          - NoiseTexture(vector: vector_math, scale: 200.0, distortion: 2.9999998).factor),
+      subsurface_scale: 0.05,
+      coat_weight: 0.14431818,
+      coat_roughness: 0.65272725,
+      sheen_weight: 0.124545455,
+      emission_color: (0.0, 0.0, 0.0, 1.0),
+      emission_strength: 1.0),
+    displacement: Displacement(height: math * 0.04999, midlevel: 0.0, scale: 0.1))
+}

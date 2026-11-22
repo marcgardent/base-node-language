@@ -1,0 +1,53 @@
+geometry graph "Grid Instancer"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
+    "Count X": Int = 3 in 1..,
+    "Count Y": Int = 3 in 1..,
+    "Count Z": Int = 3 in 1..,
+    Spacing: Vector = (1.0, 1.0, 1.0),
+    "Options"(default_closed: true) {
+        "Pick Instance": Bool,
+        "Instance Index": Int(hide_value: true)
+    }
+) -> (Instances: Geometry) {
+  "X" {
+    duplicate_elements = Points()
+      |> DuplicateElements(amount: count_x)
+    set_position = SetPosition(
+      duplicate_elements.geometry,
+      offset: VectorMath[MULTIPLY](
+        Vector: duplicate_elements.duplicate_index,
+        Vector_001: Spacing * (1.0, 0.0, 0.0)))
+  }
+  "Y" {
+    duplicate_elements_2 = DuplicateElements(set_position, amount: count_y)
+    set_position_2 = SetPosition(
+      duplicate_elements_2.geometry,
+      offset: VectorMath[MULTIPLY](
+        Vector: duplicate_elements_2.duplicate_index,
+        Vector_001: Spacing * (0.0, 1.0, 0.0)))
+  }
+  "Z" {
+    duplicate_elements_3 = DuplicateElements(set_position_2, amount: count_z)
+    set_position_3 = SetPosition(
+      duplicate_elements_3.geometry,
+      offset: VectorMath[MULTIPLY](
+        Vector: duplicate_elements_3.duplicate_index,
+        Vector_001: Spacing * (0.0, 0.0, 1.0)))
+  }
+  "Center" {
+    bounding_box = BoundingBox(set_position_3)
+    set_position_4 = SetPosition(
+      set_position_3,
+      offset: -Mix[VECTOR](factor: 0.5, a: bounding_box.min, b: bounding_box.max))
+  }
+  "Instancing" {
+    instance_on_points = InstanceOnPoints(
+      set_position_4,
+      selection: Selection,
+      instance: Geometry,
+      pick_instance: pick_instance,
+      instance_index: instance_index)
+  }
+  return (Instances: instance_on_points)
+}

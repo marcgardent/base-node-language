@@ -1,0 +1,23 @@
+shader graph "WPG_10(p4)"(
+    Vector: Vector(hide_value: true),
+    scale: Float = 5.0
+) -> (UV: Vector, position: Vector, mx: Vector, my: Vector) {
+  "Wallpaper group tile pattern more on :https://en.wikipedia.org/wiki/Wallpaper_group"
+  "p4(10)" #7b2a1b {
+    vector_math = Vector * scale
+    vector_math_2 = fract(vector_math) - (0.5, 0.5, 0.0)
+    vector_math_3 = abs(vector_math_2)
+    math = sign(vector_math_2.x * vector_math_2.y)
+    separate_xyz = SeparateXYZ(vector: vector_math_3) @ hide
+    combine_xyz = CombineXYZ(x: separate_xyz.y, y: separate_xyz.x) @ hide
+    mix = Mix[VECTOR](factor: math, a: combine_xyz, b: vector_math_3)
+    vector_math_4 = floor(vector_math) + (0.5, 0.5, 0.0) @ hide
+    math_2 = sign(vector_math_2.x) @ hide
+    math_3 = sign(vector_math_2.y) @ hide
+    vector_math_5 = (1.0, 0.0, 0.0) * math_2 @ hide
+    vector_math_6 = (0.0, 1.0, 0.0) * math_3 @ hide
+    mix_2 = Mix[VECTOR](factor: math, a: vector_math_6, b: vector_math_5) @ hide
+    mix_3 = Mix[VECTOR](factor: math, a: vector_math_5, b: vector_math_6) @ hide
+  }
+  return (UV: mix, position: vector_math_4, mx: mix_2, my: mix_3)
+}

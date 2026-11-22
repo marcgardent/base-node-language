@@ -1,0 +1,14 @@
+geometry graph Damping(
+    Linear: Float(structure_type: FIELD) = 2.0 in 0.0..,
+    Angular: Float(structure_type: FIELD) = 2.0 in 0.0..,
+    "Filter"(default_closed: true) {
+        Filter: String(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Damping: Bundle) {
+  return (
+    Damping: CombineBundle(
+      Type: "Blender.Damping",
+      filter: Filter,
+      linear_damping: Linear,
+      angular_damping: Angular))
+}

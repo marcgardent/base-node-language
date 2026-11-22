@@ -1,0 +1,85 @@
+geometry graph "Apply Geo Cache - Topology Changing"(
+    "New Geometry": Geometry,
+    "Cached Geometry": Geometry,
+    "Sim Attributes": String(
+      description: "List of attribute names (not) to transfer. A wildcard (*) at the end is allowed",
+      optional_label: true),
+    "Point ID": Int(hide_value: true) = Index(),
+    "Edge ID": Int(hide_value: true) = Index(),
+    "Face ID": Int(hide_value: true) = Index(),
+    "Corner ID": Int(hide_value: true) = Index(),
+    "Curve ID": Int(hide_value: true) = Index(),
+    "Instance ID": Int(hide_value: true) = Index()
+) -> ("Mixed Geometry": Geometry) {
+  get_geometry_bundle = cached_geometry
+    |> TransferAttributes(
+      target_point_id: point_id,
+      target_edge_id: edge_id,
+      target_face_id: face_id,
+      target_corner_id: corner_id,
+      target_curve_id: curve_id,
+      target_instance_id: instance_id,
+      source: new_geometry,
+      source_point_id: point_id,
+      source_edge_id: edge_id,
+      source_face_id: face_id,
+      source_corner_id: corner_id,
+      source_curve_id: curve_id,
+      source_instance_id: instance_id,
+      attribute_names: sim_attributes,
+      exclude_names: true).target
+    |> GetGeometryBundle(remove: true)
+  return (
+    "Mixed Geometry": SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: JoinBundle(GetGeometryBundle(new_geometry).bundle, get_geometry_bundle.bundle)))
+}
+
+geometry graph "String to List"(
+    String: String(optional_label: true),
+    Separator: String(optional_label: true) = ","
+) -> (List: String) {
+  return (List: TrimString(string: SplitString(string: String, separator: Separator)))
+}
+
+geometry graph "Sim Attributes"(Extra: String) -> ("Sim Attributes": String) {
+  string = "position, rotation, velocity, angular_velocity, sim:*"
+  return ("Sim Attributes": string_to_list(string: JoinStrings(",", string, Extra)))
+}
+
+geometry(is_modifier: false) graph "Set Geo Updater - Simulated Topology"(
+    Geometry: Geometry,
+    "Extra Sim Attributes": String(optional_label: true)
+) -> Geometry {
+  closure_output = graph(Geometry: Geometry, Cache: Geometry, "Post Sim": Bool) -> Geometry {
+    return apply_geo_cache_topology_changing(
+      Geometry,
+      cached_geometry: Cache,
+      sim_attributes: sim_attributes(extra: extra_sim_attributes),
+      point_id: NamedAttribute[INT](name: "original_point_index").attribute,
+      edge_id: NamedAttribute[INT](name: "original_edge_index").attribute,
+      face_id: NamedAttribute[INT](name: "original_face_index").attribute,
+      corner_id: NamedAttribute[INT](name: "original_corner_index").attribute,
+      curve_id: NamedAttribute[INT](name: "original_curve_index").attribute,
+      instance_id: NamedAttribute[INT](name: "original_instance_index").attribute)
+  }
+  "Initialize original id attributes" {
+    index = Index()
+    store_named_attribute = Geometry
+      |> StoreNamedAttribute[INT](name: "original_point_index", value: index)
+      |> StoreNamedAttribute[INT, EDGE](name: "original_edge_index", value: index)
+      |> StoreNamedAttribute[INT, FACE](name: "original_face_index", value: index)
+      |> StoreNamedAttribute[INT, CORNER](name: "original_corner_index", value: index)
+      |> StoreNamedAttribute[INT, CURVE](name: "original_curve_index", value: index)
+      |> StoreNamedAttribute[INT, INSTANCE](name: "original_instance_index", value: index)
+  }
+  get_geometry_bundle = GetGeometryBundle(store_named_attribute, remove: true)
+  set_geometry_bundle = SetGeometryBundle(
+    get_geometry_bundle.geometry,
+    bundle: StoreBundleItem[CLOSURE, SINGLE](
+      bundle: get_geometry_bundle.bundle,
+      path: "sim_apply_cache",
+      item: closure_output))
+  viewer = Viewer(Geometry(auto_remove: true): set_geometry_bundle)
+  return set_geometry_bundle
+}

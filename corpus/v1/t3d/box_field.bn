@@ -1,0 +1,15 @@
+geometry graph "Box Field"(
+    Clamp: Bool = true,
+    Location: Vector(subtype: TRANSLATION) in -10000.0..10000.0,
+    Rotation: Rotation,
+    Scale: Vector = (1.0, 1.0, 1.0) in -10000.0..10000.0
+) -> (Factor: Float) {
+  "Transformation" {
+    vector_math = abs(RotateVector(vector: Position() - Location, rotation: Rotation)) - Scale * 0.5
+  }
+  "Box Field" {
+    math = 0.0 - max(max(vector_math.x, vector_math.y), vector_math.z)
+    switch = Clamp ? Clamp(value: math) : math
+  }
+  return (Factor: switch)
+}

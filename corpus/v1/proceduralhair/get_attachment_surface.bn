@@ -1,0 +1,21 @@
+geometry(is_modifier: false) graph "Get Attachment Surface"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  separate_bundle = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_geometry: Geometry, surface_uv_map: Vector)
+  compare = DomainSize(separate_bundle.surface_geometry).point_count == 0
+  separate_bundle_2 = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_object: Object, surface_uv_map_name: String)
+  switch = compare
+    ? ObjectInfo[RELATIVE](object: separate_bundle_2.surface_object).geometry
+    : separate_bundle.surface_geometry
+  return (
+    "Surface Geometry": switch,
+    "Surface UV Map": compare
+      ? NamedAttribute[FLOAT_VECTOR](name: separate_bundle_2.surface_uv_map_name).attribute
+      : separate_bundle.surface_uv_map,
+    Exists: not Warning(
+      show: DomainSize(switch).point_count == 0,
+      message: "Missing surface geometry"))
+}

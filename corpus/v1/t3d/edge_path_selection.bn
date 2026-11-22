@@ -1,0 +1,15 @@
+geometry graph "Edge Path Selection"(
+    "Edge Cost": Float = 1.0,
+    "Start Index": Int in 0..,
+    "End Index": Int in 0..
+) -> (Selection: Bool) {
+  {
+    index = Index()
+    edge_paths_to_selection = EdgePathsToSelection(
+      start_vertices: index == start_index,
+      next_vertex_index: ShortestEdgePaths(
+        end_vertex: index == end_index,
+        edge_cost: edge_cost).next_vertex_index)
+  }
+  return (Selection: edge_paths_to_selection)
+}

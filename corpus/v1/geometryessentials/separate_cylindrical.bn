@@ -1,0 +1,9 @@
+geometry graph "Separate Cylindrical"(
+    Vector: Vector(hide_value: true) in 0.0..1.0
+) -> (
+    R: Float(description: "Radius - Length of the vector"),
+    Phi: Float(subtype: ANGLE, description: "Azimuth - Angle around the up axis"),
+    Z: Float(description: "Offset from the ground plane")
+) {
+  return (R: length(Vector * (1.0, 1.0, 0.0)), Phi: atan2(Vector.y, Vector.x), Z: Vector.z)
+}

@@ -1,0 +1,282 @@
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph Mass(
+    Index: Int = Index() in 0..
+) -> (mass: Float(description: "Read the `mass` attribute from the geometry")) {
+  return (mass: EvaluateAtIndex(value: fallback_float(name: "mass", fallback: 1.0), index: Index))
+}
+
+geometry graph "XPBD Finalise"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE)
+) -> Geometry {
+  return StoreNamedAttribute[FLOAT_VECTOR](
+    Geometry,
+    selection: Selection,
+    name: "velocity",
+    value: (Position() - NamedAttribute[FLOAT_VECTOR](name: "p_i").attribute) / deltaT)
+}
+
+geometry graph "Inverse Mass"() -> (Exists: Bool, w: Float, mass: Float) {
+  group = fallback_float(name: "mass", fallback: 1.0)
+  string = "inverse_mass"
+  return (
+    Exists: NamedAttribute(name: string).exists,
+    w: fallback_float(name: string, fallback: 1.0 / group),
+    mass: group)
+}
+
+geometry graph Velocity() -> (velocity: Vector) {
+  return (velocity: NamedAttribute[FLOAT_VECTOR](name: "velocity").attribute)
+}
+
+geometry graph "XPBD Init"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Force: Vector = (0.0, 0.0, -9.8) in -10000.0..10000.0,
+    Drag: Float = 10.0 in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in -10000.0..10000.0
+) -> Geometry {
+  "New Forces" {
+    vector_math = Force * deltaT * inverse_mass().w
+  }
+  "Drag Force" {
+    Velocity = Velocity()
+    vector_math_2 = Velocity * Clamp(value: 1.0 - Drag * deltaT)
+  }
+  return Geometry
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "p_i", value: Position())
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "velocity", value: vector_math_2 + vector_math)
+    |> SetPosition(selection: Selection, offset: Velocity() * deltaT)
+}
+
+geometry graph "Constraint Distance"(
+    Target: Vector in -10000.0..10000.0,
+    Self: Vector = Position() in -10000.0..10000.0,
+    Distance: Float = 0.5 in -10000.0..10000.0,
+    W1: Float = 0.5 in 0.0..10000.0,
+    W2: Float = 0.5 in 0.0..10000.0,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> (Correction: Vector, Value: Float) {
+  vector_math = Target - Self
+  vector_math_2 = length(vector_math)
+  return (
+    Correction: normalize(vector_math)
+      * ((vector_math_2 - Distance) * (W1 / (W1 + W2 + alpha / (deltaT * deltaT)))),
+    Value: vector_math_2)
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Float"(
+    Value: Float(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Float(description: "The field evaluated at the offset `Index` value")) {
+  return (Value: EvaluateAtIndex(value: Value, index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "XPBD Solve Curve"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Points: Int = 2 in 0..5,
+    Straightness: Float(subtype: FACTOR) = 0.9 in 0.0..1.0,
+    Length: Float,
+    alpha: Float in 0.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> Geometry {
+  group = inverse_mass()
+  separate_components = SeparateComponents(Geometry)
+  repeat_output = repeat(Points, Geometry: separate_components.curve) -> {
+    iteration_2 = iteration
+    integer_math = IntegerMath[ADD](Value: iteration_2, Value_001: 1)
+    repeat_output_2 = repeat(2, Geometry: Geometry) -> {
+      index_switch = IndexSwitch(iteration, integer_math, IntegerMath[NEGATE](value: integer_math))
+      return SetPosition(
+        Geometry,
+        selection: nimply(
+          Selection,
+          IndexSwitch(
+            iteration,
+            EndpointSelection(start_size: 0, end_size: integer_math),
+            EndpointSelection(start_size: integer_math, end_size: 0))),
+        offset: constraint_distance(
+          target: offset_vector(offset: index_switch),
+          distance: Switch[FLOAT](
+              switch: iteration_2 > 0,
+              false_: integer_math,
+              true_: integer_math * Mix(factor: Straightness, a: 0.5, b: 1.0))
+            * Length,
+          w1: group.w,
+          w2: offset_float(value: group.w, offset: index_switch),
+          alpha: alpha,
+          deltat: deltaT).correction)
+    }
+    return repeat_output_2
+  }
+  return separate_components.mesh
+    + repeat_output
+    + separate_components.grease_pencil
+    + separate_components.point_cloud
+    + separate_components.volume
+    + separate_components.instances
+}
+
+geometry graph "Lerp Position"(
+    a: Vector = Position() in -10000.0..10000.0,
+    b: Vector in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 0.5 in -10000.0..10000.0,
+    Decay: Float = 0.5 in -10000.0..10000.0
+) -> (Position: Vector, Length: Float) {
+  vector_math = a - b
+  return (Position: b + vector_math * exp(deltaT * -Decay), Length: length(vector_math))
+}
+
+geometry graph "XPBD Solve Hook"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true),
+    Target: Vector in -10000.0..10000.0,
+    Decay: Float = 0.5 in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 0.5 in -10000.0..10000.0
+) -> Geometry {
+  group = lerp_position(b: Target, deltat: deltaT, decay: Decay)
+  switch = group.length < 0.01 ? Target : group.position
+  return SetPosition(Geometry, selection: Selection, position: group.position)
+}
+
+geometry graph "XPBD Solve Points for Curve"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Radius: Float,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> Geometry {
+  capture_attribute = CaptureAttribute(
+    Geometry,
+    Vector: Position() + RandomValue[FLOAT_VECTOR](min: (-1.0, -1.0, -1.0)) * 0.001)
+  capture_attribute_2 = CaptureAttribute(
+    capture_attribute.geometry,
+    Index: IndexOfNearest(position: capture_attribute.vector).index)
+  math = EvaluateAtIndex(value: Radius, index: capture_attribute_2.index) + Radius
+  group = constraint_distance(
+    target: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: capture_attribute_2.index),
+    distance: math,
+    w1: 1.0,
+    w2: 1.0,
+    alpha: alpha,
+    deltat: deltaT)
+  return SetPosition(
+    capture_attribute_2.geometry,
+    selection: Selection and math > group.value,
+    offset: group.correction)
+}
+
+geometry(is_modifier: false) graph "Simulate Curve"(
+    Geometry: Geometry(description: "Geometry containing curve to simulate"),
+    Selection: Bool(description: "Which points to simulate on the curve", hide_value: true) = true,
+    Substeps: Int(
+      description: "Number of substeps to simulate for each frame of the animation (higher is slower but more accurate)") = 5 in 1..100,
+    "Simulation" {
+        Force: Vector(
+          description: "Additional forces to be applied to the simulation",
+          hide_value: true) in -10000.0..10000.0,
+        Drag: Float(
+          description: "Drag force for how quickly velocity should dissipate in the simulation. 0 is no drag and higher values dissipate quicker.") = 1.0 in 0.0..10000.0
+    },
+    "Point" {
+        "Point Radius": Float(
+          description: "Radius for each point which is used for calculating collisions between points") = 0.04 in 0.0..,
+        "Point alpha": Float in -10000.0..10000.0
+    },
+    "Curve" {
+        "Curve Points": Int(
+          description: "Number of points to check in each direction to maintain straightness of curve") = 1 in 0..5,
+        "Curve Straightness": Float(subtype: FACTOR) = 0.9 in 0.0..1.0,
+        "Curve Segment Length": Float = 0.1 in 0.0..,
+        "Curve alpha": Float in 0.0..10000.0
+    },
+    "Hook" {
+        "Hook Selection": Bool(hide_value: true),
+        "Hook Target": Vector(hide_value: true) in -10000.0..10000.0,
+        "Hook Decay": Float = 0.5 in -10000.0..10000.0
+    },
+    "Pin" {
+        "Pin Selection": Bool(hide_value: true),
+        "Pin Target": Vector(hide_value: true) = Position()
+    }
+) -> Geometry {
+  boolean_math = nimply(Selection, pin_selection)
+  Mass = Mass()
+  simulation_output = simulate(
+    Geometry: Geometry
+      |> SeparateComponents().curve
+      |> StoreNamedAttribute(
+        selection: not NamedAttribute(name: "mass").exists,
+        name: "mass",
+        value: 1.0)) -> {
+    math = delta_time / Substeps
+    repeat_output = repeat(
+      Substeps,
+      Geometry: StoreNamedAttribute(Geometry, name: "inverse_mass", value: 1.0 / Mass)) -> {
+      return Geometry
+        |> xpbd_init(selection: boolean_math, force: Force, drag: Drag, deltat: math)
+        |> xpbd_solve_curve(
+          selection: boolean_math,
+          points: curve_points,
+          straightness: curve_straightness,
+          length: curve_segment_length,
+          alpha: curve_alpha,
+          deltat: math)
+        |> xpbd_solve_points_for_curve(
+          selection: boolean_math,
+          radius: point_radius,
+          alpha: point_alpha,
+          deltat: math)
+        |> xpbd_solve_hook(
+          selection: hook_selection,
+          target: hook_target,
+          decay: hook_decay,
+          deltat: math)
+        |> SetPosition(selection: pin_selection, position: pin_target)
+        |> xpbd_finalise(selection: boolean_math, deltat: math)
+    }
+    return repeat_output
+  }
+  return simulation_output
+}

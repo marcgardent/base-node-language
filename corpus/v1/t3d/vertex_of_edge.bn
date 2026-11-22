@@ -1,0 +1,16 @@
+geometry graph "Vertex of Edge"(
+    "Edge Index": Int(hide_value: true) = Index(),
+    Weights: Float(hide_value: true)
+) -> ("Vertex Index 1": Int, "Vertex Index 2": Int) {
+  {
+    corners_of_edge = CornersOfEdge(edge_index: edge_index, weights: Weights, sort_index: 1)
+    vertex_of_corner = VertexOfCorner(corner_index: corners_of_edge.corner_index)
+    vertex_of_corner_2 = VertexOfCorner(
+      corner_index: OffsetCornerInFace(corner_index: corners_of_edge.corner_index, offset: 1))
+    compare = EvaluateAtIndex(value: Weights, index: vertex_of_corner)
+      > EvaluateAtIndex(value: Weights, index: vertex_of_corner_2)
+    switch = compare ? vertex_of_corner_2 : vertex_of_corner
+    switch_2 = not compare ? vertex_of_corner_2 : vertex_of_corner
+  }
+  return ("Vertex Index 1": switch, "Vertex Index 2": switch_2)
+}

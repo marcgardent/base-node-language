@@ -1,0 +1,19 @@
+geometry graph ".MN_constants_atom_name_nucleic"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Side Chain Joint Carbon": Int
+) {
+  integer = 61
+  integer_2 = 77
+  integer_3 = 50
+  integer_4 = 61
+  integer_5 = 54
+  return (
+    "Backbone Lower": integer_3,
+    "Backbone Upper": integer_4,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Side Chain Joint Carbon": integer_5)
+}

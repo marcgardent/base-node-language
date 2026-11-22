@@ -1,0 +1,24 @@
+geometry graph "Poke Faces"(
+    Mesh: Geometry,
+    Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
+    Depth: Float(subtype: DISTANCE)
+) -> (Mesh: Geometry, "New Vertices": Bool) {
+  "Initial Index" {
+    capture_attribute = CaptureAttribute(Mesh, Value: Index())
+  }
+  "Poke" {
+    extrude_mesh = ExtrudeMesh(
+      capture_attribute.geometry,
+      selection: Selection,
+      offset_scale: Depth)
+    merge_by_distance = extrude_mesh.mesh
+      |> ScaleElements(selection: extrude_mesh.top, scale: 0.0)
+      |> MergeByDistance(selection: extrude_mesh.top, mode: Connected, distance: 0.0005)
+  }
+  "New Vertices" {
+    capture_attribute_2 = CaptureAttribute(
+      merge_by_distance,
+      Value: Index() - capture_attribute.value > 0.0)
+  }
+  return (Mesh: capture_attribute_2.geometry, "New Vertices": capture_attribute_2.value)
+}

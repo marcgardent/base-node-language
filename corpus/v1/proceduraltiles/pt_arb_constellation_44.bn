@@ -1,0 +1,52 @@
+shader graph "PT_ARB_Constellation(44)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  value = 1.0
+  value_2 = 2.41421
+  math = -value @ hide
+  math_2 = -value_2 @ hide
+  combine_xyz = CombineXYZ(x: value, y: value_2)
+  value_3 = 0.07925633
+  "p4m(11)" #7b2a1b {
+    vector_math_5 = Vector * Scale
+    vector_math_6 = fract(vector_math_5) - (0.5, 0.5, 0.0)
+    vector_math_7 = abs(vector_math_6)
+    vector_math_8 = floor(vector_math_5) + (0.5, 0.5, 0.0) @ hide
+    math_9 = sign(vector_math_6.x) @ hide
+    math_10 = sign(vector_math_6.y) @ hide
+    vector_math_9 = (1.0, 0.0, 0.0) * math_9 @ hide
+    vector_math_10 = (0.0, 1.0, 0.0) * math_10 @ hide
+    math_11 = vector_math_7.x - vector_math_7.y < 0.0
+    mix_2 = math_11 ? vector_math_10 : vector_math_9 @ hide
+    mix_3 = math_11 ? vector_math_9 : vector_math_10 @ hide
+    mix_4 = math_11 ? CombineXYZ(x: vector_math_7.y, y: vector_math_7.x) : vector_math_7
+  }
+  vector_math = mix_4 - (0.10355339, 0.04289321, 0.0)
+  vector_math_2 = mix_4 - (0.35355338, 0.35355338, 0.0)
+  vector_math_3 = vector_math_2 ⋅ normalize(combine_xyz)
+  vector_math_4 = mix_4 ⋅ normalize(CombineXYZ(x: value, y: math_2))
+  math_3 = min(
+    vector_math ⋅ normalize(CombineXYZ(x: value_2, y: math)),
+    vector_math ⋅ normalize(combine_xyz))
+  math_4 = min(
+    abs(vector_math_4) - value_3,
+    max(vector_math_3, vector_math_2 ⋅ normalize(CombineXYZ(x: math_2, y: math))))
+  math_5 = math_4 < 0.0 @ hide
+  math_6 = vector_math_4 > 0.0 @ hide
+  math_7 = vector_math_3 > 0.0 @ hide
+  math_8 = math_3 > 0.0 @ hide
+  mix = math_5
+    ? (math_8 ? (0.5, 0.14697339, 0.0) : (0.0, 0.0, 0.0))
+    : math_6 ? (0.38807118, 0.0, 0.0) : math_7 ? (0.5, 0.5, 0.0) : (0.27440777, 0.27440777, 0.0)
+  vector_math_11 = mix_2 * mix.x + mix_3 * mix.y + vector_math_8
+  vector_math_12 = vector_math_11 / Scale
+  vector_math_13 = vector_math_11 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_12,
+    UV: Vector - vector_math_12,
+    Color: WhiteNoiseTexture(vector: vector_math_13).color,
+    Edge: abs(min(abs(math_4), math_3)) / Scale,
+    Masks: math_5 ? (math_8 ? 1.0 : 0.0) : math_7 ? 3.0 : 2.0)
+}

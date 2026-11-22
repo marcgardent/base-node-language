@@ -1,0 +1,140 @@
+geometry graph ".OKLab Matrices"() -> (M1: Matrix, M2: Matrix) {
+  return (
+    M1: CombineMatrix(
+      column_1_row_1: 0.818933,
+      column_1_row_2: 0.032985,
+      column_1_row_3: 0.0482,
+      column_2_row_1: 0.3618667,
+      column_2_row_2: 0.9293119,
+      column_2_row_3: 0.264366,
+      column_3_row_1: -0.1288597,
+      column_3_row_2: 0.03614564,
+      column_3_row_3: 0.633852),
+    M2: CombineMatrix(
+      column_1_row_1: 0.21045426,
+      column_1_row_2: 1.9779985,
+      column_1_row_3: 0.025904037,
+      column_2_row_1: 0.7936178,
+      column_2_row_2: -2.42859,
+      column_2_row_3: 0.7827718,
+      column_3_row_1: -0.004072047,
+      column_3_row_2: 0.4505937,
+      column_3_row_3: -0.8086758))
+}
+
+geometry graph "Color to OKLab"(Color: Color) -> (OKLab: Vector(subtype: XYZ)) {
+  value = 0.3333333
+  return (
+    OKLab: TransformPoint(
+      vector: VectorMath[POWER](
+        Vector: TransformPoint(vector: Color, transform: oklab_matrices().m1),
+        Vector_001: value),
+      transform: oklab_matrices().m2))
+}
+
+geometry graph "LCh to OKLab"(L: Float, C: Float, h: Float(subtype: ANGLE)) -> (OKLab: Vector) {
+  "a" {
+    math = C * cos(h)
+  }
+  "b" {
+    math_2 = C * sin(h)
+  }
+  return (OKLab: CombineXYZ(x: L, y: math, z: math_2))
+}
+
+geometry graph "OKLab to LCh"(
+    OKLab: Vector in -10000.0..10000.0
+) -> (L: Float, C: Float, h: Float(subtype: ANGLE)) {
+  "C" {
+    integer = 2
+    math = sqrt(pow(OKLab.y, integer) + pow(OKLab.z, integer))
+  }
+  return (L: OKLab.x, C: math, h: atan2(OKLab.z, OKLab.y))
+}
+
+geometry graph "OKLab Offset LCh"(
+    OKLab: Vector = (0.64, 0.0, 0.0001) in -10000.0..10000.0,
+    L: Float in -10000.0..10000.0,
+    h: Float in -10000.0..10000.0
+) -> (OKLab: Vector) {
+  group = oklab_to_lch(oklab: OKLab)
+  return (OKLab: lch_to_oklab(l: L + group.l, c: group.c, h: group.h + h))
+}
+
+geometry graph "OKLab to Color"(OKLab: Vector) -> Color {
+  integer = 3
+  return TransformPoint(
+    vector: VectorMath[POWER](
+      Vector: TransformPoint(
+        vector: OKLab,
+        transform: InvertMatrix(matrix: oklab_matrices().m2).matrix),
+      Vector_001: integer),
+    transform: InvertMatrix(matrix: oklab_matrices().m1).matrix)
+}
+
+geometry graph "Color OKLab Offset"(
+    Color: Color = (0.07984344, 1.0, 0.2559341),
+    Colorspace: Menu(menu_expanded: true, optional_label: true) = OKLab,
+    Luminance: Float(subtype: FACTOR) in -1.0..1.0,
+    Saturation: Float(subtype: FACTOR) in 0.0..1.0,
+    Lightness: Float(subtype: FACTOR) in 0.0..1.0,
+    Hue: Float(subtype: FACTOR) in -3.1415927..3.1415927
+) -> Color {
+  separate_color = SeparateColor[HSL](color: Color)
+  return MenuSwitch(
+    menu: Colorspace,
+    OKLab: oklab_to_color(
+      oklab: oklab_offset_lch(oklab: color_to_oklab(color: Color), l: Luminance, h: Hue)),
+    HSL: CombineColor[HSL](
+      red: separate_color.red + Hue,
+      green: separate_color.green + Saturation,
+      blue: separate_color.blue + Lightness,
+      alpha: separate_color.alpha)).output
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Select Atomic Number"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    atomic_number: Int(
+      description: "Create a selection based on the inputted atomic number.") = 6 in 1..140
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: NamedAttribute[INT](name: "atomic_number").attribute == atomic_number)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Color Goodsell"(
+    Color: Color(description: "Color to apply 'Goodsell' style colors to") = (0.5, 0.5, 0.5),
+    Factor: Float(
+      subtype: FACTOR,
+      description: "Amount to apply the 'Goodsell Style' coloring to") = 0.3 in 0.0..1.0,
+    Invert: Bool(description: "Whether to invert the darkening of the colors")
+) -> (Color: Color(description: "The generated color based on the node inputs")) {
+  group = select_atomic_number()
+  return (
+    Color: color_oklab_offset(
+      color: Color,
+      luminance: Mix(factor: (Invert ? group.inverted : group.selection) ? 0.0 : Factor, b: -0.4)))
+}

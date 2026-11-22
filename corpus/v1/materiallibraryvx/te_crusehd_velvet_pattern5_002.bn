@@ -1,0 +1,15 @@
+shader graph "TE_Crusehd_Velvet_pattern5.002"(Vector: Vector, Scale: Float = 5.0) -> Color {
+  return ColorRamp[
+    color_ramp: Ramp(
+      (0.0909, (0.0, 0.0, 0.0, 1.0)),
+      (0.20454, (0.17078, 0.17078, 0.17078, 1.0)),
+      (1.0, (1.0, 1.0, 1.0, 1.0)),
+      interpolation: B_SPLINE)](
+    factor: WaveTexture[RINGS, DIAGONAL, SPHERICAL](
+      vector: Vector,
+      scale: Scale,
+      distortion: 7.5,
+      detail: 5.0,
+      detail_scale: 6.0,
+      phase_offset: 1.5707964).factor).color
+}

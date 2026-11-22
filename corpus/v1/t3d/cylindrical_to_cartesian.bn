@@ -1,0 +1,8 @@
+geometry graph "Cylindrical to Cartesian"(
+    "r, θ, z": Vector in -10000.0..10000.0
+) -> ("x,y,z": Vector) {
+  "To cartesian" {
+    combine_xyz = CombineXYZ(x: cos(r_θ_z.y) * r_θ_z.x, y: r_θ_z.x * sin(r_θ_z.y), z: r_θ_z.z)
+  }
+  return ("x,y,z": combine_xyz)
+}

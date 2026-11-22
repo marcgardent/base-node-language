@@ -1,0 +1,75 @@
+shader graph "PT_ARB_EightStars(48)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 3.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  "p4g(12)" #7b2a1b {
+    vector_math = Vector * Scale
+    vector_math_2 = fract(vector_math) - (0.5, 0.5, 0.0)
+    vector_math_3 = abs(vector_math_2)
+    vector_math_4 = floor(vector_math) @ hide
+    vector_math_5 = vector_math_4 + (0.5, 0.5, 0.0) @ hide
+    math = sign(vector_math_2.x) @ hide
+    math_2 = sign(vector_math_2.y) @ hide
+    vector_math_6 = (1.0, 0.0, 0.0) * math @ hide
+    vector_math_7 = (0.0, 1.0, 0.0) * math_2 @ hide
+    math_3 = vector_math_3.x + vector_math_3.y > 0.5
+    mix = math_3 ? vector_math_7 : vector_math_6 @ hide
+    mix_2 = math_3 ? vector_math_6 : vector_math_7 @ hide
+    map_range = MapRange[FLOAT_VECTOR](
+      vector: vector_math_3,
+      from_max: (0.5, 0.5, 0.0),
+      to_min: (0.5, 0.5, 0.0),
+      to_max: (0.0, 0.0, 0.0)) @ hide
+    separate_xyz = SeparateXYZ(vector: map_range) @ hide
+    combine_xyz = CombineXYZ(x: separate_xyz.y, y: separate_xyz.x) @ hide
+    mix_3 = math_3 ? combine_xyz : vector_math_3
+    vector_math_9 = vector_math + (0.5, 0.5, 0.0) @ hide
+    vector_math_8 = floor(vector_math_9) @ hide
+    mix_4 = math_3 ? vector_math_8 : vector_math_5
+    map_range_2 = MapRange(value: math_3, from_min: 1.0, from_max: 0.0, to_min: -1.0) @ hide
+    vector_math_10 = mix * map_range_2 @ hide
+    vector_math_11 = mix_2 * map_range_2 @ hide
+  }
+  math_4 = vector_math_2.x + vector_math_2.y
+  math_5 = vector_math_2.x - vector_math_2.y
+  math_6 = min(-min(math_4, math_5), max(math_4, math_5)) > 0.0
+  mix_5 = math_6 ? CombineXYZ(x: mix_3.y, y: mix_3.x) : mix_3
+  vector_math_12 = mix_5 - (0.14644662, 0.0, 0.0)
+  vector_math_13 = mix_5 - (0.25, 0.10355339, 0.0)
+  vector_math_14 = mix_5 - (0.39644662, 0.04289322, 0.0)
+  vector_math_15 = vector_math_12 ⋅ (0.92388, -0.382683, 0.0)
+  vector_math_16 = vector_math_13 ⋅ normalize((-1.0, -1.0, 0.0))
+  math_7 = min(-vector_math_14.x, -(vector_math_14 ⋅ normalize((1.0, -1.0, 0.0))))
+  math_8 = min(
+    max(vector_math_15, -(vector_math_12 ⋅ (0.92388, 0.382683, 0.0))),
+    max(-vector_math_13.y, -vector_math_16))
+  math_9 = max(vector_math_13.y, vector_math_16)
+  math_10 = math_8 < 0.0 @ hide
+  math_11 = vector_math_15 < 0.0 @ hide
+  math_12 = math_9 < 0.0 @ hide
+  math_13 = vector_math_13.y > 0.0 @ hide
+  math_14 = math_7 > 0.0 @ hide
+  mix_6 = math_10
+    ? (0.14489968, 0.1449, 0.0)
+    : math_11
+      ? (0.0, 0.0, 0.0)
+      : math_12
+        ? (math_14 ? (0.3404822, 0.066074, 0.0) : (0.5, 0.0, 0.0))
+        : math_13 ? (0.3144549, 0.18554507, 0.0) : (0.23759964, 0.0, 0.0)
+  math_15 = math_8 < 0.0 @ hide
+  math_16 = vector_math_15 < 0.0 @ hide
+  math_17 = math_9 < 0.0 @ hide
+  math_18 = vector_math_13.y > 0.0 @ hide
+  math_19 = math_7 > 0.0 @ hide
+  mix_7 = math_6 ? CombineXYZ(x: mix_6.y, y: mix_6.x) : mix_6
+  vector_math_17 = vector_math_10 * mix_7.x + vector_math_11 * mix_7.y + mix_4
+  vector_math_18 = vector_math_17 / Scale
+  vector_math_19 = vector_math_17 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_18,
+    UV: Vector - vector_math_18,
+    Color: WhiteNoiseTexture(vector: vector_math_19).color,
+    Edge: abs(min(math_8, min(abs(math_9), math_7))) / Scale,
+    Masks: math_15 ? 1.0 : math_16 ? 0.0 : math_17 ? (math_19 ? 4.0 : 5.0) : math_18 ? 3.0 : 2.0)
+}

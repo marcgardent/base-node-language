@@ -1,0 +1,162 @@
+geometry graph ".MN_constants_atom_name_nucleic"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Side Chain Joint Carbon": Int
+) {
+  integer = 61
+  integer_2 = 77
+  integer_3 = 50
+  integer_4 = 61
+  integer_5 = 54
+  return (
+    "Backbone Lower": integer_3,
+    "Backbone Upper": integer_4,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Side Chain Joint Carbon": integer_5)
+}
+
+geometry graph ".MN_select_nucleic"() -> (
+    "Is Backbone": Bool(
+      description: "True for atoms that are part of the sugar-phosphate backbone for the nucleotides"),
+    "Is Side Chain": Bool(
+      description: "True for atoms that are part of the bases for nucleotides."),
+    "Is Nucleic": Bool(description: "True if the atoms are part of a nucleic acid")
+) {
+  group = mn_constants_atom_name_nucleic()
+  named_attribute = NamedAttribute[INT](name: "atom_name")
+  return (
+    "Is Backbone": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.backbone_upper,
+    "Is Side Chain": named_attribute.attribute >= group.side_chain_lower
+      and named_attribute.attribute <= group.side_chain_upper,
+    "Is Nucleic": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.side_chain_upper)
+}
+
+geometry graph ".MN_constants_atom_name_peptide"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Alpha Carbon": Int
+) {
+  integer = 5
+  integer_2 = 49
+  integer_3 = 4
+  integer_4 = 1
+  integer_5 = 2
+  return (
+    "Backbone Lower": integer_4,
+    "Backbone Upper": integer_3,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Alpha Carbon": integer_5)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph ".MN_select_peptide"() -> (
+    "Is Backbone": Bool,
+    "Is Side Chain": Bool,
+    "Is Peptide": Bool,
+    "Is Alpha Carbon": Bool
+) {
+  group = mn_constants_atom_name_peptide()
+  group_2 = atom_name()
+  compare = group_2 == group.alpha_carbon
+  return (
+    "Is Backbone": group_2 >= group.backbone_lower and group_2 <= group.backbone_upper,
+    "Is Side Chain": group_2 >= group.side_chain_lower and group_2 <= group.side_chain_upper
+      or compare,
+    "Is Peptide": group_2 >= group.backbone_lower and group_2 <= group.side_chain_upper,
+    "Is Alpha Carbon": compare)
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Fallback Boolean"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Bool(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Boolean: Bool(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  "Computes the boolean field if the given attribute doesn't exist. If it doesn't exist it just uses the attribute instead"
+  named_attribute = NamedAttribute[BOOLEAN](name: Name)
+  return (Boolean: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Is Alpha Carbon"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(
+      name: "is_alpha_carbon",
+      fallback: mn_select_peptide().is_alpha_carbon))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Side Chain"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    "Include CA": Bool(description: "Include the alpha carbon as part of the side chain") = true
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = fallback_boolean(
+    name: "is_side_chain",
+    fallback: mn_select_nucleic().is_side_chain or mn_select_peptide().is_side_chain)
+  group_2 = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: include_ca ? group : nimply(group, is_alpha_carbon().selection))
+  return (Selection: group_2.boolean, Inverted: group_2.inverted)
+}

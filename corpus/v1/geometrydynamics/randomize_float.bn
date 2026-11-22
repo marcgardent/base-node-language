@@ -1,0 +1,9 @@
+geometry graph "Randomize Float"(
+    Value: Float(subtype: FACTOR) in 0.0..1.0,
+    Enable: Bool = true,
+    Randomness: Float(subtype: FACTOR) in 0.0..1.0,
+    ID: Int(hide_value: true) = ID(),
+    Seed: Int in -10000..10000
+) -> (Value: Float) {
+  return (Value: Enable ? Value * RandomValue(min: 1.0 - Randomness, id: ID, seed: Seed) : Value)
+}

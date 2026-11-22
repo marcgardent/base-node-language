@@ -1,0 +1,27 @@
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "VDW Radii"(
+    Index: Int = Index() in 0..
+) -> (vdw_radii: Float(description: "Read the `vdw_radii` attribute from the geometry")) {
+  return (
+    vdw_radii: EvaluateAtIndex(
+      value: fallback_float(name: "vdw_radii", fallback: mn_world_scale()),
+      index: Index))
+}

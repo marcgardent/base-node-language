@@ -1,0 +1,22 @@
+geometry graph "UV Displace"(
+    "UV Map": Vector(hide_value: true) in 0.0..1.0,
+    Displacement: Vector(hide_value: true) in 0.0..1.0,
+    "U Strength": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    "V Strength": Float(subtype: FACTOR) = 1.0 in 0.0..1.0
+) -> ("UV Map": Vector(attribute_domain: CORNER)) {
+  {
+    vector_math = uv_map
+      * MapRange[SMOOTHSTEP, FLOAT_VECTOR](
+        vector: Displacement,
+        from_min: (-1.0, -1.0, 0.0),
+        from_max: (1.0, 1.0, 0.0),
+        to_max: (1.0, 1.0, 0.0))
+  }
+  {
+    mix = Mix[VECTOR, NON_UNIFORM](
+      factor: CombineXYZ(x: u_strength, y: v_strength),
+      a: uv_map,
+      b: vector_math)
+  }
+  return ("UV Map": mix)
+}

@@ -1,0 +1,144 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph "Group Info"(
+    "Group ID": Int(hide_value: true)
+) -> (Size: Int, "Index in Group": Int, "Index of First": Int, "Index of Last": Int) {
+  index = Index()
+  integer = 1
+  accumulate_field = AccumulateField[INT](value: integer, group_id: group_id)
+  return (
+    Size: accumulate_field.total,
+    "Index in Group": accumulate_field.trailing,
+    "Index of First": AccumulateField[INT](
+      value: accumulate_field.trailing == 0 ? index : 0,
+      group_id: group_id).total,
+    "Index of Last": AccumulateField[INT](
+      value: accumulate_field.leading == accumulate_field.total ? index : 0,
+      group_id: group_id).total)
+}
+
+geometry graph "Index to Factor"(
+    Index: Int(description: "The index starting at 0 within the overall group of size `Size`"),
+    Size: Int(description: "The size of the group that will be used to compute the factor.")
+) -> (Factor: Float(subtype: FACTOR)) {
+  return (
+    Factor: MapRange(value: Index, from_max: IntegerMath[SUBTRACT](Value: Size, Value_001: 1)))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Sub Group Info"(
+    "Sub Group ID": Int(hide_value: true),
+    "Group ID": Int(hide_value: true)
+) -> (
+    Size: Int(description: "Size of each comptued `Group ID`"),
+    "Group ID": Int(
+      description: "A unique `Group ID` that increases whenever `Sub Group ID` or `Group ID` change"),
+    "Index of First": Int(
+      description: "The absolute `Index` of the _first_ point in each computed `Group ID`"),
+    "Index of Last": Int(
+      description: "The absolute `Index` of the _last_ point in each computed `Group ID`"),
+    "Index in Group ID": Int(description: "Index within each computed `Group ID`, starting at 0"),
+    "Sub Group ID": Int,
+    "Sub Group Total": Int
+) {
+  group = integer_run(value: sub_group_id, group_id: group_id)
+  group_2 = group_info(group_id: group.group_id)
+  accumulate_field = AccumulateField[INT](
+    value: group.group_id != offset_integer(integer: group.group_id, offset: 1),
+    group_id: group_id)
+  return (
+    Size: group_2.size,
+    "Group ID": group.group_id,
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last,
+    "Index in Group ID": group_2.index_in_group,
+    "Sub Group ID": accumulate_field.trailing,
+    "Sub Group Total": accumulate_field.total)
+}
+
+geometry graph "Chain Parameter"() -> (
+    Factor: Float(
+      subtype: FACTOR,
+      description: "A residues relative position along a chain. 0 being the first residue in a chain, 1 being the last"),
+    "Residue Count": Int(description: "Number of residues in the chain"),
+    "Residue Index": Int(description: "Res ID along the chain if counting from 1"),
+    "First res_id": Int(
+      description: "The first Res ID in a chain (truncated chains start above 1)"),
+    "Last res_id": Int(
+      description: "The Res ID of the last residue in chain (not equal to Length if chain is truncated)"),
+    "Index of First": Int(description: "Index in whole structure of the first atom in the chain"),
+    "Index of Last": Int(description: "Index in the whole structure the last atom in the chain")
+) {
+  "Information for each residue within the context of the chain"
+  group = chain_id()
+  group_2 = group_info(group_id: group)
+  group_3 = sub_group_info(sub_group_id: residue_id(), group_id: group)
+  return (
+    Factor: index_to_factor(index: group_3.sub_group_id, size: group_3.sub_group_total),
+    "Residue Count": group_3.sub_group_total,
+    "Residue Index": group_3.sub_group_id,
+    "First res_id": residue_id(index: group_3.index_of_first),
+    "Last res_id": residue_id(index: group_3.index_of_last),
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last)
+}

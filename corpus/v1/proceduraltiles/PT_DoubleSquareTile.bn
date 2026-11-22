@@ -1,0 +1,88 @@
+shader graph PT_DoubleSquareTile(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "Square ratio": Float(subtype: FACTOR) = 0.5 in 0.0..1.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  vector_math = Vector * Scale
+  {
+    combine_xyz_4 = CombineXYZ(x: 1.0, y: 1.0)
+    separate_xyz_4 = SeparateXYZ(vector: combine_xyz_4) @ hide
+    math_11 = -separate_xyz_4.x @ hide
+    combine_xyz_3 = CombineXYZ(x: separate_xyz_4.y, y: math_11) @ hide
+  }
+  {
+    combine_xyz_8 = CombineXYZ(x: 1.0, y: -1.0)
+    separate_xyz_8 = SeparateXYZ(vector: combine_xyz_8) @ hide
+    math_22 = -separate_xyz_8.x @ hide
+    combine_xyz_7 = CombineXYZ(x: separate_xyz_8.y, y: math_22) @ hide
+  }
+  vector_math_9 = normalize(CombineXYZ(x: square_ratio, y: 1.0))
+  math = atan2(vector_math_9.x, vector_math_9.y)
+  vector_rotate = VectorRotate[invert: true](
+    vector: floor(VectorRotate(vector: vector_math, angle: math)) + (0.5, 0.5, 0.0),
+    angle: math)
+  vector_math_2 = vector_math - vector_rotate
+  math_12 = vector_math_9.x * 0.5
+  {
+    vector_math_4 = combine_xyz_4 * math_12
+    vector_math_5 = vector_math_4 - combine_xyz_3 * vector_math_9.y
+  }
+  math_23 = vector_math_9.x * 0.5
+  {
+    vector_math_7 = combine_xyz_8 * math_23
+    vector_math_8 = vector_math_7 - combine_xyz_7 * vector_math_9.y
+  }
+  math_25 = atan2((vector_math_2.x > 0.0) - 0.5, (vector_math_2.y > 0.0) - 0.5) - 0.7853982
+  vector_rotate_2 = VectorRotate(vector: vector_math_2, angle: math_25) @ hide
+  {
+    separate_xyz_2 = SeparateXYZ(vector: vector_rotate_2 - vector_math_4) @ hide
+    separate_xyz_3 = SeparateXYZ(vector: vector_rotate_2 - vector_math_5) @ hide
+    math_9 = separate_xyz_2.x > separate_xyz_3.x @ hide
+    mix = math_9 ? -1.0 : 1.0 @ hide
+    math_3 = separate_xyz_2.x * mix @ hide
+    math_7 = -mix @ hide
+    math_5 = separate_xyz_3.x * math_7 @ hide
+    math_10 = separate_xyz_2.y > separate_xyz_3.y @ hide
+    mix_2 = math_10 ? -1.0 : 1.0 @ hide
+    math_4 = separate_xyz_2.y * mix_2 @ hide
+    combine_xyz = CombineXYZ(x: math_3, y: math_4) @ hide
+    math_8 = -mix_2 @ hide
+    math_6 = separate_xyz_3.y * math_8 @ hide
+    combine_xyz_2 = CombineXYZ(x: math_5, y: math_6) @ hide
+    vector_math_3 = max(combine_xyz, combine_xyz_2) @ hide
+    separate_xyz = SeparateXYZ(vector: vector_math_3) @ hide
+    math_2 = max(separate_xyz.x, separate_xyz.y) @ hide
+  }
+  {
+    separate_xyz_6 = SeparateXYZ(vector: vector_rotate_2 - vector_math_7) @ hide
+    separate_xyz_7 = SeparateXYZ(vector: vector_rotate_2 - vector_math_8) @ hide
+    math_20 = separate_xyz_6.x > separate_xyz_7.x @ hide
+    mix_3 = math_20 ? -1.0 : 1.0 @ hide
+    math_14 = separate_xyz_6.x * mix_3 @ hide
+    math_18 = -mix_3 @ hide
+    math_16 = separate_xyz_7.x * math_18 @ hide
+    math_21 = separate_xyz_6.y > separate_xyz_7.y @ hide
+    mix_4 = math_21 ? -1.0 : 1.0 @ hide
+    math_15 = separate_xyz_6.y * mix_4 @ hide
+    combine_xyz_5 = CombineXYZ(x: math_14, y: math_15) @ hide
+    math_19 = -mix_4 @ hide
+    math_17 = separate_xyz_7.y * math_19 @ hide
+    combine_xyz_6 = CombineXYZ(x: math_16, y: math_17) @ hide
+    vector_math_6 = max(combine_xyz_5, combine_xyz_6) @ hide
+    separate_xyz_5 = SeparateXYZ(vector: vector_math_6) @ hide
+    math_13 = max(separate_xyz_5.x, separate_xyz_5.y) @ hide
+  }
+  math_24 = min(math_2, math_13)
+  vector_math_10 = vector_rotate * 1.0
+    + VectorRotate[invert: true](
+      vector: (math_13 > 0.0 ? (-0.5, 0.5, 0.0) : (0.5, 0.5, 0.0)) * (math_24 < 0.0),
+      angle: math_25 + math)
+  vector_math_11 = vector_math_10 / Scale
+  vector_math_12 = vector_math_10 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_11,
+    UV: Vector - vector_math_11,
+    Color: WhiteNoiseTexture(vector: vector_math_12).color,
+    Edge: abs(math_24) / Scale,
+    Masks: math_24 > 0.0)
+}

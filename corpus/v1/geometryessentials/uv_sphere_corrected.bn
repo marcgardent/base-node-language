@@ -1,0 +1,23 @@
+geometry graph ".UV_sphere_corrected"(
+    Segments: Int(description: "Horizontal resolution of the sphere") = 32 in 3..1024,
+    Rings: Int(description: "The number of horizontal rings") = 16 in 2..1024
+) -> (Mesh: Geometry, "UV Map": Vector(dimensions: 2), Equator: Bool) {
+  uvsphere = UVSphere(segments: Segments, rings: Rings)
+  math = 1.0 / Segments
+  capture_attribute = CaptureAttribute(
+    uvsphere.mesh,
+    Result: Compare[EQUAL](a: abs(Position().z), epsilon: 1e-05))
+  return (
+    Mesh: capture_attribute.geometry,
+    "UV Map": CombineXYZ(
+      x: uvsphere.uv_map.x
+        + (EvaluateOnDomain[FACE, BOOLEAN](
+            value: IntegerMath[MODULO](
+                Value: IntegerMath[ADD](Value: Index(), Value_001: 1),
+                Value_001: Segments)
+              <= 0)
+          ? -1.0 + math
+          : math),
+      y: uvsphere.uv_map.y),
+    Equator: capture_attribute.result)
+}

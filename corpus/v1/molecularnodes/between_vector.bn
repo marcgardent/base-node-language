@@ -1,0 +1,10 @@
+geometry graph "Between Vector"(
+    Value: Vector(description: "The value to test element-wise"),
+    Lower: Vector(description: "The lower bounds (including) for the comparison"),
+    Upper: Vector(description: "The upper bounds (including) for the comparison")
+) -> (
+    Boolean: Bool(
+      description: "If the value is between (and including) the lower the upper bounds")
+) {
+  return (Boolean: Value >= Lower and Value <= Upper)
+}

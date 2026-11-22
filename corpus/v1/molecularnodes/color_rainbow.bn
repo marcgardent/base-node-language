@@ -1,0 +1,303 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph "Group Info"(
+    "Group ID": Int(hide_value: true)
+) -> (Size: Int, "Index in Group": Int, "Index of First": Int, "Index of Last": Int) {
+  index = Index()
+  integer = 1
+  accumulate_field = AccumulateField[INT](value: integer, group_id: group_id)
+  return (
+    Size: accumulate_field.total,
+    "Index in Group": accumulate_field.trailing,
+    "Index of First": AccumulateField[INT](
+      value: accumulate_field.trailing == 0 ? index : 0,
+      group_id: group_id).total,
+    "Index of Last": AccumulateField[INT](
+      value: accumulate_field.leading == accumulate_field.total ? index : 0,
+      group_id: group_id).total)
+}
+
+geometry graph "Index to Factor"(
+    Index: Int(description: "The index starting at 0 within the overall group of size `Size`"),
+    Size: Int(description: "The size of the group that will be used to compute the factor.")
+) -> (Factor: Float(subtype: FACTOR)) {
+  return (
+    Factor: MapRange(value: Index, from_max: IntegerMath[SUBTRACT](Value: Size, Value_001: 1)))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Sub Group Info"(
+    "Sub Group ID": Int(hide_value: true),
+    "Group ID": Int(hide_value: true)
+) -> (
+    Size: Int(description: "Size of each comptued `Group ID`"),
+    "Group ID": Int(
+      description: "A unique `Group ID` that increases whenever `Sub Group ID` or `Group ID` change"),
+    "Index of First": Int(
+      description: "The absolute `Index` of the _first_ point in each computed `Group ID`"),
+    "Index of Last": Int(
+      description: "The absolute `Index` of the _last_ point in each computed `Group ID`"),
+    "Index in Group ID": Int(description: "Index within each computed `Group ID`, starting at 0"),
+    "Sub Group ID": Int,
+    "Sub Group Total": Int
+) {
+  group = integer_run(value: sub_group_id, group_id: group_id)
+  group_2 = group_info(group_id: group.group_id)
+  accumulate_field = AccumulateField[INT](
+    value: group.group_id != offset_integer(integer: group.group_id, offset: 1),
+    group_id: group_id)
+  return (
+    Size: group_2.size,
+    "Group ID": group.group_id,
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last,
+    "Index in Group ID": group_2.index_in_group,
+    "Sub Group ID": accumulate_field.trailing,
+    "Sub Group Total": accumulate_field.total)
+}
+
+geometry graph "Chain Parameter"() -> (
+    Factor: Float(
+      subtype: FACTOR,
+      description: "A residues relative position along a chain. 0 being the first residue in a chain, 1 being the last"),
+    "Residue Count": Int(description: "Number of residues in the chain"),
+    "Residue Index": Int(description: "Res ID along the chain if counting from 1"),
+    "First res_id": Int(
+      description: "The first Res ID in a chain (truncated chains start above 1)"),
+    "Last res_id": Int(
+      description: "The Res ID of the last residue in chain (not equal to Length if chain is truncated)"),
+    "Index of First": Int(description: "Index in whole structure of the first atom in the chain"),
+    "Index of Last": Int(description: "Index in the whole structure the last atom in the chain")
+) {
+  "Information for each residue within the context of the chain"
+  group = chain_id()
+  group_2 = group_info(group_id: group)
+  group_3 = sub_group_info(sub_group_id: residue_id(), group_id: group)
+  return (
+    Factor: index_to_factor(index: group_3.sub_group_id, size: group_3.sub_group_total),
+    "Residue Count": group_3.sub_group_total,
+    "Residue Index": group_3.sub_group_id,
+    "First res_id": residue_id(index: group_3.index_of_first),
+    "Last res_id": residue_id(index: group_3.index_of_last),
+    "Index of First": group_2.index_of_first,
+    "Index of Last": group_2.index_of_last)
+}
+
+geometry graph "LCh to OKLab"(L: Float, C: Float, h: Float(subtype: ANGLE)) -> (OKLab: Vector) {
+  "a" {
+    math = C * cos(h)
+  }
+  "b" {
+    math_2 = C * sin(h)
+  }
+  return (OKLab: CombineXYZ(x: L, y: math, z: math_2))
+}
+
+geometry graph ".OKLab Matrices"() -> (M1: Matrix, M2: Matrix) {
+  return (
+    M1: CombineMatrix(
+      column_1_row_1: 0.818933,
+      column_1_row_2: 0.032985,
+      column_1_row_3: 0.0482,
+      column_2_row_1: 0.3618667,
+      column_2_row_2: 0.9293119,
+      column_2_row_3: 0.264366,
+      column_3_row_1: -0.1288597,
+      column_3_row_2: 0.03614564,
+      column_3_row_3: 0.633852),
+    M2: CombineMatrix(
+      column_1_row_1: 0.21045426,
+      column_1_row_2: 1.9779985,
+      column_1_row_3: 0.025904037,
+      column_2_row_1: 0.7936178,
+      column_2_row_2: -2.42859,
+      column_2_row_3: 0.7827718,
+      column_3_row_1: -0.004072047,
+      column_3_row_2: 0.4505937,
+      column_3_row_3: -0.8086758))
+}
+
+geometry graph "OKLab to Color"(OKLab: Vector) -> Color {
+  integer = 3
+  return TransformPoint(
+    vector: VectorMath[POWER](
+      Vector: TransformPoint(
+        vector: OKLab,
+        transform: InvertMatrix(matrix: oklab_matrices().m2).matrix),
+      Vector_001: integer),
+    transform: InvertMatrix(matrix: oklab_matrices().m1).matrix)
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Residue Parameter"() -> (
+    Factor: Float(
+      subtype: FACTOR,
+      description: "An atom's relative position in a residue, with the first atom being 0 and the last atom being 1"),
+    "Atom Count": Int(description: "Number of  atoms in a residue"),
+    "Atom Index": Int(description: "Index of an atom in a residue when counting from 0"),
+    "First atom_name": Int(description: "the atom_name for the first atom in a residue"),
+    "Last atom_name": Int(description: "The atom_name for the last atom in a residue"),
+    "Index of First": Int(
+      description: "Index (in the whole structure) for the first atom in a  residue"),
+    "Index of Last": Int(
+      description: "Index (in the whole structure) for the last atom in a  residue")
+) {
+  group = sub_group_info(sub_group_id: residue_id(), group_id: chain_id())
+  return (
+    Factor: index_to_factor(index: group.index_in_group_id, size: group.size),
+    "Atom Count": group.size,
+    "Atom Index": group.index_in_group_id,
+    "First atom_name": atom_name(index: group.index_of_first),
+    "Last atom_name": atom_name(index: group.index_of_last),
+    "Index of First": group.index_of_first,
+    "Index of Last": group.index_of_last)
+}
+
+geometry graph "Unique Residue ID"() -> (
+    "Group ID": Int(description: "A unique Group ID for eash residue")
+) {
+  group = atom_name()
+  accumulate_field = AccumulateField[INT](
+    value: group == 1 or group == 50 or integer_run(value: residue_id()).is_different)
+  {
+    integer_math = IntegerMath[SUBTRACT](Value: accumulate_field.leading, Value_001: 1)
+  }
+  return ("Group ID": integer_math)
+}
+
+geometry graph "Structure Parameter"() -> (
+    "Atom Factor": Float(
+      subtype: FACTOR,
+      description: "Factor of the atom within the structure, which is the relative position of the `Index` within the overall structure between 0 and 1"),
+    Index: Int(
+      description: "`Index` of the point within the structure. Equal to the `Index` input node"),
+    "Atom Count": Int(
+      description: "Number of atoms in the structure, equal to the size of the Point Domain"),
+    "Index of First": Int(
+      description: "`Index` of first atom in the entire structure, which will always be 0"),
+    "Index of Last": Int(
+      description: "Index of last atom in the entire structure. Equal to `Atom Count` - 1"),
+    "Residue Factor": Float(subtype: FACTOR),
+    "Residue Index": Int(
+      description: "A unique `Group ID` that increases whenever `Sub Group ID` or `Group ID` change"),
+    "Residue Count": Int
+) {
+  group = group_info()
+  index = Index()
+  group_2 = sub_group_info(sub_group_id: unique_residue_id())
+  return (
+    "Atom Factor": index_to_factor(index: index, size: group.size),
+    Index: index,
+    "Atom Count": group.size,
+    "Index of First": group.index_of_first,
+    "Index of Last": group.index_of_last,
+    "Residue Factor": index_to_factor(index: group_2.group_id, size: group_2.sub_group_total),
+    "Residue Index": group_2.group_id,
+    "Residue Count": group_2.sub_group_total)
+}
+
+geometry graph "Color Rainbow"(
+    Factor: Menu(optional_label: true) = Chain,
+    "Color Space": Menu(optional_label: true) = HSV,
+    Offset: Float(
+      description: "Offset the starting hue of the rainbow colors. HSV is 0-1 for the entire rainbow, OKLab is -Pi to Pi for the rainbow.") in -10000.0..10000.0,
+    "HSV"(default_closed: true) {
+        "HSL Saturation": Float(
+          subtype: FACTOR,
+          description: "The `Saturation` value of the rainbow colors") = 0.8 in 0.0..1.0,
+        "HSL Value": Float(
+          subtype: FACTOR,
+          description: "The `Value` value of the resulting rainbow colors") = 0.8 in 0.0..1.0
+    },
+    "OKLab"(default_closed: true) {
+        "OKLab Luminance": Float = 0.94,
+        "OKLab Chroma": Float = 0.2
+    }
+) -> (Color: Color(description: "The generated color")) {
+  menu_switch = MenuSwitch(
+    menu: Factor,
+    Residue: residue_parameter().factor,
+    Chain: chain_parameter().factor,
+    Structure: structure_parameter().atom_factor)
+  return (
+    Color: MenuSwitch(
+      menu: color_space,
+      HSV: CombineColor[HSV](
+        red: Math[WRAP](Value: Offset + menu_switch.output, Value_001: 0.0, Value_002: 1.0),
+        green: hsl_saturation,
+        blue: hsl_value),
+      OKLab: oklab_to_color(
+        oklab: lch_to_oklab(
+          l: oklab_luminance,
+          c: oklab_chroma,
+          h: menu_switch.output * 6.2831855 + Offset))).output)
+}

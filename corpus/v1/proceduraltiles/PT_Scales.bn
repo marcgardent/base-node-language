@@ -1,0 +1,79 @@
+shader graph PT_Scales(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Height: Float = 1.0 in 0.06..
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float) {
+  combine_xyz = CombineXYZ(x: 1.0, y: Height, z: Height)
+  vector_math = Vector * Scale / combine_xyz
+  vector_math_2 = fract(vector_math) * combine_xyz
+  vector_math_3 = vector_math_2 - CombineXYZ(x: 0.5, y: Height - 0.5)
+  math = Height / 2.0 - 0.5
+  vector_math_4 = vector_math_2 - CombineXYZ(y: math)
+  {
+    math_4 = length(vector_math_2 - (0.5, -0.5, 0.0)) - 0.5
+    math_5 = length(abs(vector_math_2 - CombineXYZ(x: 0.5, y: math + Height)) - (0.5, 0.0, 0.0))
+      - 0.5
+    math_7 = Height * 2.0 @ hide
+    math_6 = length(vector_math_2 - CombineXYZ(x: 0.5, y: math_7 - 0.5)) - 0.5
+    math_8 = abs(math_6)
+  }
+  combine_xyz_2 = CombineXYZ(y: -Height)
+  combine_xyz_3 = CombineXYZ(x: Math[PINGPONG](Value: vector_math_4.x), y: vector_math_4.y)
+  vector_math_5 = length(combine_xyz_3)
+  math_11 = math_6 > 0.0 @ hide
+  math_12 = math_5 > 0.0 @ hide
+  math_13 = Height / 2.0
+  combine_xyz_4 = CombineXYZ(x: 0.5, y: math_13)
+  math_15 = Height * 1.5 @ hide
+  {
+    vector_math_9 = vector_math_3 + 0.0 @ hide
+    vector_math_10 = 0.0 + (0.0, 0.0, 0.0) @ hide
+    vector_math_11 = combine_xyz_2 + 0.0 @ hide
+    vector_math_12 = vector_math_9 - vector_math_10 @ hide
+    vector_math_13 = vector_math_11 - vector_math_10 @ hide
+    vector_math_14 = vector_math_12 ⋅ vector_math_13 @ hide
+    vector_math_15 = vector_math_13 ⋅ vector_math_13 @ hide
+    math_16 = Math[DIVIDE, use_clamp: true](Value: vector_math_14, Value_001: vector_math_15) @ hide
+    vector_math_18 = vector_math_13 * math_16 @ hide
+    vector_math_17 = vector_math_12 - vector_math_18 @ hide
+    vector_math_16 = length(vector_math_17) @ hide
+  }
+  math_3 = vector_math_16 - 0.5
+  math_9 = math_3 > 0.0 @ hide
+  math_14 = min(math_9, math_12) @ hide
+  mix = Height > 1.0
+    ? combine_xyz_4
+    : Mix[VECTOR](
+      factor: math_14,
+      a: combine_xyz_4,
+      b: math_11 ? CombineXYZ(x: 0.5, y: math_15) : CombineXYZ(y: Height)) @ hide
+  {
+    vector_math_19 = combine_xyz_3 + 0.0 @ hide
+    vector_math_20 = 0.0 + (0.0, 0.0, 0.0) @ hide
+    vector_math_21 = combine_xyz_2 + 0.0 @ hide
+    vector_math_22 = vector_math_19 - vector_math_20 @ hide
+    vector_math_23 = vector_math_21 - vector_math_20 @ hide
+    vector_math_24 = vector_math_22 ⋅ vector_math_23 @ hide
+    vector_math_25 = vector_math_23 ⋅ vector_math_23 @ hide
+    math_17 = Math[DIVIDE, use_clamp: true](Value: vector_math_24, Value_001: vector_math_25) @ hide
+    vector_math_28 = vector_math_23 * math_17 @ hide
+    vector_math_27 = vector_math_22 - vector_math_28 @ hide
+    vector_math_26 = length(vector_math_27) @ hide
+  }
+  math_2 = vector_math_26 - 0.5
+  math_10 = math_2 > 0.0 @ hide
+  vector_math_7 = (floor(vector_math) + (0.5, 0.5, 0.0)) * combine_xyz
+    + (math_10 ? (math_9 ? mix : (0.0, 0.0, 0.0)) : CombineXYZ(x: 0.5, y: -math_13))
+      * CombineXYZ(x: MapRange(value: vector_math_2.x > 0.5, to_min: -1.0), y: 1.0)
+    + CombineXYZ(y: Height / 4.0)
+  vector_math_6 = vector_math_7 / Scale
+  vector_math_8 = vector_math_7 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_6,
+    UV: Vector - vector_math_6,
+    Color: WhiteNoiseTexture(vector: vector_math_8).color,
+    Edge: min(
+        abs(min(abs(min(Height > 1.0 ? math_8 : abs(min(math_8, math_5)), math_3)), math_2)),
+        math_4)
+      / Scale)
+}

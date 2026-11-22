@@ -1,0 +1,2084 @@
+geometry graph Color(
+    Index: Int = Index() in 0..
+) -> (Color: Color(description: "Read the `Color` attribute from the geometry")) {
+  return (
+    Color: EvaluateAtIndex[FLOAT_COLOR](
+      value: NamedAttribute[FLOAT_COLOR](name: "Color").attribute,
+      index: Index))
+}
+
+geometry graph "Set Color"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Color: Color(
+      description: "Color to apply to the selected atoms") = (0.161517, 0.623961, 0.195602)
+) -> (Atoms: Geometry(description: "Atomic geometry with an updated `Color` attribute")) {
+  return (
+    Atoms: StoreNamedAttribute[FLOAT_COLOR](
+      Atoms,
+      selection: Selection,
+      name: "Color",
+      value: Color))
+}
+
+geometry graph ".Cleanup"(
+    Geometry: Geometry,
+    "Color Source": Geometry,
+    Material: Material(description: "Material to apply to the resulting geometry"),
+    "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true
+) -> Geometry {
+  return Geometry
+    |> set_color(
+      color: SampleIndex[FLOAT_COLOR](
+        color_source,
+        value: Color(),
+        index: NamedAttribute[INT](name: "tmp_idx").attribute))
+    |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "tmp_*")
+    |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "backbone_*")
+    |> SetMaterial(material: Material)
+    |> SetShadeSmooth(shade_smooth: shade_smooth)
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Group Pick"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(
+      description: "Valid for the point only if there is 1 single `True` for the `Pick` field in the point's group in the `Group ID`"),
+    Index: Int(description: "Index of picked item. Returns -1 if not a valid pick")
+) {
+  "Get the item of the `True` in each `Group ID`, but only if there is a single `True` in each group"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total == 1
+  return (
+    "Is Valid": compare,
+    Index: compare ? AccumulateField[INT](value: Pick ? Index() : 0, group_id: group_id).total : -1)
+}
+
+geometry graph "Group Pick Vector"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true),
+    Position: Vector(
+      description: "Vector field to pick vlaue for, defaults to `Position`",
+      hide_value: true) = Position()
+) -> (
+    "Is Valid": Bool(description: "Whether the pick for the point's `Group ID` is valid"),
+    Index: Int(description: "Picked Index for the Group, -1 if not valid"),
+    Vector: Vector(description: "Picked vector for the group, `(0, 0, 0)` if not valid")
+) {
+  group = group_pick(pick: Pick, group_id: group_id)
+  return (
+    "Is Valid": group.is_valid,
+    Index: group.index,
+    Vector: group.is_valid
+      ? EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: group.index)
+      : (0.0, 0.0, 0.0))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}
+
+geometry graph "Residue Mask"(
+    atom_name: Int(description: "Atom to pick from the group") = 1 in 2..
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(pick: atom_name() == atom_name, group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Residue Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_name: Int(description: "Read the `res_name` attribute from the geometry")) {
+  return (res_name: attribute_at_index(index: Index, name: "res_name"))
+}
+
+geometry graph "Select Nucleic Type"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (is_purine: Bool, is_pyrimidine: Bool) {
+  boolean = true
+  group = residue_name()
+  return (
+    is_purine: boolean_andor(
+      and_: And,
+      or_: Or,
+      boolean: IndexSwitch(
+        group,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        boolean,
+        false,
+        boolean,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        boolean,
+        false,
+        boolean,
+        false)).boolean,
+    is_pyrimidine: boolean_andor(
+      and_: And,
+      or_: Or,
+      boolean: IndexSwitch(
+        group,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        boolean,
+        false,
+        boolean,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        boolean,
+        false,
+        boolean)).boolean)
+}
+
+geometry graph ".Sample Nucleic Base Values"(
+    Input: Int
+) -> (
+    base_valid: Bool,
+    "base_pivot'": Vector,
+    base_Z: Vector,
+    base_Y: Vector,
+    base_position: Vector,
+    "Base Color": Color
+) {
+  "Sample relevant base positions for orientations" {
+    group = residue_mask(atom_name: 61)
+    group_2 = Color(index: residue_mask(atom_name: 67).index)
+    mix = Mix[VECTOR](
+      a: residue_mask(atom_name: 55).position,
+      b: residue_mask(atom_name: 57).position)
+    group_3 = select_nucleic_type()
+    group_4 = residue_mask(atom_name: group_3.is_pyrimidine ? 68 : 65)
+    group_5 = residue_mask(atom_name: group_3.is_pyrimidine ? 64 : 62)
+    boolean_math = group.is_valid and group_4.is_valid and group_5.is_valid
+    vector_math = group_5.position - group.position
+    vector_math_2 = group_4.position - group_5.position
+  }
+  return (
+    base_valid: boolean_math,
+    "base_pivot'": group.position,
+    base_Z: vector_math,
+    base_Y: vector_math_2,
+    base_position: mix,
+    "Base Color": group_2)
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph ".Check End Face Corner"("Captured Index": Int) -> ("Is End Face Corner": Bool) {
+  return (
+    "Is End Face Corner": captured_index == 0
+      and EvaluateAtIndex[CORNER, INT](value: captured_index, index: OffsetCornerInFace(offset: 2))
+        != 1)
+}
+
+geometry graph ".Profile Type Picker"(
+    Menu: Menu(optional_label: true) = "Custom Profile"
+) -> (Output: Int) {
+  return (Output: MenuSwitch(menu: Menu, "Default Profile": 0, "Custom Profile": 1).output)
+}
+
+geometry graph "Curve Rotation"(
+    Normal: Vector(
+      description: "The default direction to use as the Secondary Axis / X axis when computing the rotation") = Normal()
+) -> (Rotation: Rotation(description: "The computed rotation for the point on the curve")) {
+  "Computes the rotation of the point on the curve, by default using the `Normal` attribute and the `Tangent` axis"
+  return (Rotation: AxesToRotation(primary_axis: CurveTangent(), secondary_axis: Normal))
+}
+
+geometry graph "Contains Geometry"(
+    Geometry: Geometry
+) -> (
+    "Not Empty": Bool(description: "True when the input contains some geometry"),
+    Empty: Bool(description: "True when the input contains no geometry")
+) {
+  boolean_math = DomainSize(Geometry).point_count == 0
+    and DomainSize[POINTCLOUD](Geometry) == 0
+    and DomainSize[CURVE](Geometry).point_count == 0
+    and DomainSize[INSTANCES](Geometry) == 0
+    and DomainSize[GREASEPENCIL](Geometry) == 0
+  return ("Not Empty": not boolean_math, Empty: boolean_math)
+}
+
+geometry graph "Fallback Geometry"(Geometry: Geometry, Fallback: Geometry) -> Geometry {
+  return contains_geometry(Geometry).not_empty ? Geometry : Fallback
+}
+
+geometry graph "MN Units"(
+    Value: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (Angstrom: Float, Nanometre: Float) {
+  math = Value * mn_world_scale()
+  return (Angstrom: math, Nanometre: math * 10.0)
+}
+
+geometry graph "Sample Position"(
+    Geometry: Geometry(description: "The geometry to sample the `Position` from"),
+    Position: Vector(
+      description: "The `Position` field to sample the values from",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to sample the `Position` field from") = Index()
+) -> (Position: Vector(description: "The sampled `Position` field")) {
+  "A convenience wrapper around the `Sample Index` and `Position` nodes"
+  return (Position: SampleIndex[FLOAT_VECTOR, clamp: true](Geometry, value: Position, index: Index))
+}
+
+geometry graph "Curve Custom Profile"(
+    Curve: Geometry,
+    Subdivisions: Int = 6 in 1..,
+    "Profile Type": Menu(optional_label: true) = "Custom Profile",
+    "UV Map": Bool(
+      description: "Compute and store the `uv_map` attribute on the `Face Corner` domain of the final mesh"),
+    "U Component": Menu(optional_label: true) = Factor,
+    "Profile"(default_closed: true) {
+        "Profile Rotation": Rotation,
+        "Profile Scale": Vector(subtype: XYZ) = (1.0, 1.0, 1.0),
+        "Profile Curve": Geometry,
+        "Profile Resolution": Int = 4 in 3..512,
+        "Profile Radius": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+        "Profile Rotation" as profile_rotation_float: Float = 0.7853982 in -10000.0..10000.0
+    }
+) -> Geometry {
+  spline_parameter = SplineParameter()
+  capture_attribute = CaptureAttribute(
+    Curve,
+    Rotation: IndexSwitch(
+      profile_type_picker(menu: profile_type),
+      curve_rotation(),
+      profile_rotation),
+    Scale: profile_scale,
+    Factor: spline_parameter.factor,
+    Length: spline_parameter.length,
+    Index: spline_parameter.index)
+  resample_curve = capture_attribute.geometry
+    |> SetSplineResolution(resolution: Subdivisions)
+    |> ResampleCurve[keep_last_segment: false](mode: Evaluated)
+  spline_parameter_2 = SplineParameter()
+  capture_attribute_2 = profile_curve
+    |> fallback_geometry(
+      fallback: CurveCircle(
+          resolution: profile_resolution,
+          radius: mn_units(value: profile_radius).angstrom)
+        |> TransformGeometry(
+          rotation: AxisAngleToRotation(angle: profile_rotation_float + radians(45.0))))
+    |> CaptureAttribute(Factor: spline_parameter_2.factor, Index: spline_parameter_2.index)
+  curve_to_mesh = CurveToMesh(
+    resample_curve,
+    profile_curve: capture_attribute_2.geometry,
+    scale: Radius(),
+    fill_caps: true)
+  switch = uv_map
+    ? StoreNamedAttribute[FLOAT2, CORNER](
+      curve_to_mesh,
+      name: "uv_map",
+      value: CombineXYZ(
+        x: check_end_face_corner(captured_index: capture_attribute.index)
+          ? IndexSwitch(0, 1.0, 38.0)
+          : MenuSwitch(
+            menu: u_component,
+            Factor: capture_attribute.factor,
+            Length: capture_attribute.length).output,
+        y: check_end_face_corner(captured_index: capture_attribute_2.index)
+          ? 1.0
+          : capture_attribute_2.factor))
+    : curve_to_mesh
+  return IndexSwitch(
+    profile_type_picker(menu: profile_type),
+    switch,
+    SetPosition(
+      switch,
+      position: resample_curve
+        |> InstanceOnPoints(
+          instance: capture_attribute_2.geometry,
+          rotation: capture_attribute.rotation,
+          scale: capture_attribute.scale)
+        |> RealizeInstances[realize_to_point_domain: true]()
+        |> sample_position()))
+}
+
+geometry graph "Curve Endpoint Values"(
+    "Start Size": Int(description: "The size of the starting points of the curve") = 1 in 0..,
+    "Start Value": Int(
+      description: "The value to output for the starting points of the curve") = 1 in -2147483647..,
+    "Other Value": Int(
+      description: "The value for the points which aren't part of the start or end points") in -2147483647..,
+    "End Size": Int(description: "The size of the end points") = 1 in 0..,
+    "End Value": Int(
+      description: "The value that is returned for the end points of the curve") = -1
+) -> (
+    Value: Int(
+      description: "The value for the point, determined by the inputs if it is in the start, end or 'other' region"),
+    "Start Selection": Bool(
+      description: "The `n` points at the start of a spline determined by `Start Size`"),
+    "End Selection": Bool(
+      description: "The `n` points at the end of a spline determined by `End Size`")
+) {
+  "Output a different integer value for the endpoints of a curve and the middle of a curve"
+  endpoint_selection = EndpointSelection(start_size: 0, end_size: end_size)
+  endpoint_selection_2 = EndpointSelection(start_size: start_size, end_size: 0)
+  return (
+    Value: endpoint_selection ? end_value : endpoint_selection_2 ? start_value : other_value,
+    "Start Selection": endpoint_selection_2,
+    "End Selection": endpoint_selection)
+}
+
+geometry graph "Unit Convert"(
+    "Distance Type": Menu(
+      description: "What unit to scale the value to",
+      optional_label: true) = Angstrom,
+    From: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (
+    World: Float(description: "The value that has been scaled appropriately for the world space")
+) {
+  math = From * mn_world_scale()
+  math_2 = math * 10.0
+  return (
+    World: MenuSwitch(
+      menu: distance_type,
+      Angstrom: math,
+      Nanometre: math_2,
+      Micrometre: math_2 * 1000.0).output)
+}
+
+geometry graph "Angstrom to World"(Angstrom: Float = 3.0 in -10000.0..10000.0) -> (World: Float) {
+  return (World: unit_convert(from: Angstrom))
+}
+
+geometry graph "Between Float"(
+    Value: Float(description: "The value to test if it is between the lower and upper bounds"),
+    Lower: Float(description: "Test if the `Value` is greater than or equal to this"),
+    Upper: Float(description: "Test if the `Value` is less than or equal to this")
+) -> (
+    Boolean: Bool(
+      description: "Whether the input `Value` is between (and including) the lower and upper bounds")
+) {
+  return (Boolean: Value >= Lower and Value <= Upper)
+}
+
+geometry graph "Fractionate Float"(
+    Menu: Menu(menu_expanded: true, optional_label: true) = Linear,
+    Value: Float(description: "The value to fractionate")
+) -> (
+    Fraction: Float(description: "Fractional component of the value, between 0 and 1"),
+    Floor: Int(description: "The floor of the value; the integer rounded down"),
+    Ceiling: Int(description: "The ceiling of the value, the integer rounded up")
+) {
+  math = fract(Value)
+  return (
+    Fraction: MenuSwitch(
+      menu: Menu,
+      Linear: math,
+      Smoother: MapRange[SMOOTHERSTEP](value: math)).output,
+    Floor: FloatToInteger[FLOOR](float: Value),
+    Ceiling: FloatToInteger[CEILING](float: Value))
+}
+
+geometry graph "Index Mix Float"(
+    Value: Float(description: "The field to interpolate based on the input `Index`"),
+    Index: Float(
+      description: "The floor and ceiling of this Index value is taken and used for sampling, the fraction of this value is then used to mix between the sampled values")
+) -> (
+    Value: Float(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`"),
+    From: Int(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`"),
+    To: Int(
+      description: "The mixed value of the field, first evaluating the field at the `From` and `To` Indices then mixing between them based on the fraction of the input `Index`")
+) {
+  group = fractionate_float(value: Index)
+  return (
+    Value: Mix(
+      factor: group.fraction,
+      a: EvaluateAtIndex(value: Value, index: group.floor),
+      b: EvaluateAtIndex(value: Value, index: group.ceiling)),
+    From: group.floor,
+    To: group.ceiling)
+}
+
+geometry graph "Index Mixed"(
+    Index: Int(description: "The `Index` at which to add the `Offset` value to") = Index(),
+    Offset: Float(
+      description: "The offset value to add to the to the `Index`") = 0.5 in -10000.0..10000.0
+) -> (
+    Mixed: Float(description: "The sum of the `Offset` and the `Index`"),
+    Floor: Int(description: "The floor of the `Mixed` output"),
+    Ceiling: Int(description: "The `Ceiling` of the mixed output")
+) {
+  math = Index + Offset
+  float_to_integer = FloatToInteger[FLOOR](float: math)
+  return (Mixed: math, Floor: float_to_integer, Ceiling: float_to_integer + 1.0)
+}
+
+geometry graph "Offset Point Along Curve"(
+    "Point Index": Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Index(),
+    Offset: Float(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -10000.0..10000.0
+) -> (
+    "Is Off Spline": Bool(description: "The field evaluated at the offset `Index` value"),
+    Factor: Float(description: "The field evaluated at the offset `Index` value"),
+    Length: Float(description: "The field evaluated at the offset `Index` value"),
+    "Index A": Int(description: "The field evaluated at the offset `Index` value"),
+    "Index B": Int(description: "The field evaluated at the offset `Index` value")
+) {
+  "Offset along the current point's curve, by a number of points. 1 offsets by a single point on the curve (regardless of how far away they are). 1.5 offsets to half way between `Point Index` + 1 and `Point Index` + 2, returning the `Length` and the `Factor` for this point on the curve"
+  "Clamp the offset to not exceed the points in the spline" {
+    curve_of_point = CurveOfPoint(point_index: point_index)
+    integer_math = IntegerMath[NEGATE](value: curve_of_point.index_in_curve)
+    integer_math_2 = IntegerMath[SUBTRACT](
+      Value: IntegerMath[SUBTRACT](
+        Value: PointsOfCurve(curve_index: curve_of_point.curve_index).total,
+        Value_001: 1),
+      Value_001: curve_of_point.index_in_curve)
+    clamp = Clamp(value: Offset, min: integer_math, max: integer_math_2)
+  }
+  group = index_mixed(index: point_index, offset: clamp)
+  spline_parameter = SplineParameter()
+  return (
+    "Is Off Spline": between_float(value: Offset, lower: integer_math, upper: integer_math_2),
+    Factor: index_mix_float(value: spline_parameter.factor, index: group.mixed).value,
+    Length: index_mix_float(value: spline_parameter.length, index: group.mixed).value,
+    "Index A": group.floor,
+    "Index B": group.ceiling)
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Curve Split Splines"(
+    Curve: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    "Curve Normal": Menu(optional_label: true) = Free,
+    "Curve Group ID": Int,
+    "Distance Split": Menu(optional_label: true) = "Split Distance",
+    "Distance Cutoff": Float in -10000.0..10000.0,
+    Rotation: Rotation(hide_value: true),
+    "Offset" {
+        "Offset Amount": Float in -10000.0..10000.0,
+        "Offset Spline Type": Menu(optional_label: true) = Bezier,
+        "Offset Resolution": Int = 12 in 1..
+    }
+) -> (
+    Curve: Geometry,
+    Index: Int,
+    Rotation: Rotation,
+    "Offset" {
+        "Offset Rotation": Rotation,
+        "Offset Position": Vector,
+        "Offset Tangent": Vector,
+        "Offset Normal": Vector
+    }
+) {
+  "Spline the given curves into new separate splines based on their Curve Group ID, additionally dropping any non-selected points"
+  curve_handle_positions = CurveHandlePositions()
+  capture_attribute = CaptureAttribute(
+    Curve,
+    Factor: offset_point_along_curve(offset: offset_amount).factor,
+    "Curve Index": CurveOfPoint().curve_index,
+    Selection as selection_2: Selection,
+    "Curve Group ID": curve_group_id,
+    "Distance Cutoff": distance_cutoff,
+    Rotation: Rotation,
+    Index: Index(),
+    Normal: Normal[legacy_corner_normals: true]().normal,
+    Position: Position(),
+    Trailing: AccumulateField[INT](value: not Selection).trailing)
+  "Potentially sample a new interpolated point along the curve" {
+    sample_curve = MenuSwitch(
+        menu: offset_spline_type,
+        Poly: capture_attribute.geometry,
+        Bezier: SetSplineResolution(
+          capture_attribute.geometry,
+          resolution: offset_resolution)).output
+      |> SampleCurve[QUATERNION](
+        value: capture_attribute.rotation,
+        factor: capture_attribute.factor,
+        curve_index: capture_attribute.curve_index)
+  }
+  capture_attribute_2 = capture_attribute.geometry
+    |> SetSplineType[BEZIER]()
+    |> SetHandleType()
+    |> SetSplineResolution(resolution: 1)
+    |> CaptureAttribute(Left: curve_handle_positions.left, Right: curve_handle_positions.right)
+  spline_length = SplineLength()
+  capture_attribute_3 = CaptureAttribute[CURVE](
+    capture_attribute_2.geometry,
+    selection: IsSplineCyclic(),
+    "Point Count": spline_length.point_count)
+  "Check if we should make the cyclic peptide cyclic again" {
+    boolean_math = capture_attribute_3.selection
+      and spline_length.point_count == capture_attribute_3.point_count
+  }
+  set_spline_cyclic = capture_attribute_3.geometry
+    |> CurveToPoints[EVALUATED]().points
+    |> SeparateGeometry(selection: capture_attribute.selection_2).selection
+    |> SetPosition(position: capture_attribute.position)
+    |> PointsToCurves(
+      curve_group_id: MenuSwitch(
+        menu: distance_split,
+        "Ignore Distance": capture_attribute.trailing,
+        "Split Distance": capture_attribute.trailing
+          + AccumulateField[INT](
+            value: angstrom_to_world(angstrom: distance(offset_vector(offset: -1), Position()))
+              > capture_attribute.distance_cutoff).leading).output)
+    |> SetSplineCyclic(cyclic: boolean_math)
+  return (
+    Curve: MenuSwitch(
+        menu: curve_normal,
+        "Minimum Twist": set_spline_cyclic,
+        Free: SetCurveNormal(
+          set_spline_cyclic,
+          mode: Free,
+          normal: capture_attribute.normal)).output
+      |> SetSplineType[BEZIER]()
+      |> SetHandleType()
+      |> SetHandlePositions(position: capture_attribute_2.left)
+      |> SetHandlePositions[RIGHT](position: capture_attribute_2.right),
+    Index: capture_attribute.index,
+    Rotation: capture_attribute.rotation,
+    "Offset Rotation": sample_curve.value,
+    "Offset Position": sample_curve.position,
+    "Offset Tangent": sample_curve.tangent,
+    "Offset Normal": sample_curve.normal)
+}
+
+geometry graph "Curve to Mesh with UVMap"(
+    Curve: Geometry,
+    "U Component": Menu(optional_label: true) = Factor,
+    "Profile Resolution": Int = 12 in 3..512,
+    "Fill Caps": Bool
+) -> (Mesh: Geometry, uv_map: Vector) {
+  group = fallback_geometry()
+  menu_switch = MenuSwitch(menu: u_component, Factor: 0, Length: 1)
+  named_attribute = NamedAttribute(name: "radius")
+  spline_length = SplineLength()
+  spline_parameter = SplineParameter()
+  capture_attribute = CurveCircle(resolution: profile_resolution)
+    |> CaptureAttribute(Factor: SplineParameter().factor, Index: SplineParameter().index)
+  capture_attribute_2 = CaptureAttribute(
+    Curve,
+    Factor: IndexSwitch(menu_switch.output, spline_parameter.factor, spline_parameter.length),
+    Index: SplineParameter().index,
+    Length: SplineLength().length)
+  return (
+    Mesh: CurveToMesh(
+      capture_attribute_2.geometry,
+      profile_curve: capture_attribute.geometry,
+      scale: named_attribute.exists ? named_attribute.attribute : 1.0,
+      fill_caps: fill_caps),
+    uv_map: CombineXYZ(
+      x: check_end_face_corner(captured_index: capture_attribute_2.index)
+        ? IndexSwitch(menu_switch.output, 1.0, capture_attribute_2.length)
+        : capture_attribute_2.factor,
+      y: check_end_face_corner(captured_index: capture_attribute.index)
+        ? 1.0
+        : capture_attribute.factor))
+}
+
+geometry graph ".MN_constants_atom_name_nucleic"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Side Chain Joint Carbon": Int
+) {
+  integer = 61
+  integer_2 = 77
+  integer_3 = 50
+  integer_4 = 61
+  integer_5 = 54
+  return (
+    "Backbone Lower": integer_3,
+    "Backbone Upper": integer_4,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Side Chain Joint Carbon": integer_5)
+}
+
+geometry graph ".MN_select_nucleic"() -> (
+    "Is Backbone": Bool(
+      description: "True for atoms that are part of the sugar-phosphate backbone for the nucleotides"),
+    "Is Side Chain": Bool(
+      description: "True for atoms that are part of the bases for nucleotides."),
+    "Is Nucleic": Bool(description: "True if the atoms are part of a nucleic acid")
+) {
+  group = mn_constants_atom_name_nucleic()
+  named_attribute = NamedAttribute[INT](name: "atom_name")
+  return (
+    "Is Backbone": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.backbone_upper,
+    "Is Side Chain": named_attribute.attribute >= group.side_chain_lower
+      and named_attribute.attribute <= group.side_chain_upper,
+    "Is Nucleic": named_attribute.attribute >= group.backbone_lower
+      and named_attribute.attribute <= group.side_chain_upper)
+}
+
+geometry graph "Fallback Boolean"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Bool(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Boolean: Bool(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  "Computes the boolean field if the given attribute doesn't exist. If it doesn't exist it just uses the attribute instead"
+  named_attribute = NamedAttribute[BOOLEAN](name: Name)
+  return (Boolean: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Is Nucleic"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(name: "is_nucleic", fallback: mn_select_nucleic().is_nucleic))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Set Instancer"(
+    Geometry: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    is_instanced: Bool = true
+) -> Geometry {
+  return StoreNamedAttribute[BOOLEAN](Geometry, name: "is_instanced", value: is_instanced)
+}
+
+geometry(is_modifier: true) graph "Smooth by Angle"(
+    Mesh: Geometry,
+    Angle: Float(
+      subtype: ANGLE,
+      description: "Maximum face angle for smooth edges") = 0.5235988 in 0.0..3.1415927,
+    "Ignore Sharpness": Bool(force_non_field: true, structure_type: SINGLE)
+) -> (Mesh: Geometry) {
+  "Set the sharpness of mesh edges based on the angle between the neighboring faces"
+  return (
+    Mesh: Mesh
+      |> SetShadeSmooth[EDGE](
+        selection: IsEdgeSmooth() or ignore_sharpness,
+        shade_smooth: EdgeAngle().unsigned_angle <= Angle and (IsFaceSmooth() or ignore_sharpness))
+      |> SetShadeSmooth())
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Unique Residue ID"() -> (
+    "Group ID": Int(description: "A unique Group ID for eash residue")
+) {
+  group = atom_name()
+  accumulate_field = AccumulateField[INT](
+    value: group == 1 or group == 50 or integer_run(value: residue_id()).is_different)
+  {
+    integer_math = IntegerMath[SUBTRACT](Value: accumulate_field.leading, Value_001: 1)
+  }
+  return ("Group ID": integer_math)
+}
+
+geometry graph "Vector in Angstroms"(
+    Vector: Vector in -10000.0..10000.0,
+    Normalize: Bool(description: "Normalize the vector before first scaling to angstroms") = true,
+    Angstrom: Float = 2.5 in -10000.0..10000.0
+) -> (
+    Vector: Vector(
+      description: "Vector that has been scaled by the number of input angstroms, optionally normalizing the vector first")
+) {
+  return (Vector: (Normalize ? normalize(Vector) : Vector) * angstrom_to_world(angstrom: Angstrom))
+}
+
+geometry graph ".MN_utils_style_ribbon_nucleic"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Material: Material(description: "Material to apply to the resulting geometry"),
+    Switch: Bool,
+    "Backbone" {
+        "Backbone Subdivisions": Int = 3 in 1..10,
+        "Backbone Resolution": Int = 8 in 3..50,
+        "Backbone Radius": Float(subtype: DISTANCE) = 2.0 in 0.0..,
+        "Backbone Shade Smooth": Bool = true,
+        "Backbone Scale": Vector(subtype: XYZ) = (1.0, 1.0, 1.0)
+    },
+    "Base" {
+        "Base Geometry": Geometry,
+        "Base Scale": Vector = (2.5, 0.5, 7.0) in -10000.0..10000.0,
+        "Base Resolution": Int = 6 in 3..512
+    }
+) -> (Geometry: Geometry, Curve: Geometry) {
+  "Slightly Extend Curve Ends" {
+    group = curve_endpoint_values()
+    endpoint_selection = EndpointSelection()
+    group_2 = vector_in_angstroms(
+      vector: offset_vector(vector: CurveTangent(), offset: group.value),
+      normalize: false,
+      angstrom: group.value * -2.0)
+  }
+  group_3 = curve_to_mesh_with_uvmap()
+  capture_attribute = Atoms
+    |> RemoveNamedAttribute(name: "bond_type")
+    |> CaptureAttribute(
+      Selection as selection_2: is_nucleic(and_: Selection).selection,
+      "Backbone Radius": backbone_radius)
+  capture_attribute_2 = capture_attribute.geometry
+    |> SeparateGeometry(selection: capture_attribute.selection_2).selection
+    |> CaptureAttribute("Unique Group ID": unique_residue_id())
+  group_4 = sample_nucleic_base_values(input: capture_attribute_2.unique_group_id)
+  capture_attribute_3 = CaptureAttribute(
+    capture_attribute_2.geometry,
+    base_valid: group_4.base_valid,
+    base_pivot: group_4.base_pivot,
+    base_Z: group_4.base_z,
+    base_Y: group_4.base_y,
+    base_position: group_4.base_position,
+    "Base Color": group_4.base_color)
+  "Delete between chains and distance too large" {
+    group_5 = capture_attribute_3.geometry
+      |> MeshToPoints(selection: atom_name() == 55, position: capture_attribute_3.base_position)
+      |> StoreNamedAttribute[INT](name: "tmp_idx", value: Index())
+      |> PointsToCurves(curve_group_id: chain_id())
+      |> curve_split_splines(curve_normal: "Minimum Twist", distance_cutoff: 0.1)
+  }
+  set_curve_radius = SetCurveRadius(group_5.curve, radius: capture_attribute.backbone_radius)
+  "Instance simple base cylinder" {
+    axes_to_rotation = AxesToRotation(
+      primary_axis: capture_attribute_3.base_z,
+      secondary_axis: capture_attribute_3.base_y)
+    value = 1.0
+    cylinder = Cylinder(vertices: base_resolution, radius: value, depth: value)
+    instance_on_points = set_curve_radius
+      |> SetCurveNormal(mode: Free, normal: capture_attribute_3.base_y)
+      |> StoreNamedAttribute[FLOAT_COLOR](
+        name: "vertex_color",
+        value: capture_attribute_3.base_color)
+      |> StoreNamedAttribute[BOOLEAN](name: "is_side_chain", value: true)
+      |> set_instancer()
+      |> InstanceOnPoints(
+        selection: capture_attribute_3.base_valid,
+        instance: fallback_geometry(
+          base_geometry,
+          fallback: cylinder.mesh
+            |> TransformGeometry(
+              translation: CombineXYZ(z: value / 2.0),
+              rotation: (0.0, 0.0, 0.7853982))
+            |> StoreNamedAttribute[FLOAT_VECTOR, CORNER](name: "uv_map", value: cylinder.uv_map)
+            |> TransformGeometry(
+              scale: vector_in_angstroms(vector: base_scale, normalize: false, angstrom: 1.0))),
+        rotation: axes_to_rotation)
+  }
+  store_named_attribute = set_curve_radius
+    |> SetCurveNormal()
+    |> StoreNamedAttribute[BOOLEAN](name: "is_backbone", value: true)
+  return (
+    Geometry: (store_named_attribute
+        |> SetPosition(selection: endpoint_selection, offset: group_2)
+        |> curve_custom_profile(
+          subdivisions: backbone_subdivisions,
+          profile_type: Switch[MENU](
+            switch: Switch,
+            false_: "Custom Profile",
+            true_: "Default Profile"),
+          profile_rotation: RotateRotation[LOCAL](
+            rotation: axes_to_rotation,
+            rotate_by: (0.0, 0.0, -0.7853982)),
+          profile_scale: backbone_scale / mn_world_scale(),
+          profile_curve: Switch[GEOMETRY](
+            switch: Switch,
+            false_: CurveCircle(resolution: 4, radius: 0.01)
+              |> TransformGeometry(rotation: (1.5707964, 0.7853982, -1.5707964))),
+          profile_resolution: backbone_resolution,
+          profile_rotation_float: 58.48539)
+        |> smooth_by_angle(angle: 1.0471976)
+        |> cleanup(
+          color_source: store_named_attribute,
+          material: Material,
+          shade_smooth: backbone_shade_smooth))
+      + (instance_on_points
+        |> smooth_by_angle(angle: 1.3089969, ignore_sharpness: true)
+        |> SetMaterial(material: Material)
+        |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "tmp_*")),
+    Curve: store_named_attribute)
+}
+
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "2 Index Angle"(
+    Position: Vector(
+      description: "The `Position` vectors to use for the angle calculation") = Position(),
+    "Index A": Int(
+      description: "First end point for the angle calculation around the current point") in 0..,
+    "Index B": Int(
+      description: "The `Index` for the middle point in the angle calculation, defaulting to the current point") = Index() in 0..,
+    "Index C": Int(
+      description: "Last end point for the angle calculation around the current point") = 2 in 0..
+) -> (Angle: Float(description: "Angle of the line A -> Self -> C in radians")) {
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: index_b)
+  return (
+    Angle: vector_angle(
+      a: EvaluateAtIndex[FLOAT_VECTOR](
+          value: Position,
+          index: EvaluateAtIndex[INT](value: index_a, index: index_b))
+        - evaluate_at_index,
+      b: EvaluateAtIndex[FLOAT_VECTOR](
+          value: Position,
+          index: EvaluateAtIndex[INT](value: index_c, index: index_b))
+        - evaluate_at_index).angle)
+}
+
+geometry graph ".MN_select_sec_struct_id"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    id: Int(description: "Secondary structure component to select") = 1
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: id == NamedAttribute[INT](name: "sec_struct").attribute)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Helix"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph "Is Loop"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or, id: 3)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph "Is Sheet"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or, id: 2)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph ".MN_select_sec_struct"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true
+) -> ("Is Helix": Bool, "Is Sheet": Bool, "Is Structured": Bool, "Is Loop": Bool) {
+  group = is_loop(and_: And)
+  return (
+    "Is Helix": is_helix(and_: And).selection,
+    "Is Sheet": is_sheet(and_: And).selection,
+    "Is Structured": not group.selection,
+    "Is Loop": group.selection)
+}
+
+geometry graph "Offset Boolean"(
+    Boolean: Bool(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Boolean: Bool(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Boolean: EvaluateAtIndex[BOOLEAN](
+      value: Boolean,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Expand Boolean"(
+    Boolean: Bool(hide_value: true),
+    Expand: Int in -2147483647..
+) -> (Boolean: Bool) {
+  return (
+    Boolean: Boolean
+      or (offset_boolean(boolean: Boolean, offset: Expand)
+        or offset_boolean(boolean: Boolean, offset: IntegerMath[NEGATE](value: Expand))))
+}
+
+geometry graph ".MN_bs_smooth"(
+    Geometry: Geometry,
+    Factor: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Iterations: Int = 2 in 0..
+) -> Geometry {
+  group = mn_select_sec_struct()
+  position = Position()
+  return SetPosition(
+    Geometry,
+    selection: group.is_sheet,
+    position: Mix[VECTOR](
+      factor: Factor,
+      a: position,
+      b: BlurAttribute[FLOAT_VECTOR](
+        value: position,
+        iterations: Iterations,
+        weight: expand_boolean(boolean: group.is_structured, expand: 1))))
+}
+
+geometry graph "Attribute Run"(
+    Name: String(
+      description: "The `Named Attribute` to read from the geometry before applying the `Integer Run` node",
+      optional_label: true),
+    "Group ID": Int(
+      description: "The `Group ID` to use for the `Integer Run` node",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(
+      description: "The current point's `Named Attribute` value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, increasing whenever the attribute or the `Group ID` values change")
+) {
+  "Group mask increments whenever the attribute or the Group ID changes"
+  group = integer_run(value: NamedAttribute[INT](name: Name).attribute, group_id: group_id)
+  return ("Is Different": group.is_different, "Group ID": group.group_id)
+}
+
+geometry graph "Group Parameter"(
+    "Group ID": Int(
+      description: "The identifier specifying groupings of the points",
+      hide_value: true)
+) -> (
+    "Is First": Bool(description: "If the point is the first point in the `Group ID`"),
+    "Is Last": Bool(description: "If the point is the last item in the `Group ID`"),
+    "Group Size": Int,
+    "Relative Index": Int(
+      description: "The relative index  of the point within the `Group ID`. Starts at `0` for the first point counting up to `Group Size - 1`")
+) {
+  accumulate_field = AccumulateField[INT](group_id: group_id)
+  return (
+    "Is First": not accumulate_field.trailing,
+    "Is Last": accumulate_field.leading == accumulate_field.total,
+    "Group Size": accumulate_field.total,
+    "Relative Index": accumulate_field.trailing)
+}
+
+geometry graph ".MN_init_tmp_attributes"(Geometry: Geometry) -> Geometry {
+  group = group_parameter(group_id: NamedAttribute[INT](name: "tmp_ss_ID").attribute)
+  capture_attribute = Geometry
+    |> StoreNamedAttribute[INT](
+      name: "tmp_ss_ID",
+      value: attribute_run(name: "sec_struct", group_id: CurveOfPoint().curve_index).group_id)
+    |> CaptureAttribute(
+      "Is First": group.is_first,
+      "Is Last": group.is_last,
+      Size: group.group_size)
+  return capture_attribute.geometry
+    |> StoreNamedAttribute[INT](name: "tmp_ss_size", value: capture_attribute.size)
+    |> StoreNamedAttribute[BOOLEAN](name: "tmp_ss_first", value: capture_attribute.is_first)
+    |> StoreNamedAttribute[BOOLEAN](name: "tmp_ss_last", value: capture_attribute.is_last)
+    |> StoreNamedAttribute[INT](name: "tmp_idx_curve", value: CurveOfPoint().curve_index)
+}
+
+geometry graph "Fallback Vector"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Vector(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Output: Vector(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: Name)
+  return (Output: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph ".Backbone Position"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Read,
+    Menu: Menu(
+      description: "the particular backbone residue to read the value from",
+      optional_label: true) = backbone_N
+) -> (Position: Vector) {
+  menu_switch = MenuSwitch(menu: Menu, backbone_N: 1, backbone_CA: 2, backbone_C: 3, backbone_O: 4)
+  index_switch = IndexSwitch(
+    menu_switch.output,
+    "",
+    "backbone_N",
+    "backbone_CA",
+    "backbone_C",
+    "backbone_O")
+  return (
+    Position: MenuSwitch(
+      menu: Method,
+      Read: NamedAttribute[FLOAT_VECTOR](name: index_switch).attribute,
+      Compute: EvaluateAtIndex[FLOAT_VECTOR](
+        value: fallback_vector(
+          name: index_switch,
+          fallback: residue_mask(atom_name: menu_switch.output).position),
+        index: residue_mask(atom_name: 2).index)).output)
+}
+
+geometry graph "Backbone C"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (C: Vector) {
+  return (C: backbone_position(method: Method, menu: backbone_C))
+}
+
+geometry graph "Backbone CA"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (CA: Vector) {
+  return (CA: backbone_position(method: Method, menu: backbone_CA))
+}
+
+geometry graph "Backbone N"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (N: Vector) {
+  return (N: backbone_position(method: Method))
+}
+
+geometry graph "Vector Direction"(
+    Normalize: Bool = true,
+    To: Vector in -10000.0..10000.0,
+    From: Vector in -10000.0..10000.0
+) -> (
+    Direction: Vector(description: "Vector between the points, potentially normalized"),
+    Distance: Float(description: "Distance between the points before normalization")
+) {
+  vector_math = To - From
+  return (
+    Direction: Normalize ? normalize(vector_math) : vector_math,
+    Distance: length(vector_math))
+}
+
+geometry graph "Backbone NH"(
+    Menu: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (NH: Vector) {
+  group = backbone_n(method: Read)
+  group_2 = backbone_n()
+  string = "backbone_NH"
+  vector_math = VectorMath[MULTIPLY_ADD](
+    Vector: normalize(
+      vector_direction(to: group, from: backbone_ca(method: Read)).direction
+        + vector_direction(to: group, from: backbone_c(method: Read)).direction),
+    Vector_001: angstrom_to_world(angstrom: 1.01),
+    Vector_002: backbone_n(method: Read))
+  return (
+    NH: MenuSwitch(
+      menu: Menu,
+      Read: NamedAttribute[FLOAT_VECTOR](name: string).attribute,
+      Compute: fallback_vector(
+        name: string,
+        fallback: VectorMath[MULTIPLY_ADD](
+          Vector: vector_direction(
+            to: group_2,
+            from: Mix[VECTOR](
+              factor: 0.5,
+              a: backbone_ca(),
+              b: offset_vector(vector: backbone_c(), offset: -1))).direction,
+          Vector_001: angstrom_to_world(angstrom: 1.01),
+          Vector_002: group_2))).output)
+}
+
+geometry graph ".MN_constants_atom_name_peptide"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Alpha Carbon": Int
+) {
+  integer = 5
+  integer_2 = 49
+  integer_3 = 4
+  integer_4 = 1
+  integer_5 = 2
+  return (
+    "Backbone Lower": integer_4,
+    "Backbone Upper": integer_3,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Alpha Carbon": integer_5)
+}
+
+geometry graph ".MN_select_peptide"() -> (
+    "Is Backbone": Bool,
+    "Is Side Chain": Bool,
+    "Is Peptide": Bool,
+    "Is Alpha Carbon": Bool
+) {
+  group = mn_constants_atom_name_peptide()
+  group_2 = atom_name()
+  compare = group_2 == group.alpha_carbon
+  return (
+    "Is Backbone": group_2 >= group.backbone_lower and group_2 <= group.backbone_upper,
+    "Is Side Chain": group_2 >= group.side_chain_lower and group_2 <= group.side_chain_upper
+      or compare,
+    "Is Peptide": group_2 >= group.backbone_lower and group_2 <= group.side_chain_upper,
+    "Is Alpha Carbon": compare)
+}
+
+geometry graph "Is Alpha Carbon"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(
+      name: "is_alpha_carbon",
+      fallback: mn_select_peptide().is_alpha_carbon))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Backbone"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(
+      name: "is_backbone",
+      fallback: mn_select_nucleic().is_backbone or mn_select_peptide().is_backbone))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Menu Atom Name"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (atom_name: Int, Selection: Bool, atom_name as atom_name_string: String) {
+  index_switch = IndexSwitch(
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    50,
+    51,
+    51,
+    52,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77)
+  menu_switch = MenuSwitch(
+    menu: atom_name,
+    N: 1,
+    CA: 2,
+    C: 3,
+    O: 4,
+    CB: 5,
+    CG: 6,
+    CG1: 7,
+    CG2: 8,
+    OG: 9,
+    OG1: 10,
+    SG: 11,
+    CD: 12,
+    CD1: 13,
+    CD2: 14,
+    ND1: 15,
+    ND2: 16,
+    OD1: 17,
+    OD2: 18,
+    SD: 19,
+    CE: 20,
+    CE1: 21,
+    CE2: 23,
+    CE3: 24,
+    NE: 25,
+    NE1: 26,
+    NE2: 27,
+    OE1: 28,
+    OE2: 29,
+    CH2: 30,
+    NH1: 31,
+    NH2: 32,
+    OH: 33,
+    CZ: 34,
+    CZ2: 35,
+    CZ3: 36,
+    NZ: 37,
+    OXT: 38,
+    P: 50,
+    O1P: 51,
+    OP1: 51,
+    OP2: 52,
+    O2P: 52,
+    "O5'": 53,
+    "C5'": 54,
+    "C4'": 55,
+    "O4'": 56,
+    "C3'": 57,
+    "O3'": 58,
+    "C2'": 59,
+    "O2'": 60,
+    "C1'": 61,
+    N1: 62,
+    N9: 63,
+    N3: 64,
+    C8: 65,
+    N7: 66,
+    C5: 67,
+    C6: 68,
+    N6: 69,
+    C2: 70,
+    C4: 71,
+    O6: 72,
+    N2: 73,
+    N4: 74,
+    O2: 75,
+    O4: 76,
+    C7: 77)
+  menu_switch_2 = MenuSwitch(
+    menu: N,
+    N: "N",
+    CA: "CA",
+    C: "C",
+    O: "O",
+    CB: "CB",
+    CG: "CG",
+    CG1: "CG1",
+    CG2: "CG2",
+    OG: "OG",
+    OG1: "OG1",
+    SG: "SG",
+    CD: "CD",
+    CD1: "CD1",
+    CD2: "CD2",
+    ND1: "ND1",
+    ND2: "ND2",
+    OD1: "OD1",
+    OD2: "OD2",
+    SD: "SD",
+    CE: "CE",
+    CE1: "CE1",
+    CE2: "CE2",
+    CE3: "CE3",
+    NE: "NE",
+    NE1: "NE1",
+    NE2: "NE2",
+    OE1: "OE1",
+    OE2: "OE2",
+    CH2: "CH2",
+    NH1: "NH1",
+    NH2: "NH2",
+    OH: "OH",
+    CZ: "CZ",
+    CZ2: "CZ2",
+    CZ3: "CZ3",
+    NZ: "NZ",
+    OXT: "OXT",
+    P: "P",
+    O1P: "O1P",
+    OP1: "OP1",
+    OP2: "OP2",
+    O2P: "O2P",
+    "O5'": "O5'",
+    "C5'": "C5'",
+    "C4'": "C4'",
+    "O4'": "O4'",
+    "C3'": "C3'",
+    "O3'": "O3'",
+    "C2'": "C2'",
+    "O2'": "O2'",
+    "C1'": "C1'",
+    N1: "N1",
+    N9: "N9",
+    N3: "N3",
+    C8: "C8",
+    N7: "N7",
+    C5: "C5",
+    C6: "C6",
+    N6: "N6",
+    C2: "C2",
+    C4: "C4",
+    O6: "O6",
+    N2: "N2",
+    N4: "N4",
+    O2: "O2",
+    O4: "O4",
+    C7: "C7")
+  return (
+    atom_name: menu_switch.output,
+    Selection: menu_switch.output == atom_name(),
+    atom_name_string: IndexSwitch(
+      menu_switch.output,
+      "N",
+      "CA",
+      "C",
+      "O",
+      "CB",
+      "CG",
+      "CG1",
+      "CG2",
+      "OG",
+      "OG1",
+      "SG",
+      "CD",
+      "CD1",
+      "CD2",
+      "ND1",
+      "ND2",
+      "OD1",
+      "OD2",
+      "SD",
+      "CE",
+      "CE1",
+      "CE2",
+      "CE3",
+      "NE",
+      "NE1",
+      "NE2",
+      "OE1",
+      "OE2",
+      "CH2",
+      "NH1",
+      "NH2",
+      "OH",
+      "CZ",
+      "CZ2",
+      "CZ3",
+      "NZ",
+      "OXT",
+      "P",
+      "O1P",
+      "OP1",
+      "OP2",
+      "O2P",
+      "O5'",
+      "C5'",
+      "C4'",
+      "O4'",
+      "C3'",
+      "O3'",
+      "C2'",
+      "O2'",
+      "C1'",
+      "N1",
+      "N9",
+      "N3",
+      "C8",
+      "N7",
+      "C5",
+      "C6",
+      "N6",
+      "C2",
+      "C4",
+      "O6",
+      "N2",
+      "N4",
+      "O2",
+      "O4",
+      "C7"))
+}
+
+geometry graph "Menu Residue Mask"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(
+    pick: menu_atom_name(atom_name: atom_name).selection,
+    group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph ".MN_topo_assign_backbone"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges")
+) -> (Atoms: Geometry, "CA Atoms": Geometry, "Sample Index": Int) {
+  "Compute only on backbone atoms, but capture their idx first" {
+    group = is_alpha_carbon()
+    capture_attribute = CaptureAttribute(
+      Atoms,
+      Selection as selection_2: group.selection,
+      Index: AccumulateField[INT](value: group.selection).trailing)
+    separate_geometry = SeparateGeometry(
+      capture_attribute.geometry,
+      selection: is_backbone().selection)
+  }
+  string = "backbone"
+  repeat_output = repeat(4, Geometry: separate_geometry.selection) -> {
+    group_2 = menu_residue_mask(atom_name: IndexSwitch[MENU](iteration, N, CA, C, O))
+    return StoreNamedAttribute[FLOAT_VECTOR](
+      Geometry,
+      selection: group_2.is_valid,
+      name: JoinStrings("_", string, IndexSwitch(iteration, "N", "CA", "C", "O")),
+      value: group_2.position)
+  }
+  return (
+    Atoms: repeat_output,
+    "CA Atoms": repeat_output
+      |> SeparateGeometry(selection: capture_attribute.selection_2).selection
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "backbone_NH", value: backbone_nh()),
+    "Sample Index": SampleIndex[INT](
+      capture_attribute.geometry,
+      value: capture_attribute.index,
+      index: Index()))
+}
+
+geometry graph "Atom ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_id: Int(
+      description: "The `atom_id` attribute, read from geometry. Corresponds to the order of the atoms when they were read from the file")
+) {
+  return (atom_id: attribute_at_index(index: Index, name: "atom_id"))
+}
+
+geometry graph "Unique Chain ID"(
+    Cutoff: Float(
+      subtype: DISTANCE,
+      description: "Threshold distance over which the next points are considered to be part of a new chain") = 4.5 in 0.0..10000.0
+) -> ("Group ID": Int(description: "Calculated `Group ID` attribute")) {
+  "Compute a unique Group ID based on the `chain_id` attribute, but also incrememnting if subsequent points are over a cutoff distance from each other"
+  position = Position()
+  return (
+    "Group ID": IntegerMath[ADD](
+      Value: integer_run(value: chain_id()).group_id,
+      Value_001: AccumulateField[INT](
+        value: distance(offset_vector(vector: position, offset: -1), position)
+          > angstrom_to_world(angstrom: Cutoff)).leading))
+}
+
+geometry graph "Atoms to Curves"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Points to maintain and use for splines, non-selected points are removed",
+      hide_value: true) = true,
+    "Sort Points": Bool(
+      description: "Sort points first by atom_id and chain_id before splitting to curves"),
+    Cutoff: Float(subtype: DISTANCE) = 6.0 in -10000.0..10000.0
+) -> (Curves: Geometry) {
+  group = chain_id()
+  separate_components = SeparateComponents(Atoms)
+  mesh_to_points = MeshToPoints(
+    CurveToMesh(separate_components.curve) + separate_components.mesh,
+    selection: Selection)
+  return (
+    Curves: PointsToCurves(
+      sort_points
+        ? mesh_to_points
+          |> SortElements(sort_weight: group)
+          |> SortElements(group_id: group, sort_weight: atom_id())
+        : mesh_to_points,
+      curve_group_id: unique_chain_id(cutoff: Cutoff)))
+}
+
+geometry graph "Backbone O"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (O: Vector) {
+  return (O: backbone_position(method: Method, menu: backbone_O))
+}
+
+geometry graph "Backbone Positions"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    O: Vector(description: "The position of the backbone _O_ atom for the residue"),
+    C: Vector(description: "The position of the backbone _C_ atom for the residue"),
+    CA: Vector(description: "The position of the backbone _CA_ atom for the residue"),
+    N: Vector(description: "The position of the backbone _N_ atom for the residue"),
+    NH: Vector
+) {
+  menu_switch = MenuSwitch(menu: Method, Read: 0, Compute: 1)
+  return (
+    O: backbone_o(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    C: backbone_c(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    CA: backbone_ca(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    N: backbone_n(method: IndexSwitch[MENU](menu_switch.output, Read, Compute)),
+    NH: backbone_nh(menu: IndexSwitch[MENU](menu_switch.output, Read, Compute)))
+}
+
+geometry graph "Backbone Vectors"(
+    Method: Menu(menu_expanded: true, optional_label: true) = Compute
+) -> (
+    Normal: Vector(
+      description: "The vector used for the `Normal` of a curve when reading positions from a peptide backbone"),
+    Tangent: Vector(
+      description: "The vector used as the `Tangent` for a curve when reading values from a peptide backbone"),
+    Bitangent: Vector(description: "Cross product of the Normal and Tangent")
+) {
+  "The `Vectors` that are useful for a curve when reading from a peptide backbone"
+  group = backbone_positions(method: Method)
+  vector_math = normalize(group.c - group.n)
+  vector_math_2 = normalize(Mix[VECTOR](factor: 0.45, a: group.c, b: group.n) - group.ca)
+  return (
+    Normal: vector_math_2,
+    Tangent: vector_math,
+    Bitangent: normalize(vector_math × vector_math_2))
+}
+
+geometry graph "Atoms to CA Curves"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    "BS Smoothing": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Threshold: Float(
+      description: "Distance (Angstroms) over which subsequent CA points are treated as a new chain") = 4.5 in 0.0..10000.0
+) -> (Curves: Geometry) {
+  "Turn backbone points to curves" {
+    group = Atoms
+      |> mn_topo_assign_backbone().atoms
+      |> atoms_to_curves(selection: is_alpha_carbon(and_: Selection).selection, cutoff: Threshold)
+  }
+  position = Position()
+  return (
+    Curves: group
+      |> StoreNamedAttribute[INT](name: "tmp_idx", value: Index())
+      |> mn_init_tmp_attributes()
+      |> SetCurveNormal(mode: Free, normal: backbone_vectors(method: Read).normal)
+      |> mn_bs_smooth(factor: bs_smoothing, iterations: 1)
+      |> SeparateGeometry[CURVE](selection: SplineLength().point_count > 1).selection
+      |> SetSplineCyclic(
+        cyclic: distance(
+            EvaluateAtIndex[FLOAT_VECTOR](value: position, index: PointsOfCurve().point_index),
+            EvaluateAtIndex[FLOAT_VECTOR](
+              value: position,
+              index: PointsOfCurve(sort_index: -1).point_index))
+          < angstrom_to_world(angstrom: 4.0)))
+}
+
+geometry graph ".MN_utils_style_ribbon_peptide"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this node to",
+      hide_value: true) = true,
+    Quality: Int = 3 in 0..6,
+    "BS Smoothing": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Radius: Float = 1.6 in 0.0..,
+    "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+    Material: Material(description: "Material to apply to the resulting geometry"),
+    "UV Map": Bool,
+    "U Component": Menu(optional_label: true) = Factor,
+    Threshold: Float = 4.5 in 0.0..10000.0
+) -> (Geometry: Geometry, Curve: Geometry) {
+  group = atoms_to_ca_curves(
+    Atoms,
+    selection: Selection,
+    bs_smoothing: bs_smoothing,
+    threshold: Threshold)
+  set_curve_radius = group
+    |> SetCurveNormal()
+    |> SetCurveRadius(radius: Radius)
+  fillet_curve = FilletCurve(
+    set_curve_radius,
+    radius: MapRange(
+      value: _2_index_angle(index_a: offset_index(offset: -1), index_c: offset_index(offset: 1)),
+      from_min: 1.6899998,
+      from_max: 2.861593,
+      to_max: 0.25)) @ mute
+  integer = 2
+  integer_2 = 3
+  return (
+    Geometry: fillet_curve
+      |> SetSplineType[BEZIER]()
+      |> SetHandleType()
+      |> curve_custom_profile(
+        subdivisions: IntegerMath[MULTIPLY](Value: Quality, Value_001: integer),
+        profile_type: "Default Profile",
+        uv_map: uv_map,
+        u_component: u_component,
+        profile_rotation: curve_rotation(),
+        profile_resolution: IntegerMath[MULTIPLY](Value: Quality, Value_001: integer_2),
+        profile_rotation_float: 0.0)
+      |> cleanup(color_source: group, material: Material, shade_smooth: shade_smooth),
+    Curve: set_curve_radius)
+}
+
+geometry graph "Check Geometry"(
+    Geometry: Geometry,
+    Message: String(
+      optional_label: true) = "Input contains no geometry, check your node connections."
+) -> Geometry {
+  warning = Warning(show: contains_geometry(Geometry).empty, message: Message)
+  return Geometry
+}
+
+geometry graph "Set URes ID"(Geometry: Geometry) -> Geometry {
+  return StoreNamedAttribute[INT](Geometry, name: "ures_id", value: unique_residue_id())
+}
+
+geometry graph ".MN_ensure_ures_id"(Input: Geometry) -> (Output: Geometry) {
+  "If the `ures_id` attribute doesn't exist, create it"
+  "Check if `ures_id` exists" {
+    get_attribute_names = GetAttributeNames(
+      Input,
+      filter_data_type: true,
+      data_type: Integer,
+      filter_domain: true)
+    list_length = ListLength[STRING](
+      list: FilterList[STRING](
+        list: get_attribute_names,
+        selection: get_attribute_names == "ures_id").selection)
+  }
+  return (Output: list_length ? Input : set_ures_id(Input))
+}
+
+geometry graph "Get Geometry Atoms"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> (Geometry: Geometry, Bundle: Bundle, Atoms: Geometry) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  string = "MN/Atoms"
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: string,
+    remove: true)
+  return (
+    Geometry: Switch[GEOMETRY](switch: get_bundle_item.exists, true_: get_geometry_bundle.geometry),
+    Bundle: get_bundle_item.bundle,
+    Atoms: get_bundle_item.exists ? get_bundle_item.item : get_geometry_bundle.geometry)
+}
+
+geometry graph "Evaluate on Atoms"(
+    Geometry: Geometry(description: "Geometry to get the bundle of"),
+    Selection: Bool(
+      description: "The parts of the geometry that go into the first output",
+      hide_value: true) = true,
+    Closure: Closure,
+    Result: Menu(
+      description: "Where to store the result of the closure. Bundle overwrite the existing `MN/Atoms` bundle. Geometry passes along the bundle and joins the resulting geometry into the output.",
+      menu_expanded: true,
+      optional_label: true) = Geometry
+) -> Geometry {
+  group = get_geometry_atoms(Geometry)
+  "Evaluate the closure on the 'Atoms'" {
+    evaluate_closure = EvaluateClosure(
+      Closure,
+      Atoms: group.atoms
+        |> check_geometry(message: "'Atoms' contains no geometry, check your node connections.")
+        |> mn_ensure_ures_id()
+        |> SeparateGeometry(selection: Selection).selection) -> Geometry
+  }
+  menu_switch = MenuSwitch(menu: Result, Geometry: 0, Bundle: 1)
+  string = "Evaluate the 'Closure' on the 'Atoms' geometry, join the resulting geometry with the input geometry.  If the input 'Geometry' doesn't contain a 'MN/Atoms' bundle then we treat the input geometry as the 'Atoms'."
+  return SetGeometryBundle(
+    group.geometry + IndexSwitch(menu_switch.output, evaluate_closure, _),
+    bundle: StoreBundleItem[GEOMETRY](
+      bundle: group.bundle,
+      path: "MN/Atoms",
+      item: IndexSwitch(menu_switch.output, group.atoms, evaluate_closure)))
+}
+
+geometry graph "Is Peptide"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(name: "is_peptide", fallback: mn_select_peptide().is_peptide))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Separate Polymers"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges")
+) -> (Peptide: Geometry, Nucleic: Geometry, Other: Geometry) {
+  separate_geometry = SeparateGeometry(Atoms, selection: is_peptide().selection)
+  separate_geometry_2 = SeparateGeometry(
+    separate_geometry.inverted,
+    selection: is_nucleic().selection)
+  return (
+    Peptide: separate_geometry.selection,
+    Nucleic: separate_geometry_2.selection,
+    Other: separate_geometry_2.inverted)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Style Ribbon"(
+    Atoms: Geometry(description: "Atomic geometry that contains vertices and edges"),
+    Selection: Bool(
+      description: "Selection of atoms to apply this style to, discarding unselected points",
+      hide_value: true) = true,
+    Quality: Int(
+      description: "A lower value results in less geometry, with a higher value meaning better looking but more dense geometry") = 3 in 0..6,
+    "Peptide"(default_closed: true) {
+        "Peptide Radius": Float = 1.6 in 0.0..,
+        "Backbone" {
+            "Backbone Smoothing": Float(
+              subtype: FACTOR,
+              description: "Smoothen the sheet ribbons such as beta-sheets") = 0.5 in 0.0..1.0,
+            "Backbone Threshold": Float(
+              description: "Distance (Angstroms) over which subsequent CA points are treated as a new chain") = 4.5 in 0.0..10000.0
+        },
+        "UV Map"(
+          description: "Create a UV map for the generated mesh ribbon.",
+          default_closed: true) {
+            "UV Map": Bool(
+              is_panel_toggle: true,
+              description: "Compute and store the `uv_map` for the final protein ribbon geometry"),
+            "U Component": Menu(
+              description: "Store either the 'Length' or the 'Factor' of the curve as the U component.",
+              menu_expanded: true,
+              optional_label: true) = Factor
+        }
+    },
+    "Nucleic"(default_closed: true) {
+        "Nucleic Backbone" {
+            "Nucleic Backbone Shape": Menu(menu_expanded: true, optional_label: true) = Cicular,
+            "Nucleic Backbone Radius": Float = 2.0 in 0.0..,
+            "Nucleic Backbone Width": Float = 4.0 in 0.0..10000.0,
+            "Nucleic Backbone Thickness": Float = 1.0 in 0.0..10000.0
+        },
+        "Nucleic Base"(default_closed: true) {
+            "Base Geometry": Geometry,
+            "Base Scale": Vector = (2.5, 0.5, 7.0) in -10000.0..10000.0,
+            "Base Resolution": Int = 4 in 3..512,
+            "Base Realize": Bool
+        }
+    },
+    "Material"(default_closed: true) {
+        "Shade Smooth": Bool(description: "Apply smooth shading to the created geometry") = true,
+        Material: Material(
+          description: "Material to apply to the resulting geometry",
+          optional_label: true)
+    }
+) -> (Geometry: Geometry(description: "The generated geometry for the style node group")) {
+  menu_switch = MenuSwitch(menu: nucleic_backbone_shape, Cicular: 0, Rectangular: 1)
+  closure_output = graph(Atoms: Geometry) -> Geometry {
+    group = Atoms
+      |> check_geometry()
+      |> separate_polymers()
+    group_2 = mn_utils_style_ribbon_nucleic(
+      group.nucleic,
+      selection: Selection,
+      material: Material,
+      switch: IndexSwitch(menu_switch.output, true, false),
+      backbone_subdivisions: IntegerMath[MULTIPLY](Value: Quality, Value_001: 2),
+      backbone_resolution: IntegerMath[MULTIPLY](Value: Quality, Value_001: 4),
+      backbone_radius: IndexSwitch(menu_switch.output, nucleic_backbone_radius, 0.0),
+      backbone_shade_smooth: shade_smooth,
+      backbone_scale: IndexSwitch(
+        menu_switch.output,
+        (0.0, 0.0, 0.0),
+        CombineXYZ(x: 1.0, y: nucleic_backbone_width, z: nucleic_backbone_thickness)),
+      base_geometry: base_geometry,
+      base_scale: base_scale,
+      base_resolution: base_resolution)
+    group_3 = mn_utils_style_ribbon_peptide(
+      group.peptide,
+      selection: Selection,
+      quality: Quality,
+      bs_smoothing: backbone_smoothing,
+      radius: peptide_radius,
+      shade_smooth: shade_smooth,
+      material: Material,
+      uv_map: uv_map,
+      u_component: u_component,
+      threshold: backbone_threshold)
+    join_geometry = group_3.curve + group_2.curve
+    return group_3.geometry + group_2.geometry
+  }
+  return (Geometry: evaluate_on_atoms(Atoms, closure: closure_output))
+}

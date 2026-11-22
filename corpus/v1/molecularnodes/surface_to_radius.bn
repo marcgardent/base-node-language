@@ -1,0 +1,67 @@
+geometry graph "MN Typed Bundles"(
+    Type: Menu(optional_label: true) = "MN.MeshProcess",
+    Closure: Closure,
+    step: Int = 1,
+    Path: String(optional_label: true)
+) -> Bundle {
+  return StoreBundleItem[BUNDLE](
+    path: Path,
+    item: CombineBundle(
+      Type: MenuSwitch(menu: Type, "MN.MeshProcess": "MN.MeshProcess").output,
+      closure: Closure,
+      step: step))
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "VDW Radii"(
+    Index: Int = Index() in 0..
+) -> (vdw_radii: Float(description: "Read the `vdw_radii` attribute from the geometry")) {
+  return (
+    vdw_radii: EvaluateAtIndex(
+      value: fallback_float(name: "vdw_radii", fallback: mn_world_scale()),
+      index: Index))
+}
+
+geometry graph ".Surface to Radius"(
+    "Scale Radii": Float = 1.47 in 0.0..10.0,
+    Atoms: Geometry,
+    step: Int
+) -> Bundle {
+  position = Position()
+  closure_output = graph(Geometry: Geometry) -> Geometry {
+    capture_attribute = CaptureAttribute(Geometry, Value: SampleNearest(Atoms))
+    capture_attribute_2 = CaptureAttribute(
+      capture_attribute.geometry,
+      "Value.001": SampleIndex[FLOAT_VECTOR](
+        Atoms,
+        value: position,
+        index: capture_attribute.value))
+    return SetPosition(
+      capture_attribute_2.geometry,
+      position: Mix[VECTOR](
+        factor: 0.0,
+        a: capture_attribute_2.value_001
+          + normalize(position - capture_attribute_2.value_001)
+            * SampleIndex(Atoms, value: scale_radii * vdw_radii(), index: capture_attribute.value),
+        b: Position()))
+  }
+  return mn_typed_bundles(closure: closure_output, step: step, path: "Surface to Radius")
+}

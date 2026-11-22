@@ -1,0 +1,135 @@
+geometry graph ".Check End Face Corner"("Captured Index": Int) -> ("Is End Face Corner": Bool) {
+  return (
+    "Is End Face Corner": captured_index == 0
+      and EvaluateAtIndex[CORNER, INT](value: captured_index, index: OffsetCornerInFace(offset: 2))
+        != 1)
+}
+
+geometry graph ".Profile Type Picker"(
+    Menu: Menu(optional_label: true) = "Custom Profile"
+) -> (Output: Int) {
+  return (Output: MenuSwitch(menu: Menu, "Default Profile": 0, "Custom Profile": 1).output)
+}
+
+geometry graph "Curve Rotation"(
+    Normal: Vector(
+      description: "The default direction to use as the Secondary Axis / X axis when computing the rotation") = Normal()
+) -> (Rotation: Rotation(description: "The computed rotation for the point on the curve")) {
+  "Computes the rotation of the point on the curve, by default using the `Normal` attribute and the `Tangent` axis"
+  return (Rotation: AxesToRotation(primary_axis: CurveTangent(), secondary_axis: Normal))
+}
+
+geometry graph "Contains Geometry"(
+    Geometry: Geometry
+) -> (
+    "Not Empty": Bool(description: "True when the input contains some geometry"),
+    Empty: Bool(description: "True when the input contains no geometry")
+) {
+  boolean_math = DomainSize(Geometry).point_count == 0
+    and DomainSize[POINTCLOUD](Geometry) == 0
+    and DomainSize[CURVE](Geometry).point_count == 0
+    and DomainSize[INSTANCES](Geometry) == 0
+    and DomainSize[GREASEPENCIL](Geometry) == 0
+  return ("Not Empty": not boolean_math, Empty: boolean_math)
+}
+
+geometry graph "Fallback Geometry"(Geometry: Geometry, Fallback: Geometry) -> Geometry {
+  return contains_geometry(Geometry).not_empty ? Geometry : Fallback
+}
+
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "MN Units"(
+    Value: Float(
+      description: "A value which will be scaled appropriately for the world") = 3.0 in -10000.0..10000.0
+) -> (Angstrom: Float, Nanometre: Float) {
+  math = Value * mn_world_scale()
+  return (Angstrom: math, Nanometre: math * 10.0)
+}
+
+geometry graph "Sample Position"(
+    Geometry: Geometry(description: "The geometry to sample the `Position` from"),
+    Position: Vector(
+      description: "The `Position` field to sample the values from",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to sample the `Position` field from") = Index()
+) -> (Position: Vector(description: "The sampled `Position` field")) {
+  "A convenience wrapper around the `Sample Index` and `Position` nodes"
+  return (Position: SampleIndex[FLOAT_VECTOR, clamp: true](Geometry, value: Position, index: Index))
+}
+
+geometry(is_modifier: false) graph "Curve Custom Profile"(
+    Curve: Geometry,
+    Subdivisions: Int = 6 in 1..,
+    "Profile Type": Menu(optional_label: true) = "Custom Profile",
+    "UV Map": Bool(
+      description: "Compute and store the `uv_map` attribute on the `Face Corner` domain of the final mesh"),
+    "U Component": Menu(optional_label: true) = Factor,
+    "Profile"(default_closed: true) {
+        "Profile Rotation": Rotation,
+        "Profile Scale": Vector(subtype: XYZ) = (1.0, 1.0, 1.0),
+        "Profile Curve": Geometry,
+        "Profile Resolution": Int = 4 in 3..512,
+        "Profile Radius": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+        "Profile Rotation" as profile_rotation_float: Float = 0.7853982 in -10000.0..10000.0
+    }
+) -> Geometry {
+  spline_parameter = SplineParameter()
+  capture_attribute = CaptureAttribute(
+    Curve,
+    Rotation: IndexSwitch(
+      profile_type_picker(menu: profile_type),
+      curve_rotation(),
+      profile_rotation),
+    Scale: profile_scale,
+    Factor: spline_parameter.factor,
+    Length: spline_parameter.length,
+    Index: spline_parameter.index)
+  resample_curve = capture_attribute.geometry
+    |> SetSplineResolution(resolution: Subdivisions)
+    |> ResampleCurve[keep_last_segment: false](mode: Evaluated)
+  spline_parameter_2 = SplineParameter()
+  capture_attribute_2 = profile_curve
+    |> fallback_geometry(
+      fallback: CurveCircle(
+          resolution: profile_resolution,
+          radius: mn_units(value: profile_radius).angstrom)
+        |> TransformGeometry(
+          rotation: AxisAngleToRotation(angle: profile_rotation_float + radians(45.0))))
+    |> CaptureAttribute(Factor: spline_parameter_2.factor, Index: spline_parameter_2.index)
+  curve_to_mesh = CurveToMesh(
+    resample_curve,
+    profile_curve: capture_attribute_2.geometry,
+    scale: Radius(),
+    fill_caps: true)
+  switch = uv_map
+    ? StoreNamedAttribute[FLOAT2, CORNER](
+      curve_to_mesh,
+      name: "uv_map",
+      value: CombineXYZ(
+        x: check_end_face_corner(captured_index: capture_attribute.index)
+          ? IndexSwitch(0, 1.0, 38.0)
+          : MenuSwitch(
+            menu: u_component,
+            Factor: capture_attribute.factor,
+            Length: capture_attribute.length).output,
+        y: check_end_face_corner(captured_index: capture_attribute_2.index)
+          ? 1.0
+          : capture_attribute_2.factor))
+    : curve_to_mesh
+  return IndexSwitch(
+    profile_type_picker(menu: profile_type),
+    switch,
+    SetPosition(
+      switch,
+      position: resample_curve
+        |> InstanceOnPoints(
+          instance: capture_attribute_2.geometry,
+          rotation: capture_attribute.rotation,
+          scale: capture_attribute.scale)
+        |> RealizeInstances[realize_to_point_domain: true]()
+        |> sample_position()))
+}

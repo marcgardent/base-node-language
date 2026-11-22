@@ -1,0 +1,27 @@
+shader(material: true) graph "Chocolate Swirl"() -> (surface: Shader, displacement: Vector) {
+  math = NoiseTexture[normalize: false](
+      vector: Mapping(vector: TextureCoordinate().generated),
+      scale: 4.5,
+      detail: 0.0,
+      roughness: 1.0,
+      lacunarity: 1.0).factor
+    * 0.5 @ hide
+  return (
+    surface: MixShader(
+      a: GlossyBSDF[GGX](color: (0.07822, 0.03175, 0.01636, 1.0), roughness: 0.4472136),
+      b: MixShader(
+        a: SubsurfaceScattering[BURLEY](
+          color: (0.05780544, 0.012286486, 0.008568126, 1.0),
+          scale: 2.8999977),
+        b: DiffuseBSDF(color: (0.10446, 0.01657, 0.01657, 1.0), roughness: 0.19599))),
+    displacement: Displacement(
+      height: Bump(
+        distance: 0.1,
+        filter_width: 1.0,
+        normal: NoiseTexture(
+          vector: MagicTexture(vector: math, scale: 0.3).factor,
+          scale: 1.0,
+          distortion: 1.0).factor),
+      midlevel: 0.0,
+      scale: 0.1))
+}

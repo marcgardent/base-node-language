@@ -1,0 +1,15 @@
+geometry graph "Sample Mix Vector"(
+    A: Geometry(description: "Geometry A to sample and mix from"),
+    B: Geometry(description: "Geometry B to sample and mix to"),
+    Position: Vector(
+      description: "The field to sample from each geometry, defaulting to `Position`",
+      hide_value: true) = Position(),
+    Factor: Float(subtype: FACTOR, description: "The amount to mix from A to B") = 0.5 in 0.0..1.0,
+    Index: Int(description: "`Index` on the geometries to sample from") = Index()
+) -> (Vector: Vector(description: "The final mixed vector")) {
+  return (
+    Vector: Mix[VECTOR](
+      factor: Factor,
+      a: SampleIndex[FLOAT_VECTOR](A, value: Position, index: Index),
+      b: SampleIndex[FLOAT_VECTOR](B, value: Position, index: Index)))
+}

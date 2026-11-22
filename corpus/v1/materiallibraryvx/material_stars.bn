@@ -1,0 +1,37 @@
+shader(material: true) graph Stars() -> (surface: Shader) {
+  mapping = Mapping(vector: TextureCoordinate().generated)
+  voronoi_texture = VoronoiTexture(vector: mapping, scale: 250.0)
+  return (
+    surface: MixShader(
+      factor: 0.85,
+      a: MixShader(
+        factor: LightFalloff(smooth: 14.699999).linear,
+        a: Background(
+          color: ColorRamp[
+            color_ramp: Ramp(
+              (0.63636357, (0.0, 0.0, 0.0, 1.0)),
+              (0.79318166, (0.005170967, 0.005170967, 0.005170967, 0.9555786)),
+              (0.91363645, (1.0, 1.0, 1.0, 1.0)))](
+            factor: voronoi_texture.distance * voronoi_texture.distance).color)),
+      b: MixShader(
+        a: Background(
+          color: ColorRamp[
+            color_ramp: Ramp(
+              (0.22954544, (0.005170967, 0.005170967, 0.005170967, 0.9555786)),
+              (0.64090896, (0.0, 0.0, 0.0, 1.0)),
+              (1.0, (1.0, 1.0, 1.0, 1.0)))](
+            factor: NoiseTexture(
+              vector: mapping,
+              scale: 500.0,
+              detail: 200.0,
+              distortion: 0.5).color).color),
+        b: Background(
+          color: ColorRamp[
+            color_ramp: Ramp(
+              (0.67272735, (0.0, 0.0, 0.0, 1.0)),
+              (0.7636364, (1.0, 1.0, 1.0, 1.0)))](
+            factor: NoiseTexture(
+              vector: mapping,
+              scale: 344.09998,
+              distortion: 0.5).color).color))))
+}

@@ -1,0 +1,287 @@
+geometry graph "Face Corner Angle"() -> (
+    "Corner Angle": Float(
+      description: "Angle between the next and previous edge of a face corner within the face"),
+    Bisector: Vector(
+      description: "Directional vector pointing central between next and previous edge of a face corner")
+) {
+  position = Position()
+  vector_math = normalize(
+    EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: position, index: OffsetCornerInFace(offset: -1))
+      - position)
+  vector_math_2 = normalize(
+    EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: position, index: OffsetCornerInFace(offset: 1))
+      - position)
+  evaluate_on_domain = EvaluateOnDomain[FACE, FLOAT_VECTOR](value: Normal().true_normal)
+  math = sign((vector_math × vector_math_2) ⋅ evaluate_on_domain)
+  math_2 = acos(vector_math ⋅ vector_math_2)
+  "angle" {
+    switch = math > 0.0 ? 6.2831855 - math_2 : math_2
+  }
+  return (
+    "Corner Angle": EvaluateOnDomain[CORNER](value: switch),
+    Bisector: EvaluateOnDomain[CORNER, FLOAT_VECTOR](
+      value: VectorRotate(vector: vector_math_2, axis: evaluate_on_domain, angle: switch * 0.5)))
+}
+
+geometry(show_modifier_manage_panel: false) graph "Instance on Elements"(
+    Geometry: Geometry,
+    "Instance On": Menu(
+      description: "Geometry element type to instance on",
+      optional_label: true) = Points,
+    Mask: Float(
+      subtype: FACTOR,
+      description: "Specify which elements to use for instancing. (Floating point values result in a random selection.)",
+      structure_type: FIELD) = 1.0 in 0.0..1.0,
+    "Input Type": Menu(
+      description: "How the instance geometry input should be exposed",
+      hide_in_modifier: true,
+      menu_expanded: true,
+      optional_label: true) = "Data-Block",
+    "Instance Type": Menu(
+      description: "How the instance geometry data-block should be exposed",
+      menu_expanded: true,
+      optional_label: true) = Object,
+    Collection: Collection(description: "Instance geometry collection"),
+    Object: Object(description: "Instance geometry object"),
+    Instance: Geometry(description: "Instance geometry input"),
+    "Realize Instances": Bool(
+      description: "Turn the output into a single geometry rather than instances (required by many other modifiers)"),
+    "Keep Surface": Bool(
+      description: "Keep the original input geometry and join it with the instance geometry") = true,
+    Seed: Int(
+      description: "Base value to control random variation in a reproducible way",
+      force_non_field: true,
+      structure_type: SINGLE),
+    "Pick Instance"(
+      description: "Choose child instances for each element instead of instancing the entire geometry",
+      default_closed: true) {
+        "Pick Instance": Bool(
+          is_panel_toggle: true,
+          description: "Choose child instances for each element instead of instancing the entire geometry"),
+        "Reset Transform": Bool(
+          description: "Reset the transforms of each individual child instance") = true,
+        "Instance Index": Menu(
+          description: "Method how the child instance is chosen per element",
+          force_non_field: true,
+          optional_label: true,
+          structure_type: SINGLE) = Random,
+        "Instance Index" as instance_index_int: Int(
+          description: "Which child instance to pick per element by index",
+          structure_type: FIELD)
+    },
+    "Transform"(
+      description: "Configuration regarding the transformation of each instance",
+      default_closed: true) {
+        "Surface Offset": Float(
+          subtype: DISTANCE,
+          description: "Distance to offset each instance along the normal of the input geometry") in -10000.0..10000.0,
+        "Align Rotation": Bool(
+          description: "Rotate instances based on the shape of the input geometry",
+          structure_type: FIELD) = true,
+        Scale: Vector(
+          subtype: XYZ,
+          description: "Scale the instances on each local axis",
+          structure_type: FIELD) = (1.0, 1.0, 1.0),
+        "Scale by Face Area"(
+          description: "Scale the instances based on the face area of the input geometry",
+          default_closed: true) {
+            "Scale by Face Area": Bool(
+              is_panel_toggle: true,
+              description: "Scale the instances based on the face area of the input geometry",
+              force_non_field: true,
+              structure_type: SINGLE),
+            "Scale by Face Area Multiplier": Float(
+              description: "Multiply the instance scale with a factor to calibrate the considered face area",
+              structure_type: FIELD) = 1.0 in -10000.0..10000.0
+        },
+        "Corner Offset"(
+          description: "Offset the instances on face corners into their respective face") {
+            "Corner Offset Method": Menu(
+              description: "Method to define the direction of the offset along the corner",
+              menu_expanded: true,
+              optional_label: true) = "Face Center",
+            "Corner Offset Factor": Float(
+              subtype: FACTOR,
+              description: "Move the instances towards the face center",
+              structure_type: FIELD) = 0.1 in 0.0..1.0,
+            "Corner Offset Distance": Float(
+              subtype: DISTANCE,
+              description: "Distance to offset the instances from the face corner",
+              structure_type: FIELD) = 0.1 in 0.0..10000.0,
+            "Even Edge Distance": Bool(
+              description: "Adjust the offset distance to keep an even perpendicular distance to edges",
+              structure_type: FIELD) = true
+        }
+    }
+) -> Geometry {
+  "Elements to Points" {
+    menu_switch = MenuSwitch(menu: instance_on, Points: 0, Edges: 1, Faces: 2, Corners: 3) @ hide
+    normal = Normal()
+    edge_vertices = EdgeVertices() @ hide
+    vector_math_4 = edge_vertices.position_2 - edge_vertices.position_1 @ hide
+    vector_math_5 = normalize(vector_math_4) @ hide
+  }
+  menu_switch_2 = MenuSwitch(menu: instance_type, Object: 0, Collection: 1) @ hide
+  "Instance Index (if target type is collection)" {
+    index = Index() @ hide
+  }
+  menu_switch_3 = MenuSwitch(menu: input_type, "Data-Block": 0, Geometry: 1) @ hide
+  "Face Tangent Vector" {
+    position = Position()
+    vector_math = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+        value: position,
+        index: CornersOfFace(sort_index: 1).corner_index)
+      - EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: position, index: CornersOfFace().corner_index)
+  }
+  "Elements to Points" .. {
+    capture_attribute = CaptureAttribute[FACE](
+      Geometry,
+      "Face Area": FaceArea(),
+      Tangent: vector_math) @ #1b2f56
+    capture_attribute_3 = CaptureAttribute[EDGE](
+      capture_attribute.geometry,
+      Normal: normal.normal,
+      Tangent: vector_math_5) @ hide
+    capture_attribute_5 = CaptureAttribute[FACE](
+      capture_attribute.geometry,
+      Normal: normal.normal,
+      Tangent: capture_attribute.tangent) @ #1b2f56 hide
+  }
+  "Scale" {
+    "Scale by Face Area" {
+      switch_2 = scale_by_face_area
+        ? Scale * (sqrt(capture_attribute.face_area) * scale_by_face_area_multiplier)
+        : Scale
+      "Only use when instancing on faces" {
+        switch_4 = menu_switch.faces ? switch_2 : Scale
+      }
+    }
+  }
+  "Selection" {
+    random_value = RandomValue[BOOLEAN](
+      probability: Mask,
+      seed: HashValue(value: Seed, seed: 548754876))
+  }
+  "Face Corner Offset" {
+    "Face Center Offset" {
+      position_2 = Position()
+      mix = Mix[VECTOR](
+        factor: corner_offset_factor,
+        a: position_2,
+        b: EvaluateOnDomain[FACE, FLOAT_VECTOR](value: position_2))
+    }
+    "Corner Bisector Offset" {
+      group = face_corner_angle()
+      vector_math_2 = Position()
+        + group.bisector
+          * (even_edge_distance
+            ? corner_offset_distance / sin(group.corner_angle * 0.5)
+            : corner_offset_distance)
+    }
+    switch_9 = MenuSwitch[GEOMETRY](
+        menu: corner_offset_method,
+        "Face Center": _,
+        "Corner Center": _).corner_center
+      ? vector_math_2
+      : mix
+  }
+  switch_7 = menu_switch_3.geometry
+    ? pick_instance
+    : menu_switch_2.collection ? pick_instance : false
+  "Instance Index (if target type is collection)" .. {
+    switch_5 = switch_7
+      ? MenuSwitch(
+        menu: instance_index,
+        Random: HashValue(value: ID(), seed: Seed),
+        Sequence: index,
+        Input: instance_index_int).output
+      : index
+  }
+  "Corner Flank Direction" {
+    position_3 = Position()
+    vector_math_3 = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+        value: position_3,
+        index: OffsetCornerInFace(offset: -1))
+      - position_3
+  }
+  "Elements to Points" .. {
+    capture_attribute_2 = CaptureAttribute[CORNER](
+      capture_attribute.geometry,
+      Tangent: vector_math_3,
+      Normal: normal.normal) @ hide
+  }
+  "Face Tangent Vector" {
+    edge_vertices_2 = EdgeVertices() @ hide
+    vector_math_6 = edge_vertices_2.position_2 - edge_vertices_2.position_1 @ hide
+    vector_math_7 = normalize(vector_math_6) @ hide
+    evaluate_at_index = EvaluateAtIndex[EDGE, FLOAT_VECTOR](
+      value: vector_math_7,
+      index: EdgesOfVertex().edge_index)
+  }
+  "Elements to Points" .. {
+    capture_attribute_4 = CaptureAttribute(
+      capture_attribute.geometry,
+      Normal: normal.normal,
+      Value: evaluate_at_index) @ hide
+    index_switch = IndexSwitch(
+      menu_switch.output,
+      capture_attribute_4.geometry,
+      MeshToPoints[EDGES](capture_attribute_3.geometry),
+      MeshToPoints[FACES](capture_attribute_5.geometry),
+      MeshToPoints[CORNERS](capture_attribute_2.geometry, position: switch_9))
+    index_switch_2 = IndexSwitch(
+      menu_switch.output,
+      capture_attribute_4.normal,
+      capture_attribute_3.normal,
+      capture_attribute_5.normal,
+      capture_attribute_2.normal) @ hide
+    index_switch_3 = IndexSwitch(
+      menu_switch.output,
+      capture_attribute_4.value,
+      capture_attribute_3.tangent,
+      capture_attribute.tangent,
+      capture_attribute_2.tangent) @ hide
+  }
+  "Align Rotation to Normal" {
+    switch = Switch[ROTATION](
+      switch: align_rotation,
+      true_: AlignRotationToVector[axis: X, pivot_axis: Z](
+        rotation: AlignRotationToVector(vector: index_switch_2),
+        vector: index_switch_3))
+  }
+  "Input Geometry" {
+    switch_10 = pick_instance ? reset_transform : false
+    switch_6 = menu_switch_3.geometry
+      ? (switch_10 ? SetInstanceTransform(Instance, transform: CombineTransform()) : Instance)
+      : IndexSwitch(
+        menu_switch_2.output,
+        ObjectInfo(object: Object, as_instance: true).geometry,
+        switch_10
+          ? CollectionInfo(collection: Collection, separate_children: true, reset_children: true)
+          : CollectionInfo(collection: Collection, separate_children: true))
+  }
+  "Instance Fallback" {
+    switch_8 = Warning[INFO](
+        show: switch_7 and DomainSize[INSTANCES](switch_6) == 0,
+        message: "Pick Instance is on, but there are no instances to pick from. Falling back to using input as instance.")
+      ? GeometryToInstance(switch_6)
+      : switch_6
+  }
+  instance_on_points = InstanceOnPoints(
+    index_switch,
+    selection: random_value,
+    instance: switch_8,
+    pick_instance: switch_7,
+    instance_index: switch_5,
+    rotation: switch,
+    scale: switch_4)
+  "Offset" {
+    translate_instances = TranslateInstances(
+      instance_on_points,
+      translation: CombineXYZ(z: surface_offset))
+  }
+  switch_3 = realize_instances
+    ? RealizeInstances[realize_to_point_domain: true](translate_instances, preserve_normals: true)
+    : translate_instances
+  return keep_surface ? Geometry + switch_3 : switch_3
+}

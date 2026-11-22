@@ -1,0 +1,21 @@
+geometry(is_modifier: false) graph "Vertices Manifold"(
+    Mesh: Geometry,
+    Menu: Menu(optional_label: true) = Triangles,
+    "Group ID": Int(hide_value: true)
+) -> (Mesh: Geometry) {
+  {
+    sample_index = SampleIndex[FLOAT_VECTOR, clamp: true](Mesh, value: Position(), index: Index())
+  }
+  {
+    mesh_to_curve = MeshToCurve(Mesh)
+    set_position = MenuSwitch(
+        menu: Menu,
+        Triangles: FillCurve(mesh_to_curve, group_id: group_id),
+        "N-gons": FillCurve(mesh_to_curve, group_id: group_id, mode: "N-gons")).output
+      |> SetPosition(position: sample_index)
+  }
+  {
+    delete_geometry = DeleteGeometry(set_position, selection: EdgeNeighbors() == 0)
+  }
+  return (Mesh: delete_geometry)
+}

@@ -1,0 +1,92 @@
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Integer"(
+    Integer: Int(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field")
+) -> (Integer: Int(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Integer: EvaluateAtIndex[INT](
+      value: Integer,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Integer Run"(
+    Value: Int(description: "The field to check for changes in value", hide_value: true),
+    "Group ID": Int(
+      description: "Does not restart counting for each Group ID, but does increment by 1 when the Group ID changes",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(description: "The current value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, which increases by 1 whenever the `Value` or `Group ID` values change")
+) {
+  "A unique value for each grouping of a value. Accumulating along the field, the output Group Mask increments by 1 whenever the value or Group ID changes"
+  boolean_math = offset_integer(integer: Value, offset: -1) != Value
+    or group_id != offset_integer(integer: group_id, offset: -1)
+  return (
+    "Is Different": boolean_math,
+    "Group ID": AccumulateField[INT](value: boolean_math).leading)
+}
+
+geometry graph "Attribute Run"(
+    Name: String(
+      description: "The `Named Attribute` to read from the geometry before applying the `Integer Run` node",
+      optional_label: true),
+    "Group ID": Int(
+      description: "The `Group ID` to use for the `Integer Run` node",
+      hide_value: true)
+) -> (
+    "Is Different": Bool(
+      description: "The current point's `Named Attribute` value is different from the previous"),
+    "Group ID": Int(
+      description: "The new `Group ID`, increasing whenever the attribute or the `Group ID` values change")
+) {
+  "Group mask increments whenever the attribute or the Group ID changes"
+  group = integer_run(value: NamedAttribute[INT](name: Name).attribute, group_id: group_id)
+  return ("Is Different": group.is_different, "Group ID": group.group_id)
+}
+
+geometry graph "Group Parameter"(
+    "Group ID": Int(
+      description: "The identifier specifying groupings of the points",
+      hide_value: true)
+) -> (
+    "Is First": Bool(description: "If the point is the first point in the `Group ID`"),
+    "Is Last": Bool(description: "If the point is the last item in the `Group ID`"),
+    "Group Size": Int,
+    "Relative Index": Int(
+      description: "The relative index  of the point within the `Group ID`. Starts at `0` for the first point counting up to `Group Size - 1`")
+) {
+  accumulate_field = AccumulateField[INT](group_id: group_id)
+  return (
+    "Is First": not accumulate_field.trailing,
+    "Is Last": accumulate_field.leading == accumulate_field.total,
+    "Group Size": accumulate_field.total,
+    "Relative Index": accumulate_field.trailing)
+}
+
+geometry(is_modifier: false) graph ".MN_init_tmp_attributes"(Geometry: Geometry) -> Geometry {
+  group = group_parameter(group_id: NamedAttribute[INT](name: "tmp_ss_ID").attribute)
+  capture_attribute = Geometry
+    |> StoreNamedAttribute[INT](
+      name: "tmp_ss_ID",
+      value: attribute_run(name: "sec_struct", group_id: CurveOfPoint().curve_index).group_id)
+    |> CaptureAttribute(
+      "Is First": group.is_first,
+      "Is Last": group.is_last,
+      Size: group.group_size)
+  return capture_attribute.geometry
+    |> StoreNamedAttribute[INT](name: "tmp_ss_size", value: capture_attribute.size)
+    |> StoreNamedAttribute[BOOLEAN](name: "tmp_ss_first", value: capture_attribute.is_first)
+    |> StoreNamedAttribute[BOOLEAN](name: "tmp_ss_last", value: capture_attribute.is_last)
+    |> StoreNamedAttribute[INT](name: "tmp_idx_curve", value: CurveOfPoint().curve_index)
+}

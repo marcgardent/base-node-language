@@ -1,0 +1,397 @@
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph "Randomize Transforms"(
+    Instances: Geometry(description: "Instances to rotate individually"),
+    Selection: Bool(
+      description: "Selection of instances to randomize",
+      hide_value: true,
+      hide_in_modifier: true) = true,
+    "Local Space": Bool(
+      description: "Randomize instance transforms in their individual local space") = true,
+    Offset: Vector(
+      subtype: XYZ,
+      description: "Offset the instances randomly",
+      structure_type: FIELD) in -10000.0..10000.0,
+    Rotation: Vector(
+      subtype: EULER,
+      description: "Rotate the instances randomly",
+      structure_type: FIELD) in -10000.0..10000.0,
+    "Scale Axes": Menu(
+      description: "Whether to apply random scale uniformly or per axis",
+      force_non_field: true,
+      menu_expanded: true,
+      optional_label: true,
+      structure_type: SINGLE) = Uniform,
+    Scale: Vector(
+      description: "Scale the instances randomly per axis",
+      structure_type: FIELD) in 0.0..1.0,
+    Scale as scale_float: Float(
+      subtype: FACTOR,
+      description: "Scale the instances randomly",
+      structure_type: FIELD) in 0.0..1.0,
+    Flipping: Vector(
+      subtype: FACTOR,
+      description: "Flip a fraction of instances along individual axes",
+      structure_type: FIELD) in 0.0..1.0,
+    Seed: Int(
+      description: "Base value to control random variation in a reproducible way",
+      force_non_field: true,
+      structure_type: SINGLE)
+) -> (Instances: Geometry) {
+  hash_value_2 = HashValue(value: Seed, seed: 465656096)
+  hash_value = HashValue(value: hash_value_2, seed: 76836728)
+  switch = local_space ? (0.0, 0.0, 0.0) : Position()
+  return (
+    Instances: Instances
+      |> RotateInstances(
+        selection: Selection,
+        rotation: RandomValue[FLOAT_VECTOR](
+          min: Rotation * -0.5,
+          max: Rotation * 0.5,
+          seed: hash_value_2),
+        pivot_point: switch,
+        local_space: local_space)
+      |> TranslateInstances(
+        selection: Selection,
+        translation: RandomValue[FLOAT_VECTOR](
+            min: (-1.0, -1.0, -1.0),
+            seed: HashValue(value: hash_value, seed: 587641147))
+          * Offset,
+        local_space: local_space)
+      |> ScaleInstances(
+        selection: Selection,
+        scale: (1.0
+            - IndexSwitch[VECTOR](
+              MenuSwitch(menu: scale_axes, Uniform: 0, Axes: 1).output,
+              RandomValue(max: scale_float, seed: hash_value),
+              RandomValue[FLOAT_VECTOR](max: Scale, seed: hash_value)))
+          * sign(
+            RandomValue[FLOAT_VECTOR](
+              min: 1.0 - Flipping,
+              max: 0.0 - Flipping,
+              seed: HashValue(value: hash_value, seed: 76881592))),
+        center: switch,
+        local_space: local_space))
+}
+
+geometry(show_modifier_manage_panel: false) graph "Scatter on Surface"(
+    Mesh: Geometry(description: "Mesh on whose faces to scatter on"),
+    Selection: Bool(
+      description: "Which faces to scatter on",
+      hide_value: true,
+      hide_in_modifier: true) = true,
+    "Density Method": Menu(
+      description: "Method to define the number of scattered instances",
+      menu_expanded: true,
+      optional_label: true) = Density,
+    "Distribution Method": Menu(
+      description: "Method to use for scattering points",
+      menu_expanded: true,
+      optional_label: true) = Random,
+    Amount: Int(description: "Exact number of scattered instances before masking") = 1000 in 0..,
+    Density: Float(description: "Amount of scattered instances per unit squared") = 1.0 in 0.0..,
+    "Distribution Mask": Float(
+      subtype: FACTOR,
+      description: "Mask to multiply the density by") = 1.0 in 0.0..1.0,
+    "Minimum Distance": Float(
+      subtype: DISTANCE,
+      description: "Minimum allowed distance between the centers of two scattered instances. Increase value for a more locally even distribution.") in 0.0..,
+    "Keep Surface": Bool(
+      description: "Keep the original input geometry and join it with the scattered geometry") = true,
+    "Scatter on Instances": Bool(
+      description: "Use instances contained in the input geometry as base for scattering"),
+    Seed: Int(
+      description: "Base value to control random variation in a reproducible way",
+      force_non_field: true,
+      structure_type: SINGLE),
+    "Instancing"(description: "Configuration of the scattered instances") {
+        "Input Type": Menu(
+          description: "How the instance geometry input should be exposed",
+          hide_in_modifier: true,
+          menu_expanded: true,
+          optional_label: true) = "Data-Block",
+        "Instance Type": Menu(
+          description: "How the instance geometry data-block should be exposed",
+          menu_expanded: true,
+          optional_label: true) = Object,
+        Object: Object(description: "Object providing the instance geometry used for scattering"),
+        Collection: Collection(
+          description: "Collection providing the instance geometry used for scattering"),
+        Instance: Geometry(description: "Geometry that is instanced on the scattered points"),
+        "Viewport Visibility": Float(
+          subtype: FACTOR,
+          description: "Amount of scattered instances shown in the viewport") = 1.0 in 0.0..1.0,
+        "Realize Instances": Bool(
+          description: "Turn the output into a single geometry rather than instances (required by many other modifiers)"),
+        "Pick Instance"(
+          description: "Choose child instances for each element instead of instancing the entire geometry",
+          default_closed: true) {
+            "Pick Instance": Bool(
+              is_panel_toggle: true,
+              description: "Choose child instances for each element instead of instancing the entire geometry"),
+            "Reset Transform": Bool(
+              description: "Reset the transforms of each individual child instance") = true,
+            "Instance Seed": Int(
+              description: "Base value to control random instance variation in a reproducible way",
+              force_non_field: true,
+              structure_type: SINGLE)
+        },
+        "Transform"(
+          description: "Configure the transformation of scattered instances",
+          default_closed: true) {
+            "Surface Offset": Float(
+              subtype: DISTANCE,
+              description: "Distance to offset each instance along the normal of the surface geometry",
+              structure_type: FIELD) in -10000.0..10000.0,
+            "Align Rotation": Bool(
+              description: "Rotate instances based on the shape of the surface geometry",
+              structure_type: FIELD) = true,
+            "Alignment Axis": Menu(
+              description: "Which axis to align with the normal of the surface geometry",
+              force_non_field: true,
+              menu_expanded: true,
+              optional_label: true,
+              structure_type: SINGLE) = Z,
+            Scale: Vector(
+              subtype: XYZ,
+              description: "Scale of the instances on each local axis",
+              structure_type: FIELD) = (1.0, 1.0, 1.0),
+            "Randomize"(
+              description: "Randomize transforms between all scattered instances",
+              default_closed: true) {
+                Randomize: Bool(
+                  is_panel_toggle: true,
+                  description: "Randomize transforms between all scattered instances"),
+                "Randomize Offset": Vector(
+                  subtype: XYZ,
+                  description: "Offset the instances randomly") in -10000.0..10000.0,
+                "Randomize Rotation": Vector(
+                  subtype: EULER,
+                  description: "Rotate the instances randomly") in -6.28319..6.2831855,
+                "Randomize Scale Axes": Menu(
+                  description: "Whether to apply random scale uniformly or per axis",
+                  menu_expanded: true,
+                  optional_label: true) = Uniform,
+                "Randomize Scale": Vector(
+                  subtype: XYZ,
+                  description: "Scale the instances down randomly per axis") in 0.0..1.0,
+                "Randomize Scale" as randomize_scale_float: Float(
+                  subtype: FACTOR,
+                  description: "Scale the instances down randomly") in 0.0..1.0,
+                "Randomize Flipping": Vector(
+                  subtype: FACTOR,
+                  description: "Flip a fraction of instances along individual axes") in 0.0..1.0,
+                "Randomize Seed": Int(
+                  description: "Base value to control random variation in a reproducible way")
+            }
+        }
+    },
+    "Masking"(
+      description: "Additional masking applied after the initial scattering of instances",
+      default_closed: true) {
+        Masking: Bool(
+          is_panel_toggle: true,
+          description: "Additional masking applied after the initial scattering of instances"),
+        "Image Mask": Image(
+          description: "Grayscale image texture used to remove scattered instances"),
+        "UV Map": Vector(
+          description: "Texture coordinates used to map the image on the surface",
+          hide_value: true,
+          default_attribute_name: "UVMap",
+          structure_type: FIELD) = Position()
+    }
+) -> (Instances: Geometry) {
+  "Instance Geometry" {
+    menu_switch = MenuSwitch(menu: instance_type, Object: 0, Collection: 1)
+    menu_switch_3 = MenuSwitch(menu: input_type, "Data-Block": 0, Geometry: 1)
+    switch_18 = pick_instance ? reset_transform : false
+    index_switch = IndexSwitch(
+      menu_switch_3.geometry,
+      IndexSwitch(
+        menu_switch.output,
+        ObjectInfo(object: Object, as_instance: true).geometry,
+        switch_18
+          ? CollectionInfo(collection: Collection, separate_children: true, reset_children: true)
+          : CollectionInfo(collection: Collection, separate_children: true)),
+      switch_18 ? SetInstanceTransform(Instance, transform: CombineTransform()) : Instance)
+  }
+  menu_switch_2 = MenuSwitch(menu: distribution_method, Random: 0, "Poisson Disk": 1)
+  switch_5 = menu_switch_3.geometry ? pick_instance : menu_switch.collection ? pick_instance : false
+  "Distribution" {
+    "Density" {
+      math = distribution_mask * Density @ hide
+      switch_16 = scatter_on_instances ? Mesh : SeparateComponents(Mesh).mesh
+      distribute_points_on_faces = DistributePointsOnFaces(
+        switch_16,
+        selection: Selection,
+        density: math,
+        seed: Seed)
+      attribute_statistic = AttributeStatistic[CORNER](switch_16, attribute: Density)
+      math_2 = Density / attribute_statistic.max @ hide
+      math_7 = distribution_mask * math_2 @ hide
+      distribute_points_on_faces_2 = DistributePointsOnFaces[POISSON](
+        switch_16,
+        selection: Selection,
+        distance_min: minimum_distance,
+        density_max: attribute_statistic.max,
+        density_factor: math_7,
+        seed: Seed)
+      switch = menu_switch_2.poisson_disk
+        ? distribute_points_on_faces_2.points
+        : distribute_points_on_faces.points
+      switch_2 = menu_switch_2.poisson_disk
+        ? distribute_points_on_faces_2.rotation
+        : distribute_points_on_faces.rotation
+      switch_15 = menu_switch_2.poisson_disk
+        ? distribute_points_on_faces_2.normal
+        : distribute_points_on_faces.normal
+    }
+    "Amount" {
+      "Initial Density Estimate" {
+        face_area = FaceArea()
+        attribute_statistic_2 = AttributeStatistic[FACE](
+          Mesh,
+          selection: Selection,
+          attribute: face_area)
+        math_6 = Amount
+          / attribute_statistic_2.sum
+          * (attribute_statistic_2.sum
+            / AttributeStatistic[FACE](
+              Mesh,
+              selection: Selection,
+              attribute: distribution_mask * face_area).sum)
+        "10% supersample" {
+          math_3 = math_6 * 1.1
+        }
+        math_8 = math_6
+          * AttributeStatistic[FACE](Mesh, selection: Selection, attribute: distribution_mask).max
+      }
+      integer = 5 @ "Maximum Iterations"
+      repeat_output = repeat(
+        integer,
+        Geometry: Geometry,
+        Output: Rotation = (0.0, 0.0, 0.0),
+        Normal: (0.0, 0.0, 0.0),
+        Density: math_3,
+        Result: false) -> {
+        distribute_points_on_faces_3 = DistributePointsOnFaces(
+          Mesh,
+          selection: Selection,
+          density: Density * distribution_mask,
+          seed: Seed)
+        "Make new density estimate" {
+          domain_size = DomainSize[POINTCLOUD](distribute_points_on_faces_3.points)
+          compare = domain_size >= Amount
+          "new estimate" {
+            math_4 = Amount / domain_size @ "ratio" hide
+            math_5 = math_4 * 1.1 @ "supersampling" hide
+            clamp = Clamp(value: math_5, min: 1.1, max: 10.0) @ hide
+            switch_10 = domain_size ? clamp : 2.0 @ "fallback"
+          }
+        }
+        return (
+          Geometry: Result ? Geometry : distribute_points_on_faces_3.points,
+          Output: Result ? Output : distribute_points_on_faces_3.rotation,
+          Normal: Result ? Normal : distribute_points_on_faces_3.normal,
+          Density: Result ? Density : switch_10 * Density,
+          Result: Result ? Result : compare)
+      }
+      delete_geometry = repeat_output.geometry
+        |> SortElements(sort_weight: RandomValue(seed: HashValue(value: Seed, seed: 32351)))
+        |> DeleteGeometry(selection: Index() >= Amount)
+    }
+  }
+  menu_switch_4 = MenuSwitch(menu: density_method, Density: 0, Amount: 1)
+  switch_8 = menu_switch_4.amount ? delete_geometry : switch
+  switch_9 = menu_switch_4.amount ? repeat_output.output : switch_2
+  switch_11 = menu_switch_4.amount ? math_8 : attribute_statistic.max
+  "Instance Geometry" .. {
+    "Dummy Cube" {
+      geometry_to_instance = GeometryToInstance(
+        Cube(size: pow(0.31830987 / switch_11, 0.5)).mesh |> DeleteGeometry[ONLY_FACE, FACE]())
+    }
+    switch_3 = IntegerMath[ADD](
+          Value: DomainSize(index_switch).point_count,
+          Value_001: DomainSize[INSTANCES](index_switch))
+        == 0
+      ? geometry_to_instance
+      : index_switch
+  }
+  "Viewport Visibility" {
+    switch_12 = viewport_visibility < 1.0 and IsViewport()
+      ? DeleteGeometry(
+        switch_8,
+        selection: RandomValue(seed: HashValue(value: Seed, seed: 32351)) > viewport_visibility)
+      : switch_8
+  }
+  "Alignment" {
+    transform_direction = TransformDirection(direction: (0.0, 0.0, 1.0), transform: switch_9)
+    menu_switch_5 = MenuSwitch(menu: alignment_axis, X: 0, Y: 1, Z: 2) @ hide
+    switch_4 = Switch[ROTATION](
+      switch: align_rotation,
+      true_: IndexSwitch(
+        menu_switch_5.output,
+        AlignRotationToVector[axis: X](rotation: switch_9, vector: transform_direction),
+        AlignRotationToVector[axis: Y](rotation: switch_9, vector: transform_direction),
+        switch_9))
+  }
+  "Masking" {
+    image_info = ImageInfo(image: image_mask) @ hide
+    compare_2 = image_info.width > 0 @ hide
+    switch_7 = Masking
+      ? (compare_2
+        ? DeleteGeometry(
+          switch_12,
+          selection: RandomValue[BOOLEAN](
+            probability: Math[SUBTRACT](
+              Value: 1.0,
+              Value_001: ImageTexture(image: image_mask, vector: uv_map).color),
+            seed: HashValue(value: Seed, seed: -75381)))
+        : switch_12)
+      : switch_12
+  }
+  switch_14 = menu_switch_4.amount ? repeat_output.normal : switch_15
+  "Normal Offset" {
+    set_position = SetPosition(switch_7, offset: switch_14 * surface_offset)
+  }
+  separate_components = SeparateComponents(Mesh) @ hide
+  "Instance Fallback" {
+    switch_17 = Warning[INFO](
+        show: switch_5 and DomainSize[INSTANCES](switch_3) == 0,
+        message: "Pick Instance is on, but there are no instances to pick from. Falling back to using input as instance.")
+      ? GeometryToInstance(switch_3)
+      : switch_3
+  }
+  instance_on_points = InstanceOnPoints(
+    set_position,
+    instance: switch_17,
+    pick_instance: switch_5,
+    instance_index: switch_5 ? HashValue(value: ID(), seed: instance_seed) : 0,
+    rotation: switch_4,
+    scale: Scale)
+  "Randomization" {
+    switch_13 = Randomize
+      ? randomize_transforms(
+        instance_on_points,
+        offset: randomize_offset,
+        rotation: randomize_rotation,
+        scale_axes: randomize_scale_axes,
+        Scale: randomize_scale,
+        scale_float: randomize_scale_float,
+        flipping: randomize_flipping,
+        seed: HashValue(value: Seed, seed: randomize_seed))
+      : instance_on_points
+  }
+  switch_6 = realize_instances
+    ? RealizeInstances[realize_to_point_domain: true](switch_13, preserve_normals: true)
+    : switch_13
+  return (
+    Instances: keep_surface
+      ? Mesh + switch_6
+      : scatter_on_instances
+        ? switch_6
+        : separate_components.curve
+          + separate_components.grease_pencil
+          + separate_components.point_cloud
+          + separate_components.volume
+          + separate_components.instances
+          + switch_6)
+}

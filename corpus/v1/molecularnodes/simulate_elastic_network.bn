@@ -1,0 +1,294 @@
+geometry graph "Edge Length"() -> (Length: Float) {
+  edge_vertices = EdgeVertices()
+  return (
+    Length: EvaluateOnDomain[EDGE](
+      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph Mass(
+    Index: Int = Index() in 0..
+) -> (mass: Float(description: "Read the `mass` attribute from the geometry")) {
+  return (mass: EvaluateAtIndex(value: fallback_float(name: "mass", fallback: 1.0), index: Index))
+}
+
+geometry graph "XPBD Finalise"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE)
+) -> Geometry {
+  return StoreNamedAttribute[FLOAT_VECTOR](
+    Geometry,
+    selection: Selection,
+    name: "velocity",
+    value: (Position() - NamedAttribute[FLOAT_VECTOR](name: "p_i").attribute) / deltaT)
+}
+
+geometry graph "Inverse Mass"() -> (Exists: Bool, w: Float, mass: Float) {
+  group = fallback_float(name: "mass", fallback: 1.0)
+  string = "inverse_mass"
+  return (
+    Exists: NamedAttribute(name: string).exists,
+    w: fallback_float(name: string, fallback: 1.0 / group),
+    mass: group)
+}
+
+geometry graph Velocity() -> (velocity: Vector) {
+  return (velocity: NamedAttribute[FLOAT_VECTOR](name: "velocity").attribute)
+}
+
+geometry graph "XPBD Init"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Force: Vector = (0.0, 0.0, -9.8) in -10000.0..10000.0,
+    Drag: Float = 10.0 in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in -10000.0..10000.0
+) -> Geometry {
+  "New Forces" {
+    vector_math = Force * deltaT * inverse_mass().w
+  }
+  "Drag Force" {
+    Velocity = Velocity()
+    vector_math_2 = Velocity * Clamp(value: 1.0 - Drag * deltaT)
+  }
+  return Geometry
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "p_i", value: Position())
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "velocity", value: vector_math_2 + vector_math)
+    |> SetPosition(selection: Selection, offset: Velocity() * deltaT)
+}
+
+geometry graph "Constraint Distance"(
+    Target: Vector in -10000.0..10000.0,
+    Self: Vector = Position() in -10000.0..10000.0,
+    Distance: Float = 0.5 in -10000.0..10000.0,
+    W1: Float = 0.5 in 0.0..10000.0,
+    W2: Float = 0.5 in 0.0..10000.0,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> (Correction: Vector, Value: Float) {
+  vector_math = Target - Self
+  vector_math_2 = length(vector_math)
+  return (
+    Correction: normalize(vector_math)
+      * ((vector_math_2 - Distance) * (W1 / (W1 + W2 + alpha / (deltaT * deltaT)))),
+    Value: vector_math_2)
+}
+
+geometry graph "Edge Info"(
+    "Vertex Index": Int(hide_value: true) = Index(),
+    "Edge Index": Int(
+      description: "Index within the gorup of edges that are connected to this point") in 0..3
+) -> (
+    "Is Valid": Bool(description: "Whether there is a valid edge corresponding to the given index"),
+    "Point Index": Int(
+      description: "The index for the other point involved in this edge, -1 if not connected"),
+    "Point Position": Vector(
+      description: "The position for the other point involved in this edge, (0, 0, 0) if not connected"),
+    "Edge Index": Int(
+      description: "The index on the edge domain for the selected edge. -1 if not connected"),
+    "Edge Vector": Vector(
+      subtype: EULER,
+      description: "The vector along the selected edge. (0, 0, 0) if not connected"),
+    "Edge Length": Float(description: "Length of the selected edge, -1 if not connected")
+) {
+  edge_vertices = EdgeVertices()
+  edges_of_vertex = EdgesOfVertex(vertex_index: vertex_index, sort_index: edge_index)
+  "Check edge exists, or return index -1 and (0, 0, 0) vector" {
+    compare = edge_index < edges_of_vertex.total
+  }
+  math = EvaluateAtIndex[EDGE, INT](
+      value: edge_vertices.vertex_index_1 + edge_vertices.vertex_index_2,
+      index: edges_of_vertex.edge_index)
+    - Index()
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](value: position, index: math)
+  vector_math = evaluate_at_index - position
+  return (
+    "Is Valid": compare,
+    "Point Index": Switch[INT](switch: compare, false_: -1, true_: math),
+    "Point Position": evaluate_at_index,
+    "Edge Index": compare ? edges_of_vertex.edge_index : -1,
+    "Edge Vector": compare ? vector_math : (0.0, 0.0, 0.0),
+    "Edge Length": compare ? length(vector_math) : -1.0)
+}
+
+geometry graph "XPBD Solve Edges"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Distance: Float = 0.27 in 0.0..10000.0,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> Geometry {
+  group = inverse_mass()
+  repeat_output = repeat(
+    AttributeStatistic(Geometry, attribute: EdgesOfVertex().total).max,
+    Geometry: Geometry,
+    Correction: (0.0, 0.0, 0.0),
+    Value: 0) -> {
+    group_2 = edge_info(edge_index: iteration)
+    boolean_math = Selection and group_2.is_valid
+    return (
+      Correction: Correction
+        + (boolean_math
+          ? constraint_distance(
+            target: group_2.point_position,
+            distance: EvaluateAtIndex[EDGE](value: Distance, index: group_2.edge_index),
+            w1: group.w,
+            w2: EvaluateAtIndex(value: group.w, index: group_2.edge_index),
+            alpha: EvaluateAtIndex[EDGE](value: alpha, index: group_2.edge_index),
+            deltat: deltaT).correction
+          : (0.0, 0.0, 0.0)),
+      Value: IntegerMath[ADD](Value: Value, Value_001: boolean_math))
+  }
+  return SetPosition(repeat_output.geometry, offset: repeat_output.correction / repeat_output.value)
+}
+
+geometry graph "Lerp Position"(
+    a: Vector = Position() in -10000.0..10000.0,
+    b: Vector in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 0.5 in -10000.0..10000.0,
+    Decay: Float = 0.5 in -10000.0..10000.0
+) -> (Position: Vector, Length: Float) {
+  vector_math = a - b
+  return (Position: b + vector_math * exp(deltaT * -Decay), Length: length(vector_math))
+}
+
+geometry graph "XPBD Solve Hook"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true),
+    Target: Vector in -10000.0..10000.0,
+    Decay: Float = 0.5 in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) = 0.5 in -10000.0..10000.0
+) -> Geometry {
+  group = lerp_position(b: Target, deltat: deltaT, decay: Decay)
+  switch = group.length < 0.01 ? Target : group.position
+  return SetPosition(Geometry, selection: Selection, position: group.position)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "XPBD Solve Points"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Radius: Float,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> Geometry {
+  group = inverse_mass()
+  group_2 = residue_id()
+  capture_attribute = Geometry
+    |> CaptureAttribute(
+      Vector: Position() + RandomValue[FLOAT_VECTOR](min: (-1.0, -1.0, -1.0)) * 0.001).geometry
+    |> CaptureAttribute(Index: IndexOfNearest().index)
+  evaluate_at_index = EvaluateAtIndex[INT](value: group_2, index: capture_attribute.index)
+  compare = IntegerMath[ABSOLUTE](
+      value: IntegerMath[SUBTRACT](Value: group_2, Value_001: evaluate_at_index))
+    != 1
+  math = EvaluateAtIndex(value: Radius, index: capture_attribute.index) + Radius
+  group_3 = constraint_distance(
+    target: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: capture_attribute.index),
+    distance: math,
+    w1: group.w,
+    w2: EvaluateAtIndex(value: group.w, index: capture_attribute.index),
+    alpha: alpha,
+    deltat: deltaT)
+  return SetPosition(
+    capture_attribute.geometry,
+    selection: ShortestEdgePaths(end_vertex: evaluate_at_index == Index()).next_vertex_index
+        != capture_attribute.index
+      and (Selection and math > group_3.value),
+    offset: group_3.correction)
+}
+
+geometry(is_modifier: false) graph "Simulate Elastic Network"(
+    Mesh: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Substeps: Int = 5 in 1..100,
+    "Simulation" {
+        Force: Vector(hide_value: true) in -10000.0..10000.0,
+        Drag: Float = 0.1 in 0.0..10000.0,
+        "Edge" {
+            "Edge Length Source": Menu(optional_label: true) = Original,
+            "Edge Length": Float = 0.1 in 0.0..10000.0,
+            "Edge alpha": Float in 0.0..
+        },
+        "Particle" {
+            "Particle Radius": Float = 0.005 in 0.0..,
+            "Particle alpha": Float in 0.0..
+        }
+    },
+    "Hook" {
+        "Hook Selection": Bool(hide_value: true),
+        "Hook Target": Vector(hide_value: true) in -10000.0..10000.0,
+        "Hook Decay": Float = 2.0 in 0.0..10000.0
+    },
+    "Pin" {
+        "Pin Selection": Bool(hide_value: true),
+        "Pin Target": Vector(hide_value: true) = Position()
+    }
+) -> Geometry {
+  boolean_math = nimply(Selection, pin_selection)
+  Mass = Mass()
+  simulation_output = simulate(
+    Geometry: Mesh
+      |> StoreNamedAttribute(
+        selection: not NamedAttribute(name: "mass").exists,
+        name: "mass",
+        value: 1.0)
+      |> StoreNamedAttribute[EDGE](name: "tmp_length", value: edge_length())) -> {
+    math = delta_time / Substeps
+    repeat_output = repeat(
+      Substeps,
+      Geometry: StoreNamedAttribute(Geometry, name: "inverse_mass", value: Mass / 0.5)) -> {
+      return Geometry
+        |> xpbd_init(selection: boolean_math, force: Force, drag: Drag, deltat: math)
+        |> xpbd_solve_edges(
+          selection: boolean_math,
+          distance: MenuSwitch(
+            menu: edge_length_source,
+            Original: NamedAttribute(name: "tmp_length").attribute,
+            Custom: edge_length).output,
+          alpha: edge_alpha,
+          deltat: math)
+        |> xpbd_solve_points(
+          selection: boolean_math,
+          radius: particle_radius,
+          alpha: particle_alpha,
+          deltat: math)
+        |> xpbd_solve_hook(
+          selection: hook_selection,
+          target: hook_target,
+          decay: hook_decay,
+          deltat: math)
+        |> SetPosition(selection: pin_selection, position: pin_target)
+        |> xpbd_finalise(selection: boolean_math, deltat: math)
+    }
+    return repeat_output
+  }
+  return RemoveNamedAttribute(simulation_output, pattern_mode: Wildcard, name: "tmp_*")
+}

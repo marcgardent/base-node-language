@@ -1,0 +1,13 @@
+geometry graph ".Is Extra Bonds"() -> (
+    "Is Extra Bonds": Bool,
+    "Is Double Bond": Bool,
+    "Is Triple Bond": Bool
+) {
+  named_attribute = NamedAttribute[INT](name: "bond_type")
+  compare = named_attribute.attribute == 2
+  compare_2 = named_attribute.attribute == 3
+  return (
+    "Is Extra Bonds": compare or compare_2 or named_attribute.attribute == 6,
+    "Is Double Bond": compare,
+    "Is Triple Bond": compare_2)
+}

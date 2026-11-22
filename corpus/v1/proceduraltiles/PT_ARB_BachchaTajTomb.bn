@@ -1,0 +1,96 @@
+shader graph PT_ARB_BachchaTajTomb(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    "UV oriented": Bool = true
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  value = 0.083333
+  {
+    value_2 = 6.0
+    value_3 = 0.5
+  }
+  math_30 = Scale / 3.0
+  vector_math_2 = Vector * math_30
+  "HexagonalTiling" {
+    vector_math_11 = (0.0, 0.0, 0.0) * 10.0
+    combine_xyz_2 = CombineXYZ(x: 1.7320508, y: 1.0)
+    vector_math_12 = vector_math_2 / combine_xyz_2
+    mix = (abs((fract(vector_math_12) - (0.5, 0.5, 0.0)) * combine_xyz_2) - (0.57735026, 0.0, 0.0))
+          ⋅ combine_xyz_2
+        > 0.0
+      ? floor((vector_math_2 - combine_xyz_2 * 0.5) / combine_xyz_2) * combine_xyz_2 + combine_xyz_2
+      : floor(vector_math_12) * combine_xyz_2 + combine_xyz_2 * 0.5
+    vector_math_13 = vector_math_2 - mix
+  }
+  vector_math = vector_math_13 + (0.5, 0.5, 0.0) @ hide
+  .. {
+    vector_math_5 = vector_math - (0.5, 0.5, 0.0)
+    separate_xyz = SeparateXYZ(vector: vector_math_5) @ hide
+    math_13 = atan2(separate_xyz.y, separate_xyz.x) @ hide
+    math_14 = separate_xyz.y < 0.0 @ hide
+    math_16 = math_14 * 6.2831855 @ hide
+    math_15 = math_13 + math_16 @ hide
+    math_17 = math_15 / 6.2831855 @ hide
+    math_18 = math_17 * value_2 @ hide
+    math_19 = floor(math_18) @ hide
+    math_22 = math_19 + 0.5 @ hide
+    math_20 = math_22 / value_2 @ hide
+    math_21 = math_20 * 6.28319 @ hide
+    math_23 = -math_21 @ hide
+    vector_math_6 = (VectorRotate(vector: vector_math_5, angle: math_23) - CombineXYZ(x: value_3))
+      * (-1.0, 1.0, 0.0)
+    combine_xyz = CombineXYZ(x: vector_math_6.y, y: vector_math_6.x)
+  }
+  math = abs(combine_xyz ⋅ normalize((1.7320508, 1.0, 0.0)))
+  vector_math_3 = combine_xyz ⋅ normalize((-1.73205, 1.0, 0.0))
+  math_2 = abs(vector_math_3)
+  vector_math_4 = combine_xyz - (0.0, 0.25, 0.0)
+  math_3 = vector_math_4.y + 0.16666667
+  math_4 = abs(math_3)
+  math_5 = min(math, max(math_2, math_4))
+  math_6 = math_5 > 0.0833335 @ hide
+  math_7 = max(math_2, abs(vector_math_4.y))
+  math_8 = math_7 > 0.0833335 @ hide
+  math_9 = vector_math_4.x > 0.0 @ hide
+  math_10 = vector_math_4.y > -0.083333 @ hide
+  math_11 = vector_math_3 < 0.083333 @ hide
+  math_12 = math_3 < 0.083333 @ hide
+  math_24 = (math_19 - 4.0) * 1.0471976
+  vector_math_7 = mix
+    + VectorRotate(
+      vector: math_6
+        ? (math_8
+          ? (math_10 ? (0.0, 0.0, 0.0) : math_9 ? (0.28867513, -0.5, 0.0) : (-0.288675, -0.5, 0.0))
+          : (0.261182, -0.214286, 0.0))
+        : (-0.054986, -0.333333, 0.0),
+      angle: math_24)
+  vector_math_8 = vector_math_7 / math_30
+  vector_math_9 = Vector - vector_math_8
+  vector_math_10 = vector_math_7 + (1000.0, 1000.0, 0.0) @ hide
+  math_25 = Math[FLOORED_MODULO](Value: math_19, Value_001: 2.0)
+  {
+    math_26 = min(math_6, math_8)
+    math_27 = math_5 < 0.083333 @ hide
+    math_28 = math_7 < 0.0833335 @ hide
+    math_29 = Math[SUBTRACT, use_clamp: true](Value: math_26, Value_001: math_10) * 3.0
+      + Mix(
+        factor: math_26,
+        a: Mix(factor: min(math_27, math_25), a: 1.0, b: 2.0)
+          + (math_28
+            ? Mix(factor: MapRange(value: math_25, to_min: 1.0, to_max: 0.0), b: 0.99999994)
+            : 0.0))
+  }
+  return (
+    Position: vector_math_8,
+    UV: uv_oriented
+      ? VectorRotate[invert: true](
+        vector: vector_math_9,
+        angle: Mix(factor: math_26, a: math_24 + math_28 * 1.0472))
+      : vector_math_9,
+    Color: WhiteNoiseTexture(vector: vector_math_10).color,
+    Edge: min(
+        min(abs((math_11 ? math_4 : math) - 0.083333), abs(math_2 - 0.083333) + math_12)
+          + (vector_math_3 < -0.083333),
+        abs(-(vector_math_3 + 0.083333)))
+      / math_30,
+    Masks: math_29)
+}

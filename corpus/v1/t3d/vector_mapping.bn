@@ -1,0 +1,15 @@
+geometry graph "Vector Mapping"(
+    Invert: Bool,
+    Vector: Vector(hide_value: true) = Position() in -10000.0..10000.0,
+    Translation: Vector(subtype: TRANSLATION),
+    Rotation: Rotation,
+    Scale: Vector(subtype: XYZ) = (1.0, 1.0, 1.0)
+) -> Vector {
+  "Mapping" {
+    switch = Invert
+      ? RotateVector(vector: Vector - Translation, rotation: InvertRotation(rotation: Rotation))
+        / Scale
+      : RotateVector(vector: Vector + Translation, rotation: Rotation) * Scale
+  }
+  return switch
+}

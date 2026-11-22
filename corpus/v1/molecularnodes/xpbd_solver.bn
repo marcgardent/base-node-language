@@ -1,0 +1,46 @@
+geometry graph "XPBD Solver"(
+    World: Bundle(description: "World state that is updated by the solver"),
+    "Delta Time": Float(subtype: TIME_ABSOLUTE) = 0.04 in 0.0..,
+    Filter: String(
+      description: "Filters the geometry sets to process based on their tags",
+      optional_label: true),
+    "Simulation to World": Matrix,
+    "Solver"(default_closed: true) {
+        Substeps: Int = 10 in 1..,
+        "Constraint Iterations": Int = 1 in 1..,
+        "Solver Output Path": String(
+          description: "Optional output path in the world bundle for solver data",
+          optional_label: true)
+    }
+) -> (World: Bundle) {
+  "Evaluate substeps one at a time" {
+    math = 1.0 / Substeps
+    repeat_output = repeat(Substeps, World: World) -> {
+      math_2 = iteration * math
+      return XPBDSolver(
+        world: World,
+        delta_time: delta_time / Substeps,
+        filter: Filter,
+        simulation_to_world: simulation_to_world,
+        substeps: 1,
+        constraint_iterations: constraint_iterations,
+        solver_path: solver_output_path,
+        begin: math_2,
+        end: math_2 + math)
+    }
+  }
+  "Evaluate all substeps at once" {
+    xpbdsolver = XPBDSolver(
+      world: World,
+      delta_time: delta_time,
+      filter: Filter,
+      simulation_to_world: simulation_to_world,
+      substeps: Substeps,
+      constraint_iterations: constraint_iterations,
+      solver_path: solver_output_path)
+  }
+  "The result of approaches should be equal" {
+    switch = Switch[BUNDLE](false_: xpbdsolver, true_: repeat_output)
+  }
+  return (World: switch)
+}

@@ -1,0 +1,27 @@
+geometry graph MN_animate_noise_repeat(
+    Amplitude: Float = 1.0 in -10000.0..10000.0,
+    Detail: Float = 0.5 in 0.0..15.0,
+    Roughness: Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    Distortion: Float in -1000.0..1000.0,
+    Vector: Vector(hide_value: true, default_attribute_name: "position") in -10000.0..10000.0,
+    Speed: Float = 0.5 in -10000.0..10000.0,
+    "Animate 0..1": Float = 0.5 in -10000.0..10000.0
+) -> ("Noise Float": Float, "Noise Vector": Vector) {
+  value = 4.0
+  vector_math = (Vector
+      + CombineXYZ(x: animate_0_1 * Speed)
+      + RandomValue[FLOAT_VECTOR](min: (-10.0, -10.0, -10.0), max: (-1.0, 10.0, 10.0), id: Vector))
+    * (6.2831855 / Speed)
+  value_2 = 0.2
+  noise_texture = NoiseTexture["4D"](
+    vector: CombineXYZ(x: sin(vector_math.x), y: cos(vector_math.x), z: sin(vector_math.y)),
+    w: cos(vector_math.y),
+    scale: Speed * value_2,
+    detail: Detail,
+    roughness: Clamp(value: Roughness),
+    distortion: Distortion)
+  return (
+    "Noise Float": MapRange(value: noise_texture.factor, to_min: -1.0) * Amplitude,
+    "Noise Vector": MapRange[FLOAT_VECTOR](vector: noise_texture.color, to_min: (-1.0, -1.0, -1.0))
+      * Amplitude)
+}

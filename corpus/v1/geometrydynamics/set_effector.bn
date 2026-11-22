@@ -1,0 +1,28 @@
+geometry(is_modifier: false) graph "Set Effector"(
+    Geometry: Geometry(
+      description: "Geometry to add the effector to.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Effector: Bundle(
+      description: "The actual bundle containing one or multiple effectors.",
+      force_non_field: true,
+      structure_type: SINGLE),
+    Name: String(
+      description: "Name of the effector in the geometry bundle.",
+      force_non_field: true,
+      optional_label: true,
+      structure_type: SINGLE)
+) -> (
+    Geometry: Geometry(description: "The same geometry but with additional effector information.")
+) {
+  "Add effector information to the geometry bundle."
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  string = "effectors"
+  return (
+    Geometry: SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: StoreBundleItem[BUNDLE](
+        bundle: get_geometry_bundle.bundle,
+        path: JoinStrings("/", string, Name == "" ? "default" : Name),
+        item: Effector)))
+}

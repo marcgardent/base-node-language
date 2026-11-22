@@ -1,0 +1,7 @@
+geometry graph "Edge Angle Selection"(
+    Angle: Float(subtype: ANGLE) = 0.5235988
+) -> (Selection: Bool) {
+  "Edge Angle" {
+    return (Selection: EdgeAngle().unsigned_angle > Angle)
+  }
+}

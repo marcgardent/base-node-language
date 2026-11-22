@@ -1,0 +1,53 @@
+shader graph PT_RotatedScales(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0,
+    Scale: Float = 10.0 in -10000.0..10000.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  vector_math = Vector * Scale
+  vector_math_2 = fract(vector_math)
+  combine_xyz = CombineXYZ(
+    x: Math[PINGPONG](Value: vector_math_2.x),
+    y: Math[PINGPONG](Value: vector_math_2.y))
+  "checker" {
+    vector_math_3 = floor(vector_math)
+    math = Math[FLOORED_MODULO](
+      Value: Math[MULTIPLY](Value: vector_math_3, Value_001: 3.0),
+      Value_001: 2.0)
+  }
+  math_2 = length(combine_xyz - (0.0, 0.5, 0.0)) - 0.5
+  combine_xyz_2 = CombineXYZ(
+    x: Math[PINGPONG](Value: -vector_math_2.y),
+    y: Math[PINGPONG](Value: vector_math_2.x))
+  math_3 = length(combine_xyz_2 - (0.0, 0.5, 0.0)) - 0.5
+  math_4 = vector_math_2.x > 0.5 @ hide
+  math_5 = vector_math_2.y > 0.5 @ hide
+  math_6 = vector_math_2.y > 0.5 @ hide
+  math_7 = vector_math_2.x > 0.5 @ hide
+  math_8 = math_2 < 0.0 @ hide
+  math_9 = math_3 < 0.0 @ hide
+  mix = math_5 ? (0.5, 1.16667, 0.0) : (0.5, -0.166667, 0.0)
+  mix_2 = math_7 ? (1.1666666, 0.5, 0.0) : (-0.16666667, 0.5, 0.0)
+  vector_math_4 = vector_math_3
+    + Mix[VECTOR](
+      factor: math,
+      a: math_4 ? (math_8 ? (0.8333333, 0.5, 0.0) : mix) : math_8 ? (0.16666667, 0.5, 0.0) : mix,
+      b: math_6
+        ? (math_9 ? (0.5, 0.8333333, 0.0) : mix_2)
+        : math_9 ? (0.5, 0.16666667, 0.0) : mix_2)
+  vector_math_5 = vector_math_4 * (1.0 / Scale)
+  vector_math_6 = vector_math_4 + (1000.0, 1000.0, 0.0) @ hide
+  mix_3 = math_5 ? 1.0 : 3.0
+  mix_4 = math_7 ? 2.0 : 0.0
+  return (
+    Position: vector_math_5,
+    UV: Vector - vector_math_5,
+    Color: WhiteNoiseTexture(vector: vector_math_6).color,
+    Edge: Mix(
+        factor: math,
+        a: min(abs(math_2), abs(length(combine_xyz - (-0.5, 0.0, 0.0)) - 0.5)),
+        b: min(abs(math_3), abs(length(combine_xyz_2 - (-0.5, 0.0, 0.0)) - 0.5)))
+      / Scale,
+    Masks: Mix(
+      factor: math,
+      a: math_4 ? (math_8 ? 0.0 : mix_3) : math_8 ? 2.0 : mix_3,
+      b: math_6 ? (math_9 ? 3.0 : mix_4) : math_9 ? 1.0 : mix_4))
+}

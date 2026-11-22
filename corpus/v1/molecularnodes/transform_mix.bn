@@ -1,0 +1,34 @@
+geometry graph "Transform Mix"(
+    A: Matrix(description: "Transform A to mix from at 0.0"),
+    B: Matrix(description: "Transform B which will be mixed to at 1.0"),
+    Menu: Menu(menu_expanded: true, optional_label: true) = Single,
+    Translation: Float(
+      subtype: FACTOR,
+      description: "Amount to mix the Translation between A and B") = 0.5 in 0.0..1.0,
+    Rotation: Float(
+      subtype: FACTOR,
+      description: "Amount to mix the Rotation between A and B") = 0.5 in 0.0..1.0,
+    Scale: Float(
+      subtype: FACTOR,
+      description: "Amount to mix the Scale between A and B") = 0.5 in 0.0..1.0,
+    Factor: Float(subtype: FACTOR) = 0.5 in 0.0..1.0
+) -> (Transform: Matrix(description: "The final mixed Transform")) {
+  "Mix between two transformations"
+  menu_switch = MenuSwitch(menu: Menu, Single: 0, Split: 1)
+  separate_transform = SeparateTransform(transform: A)
+  separate_transform_2 = SeparateTransform(transform: B)
+  return (
+    Transform: CombineTransform(
+      translation: Mix[VECTOR](
+        factor: IndexSwitch(menu_switch.output, Factor, Translation),
+        a: separate_transform.translation,
+        b: separate_transform_2.translation),
+      rotation: Mix[ROTATION](
+        factor: IndexSwitch(menu_switch.output, Factor, Rotation),
+        a: separate_transform.rotation,
+        b: separate_transform_2.rotation),
+      scale: Mix[VECTOR](
+        factor: IndexSwitch(menu_switch.output, Factor, Scale),
+        a: separate_transform.scale,
+        b: separate_transform_2.scale)))
+}

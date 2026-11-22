@@ -1,0 +1,173 @@
+shader graph "Math.Root"(
+    Value: Float = 0.5 in -10000.0..10000.0,
+    Root: Float = 0.5 in -10000.0..10000.0
+) -> (Value: Float) {
+  return (Value: pow(Value, 1.0 / Root))
+}
+
+shader graph "PBR.Fresnel"(
+    "Fresnel Power": Float = 5.0 in -10000.0..10000.0,
+    "F-0": Float = 0.04 in 0.0..1.0,
+    Roughness: Float in 0.0..1.0,
+    Normal: Vector(hide_value: true) in -1.0..1.0
+) -> (Output: Float) {
+  mix = Mix[RGBA](
+    factor: pow(LayerWeight(normal: Normal).facing, fresnel_power),
+    a: f_0,
+    b: (1.0, 1.0, 1.0, 1.0)) @ hide
+  mix_2 = Mix[RGBA](factor: math_root(value: Roughness, root: fresnel_power), a: mix, b: f_0) @ hide
+  return (Output: mix_2)
+}
+
+shader graph SpecularLayer(
+    Shader: Shader,
+    Roughness: Float in 0.0..1.0,
+    Normal: Vector(hide_value: true) in -1.0..1.0
+) -> Shader {
+  mix_shader = MixShader(
+    factor: pbr_fresnel(roughness: Roughness, normal: Normal),
+    a: Shader,
+    b: GlossyBSDF[GGX](
+      color: (1.0, 1.0, 1.0, 1.0),
+      roughness: pow(Roughness, 0.5),
+      normal: Normal)) @ hide
+  return mix_shader
+}
+
+shader graph "PBR (Specular Setup)"(
+    "Base Color": Color = (1.0, 1.0, 1.0),
+    "Use Specular %": Float(subtype: FACTOR) in 0.0..100.0,
+    "Specular Color": Color = (1.0, 1.0, 1.0),
+    "Use Refraction %": Float(subtype: FACTOR) in 0.0..100.0,
+    "Refraction Color": Color = (1.0, 1.0, 1.0),
+    IOR: Float = 1.45 in 1.0..2.42,
+    "Roughness %": Float(subtype: FACTOR) in 0.0..100.0,
+    Normal: Vector(hide_value: true) in -1.0..1.0,
+    "Coat Roughness %": Float(subtype: FACTOR) in 0.0..100.0,
+    "Coat Normal": Vector(hide_value: true) in -1.0..1.0,
+    "Volume Color": Color = (1.0, 1.0, 1.0),
+    "Volume Density %": Float(subtype: FACTOR) in 0.0..100.0
+) -> (Shader: Shader, Volume: Shader) {
+  math = use_refraction / 100.0 @ "Percent" hide
+  math_2 = roughness / 100.0 @ "Percent" hide
+  math_3 = use_specular / 100.0 @ "Percent" hide
+  mix_shader = MixShader(
+    factor: math_3,
+    a: DiffuseBSDF(color: base_color, roughness: math_2, normal: Normal),
+    b: GlossyBSDF[GGX](
+      color: specular_color,
+      roughness: pow(math_2, 0.5),
+      normal: Normal)) @ "Specular Factor"
+  mix_shader_2 = MixShader(
+    factor: math,
+    a: mix_shader,
+    b: RefractionBSDF(
+      color: refraction_color,
+      roughness: pow(math_2, 0.5),
+      ior: IOR,
+      normal: Normal)) @ "Refraction Factor"
+  math_4 = coat_roughness / 100.0 @ "Percent" hide
+  math_5 = volume_density / 100.0 @ "Percent" hide
+  return (
+    Shader: SpecularLayer(shader: mix_shader_2, roughness: math_4, normal: coat_normal),
+    Volume: VolumeAbsorption(color: volume_color, density: math_5))
+}
+
+shader graph "Wood Texture"(
+    Dirt: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Planks: Float(subtype: FACTOR) in 0.0..1.0
+) -> (Color: Color, Bump: Vector) {
+  noise_texture = NoiseTexture(scale: 10.4, detail: 16.0) @ "Dirt" hide
+  color_ramp_2 = ColorRamp[
+    color_ramp: Ramp(
+      (0.30567688, (0.03173462, 0.12494205, 0.013271807, 1.0)),
+      (0.7860261, (0.6151932, 0.27194083, 0.04699505, 1.0)))](factor: noise_texture.factor) @ hide
+  math = Planks / 2.0 @ "/2" hide
+  math_2 = Planks / 2.0 @ "/2" hide
+  math_3 = Planks / 2.0 @ "/2" hide
+  brick_texture = BrickTexture(
+    color2: (0.27593613, 0.27593613, 0.27593613, 1.0),
+    mortar_size: 0.001,
+    mortar_smooth: 0.0,
+    brick_width: 1.0,
+    row_height: 0.1)
+  mix_2 = Mix[RGBA](factor: math, a: TextureCoordinate().uv, b: brick_texture.color) @ hide
+  mapping = Mapping[TEXTURE](vector: mix_2, scale: (8.9, 1.0, 1.0)) @ hide
+  noise_texture_2 = NoiseTexture(vector: mapping, scale: 12.7, detail: 16.0) @ "Wood" hide
+  color_ramp_3 = ColorRamp[
+    color_ramp: Ramp(
+      (0.18530351, (0.0, 0.0, 0.0, 1.0)),
+      (0.20491916, (1.0, 1.0, 1.0, 1.0)),
+      (0.2270858, (0.0, 0.0, 0.0, 1.0)),
+      (0.24452476, (1.0, 1.0, 1.0, 1.0)),
+      (0.2587335, (1.0, 1.0, 1.0, 1.0)),
+      (0.26009798, (0.0, 0.0, 0.0, 1.0)),
+      (0.2751088, (1.0, 1.0, 1.0, 1.0)),
+      (0.28629887, (0.0, 0.0, 0.0, 1.0)),
+      (0.30062747, (1.0, 1.0, 1.0, 1.0)),
+      (0.31949347, (0.0, 0.0, 0.0, 1.0)),
+      (0.33835948, (1.0, 1.0, 1.0, 1.0)),
+      (0.35387895, (0.0, 0.0, 0.0, 1.0)),
+      (0.37609154, (1.0, 1.0, 1.0, 1.0)),
+      (0.3932091, (0.0, 0.0, 0.0, 1.0)),
+      (0.41032672, (1.0, 1.0, 1.0, 1.0)),
+      (0.4427281, (0.0, 0.0, 0.0, 1.0)),
+      (0.46873975, (1.0, 1.0, 1.0, 1.0)),
+      (0.49834934, (0.0, 0.0, 0.0, 1.0)),
+      (0.52795887, (1.0, 1.0, 1.0, 1.0)),
+      (0.5575684, (0.0, 0.0, 0.0, 1.0)),
+      (0.587178, (1.0, 1.0, 1.0, 1.0)),
+      (0.6199823, (0.0, 0.0, 0.0, 1.0)),
+      (0.6559816, (1.0, 1.0, 1.0, 1.0)),
+      (0.6887861, (0.0, 0.0, 0.0, 1.0)),
+      (0.7215904, (1.0, 1.0, 1.0, 1.0)),
+      (0.7543948, (0.0, 0.0, 0.0, 1.0)),
+      (0.7871992, (1.0, 1.0, 1.0, 1.0)),
+      (0.8263934, (0.0, 0.0, 0.0, 1.0)),
+      (0.8687824, (1.0, 1.0, 1.0, 1.0)),
+      (0.9015868, (0.0, 0.0, 0.0, 1.0)),
+      (0.9471708, (1.0, 1.0, 1.0, 1.0)),
+      (1.0, (0.0, 0.0, 0.0, 1.0)))](factor: noise_texture_2.factor) @ hide
+  color_ramp = ColorRamp[
+    color_ramp: Ramp(
+      (0.0, (0.034225337, 0.010100413, 0.0038830684, 1.0)),
+      (0.040665958, (0.23265457, 0.058164157, 0.016628979, 1.0)),
+      (0.17740178, (0.073357485, 0.021365788, 0.0063842232, 1.0)),
+      (0.20933408, (0.2086799, 0.059260026, 0.014384274, 1.0)),
+      (0.33242363, (0.08100811, 0.0233306, 0.0056062564, 1.0)),
+      (0.35944325, (0.1533363, 0.045001827, 0.010669451, 1.0)),
+      (0.4950874, (0.06267029, 0.021246973, 0.005847565, 1.0)),
+      (0.5171944, (0.17936167, 0.056899145, 0.012125749, 1.0)),
+      (0.6441049, (0.046052974, 0.014396959, 0.0028628511, 1.0)),
+      (0.665393, (0.1701132, 0.054949068, 0.011576738, 1.0)),
+      (0.7958515, (0.04417334, 0.017346816, 0.0047495444, 1.0)),
+      (0.83024013, (0.14702728, 0.043735027, 0.010329825, 1.0)),
+      (0.9213973, (0.029327951, 0.010552136, 0.0035472605, 1.0)),
+      (0.94132096, (0.16171081, 0.046995465, 0.010678764, 1.0)))](factor: color_ramp_3.color) @ hide
+  mix = Mix[RGBA, DODGE](factor: Dirt, a: color_ramp.color, b: color_ramp_2.color) @ hide
+  mix_3 = Mix[RGBA, MULTIPLY](factor: Planks, a: mix, b: brick_texture.color) @ hide
+  color_ramp_4 = ColorRamp[
+    color_ramp: Ramp(
+      (0.0, (0.0, 0.0, 0.0, 1.0)),
+      (0.15611367, (0.05760639, 0.05760639, 0.05760639, 1.0)),
+      (0.1986902, (0.5, 0.5, 0.5, 1.0)),
+      (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mix_3) @ hide
+  color_ramp_5 = ColorRamp[
+    color_ramp: Ramp((0.0, (1.0, 1.0, 1.0, 1.0)), (0.17030573, (0.0, 0.0, 0.0, 1.0)))](
+    factor: brick_texture.factor) @ hide
+  mix_4 = Mix[RGBA](factor: math_2, a: color_ramp_4.color, b: color_ramp_5.color) @ hide
+  mix_5 = Mix[RGBA, MULTIPLY](factor: math_3, a: mix_4, b: color_ramp_5.color) @ hide
+  bump = Bump(strength: 0.5, distance: 0.1, filter_width: 1.0, height: mix_5) @ hide
+  return (Color: mix_3, Bump: bump)
+}
+
+shader(material: true) graph wood() -> (surface: Shader) {
+  group_2 = wood_texture(planks: 1.0)
+  group = pbr_specular_setup(
+    base_color: group_2.color,
+    roughness: 50.0,
+    normal: group_2.bump,
+    coat_roughness: 50.0,
+    coat_normal: group_2.bump) @ "PBR (Specular Setup)"
+  return (surface: group.shader)
+}

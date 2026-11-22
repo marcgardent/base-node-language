@@ -1,0 +1,71 @@
+geometry graph "O Build Structure"(
+    Solid: Bool(structure_type: GRID),
+    Color: Color,
+    Roughness: Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+    Emission: Color,
+    Bump: Float in -1.0..1.0,
+    Name: String,
+    ID: Int
+) -> (Structure: Bundle) {
+  separate_color = SeparateColor(color: Color)
+  field_to_grid_2 = FieldToGrid[BOOLEAN](topology: Solid, Opacity: separate_color.alpha) @ hide
+  combine_xyz = CombineXYZ(
+    x: separate_color.red,
+    y: separate_color.green,
+    z: separate_color.blue) @ hide
+  field_to_grid = FieldToGrid[BOOLEAN](topology: Solid, Albedo: combine_xyz) @ hide
+  field_to_grid_3 = FieldToGrid[BOOLEAN](topology: Solid, Roughness: Roughness) @ hide
+  field_to_grid_4 = FieldToGrid[BOOLEAN](topology: Solid, Emission: Vector = Emission) @ hide
+  map_range = MapRange(value: Bump, from_min: -1.0) @ hide
+  return (
+    Structure: CombineBundle[define_signature: true](
+      Solid: Solid,
+      Albedo(structure_type: GRID): field_to_grid,
+      Opacity(structure_type: GRID): field_to_grid_2,
+      Roughness: field_to_grid_3,
+      Emission: field_to_grid_4,
+      Bump: FieldToGrid[BOOLEAN](topology: Solid, Bump: map_range),
+      Name: Name,
+      ID: ID))
+}
+
+geometry graph "O Cutout by Label"(
+    Label: Bundle,
+    "Properties"(default_closed: true) {
+        Color: Color = (0.6038313, 0.6038313, 0.6038313),
+        Roughness: Float(subtype: FACTOR) = 0.2 in 0.0..1.0,
+        Emission: Color,
+        Bump: Float in -1.0..1.0
+    },
+    "Options"(default_closed: true) {
+        Name: String,
+        Invert: Bool(force_non_field: true, structure_type: SINGLE),
+        Prune: Bool = true
+    }
+) -> (Structure: Bundle) {
+  boolean_math = (SeparateBundle[define_signature: true](
+      Label) -> (
+      Name: String(structure_type: SINGLE),
+      Data: Bool(structure_type: GRID),
+      Kind: String(structure_type: SINGLE),
+      Shape: Vector(structure_type: SINGLE),
+      ID: Int(structure_type: SINGLE),
+      BxSize: Float(structure_type: SINGLE))).data
+    xor Invert
+  return (
+    Structure: o_build_structure(
+      solid: Prune
+        ? PruneGrid(grid: (Math[ABSOLUTE](value: Position()) + 1.0) * boolean_math) > 0.0
+        : boolean_math,
+      color: Color,
+      roughness: Roughness,
+      emission: Emission,
+      bump: Bump,
+      name: Name,
+      id: (SeparateBundle[define_signature: true](
+        Label) -> (
+        Data: Bool(structure_type: GRID),
+        Shape: Vector(structure_type: SINGLE),
+        Type: String(structure_type: SINGLE),
+        ID: Int(structure_type: SINGLE))).id))
+}

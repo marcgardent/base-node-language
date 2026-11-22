@@ -1,0 +1,5 @@
+geometry graph ".Profile Type Picker"(
+    Menu: Menu(optional_label: true) = "Custom Profile"
+) -> (Output: Int) {
+  return (Output: MenuSwitch(menu: Menu, "Default Profile": 0, "Custom Profile": 1).output)
+}

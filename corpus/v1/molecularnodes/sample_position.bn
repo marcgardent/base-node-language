@@ -1,0 +1,10 @@
+geometry graph "Sample Position"(
+    Geometry: Geometry(description: "The geometry to sample the `Position` from"),
+    Position: Vector(
+      description: "The `Position` field to sample the values from",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to sample the `Position` field from") = Index()
+) -> (Position: Vector(description: "The sampled `Position` field")) {
+  "A convenience wrapper around the `Sample Index` and `Position` nodes"
+  return (Position: SampleIndex[FLOAT_VECTOR, clamp: true](Geometry, value: Position, index: Index))
+}

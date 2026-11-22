@@ -1,0 +1,152 @@
+geometry(is_modifier: true) graph "RBD Playback"(
+    Geometry: Geometry,
+    "Use Frozen Pieces": Bool(
+      description: "Read the pieces frozen at bake time instead of the modifiers above (set by Bake)"),
+    "Frozen Pieces": Object,
+    Cache: Object,
+    "Piece Count": Int in 0..,
+    "Frame Count": Int in 0..,
+    "Start Frame": Int = 1,
+    "Retime" {
+        Speed: Float(description: "Playback speed of the baked motion. 0.5 is slow motion") = 1.0,
+        "Frame Offset": Float(description: "Shift the baked motion in time, in cache frames")
+    }
+) -> Geometry {
+  object_info = ObjectInfo(object: Cache)
+  math = max(frame_count - 1.0, 0.0)
+  math_2 = min(max((SceneTime().frame - start_frame) * Speed + frame_offset, 0.0), math)
+  math_3 = floor(math_2)
+  math_4 = math_2 - math_3
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  math_5 = round(
+    Math[MULTIPLY_ADD](Value: math_3, Value_001: piece_count, Value_002: named_attribute.attribute))
+  math_6 = round(
+    Math[MULTIPLY_ADD](
+      Value: min(math_3 + 1.0, math),
+      Value_001: piece_count,
+      Value_002: named_attribute.attribute))
+  position = Position()
+  named_attribute_2 = NamedAttribute[QUATERNION](name: "rot")
+  return SetPosition(
+    use_frozen_pieces ? ObjectInfo(object: frozen_pieces).geometry : Geometry,
+    selection: named_attribute.attribute < piece_count and frame_count > 0,
+    position: TransformPoint(
+      vector: Mix[VECTOR](
+          factor: math_4,
+          a: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_5),
+          b: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_6))
+        + RotateVector(
+          vector: TransformPoint(vector: Position(), transform: object_info.transform)
+            - SampleIndex[FLOAT_VECTOR, clamp: true](
+              object_info.geometry,
+              value: NamedAttribute[FLOAT_VECTOR](name: "pivot").attribute,
+              index: named_attribute.attribute),
+          rotation: Mix[ROTATION](
+            factor: math_4,
+            a: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_5),
+            b: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_6))),
+      transform: InvertMatrix(matrix: object_info.transform).matrix))
+}
+
+geometry(is_modifier: false) graph "RBD Bullet Solver"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    "Start Frame": Int(description: "The frame the simulation starts on") = 1,
+    "End Frame": Int(description: "The last frame that is baked") = 120,
+    "Time Scale": Float(
+      description: "Playback speed of the bake: 0.5 is slow motion") = 1.0 in 0.0..,
+    "Simulation" {
+        "Bullet Substeps": Int(
+          description: "Solver steps per frame. Raise for fast or thin pieces") = 10 in 1..200,
+        "Constraint Iterations": Int = 10 in 1..200,
+        "Glue Iterations": Int(
+          description: "Iterations spent on every glue bond: more makes glued pieces stiffer. 0 = as Constraint Iterations") = 30 in 0..500
+    },
+    "Properties" {
+        Density: Float(
+          description: "Mass per cubic metre, for pieces without a density attribute") = 100.0 in 0.001..,
+        Bounce: Float = 0.05 in 0.0..1.0,
+        Friction: Float = 0.6 in 0.0..,
+        "Collision Padding": Float(subtype: DISTANCE) in 0.0..,
+        "Linear Damping": Float(subtype: FACTOR) = 0.04 in 0.0..1.0,
+        "Angular Damping": Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+        "Start Asleep": Bool(description: "Pieces rest until something hits them")
+    },
+    "Collision" {
+        "Collision Objects": Collection(
+          description: "Objects the pieces collide with. They follow their own animation"),
+        "Ground Plane": Bool = true,
+        "Ground Height": Float(subtype: DISTANCE, description: "World height of the ground plane")
+    },
+    "Forces" {
+        Gravity: Vector(subtype: ACCELERATION) = (0.0, 0.0, -9.81),
+        "Force Fields": Bool(
+          description: "The force fields of the scene (Force, Wind, Vortex, Turbulence ...) act on the pieces, the way they act on Blender's own rigid bodies. Works together with initial velocities") = true,
+        "Field Weight": Float(
+          description: "Every force field is multiplied by this. Blender's rigid bodies feel a field of strength 1 as a force of 1 / frame rate newtons, so heavy pieces need strong fields") = 1.0 in 0.0..200.0,
+        "Limit To": Collection(
+          description: "Only the force fields in this collection act. Empty: every force field of the scene")
+    },
+    "Cache"(description: "Filled in by Bake. Free the bake to clear it", default_closed: true) {
+        Baked: Bool(
+          description: "The node plays the baked simulation instead of passing its input on"),
+        Cache: Object,
+        "Frozen Pieces": Object(
+          description: "The pieces as they were when the simulation was baked"),
+        "Piece Count": Int in 0..,
+        "Frame Count": Int in 0..,
+        "Cache Start Frame": Int = 1,
+        "Frame Offset": Float(description: "Shift the baked motion in time, in frames")
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  return (
+    Geometry: Switch[GEOMETRY](
+      switch: min(
+            start_frame
+              + end_frame
+              + bullet_substeps
+              + constraint_iterations
+              + glue_iterations
+              + Density
+              + Bounce
+              + Friction
+              + collision_padding
+              + linear_damping
+              + angular_damping
+              + start_asleep
+              + ground_plane
+              + ground_height
+              + length(Gravity)
+              + force_fields
+              + field_weight
+              + (CollectionInfo(collection: collision_objects) |> DomainSize[INSTANCES]())
+              + (CollectionInfo(collection: limit_to) |> DomainSize[INSTANCES]()),
+            1.0)
+          * 0.0
+        > 1.0,
+      false_: Baked
+        ? ObjectInfo(object: frozen_pieces).geometry
+          |> rbd_playback(
+            cache: Cache,
+            piece_count: piece_count,
+            frame_count: frame_count,
+            start_frame: cache_start_frame,
+            speed: time_scale,
+            frame_offset: frame_offset)
+        : Geometry),
+    "Constraint Geometry": constraint_geometry,
+    "Proxy Geometry": proxy_geometry)
+}

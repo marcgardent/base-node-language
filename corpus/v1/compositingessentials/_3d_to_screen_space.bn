@@ -1,0 +1,40 @@
+compositor graph "Transform and Project"(
+    Vector: Vector(subtype: XYZ),
+    Transform: Matrix,
+    Projection: Matrix
+) -> (Normalized: Vector(dimensions: 2), Depth: Float) {
+  transform_point = TransformPoint(vector: Vector, transform: Transform)
+  vector_math = VectorMath[MULTIPLY_ADD](
+    Vector: ProjectPoint(vector: transform_point, transform: Projection),
+    Vector_001: (0.5, 0.5, 0.5),
+    Vector_002: (0.5, 0.5, 0.5)) @ "[0, 1] range unclamped"
+  "Depth in scene units" {
+    math = abs(transform_point.z)
+  }
+  return (Normalized: vector_math, Depth: math)
+}
+
+compositor graph "3D to Screen Space"(
+    Vector: Vector(subtype: XYZ, description: "Input 3D coordinates in world space"),
+    Camera: Object(description: "The camera used for rendering the scene", optional_label: true),
+    "Clamp Depth": Bool(description: "Clamps depth to camera clipping range") = true
+) -> (
+    Normalized: Vector(
+      dimensions: 2,
+      subtype: FACTOR,
+      description: "2D coordinates in the [0, 1] range in screen space"),
+    Depth: Float(subtype: DISTANCE, description: "Depth in scene units. Same as depth pass")
+) {
+  "Convert input coordinates to normalized camera space"
+  camera_info = CameraInfo(camera: Camera)
+  group = transform_and_project(
+    vector: Vector,
+    transform: InvertMatrix(matrix: ObjectInfo(object: Camera).transform).matrix,
+    projection: camera_info.projection_matrix)
+  return (
+    Normalized: group.normalized,
+    Depth: Switch[FLOAT](
+      switch: clamp_depth,
+      false_: group.depth,
+      true_: Clamp(value: group.depth, min: camera_info.clip_start, max: camera_info.clip_end)))
+}

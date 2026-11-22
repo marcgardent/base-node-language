@@ -1,0 +1,901 @@
+compositor graph ".Multisample Displace Group 2.010"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    "X Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    "Y Image Dimensions ": Float = 1.0 in 0.0001..12000.0,
+    Displacement: Vector = (0.0, 0.0),
+    "Sample per pixel": Float = 0.5 in 0.0001..4.0
+) -> ("Result ": Color) {
+  math = 1.0 / sample_per_pixel
+  return (
+    "Result ": Image
+      |> Scale(x: sample_per_pixel, y: sample_per_pixel, extension_x: Extend, extension_y: Extend)
+      |> Displace(displacement: Displacement, extension_x: Extend, extension_y: Extend)
+      |> Scale(x: math, y: math, interpolation: Bicubic, extension_x: Extend, extension_y: Extend))
+}
+
+compositor graph "Cheap Blur 2.001"(
+    Image: Color(hide_value: true) = (1.0, 1.0, 1.0),
+    Size: Float
+) -> (Image: Color) {
+  math_2 = Size * 0.01
+  clamp = Clamp(
+    value: FloatCurve[
+      mapping: Curve(
+        (0.0, 1.0, VECTOR),
+        (0.1, 1.0, VECTOR),
+        (0.101, 0.6666667, VECTOR),
+        (0.5, 0.666667, VECTOR),
+        (0.75, 0.5, VECTOR),
+        (3.0, 0.33333),
+        (5.0, 0.25, AUTO_CLAMPED),
+        use_clip: false)](value: math_2),
+    min: 0.0625)
+  math = 1.0 / clamp
+  map_range = MapRange(value: Size, from_min: 2.0, from_max: 2.01)
+  viewer = Viewer(math_2)
+  return (
+    Image: Switch(
+      switch: map_range,
+      false_: Switch(switch: map_range, false_: Image) |> Filter(factor: Size * 0.5),
+      true_: Switch(switch: map_range, true_: Image)
+        |> Scale(x: clamp, y: clamp, extension_x: Extend, extension_y: Extend)
+        |> Blur(size: clamp * Size)
+        |> Scale(x: math, y: math)))
+}
+
+compositor graph ".Halation 3.021"(
+    "Image gamma mapped": Color,
+    "Displacement Sampels per pixel ": Float in 0.1..4.0,
+    "Halation Scale": Float(
+      description: "Value of the second floating number input") in -10000.0..10000.0,
+    "X Image Dimensions ": Float,
+    "Y Image Dimensions ": Float,
+    "Image Coodinaes": Vector,
+    "MtF Sharpen": Float(
+      subtype: FACTOR,
+      description: "Amount of mixing between the A and B inputs") = 0.1 in 0.0..1.0,
+    "Film Gauge ": Float
+) -> (Result: Color) {
+  "Needs Gamma maped input γ=2.2"
+  math = Math[COMPARE](Value: mtf_sharpen, Value_001: 0.0, Value_002: 0.02)
+  white_noise_texture = WhiteNoiseTexture(vector: image_coodinaes)
+  "Box-Muller Transform" {
+    "Radial Distance" {
+      math_2 = log(white_noise_texture.color.y, 2.7182817) @ "this is danger! ln(0) = NaN"
+      math_4 = sqrt(math_2 * -2.0) @ "prob. fixes NaN"
+    }
+    "Angle " {
+      math_3 = white_noise_texture.color.z * 6.28319
+      math_5 = cos(math_3)
+      math_6 = sin(math_3)
+    }
+  }
+  math_7 = halation_scale * 0.3
+  "Box-Muller Transform" .. {
+    combine_xyz = CombineXYZ(x: math_4 * math_6 * math_7, y: math_4 * math_5 * math_7)
+  }
+  "displecment" {
+    mix_2 = Mix[RGBA](
+      factor: 0.25,
+      a: multisample_displace_group_2_010(
+        image_gamma_mapped,
+        x_image_dimensions: x_image_dimensions,
+        y_image_dimensions: y_image_dimensions,
+        displacement: combine_xyz,
+        sample_per_pixel: displacement_sampels_per_pixel),
+      b: multisample_displace_group_2_010(
+        image_gamma_mapped,
+        x_image_dimensions: x_image_dimensions,
+        y_image_dimensions: y_image_dimensions,
+        displacement: combine_xyz * 1.15734,
+        sample_per_pixel: displacement_sampels_per_pixel * 0.5555556))
+  }
+  gamma = Gamma(image_gamma_mapped, gamma: 0.5)
+  group = cheap_blur_2_001(gamma, size: pow(halation_scale * 0.5, 0.8000001))
+  math_8 = RelativeToPixel[Smaller](
+      value: FloatCurve[
+          mapping: Curve(
+            (-1.0104163, 0.6),
+            (-0.00025214255, 0.3, VECTOR),
+            (0.0, 1.0, VECTOR),
+            (0.5036253, 1.503625),
+            (0.9855013, 1.694922),
+            use_clip: false)](value: mtf_sharpen)
+        * pow(film_gauge, 0.70000005),
+      image: gamma)
+    * 0.00045
+    * 87.552
+  switch = Switch(switch: math, false_: gamma)
+  mix = Mix[RGBA](
+    factor: MapRange(value: mtf_sharpen, from_min: -1.0, from_max: 0.3, to_min: 0.5, to_max: 0.15),
+    a: cheap_blur_2_001(switch, size: math_8 * 0.2),
+    b: cheap_blur_2_001(switch, size: math_8 * 1.5))
+  float_curve = FloatCurve[
+    mapping: Curve(
+      (-1.7318537, -0.72955596),
+      (-0.84507096, -0.5920981),
+      (-0.2477806, -0.264),
+      (0.0, 0.0, VECTOR),
+      (0.16946477, 0.52833045),
+      (0.85665846, 1.1563929),
+      (1.7828612, 1.4633561),
+      use_clip: false)](value: mtf_sharpen)
+  mix_4 = Math[GREATER_THAN](Value: float_curve, Value_001: 0.0)
+    ? float_curve * pow(0.85, film_gauge)
+    : float_curve
+  "Unsharp mask" {
+    mix_3 = Mix[RGBA, ADD, clamp_factor: false](
+      factor: mix_4,
+      a: group,
+      b: Mix[RGBA, SUBTRACT](a: group, b: mix))
+  }
+  return (
+    Result: Mix[RGBA](
+      factor: Math[MULTIPLY_ADD](
+        Value: white_noise_texture.value,
+        Value_001: 0.20000002,
+        Value_002: 0.39999992),
+      a: mix_2,
+      b: Switch(switch: math, false_: mix_3, true_: group) |> Gamma(gamma: 2.0)))
+}
+
+compositor graph ".Noise Maschine 3.022"(
+    "Image Coordinates": Vector(hide_value: true),
+    "Image lemght": Float,
+    "X Image Dimensions ": Float,
+    "X Image Dimensions " as x_image_dimensions_float: Float,
+    "L1 Scale": Float = 200.0 in -1000.0..1000.0,
+    "L2 Scale": Float = 0.1 in -1000.0..1000.0,
+    "L3 Scale": Float(description: "Scale of the base noise octave") = 0.0005 in -1000.0..1000.0
+) -> ("Lvl 1": Color, "Lvl 1" as lvl_1_float: Float, "Lvl 2": Float, llvl3: Float) {
+  voronoi_texture = VoronoiTexture(vector: image_coordinates, scale: l1_scale) @ "Level 1"
+  "lvl 1 noise, small scale, base grain, " {
+    hue_correct = HueCorrect[
+      mapping: Curves(
+        h: Curve(
+          (0.083333336, 0.495),
+          (0.25000033, 0.52),
+          (0.41666633, 0.495),
+          (0.5833333, 0.525),
+          (0.75000036, 0.475),
+          (0.91182435, 0.525)),
+        s: Curve(
+          (0.0, 0.6212966),
+          (0.16666667, 0.55),
+          (0.32849002, 0.4768518),
+          (0.49757832, 0.46666676),
+          (0.6545601, 0.6972219),
+          (0.81396276, 0.45),
+          (0.87651324, 0.45)),
+        v: Curve(
+          (0.25, 0.48),
+          (0.33383757, 0.480741),
+          (0.5024213, 0.39351824),
+          (0.6153147, 0.5046296),
+          (0.72154963, 0.50000024),
+          (0.83232486, 0.3194441),
+          (0.9588378, 0.47537),
+          (1.0, 0.48)))](voronoi_texture.color)
+    "Change the color profile without changing the withepoint" {}
+    "color corection is very specific to the type/ brand of film" {}
+    "This here looks a bit like codac gold or color plus " {}
+  }
+  "lvl2 Noise, med scale, Coarsness 170ms" {
+    voronoi_texture_2 = VoronoiTexture(
+      vector: image_coordinates,
+      scale: l2_scale,
+      roughness: 0.0,
+      lacunarity: 0.0) @ "Level 2"
+    mix = Mix[clamp_factor: false](
+      factor: 0.5,
+      a: voronoi_texture_2.distance,
+      b: voronoi_texture_2.color)
+    mix_2 = Mix(
+      factor: 0.2,
+      a: DilateErode(
+        mask: mix,
+        size: pow(
+          RelativeToPixel[Smaller](value: 1.4 / l2_scale, image: voronoi_texture_2.color),
+          0.9),
+        type: Feather),
+      b: mix)
+    mix_3 = Mix(factor: 0.29090908, a: mix_2, b: pow(mix_2, 0.5) * 0.70000005 * 0.8)
+  }
+  "lvl 3 noise, large scale, low Unifomity" {
+    "10ms" {
+      math = Math[DIVIDE, use_clamp: true](Value: 1000.0, Value_001: image_lemght)
+      noise_texture = NoiseTexture(
+        vector: Scale(
+          image_coordinates,
+          x: math,
+          y: math,
+          extension_x: Extend,
+          extension_y: Extend),
+        scale: l3_scale,
+        detail: 6.0,
+        roughness: 0.95,
+        lacunarity: 2.7182817,
+        distortion: 0.1) @ "Level 3"
+      math_2 = 1.0 / math
+      float_curve = FloatCurve[
+        mapping: Curve(
+          (-10.0, 0.0, VECTOR),
+          (-0.4, -1.1569, VECTOR),
+          (-0.019272543, 0.22275017),
+          (0.16753119, 0.29069427),
+          (0.334201, 0.7338322),
+          (0.52230465, 1.3137378, VECTOR),
+          (0.66431254, 2.3632963, VECTOR),
+          (0.92447007, 2.97963),
+          (2.0, 3.70024, VECTOR),
+          (10.0, 1.0, VECTOR),
+          use_clip: false)](
+        value: Scale(
+          noise_texture.factor,
+          x: math_2,
+          y: math_2,
+          extension_x: Repeat,
+          extension_y: Repeat))
+    }
+  }
+  "not affected by text scale " {}
+  return (
+    lvl_1: hue_correct,
+    lvl_1_float: voronoi_texture.distance,
+    "Lvl 2": mix_3,
+    llvl3: float_curve)
+}
+
+compositor graph ".Noisegroup Internal 3.022"(
+    "Input Image": Color,
+    "Input Image γ=log ": Color,
+    "Alpha mask": Float,
+    "Precompute" {
+        "X Image Dimensions ": Float(description: "Width of the Image in pixels "),
+        "Y Image Dimensions ": Float(description: "Height of the Image in pixels "),
+        "Image Length": Float(description: "diagonal of the image in pixels "),
+        "Black Level": Float(
+          description: "Input color that should be mapped to black, everything below this value gets crushed ")
+    },
+    "Mapped Controlls" {
+        "Film Gauge ": Float(
+          description: "Inverse of Film film, Greater value means smaller film stock ."),
+        "Luma Bias mask": Float,
+        "lvl 1 Noise Factor": Float(
+          description: "mixes small scale, colofull, noise ") = 1.0 in -10000.0..10000.0,
+        "lvl 1 Noise Scale ": Float(
+          description: "mixes small scale, colofull, noise ") = 1.0 in -10000.0..10000.0,
+        "lvl 2 Noise Factor": Float(
+          description: "mixes the noise associated with high coarsness") = 1.0 in -10000.0..10000.0,
+        "lvl 2 Noise Scale ": Float(
+          description: "mixes the noise associated with high coarsness") = 1.0 in -10000.0..10000.0,
+        "lvl 2 Inter Factor": Float(
+          description: "mixes the noise at a diferent point in the process than normal lvl2 ") = 1.0 in -10000.0..10000.0,
+        "lvl 3 Noise Factor ": Float(
+          description: "mixes the noise associated with low uniformitiy ") = 1.0 in -10000.0..10000.0,
+        "lvl 3 Noise Scale ": Float(
+          description: "mixes the noise associated with low uniformitiy ") = 1.0 in -10000.0..10000.0,
+        "Noise Chroma Saturation  ": Float(
+          subtype: FACTOR,
+          description: "affects saturation of the noise ") = 1.0 in 0.0..1.0,
+        "Animated ": Bool(description: "should the noise change frame to frame"),
+        " Glare Stregth ": Float(
+          subtype: FACTOR,
+          description: "controlls the amoung of Glare or Bloom"),
+        "MtF Sharpen": Float(
+          subtype: FACTOR,
+          description: "Amount of mixing between the A and B inputs") = 0.3 in 0.0..1.0,
+        "Final softening Softnes slider": Float(
+          subtype: FACTOR,
+          description: "controlls the last step of softening the image with grain added "),
+        "Halation scale ": Float(
+          description: "Controlls the amount of Halation (slight softening and distorion around sharp edges)") = 0.5 in -10000.0..10000.0,
+        "final softness factor": Float,
+        "Displacement Sampels per pixel ": Float = 0.9 in 0.1..4.0
+    },
+    "Static Controlls" {}
+) -> (Result: Color) {
+  "Made for Blender 5.1 by Selman Vorhoff"
+  image_coordinates = ImageCoordinates(input_image)
+  "slight final softening" #33001f {
+    math = Math[CEIL, use_clamp: true](value: final_softening_softnes_slider)
+    math_4 = math
+      * MapRange[clamp: false](
+        value: film_gauge,
+        from_min: 1.0,
+        from_max: 4.0,
+        to_min: 0.0003,
+        to_max: 0.0006)
+      * final_softness_factor
+  }
+  white_noise_texture = WhiteNoiseTexture["1D"](w: SceneTime().frame)
+  map_range = MapRange(value: white_noise_texture.color.z, to_max: 6.28318)
+  "Rotate and shift " {
+    vector_rotate = VectorRotate[Z_AXIS](
+      vector: image_coordinates.uniform,
+      center: CombineXYZ(x: white_noise_texture.color.x, y: white_noise_texture.color.y),
+      angle: map_range) @ "Rotate on Z Axis "
+  }
+  index_switch = IndexSwitch(animated, image_coordinates.uniform, vector_rotate)
+  group = noise_maschine_3_022(
+    image_coordinates: index_switch,
+    image_lemght: image_length,
+    x_image_dimensions: x_image_dimensions,
+    x_image_dimensions_float: y_image_dimensions,
+    l1_scale: lvl_1_noise_scale,
+    l2_scale: lvl_2_noise_scale,
+    l3_scale: lvl_3_noise_scale)
+  "noise Pre Mixing " {
+    separate_color = SeparateColor[HSV](group.lvl_1)
+    "Add L2" #332e00 {
+      mix_4 = Mix[clamp_factor: false](
+        factor: FloatCurve[
+          mapping: Curve((0.0, 0.0), (1.0, 0.5, VECTOR), (3.9792917, 1.029049), use_clip: false)](
+          value: lvl_2_noise_factor),
+        a: separate_color.green,
+        b: separate_color.green
+          * MapRange(
+            value: group.lvl_2,
+            from_min: 0.7,
+            from_max: 0.25,
+            to_min: 0.19999999,
+            to_max: 1.3000001))
+    }
+    {
+      math_11 = separate_color.blue * ((1.0 - group.lvl_1_float) * 1.8)
+    }
+    "Multiply L2" #332e00 {
+      mix = Mix[clamp_factor: false](
+        factor: lvl_2_inter_factor,
+        a: math_11,
+        b: math_11 * (1.01 - group.lvl_2))
+    }
+    "Multiply L3" #21330f {
+      mix_3 = Mix[clamp_factor: false](factor: lvl_3_noise_factor, a: mix, b: mix * group.llvl3)
+    }
+    "Add L2" .. {
+      mix_2 = Mix[clamp_factor: false](factor: lvl_2_noise_factor, a: mix_3, b: mix_3 + group.lvl_2)
+    }
+    "Subtractive Saturation " #133332 {
+      math_12 = Math[MULTIPLY, use_clamp: true](Value: mix_4, Value_001: noise_chroma_saturation)
+    }
+    combine_color = CombineColor[HSV](
+      red: separate_color.red,
+      green: math_12,
+      blue: mix_2,
+      alpha: separate_color.alpha)
+  }
+  separate_color_2 = SeparateColor(combine_color)
+  "Overlay Noise" {
+    float_curve = FloatCurve[
+      mapping: Curve(
+        (0.0, 0.0),
+        (0.1, 0.1, VECTOR),
+        (0.14555745, 0.13247836),
+        (0.2, 0.15),
+        use_clip: false)](value: lvl_1_noise_factor * luma_bias_mask * 2.0)
+  }
+  "Mix Coarsness" #332e00 {
+    math_13 = group.lvl_2 * 2.0
+  }
+  "Clamp <0" {
+    math_14 = black_level * luma_bias_mask
+  }
+  "Softness" #33001f {
+    math_15 = Math[COMPARE](Value: mtf_sharpen, Value_001: 0.0, Value_002: 0.003)
+      * Math[COMPARE](Value: glare_stregth, Value_001: 0.0, Value_002: 0.002)
+  }
+  clamp = Clamp(value: displacement_sampels_per_pixel, min: 1.0, max: 4.0)
+  scale = Scale(index_switch, x: clamp, y: clamp, extension_x: Repeat, extension_y: Repeat)
+  "Softness" .. {
+    group_2 = Switch(switch: math_15, false_: input_image_γ_log)
+      |> halation_3_021(
+        displacement_sampels_per_pixel: displacement_sampels_per_pixel,
+        halation_scale: halation_scale,
+        x_image_dimensions: x_image_dimensions,
+        y_image_dimensions: y_image_dimensions,
+        image_coodinaes: Switch(switch: math_15, false_: scale),
+        mtf_sharpen: mtf_sharpen,
+        film_gauge: film_gauge)
+    "Hybrid Log Gamma Decode " {
+      separate_color_4 = SeparateColor[HSV](group_2)
+      math_16 = max(separate_color_4.blue, 0.0)
+      gamma = CombineColor[HSV](
+          red: separate_color_4.red,
+          green: separate_color_4.green,
+          blue: Math[GREATER_THAN](Value: math_16, Value_001: 1.0)
+            ? pow(2.7182817, math_16 - 1.0)
+            : math_16,
+          alpha: separate_color_4.alpha)
+        |> Gamma(gamma: 1.5)
+    }
+    switch = Switch(switch: math_15, false_: gamma, true_: input_image)
+  }
+  separate_color_3 = Mix[RGBA, ADD](
+      factor: lvl_1_noise_factor * (luma_bias_mask * alpha_mask),
+      a: switch,
+      b: combine_color)
+    |> SeparateColor()
+  math_3 = Clamp(value: lvl_2_noise_factor * luma_bias_mask, max: 10.0) * separate_color_3.alpha
+  "Clamp <0" .. {
+    math_5 = max(MapRange[clamp: false](value: separate_color_3.red, from_min: math_14), 0.0)
+    math_6 = max(MapRange[clamp: false](value: separate_color_3.green, from_min: math_14), 0.0)
+    math_7 = max(MapRange[clamp: false](value: separate_color_3.blue, from_min: math_14), 0.0)
+  }
+  "Overlay Noise" .. {
+    mix_8 = Mix(factor: float_curve, a: math_5, b: math_5 * separate_color_2.red * 2.0)
+    mix_9 = Mix(factor: float_curve, a: math_6, b: math_6 * separate_color_2.green * 2.0)
+    mix_10 = Mix(factor: float_curve, a: math_7, b: math_7 * separate_color_2.blue * 2.0)
+  }
+  "Mix Coarsness" .. {
+    "too much need control" {
+      math_8 = mix_8 * math_13
+      math_9 = mix_9 * math_13
+      math_10 = mix_10 * math_13
+    }
+    mix_5 = Mix(factor: math_3, a: mix_8, b: math_8)
+    mix_6 = Mix(factor: math_3, a: mix_9, b: math_9)
+    mix_7 = Mix(factor: math_3, a: mix_10, b: math_10)
+  }
+  combine_color_2 = CombineColor(
+    red: mix_5,
+    green: mix_6,
+    blue: mix_7,
+    alpha: separate_color_3.alpha)
+  "slight final softening" .. {
+    relative_to_pixel = RelativeToPixel(value: math_4, image: combine_color_2)
+    math_2 = Math[SUBTRACT, use_clamp: true](Value: relative_to_pixel, Value_001: 2.5)
+    switch_2 = Switch(
+      switch: math_2,
+      false_: Switch(
+          switch: Math[ADD, use_clamp: true](
+            Value: math_2,
+            Value_001: Math[SUBTRACT, use_clamp: true](Value: 1.0, Value_001: math)),
+          false_: combine_color_2)
+        |> Filter(factor: pow(math_4 * 1700.0, 1.5) * 0.6999999),
+      true_: Switch(switch: math_2, true_: combine_color_2)
+        |> Blur(size: Clamp(value: relative_to_pixel, min: math * 1.5, max: 100.0)))
+  }
+  return (Result: Switch(switch: math, false_: combine_color_2, true_: switch_2))
+}
+
+compositor graph ".log space >1.001"(
+    Input: Float(hide_value: true, optional_label: true)
+) -> (Result: Float) {
+  return (
+    Result: Math[GREATER_THAN](Value: Input, Value_001: 1.0) ? log(Input, 2.7182817) + 1.0 : Input)
+}
+
+compositor graph "Film Grain"(
+    Input: Color(hide_value: true, optional_label: true) = (0.0, 0.0, 0.0, 0.0),
+    Factor: Float(
+      subtype: FACTOR,
+      description: "Amount of mixing between the effect and original image") = 1.0 in 0.0..1.0,
+    Preset: Menu(optional_label: true) = "Super 8 mm",
+    "Film Gauge": Menu(menu_expanded: true, optional_label: true) = "16 mm",
+    Style: Menu = "Studio Broadcast",
+    Animated: Bool(description: "Should the noise change frame to frame"),
+    "Custom Controls" {
+        ISO: Int = 400 in 50..3200,
+        Softness: Float(
+          subtype: FACTOR,
+          description: "Halation-style softening: edges 'bleed' and become smoother, adds bloom and noise that is somewhat pattern-aware") = 0.5 in 0.0..1.0,
+        Acutance: Float(
+          subtype: FACTOR,
+          description: "Sharpens large details and adds a halo around objects") = 0.5 in 0.0..1.0,
+        Coarseness: Float(
+          subtype: FACTOR,
+          description: "Emulsion roughness, also adds grain clamping") = 0.5 in 0.0..1.0,
+        Patchiness: Float(
+          subtype: FACTOR,
+          description: "Smoothness of the film substrate. High values contribute to a stroboscope effect when animating.") = 0.5 in 0.0..1.0,
+        Saturation: Float(subtype: FACTOR, description: "Noise colorfulness") = 0.5 in 0.0..1.0,
+        "Luma bias": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+        "Texture Scale": Float(subtype: FACTOR) = 0.5 in 0.0..1.0
+    }
+) -> (Result: Color) {
+  "Simulates the noise and behavior of analog film. Author: Selman Vorhoff"
+  image_info = ImageInfo(Input)
+  menu_switch = MenuSwitch(
+    menu: film_gauge,
+    "8 mm": 0.79999995,
+    "16 mm": 1.6,
+    "35 mm": 3.5,
+    "70 mm": 7.0)
+  menu_switch_3 = MenuSwitch(
+    menu: Preset,
+    "8 mm Caffenol"(description: "DIY-developed film, very grainy, high contrast and uneven."): 11,
+    "8 mm Home Movie"(description: "Heavy luminance grain with reduced sharpness and contrast."): 3,
+    "Super 8 mm"(description: "Large, dancing grain with strong structure"): 2,
+    "16 mm Broadcast"(description: "Very average film, slightly harsh but good contrast"): 5,
+    "16 mm Indie Cinema"(
+      description: "Overall soft, but with dense, punchy grain, textured midtones"): 6,
+    "35 mm Portra 400"(description: "Fine, pleasing grain for softer skin"): 9,
+    "Super 35 mm"(description: "Balanced grain typical of modern films (2K)"): 8,
+    "70 mm Cinema"(description: "Very fine, clean grain. For UHD or IMAX"): 10,
+    Custom(description: "User-defined settings. Be careful."): 0) @ "Presets to value"
+  menu_switch_2 = MenuSwitch(
+    menu: IndexSwitch(
+      menu_switch_3.output,
+      Style,
+      "Cinematic Soft",
+      "Studio Broadcast",
+      "Home Movie",
+      "Cinematic Soft",
+      "Studio Broadcast",
+      "Cinematic Soft",
+      "Cinematic Soft",
+      "Studio Broadcast",
+      "Pro Photography",
+      "Studio Broadcast",
+      "Xpro Sharp"),
+    "Xpro Sharp"(
+      description: "Xpro or cross-processing is the deliberate processing of the film in chemical solution intended for a different type of film"): 2,
+    "Cinematic Gritty": 4,
+    "Home Movie": 1,
+    "Studio Broadcast": 6,
+    "Pro Photography": 5,
+    "Cinematic Soft": 3,
+    "Custom Style": 0)
+  "Preset Table" {
+    index_switch = IndexSwitch(
+      menu_switch_2.output,
+      1.3,
+      1.0,
+      0.5,
+      1.0,
+      1.0,
+      1.0,
+      1.0) @ "Final softness" #2f0033
+    index_switch_7 = IndexSwitch(
+      menu_switch_2.output,
+      ISO,
+      400,
+      600,
+      400,
+      200,
+      400,
+      400) @ "ISO " #053300
+    index_switch_8 = IndexSwitch(
+      menu_switch_3.output,
+      menu_switch.output,
+      0.8,
+      0.9,
+      0.8,
+      1.4,
+      1.4,
+      1.7,
+      3.0,
+      3.0,
+      3.0,
+      6.5,
+      1.0) @ "Film gauge" #0a3300
+    index_switch_11 = IndexSwitch(
+      menu_switch_2.output,
+      1.1,
+      0.9,
+      0.9,
+      1.1,
+      0.9,
+      0.9,
+      0.9) @ "Softness samples" #260033
+  }
+  "Exponential Map Controls" {
+    #0a3300 {
+      math_18 = pow(index_switch_7 / 400.0, -1.1)
+      math_17 = math_18 * index_switch_8 @ "Gauge times ISO factor"
+      float_curve = FloatCurve[
+        mapping: Curve(
+          (0.0, 25.0),
+          (0.1, 11.5, VECTOR),
+          (0.8, 4.0, VECTOR),
+          (1.6, 1.9000001),
+          (3.5, 0.7368421, VECTOR),
+          (7.0, 0.4642857, VECTOR),
+          use_clip: false)](value: math_17) @ "Map 8mm = 4. 16mm = 2. 35 = 1"
+      float_curve_2 = FloatCurve[
+        mapping: Curve(
+          (0.0, 25.0),
+          (0.1, 11.5, VECTOR),
+          (0.8, 4.0, VECTOR),
+          (1.6, 1.9000001),
+          (3.5, 0.7368421, VECTOR),
+          (7.0, 0.4642857, VECTOR),
+          use_clip: false)](value: index_switch_8) @ "Map 8mm = 4. 16mm = 2. 35 = 1"
+      math_29 = Math[POWER, use_clamp: true](Value: math_18, Value_001: -0.3)
+    }
+  }
+  "Scaling" {
+    "Texture Scale" #001b33 {
+      math_10 = 1.0 / float_curve_2 @ "Scale"
+    }
+    "lvl 1" #0a3300 {
+      math_13 = pow(float_curve, 0.9) * 0.02 @ "base noise Mix "
+    }
+  }
+  "from 0 to 1 → 10 to -10 " {
+    map_range = MapRange[clamp: false](value: Softness, to_min: -10.0, to_max: 10.0) @ "Softness"
+    map_range_2 = MapRange[clamp: false](
+      value: Coarseness,
+      to_min: -10.0,
+      to_max: 10.0) @ "Coarseness"
+    map_range_3 = MapRange[clamp: false](
+      value: Patchiness,
+      to_min: 10.0,
+      to_max: -10.0) @ "Patchiness to Uniformity "
+    map_range_4 = MapRange[clamp: false](value: Saturation, to_max: 2.0) @ "Saturation "
+    map_range_5 = MapRange[clamp: false](value: Acutance, to_min: -10.0, to_max: 10.0)
+    map_range_7 = MapRange[clamp: false](
+      value: luma_bias,
+      to_min: -10.0,
+      to_max: 10.0) @ "Luma bias"
+    map_range_8 = MapRange[clamp: false](
+      value: texture_scale,
+      from_min: 1.0,
+      from_max: 0.0,
+      to_min: -10.0,
+      to_max: 10.0) @ "Texture Scale "
+  }
+  "Preset Table" .. {
+    index_switch_3 = IndexSwitch(
+      menu_switch_2.output,
+      map_range_4,
+      0.6,
+      0.6999999,
+      0.70000005,
+      1.0,
+      0.3,
+      0.9) @ "Saturation " #133332
+    index_switch_4 = IndexSwitch(
+      menu_switch_2.output,
+      map_range_2,
+      2.0,
+      3.3999996,
+      -3.5,
+      6.0,
+      -2.0,
+      0.0) @ "Coarsness" #332e00
+    index_switch_5 = IndexSwitch(
+      menu_switch_2.output,
+      map_range,
+      1.5,
+      3.0,
+      3.0,
+      1.0,
+      1.5,
+      0.0) @ "Softness" #33001f
+    index_switch_6 = IndexSwitch(
+      menu_switch_2.output,
+      map_range_3,
+      1.0,
+      -2.0,
+      6.0,
+      3.0,
+      0.0,
+      5.0) @ "Uniformity" #21330f
+    index_switch_12 = IndexSwitch(
+      menu_switch_2.output,
+      map_range_5,
+      0.0,
+      5.0,
+      -8.0,
+      2.0,
+      0.0,
+      0.0) @ "MTF Acutance " #260033
+  }
+  "Exponential Map Controls" .. {
+    "Coarsness" #332e00 {
+      math = pow(1.15, index_switch_4 + 1.0)
+      math_5 = math * 2.0
+    }
+    "Softness" #33001f {
+      math_2 = pow(2.0, index_switch_5 * 0.1) + -0.5
+      math_3 = math_2 * 0.1
+      math_14 = math_2 * 1.0 @ "Soften "
+    }
+    "Uniformity" #21330f {
+      math_4 = pow(1.15, -index_switch_6) * pow(math, 0.4)
+      math_23 = pow(pow(1.2, index_switch_6) * 2.0, 0.5)
+    }
+    "Saturation " #133332 {
+      math_24 = Mix(
+          factor: trunc(index_switch_3),
+          a: pow(index_switch_3, 0.7),
+          b: pow(index_switch_3, 1.1))
+        * 0.5
+    }
+  }
+  "Scaling" .. {
+    "Softness" #33001f {
+      math_8 = math_3 * float_curve_2 @ "Bleed"
+    }
+    "Softness scaling " #33001f {
+      math_15 = math_14 * 0.3 @ "Glare strength"
+      relative_to_pixel = RelativeToPixel[Smaller](value: math_8 * 0.03 * 2.0, image: Input)
+    }
+  }
+  index_switch_10 = IndexSwitch(
+    menu_switch_2.output,
+    map_range_7,
+    0.0,
+    4.0,
+    2.0,
+    2.0,
+    1.0,
+    -1.0) @ "Luma bias" #002633
+  "Preset Table" .. {
+    index_switch_9 = IndexSwitch(
+      0,
+      index_switch_10,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0) @ "Luma bias" #002633
+  }
+  mix_2 = Math[GREATER_THAN](Value: index_switch_8, Value_001: 3.6)
+    ? 1.1
+    : index_switch_11 @ #260033
+  "Pre Computed Black Level LUT" {
+    math_22 = math_13 * 10.0
+  }
+  "Luma Bias map" #002633 {
+    math_25 = Math[POWER, use_clamp: true](Value: abs(index_switch_9), Value_001: -0.2)
+    math_26 = pow(pow(2.0, index_switch_9), 0.5)
+  }
+  "Hybrid Log Gamma encode" {
+    separate_color = Input
+      |> Gamma(gamma: 0.6666667)
+      |> SeparateColor[HSV]()
+    math_27 = log(separate_color.blue, 2.7182817) @ "Natural Logarithm "
+    combine_color = CombineColor[HSV](
+      red: separate_color.red,
+      green: separate_color.green,
+      blue: Math[GREATER_THAN](Value: separate_color.blue, Value_001: 1.0)
+        ? math_27 + 1.0
+        : separate_color.blue,
+      alpha: separate_color.alpha)
+  }
+  "Luma Bias map" .. {
+    map_range_6 = MapRange[SMOOTHSTEP, clamp: false](
+      value: combine_color,
+      from_min: Math[MULTIPLY_ADD, use_clamp: true](Value: math_25, Value_001: -0.5),
+      from_max: Math[MULTIPLY_ADD, use_clamp: true](Value: math_25),
+      to_min: pow(log_space_1_001(input: 1.0 / math_26), 0.45),
+      to_max: log_space_1_001(input: math_26))
+  }
+  math_28 = pow(1.2, map_range_8)
+  "Preset Table" .. {
+    index_switch_2 = IndexSwitch(
+      menu_switch_2.output,
+      math_28,
+      0.9,
+      0.95,
+      1.0,
+      0.8000001,
+      1.3,
+      0.9) @ "Texture Scale" #001b33
+  }
+  "Scaling" .. {
+    "Texture Scale" .. {
+      math_9 = pow(math_10, 0.5) * index_switch_2 @ "Scale"
+    }
+    #001b33 {
+      math_19 = math_9 * 600.0 @ "L2"
+      math_20 = math_9 * 2000.0 @ "L1"
+      math_21 = math_9 * math_23
+    }
+  }
+  math_30 = float_curve_2 * math_29
+  "Scaling" .. {
+    "Lvl2 Coarsness" #332e00 {
+      math_7 = math_5 * pow(math_30, 0.8) @ "lvl2"
+      math_12 = math_7 * 0.14 @ "lvl 2 Mix"
+    }
+  }
+  math_31 = pow(float_curve_2, 0.25) * 0.8
+  "Scaling" .. {
+    "lvl3 Uniformity" #21330f {
+      math_6 = math_31 * math_4 @ "lvl 3 "
+      math_11 = math_6 * 0.25 @ "LvL3 Mix"
+    }
+  }
+  "Pre Computed Black Level LUT" .. {
+    math_16 = FloatCurve[
+        mapping: Curve(
+          (-0.201269, 0.0),
+          (-0.008788709, 0.0, VECTOR),
+          (0.0039569656, 0.00134933),
+          (0.019158714, 0.005315788),
+          (0.034930695, 0.012562542),
+          (0.05232211, 0.021592297),
+          (0.11062, 0.05266),
+          (0.15048, 0.07628),
+          (0.24056, 0.13852),
+          (0.31102, 0.1959),
+          (0.37328, 0.25278),
+          (0.39285, 0.27189),
+          (0.50874, 0.39416),
+          (0.56033, 0.45355),
+          (0.62713, 0.53859),
+          (0.7036, 0.6447),
+          (2.0761318, 5.1296697, VECTOR),
+          use_clip: false)](value: math_22)
+      * 0.1
+      * (FloatCurve[
+          mapping: Curve(
+            (0.110621, 1.7706),
+            (0.240561, 1.48511),
+            (0.4401, 1.20243),
+            (0.696506, 1.0),
+            (1.2136142, 0.51982343, VECTOR),
+            (2.1206033, 0.42473555, VECTOR),
+            (3.9731774, 0.38394368),
+            use_clip: false)](value: math_22)
+        * FloatCurve[
+          mapping: Curve(
+            (0.241287, 0.738294),
+            (0.976141, 1.2158539),
+            (2.53785, 2.1881375),
+            (3.94903, 3.1025324),
+            use_clip: false)](value: math_12)
+        * (FloatCurve[
+            mapping: Curve(
+              (0.0, 1.17818),
+              (0.316228, 1.06548),
+              (0.5, 1.0),
+              (0.632456, 0.952783),
+              (0.707107, 0.926178),
+              use_clip: false)](value: math_24)
+          * FloatCurve[
+            mapping: Curve(
+              (0.033843, 0.975578),
+              (0.604643, 0.959237),
+              (1.06548, 1.0),
+              (1.81239, 1.10416),
+              (2.44612, 1.20757),
+              (3.0591, 1.30469),
+              (3.45594, 1.35529),
+              (4.27827, 1.45617),
+              use_clip: false)](value: math_11)))
+  }
+  group = noisegroup_internal_3_022(
+    Input,
+    input_image_γ_log: combine_color,
+    alpha_mask: separate_color.alpha,
+    x_image_dimensions: image_info.dimensions.x,
+    y_image_dimensions: image_info.dimensions.y,
+    image_length: length(image_info.dimensions),
+    black_level: math_16,
+    film_gauge: float_curve_2,
+    luma_bias_mask: map_range_6,
+    lvl_1_noise_factor: math_13,
+    lvl_1_noise_scale: math_20,
+    lvl_2_noise_factor: math_12,
+    lvl_2_noise_scale: math_19,
+    lvl_2_inter_factor: 0.3,
+    lvl_3_noise_factor: math_11,
+    lvl_3_noise_scale: math_21,
+    noise_chroma_saturation: math_24,
+    animated: Animated,
+    glare_stregth: math_15,
+    mtf_sharpen: index_switch_12 * 0.16000001,
+    final_softening_softnes_slider: math_14,
+    halation_scale: relative_to_pixel,
+    final_softness_factor: index_switch,
+    displacement_sampels_per_pixel: mix_2)
+  "Mixing & Masking" {
+    mix = Mix[RGBA](factor: 1.0 - Factor, a: group, b: Input)
+  }
+  "UI/UX layer" {}
+  "all the silders have their controlls mapped here " {}
+  "making the node much easier to use & develop 🙏" {}
+  "maybe name xpr -> Sharp" {}
+  "Studio and home look close " {}
+  return (Result: mix)
+}

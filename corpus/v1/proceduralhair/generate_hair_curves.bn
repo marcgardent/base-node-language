@@ -1,0 +1,236 @@
+geometry graph "Get Attachment Surface"(
+    Geometry: Geometry(description: "Geometry to get the bundle of")
+) -> ("Surface Geometry": Geometry, "Surface UV Map": Vector, Exists: Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry)
+  separate_bundle = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_geometry: Geometry, surface_uv_map: Vector)
+  compare = DomainSize(separate_bundle.surface_geometry).point_count == 0
+  separate_bundle_2 = SeparateBundle(
+    get_geometry_bundle.bundle) -> (surface_object: Object, surface_uv_map_name: String)
+  switch = compare
+    ? ObjectInfo[RELATIVE](object: separate_bundle_2.surface_object).geometry
+    : separate_bundle.surface_geometry
+  return (
+    "Surface Geometry": switch,
+    "Surface UV Map": compare
+      ? NamedAttribute[FLOAT_VECTOR](name: separate_bundle_2.surface_uv_map_name).attribute
+      : separate_bundle.surface_uv_map,
+    Exists: not Warning(
+      show: DomainSize(switch).point_count == 0,
+      message: "Missing surface geometry"))
+}
+
+geometry graph "Get Rest Geometry"(
+    Geometry: Geometry
+) -> ("Rest Geometry": Geometry, "Rest Geometry Found": Bool, "Rest Attribute Found": Bool) {
+  get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+  get_bundle_item = GetBundleItem[GEOMETRY](
+    bundle: get_geometry_bundle.bundle,
+    path: "rest_geometry",
+    remove: true)
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position")
+  return (
+    "Rest Geometry": Warning[WARNING](
+        show: not get_bundle_item.exists,
+        message: "Missing rest geometry. Use 'Capture Rest Geometry'.")
+      ? SetPosition(
+        get_geometry_bundle.geometry,
+        selection: named_attribute.exists,
+        position: named_attribute.attribute)
+      : get_bundle_item.item,
+    "Rest Geometry Found": get_bundle_item.exists,
+    "Rest Attribute Found": SampleIndex[BOOLEAN](
+      get_geometry_bundle.geometry,
+      value: AccumulateField[INT](value: named_attribute.exists).total))
+}
+
+geometry graph "Rest Surface"(Surface: Geometry) -> ("Rest Surface": Geometry, Exists: Bool) {
+  group = get_rest_geometry(Surface)
+  return (
+    "Rest Surface": Warning[WARNING](
+        show: not (group.rest_geometry_found or group.rest_attribute_found),
+        message: "Missing rest geometry on surface. Use 'Capture Rest Geometry' or enable 'Add Rest Position'.")
+      ? Surface
+      : group.rest_geometry,
+    Exists: group.rest_geometry_found)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Set Attachment Surface"(
+    Geometry: Geometry,
+    Mode: Menu(optional_label: true) = Object,
+    "Surface Geometry": Geometry,
+    "Surface Object": Object(optional_label: true),
+    "Surface UV Map": Vector(
+      hide_value: true,
+      default_attribute_name: "UVMap",
+      structure_type: FIELD) = (0.0, 0.0)
+) -> Geometry {
+  "Set provided attachment surface directly" {
+    get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle = SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle.bundle,
+              path: "surface_geometry",
+              item: surface_geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  "Take attachment surface from object" {
+    get_geometry_bundle_2 = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle_2 = SetGeometryBundle(
+      get_geometry_bundle_2.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle_2.bundle,
+              path: "surface_geometry",
+              item: ObjectInfo[RELATIVE](object: surface_object).geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  return MenuSwitch(menu: Mode, Object: set_geometry_bundle_2, Geometry: set_geometry_bundle).output
+}
+
+geometry(show_modifier_manage_panel: false) graph "Generate Hair Curves"(
+    "Hair Surface": Geometry(
+      description: "Surface geometry or hair geometry with existing surface attachment for reference"),
+    "Surface Source": Menu(menu_expanded: true, optional_label: true) = Attached,
+    Surface: Object(
+      description: "Surface object for generation (needs matching transforms)",
+      optional_label: true),
+    "Surface UV Map": Vector(
+      description: "Surface UV map used for attachment",
+      hide_value: true,
+      default_attribute_name: "UVMap"),
+    "Resting Surface": Bool(
+      description: "Use the surface's resting state to preserve stability under deformation") = true,
+    "Attach to Surface": Bool(
+      description: "Attach the generated hair curves to the surface geometry for dynamics") = true,
+    "Hair Length": Float(
+      subtype: DISTANCE,
+      description: "Length of the generated hair curves") = 1.0 in 0.0..,
+    "Hair Material": Material(description: "Material of the generated hair curves"),
+    "Control Points": Int(
+      description: "Amount of control points of the generated hair curves") = 12 in 2..100000,
+    "Distribution" {
+        "Distribution Method": Menu(
+          description: "Use Poisson disk distribution method to keep a minimum distance",
+          menu_expanded: true,
+          optional_label: true) = Random,
+        Density: Float(
+          description: "Surface density of generated hair curves") = 10.0 in 0.0..10000.0,
+        "Density Mask": Float(
+          subtype: FACTOR,
+          description: "Factor applied on the density for curve distribution") = 1.0 in 0.0..1.0,
+        "Mask Texture": Image(
+          description: "Discard points based on a mask texture after distribution",
+          optional_label: true),
+        "Viewport Amount": Float(
+          subtype: FACTOR,
+          description: "Factor applied on the density for the viewport") = 1.0 in 0.0..1.0,
+        Seed: Int(description: "Random seed for the operation")
+    }
+) -> (
+    Geometry: Geometry,
+    Curves: Geometry,
+    "Surface Normal": Vector(
+      description: "Normal direction of the surface mesh at the attachment point",
+      attribute_domain: CURVE,
+      default_attribute_name: "surface_normal")
+) {
+  "Base Curve" {
+    set_material = CurveLine[DIRECTION](length: hair_length)
+      |> ResampleCurve[keep_last_segment: false](count: control_points)
+      |> SetMaterial(material: hair_material)
+  }
+  vector = (0.0, 0.0, 1.0)
+  "Distribute Base Points" {
+    clamp = Clamp(value: viewport_amount) @ hide
+    switch_3 = IsViewport() ? clamp : 1.0
+    menu_switch = MenuSwitch[GEOMETRY](menu: distribution_method, Random: _, "Poisson Disk": _)
+  }
+  "Surface Geometry" {
+    group = get_attachment_surface(hair_surface)
+    menu_switch_2 = MenuSwitch(
+      menu: surface_source,
+      Attached(
+        description: "Use the attached surface of the incoming hair geometry"): group.surface_geometry,
+      Input(
+        description: "Use the incoming surface input mesh"): SeparateComponents(hair_surface).mesh,
+      Object(description: "Use a specific object"): ObjectInfo[RELATIVE](object: Surface).geometry)
+    switch_2 = resting_surface
+      ? rest_surface(menu_switch_2.output).rest_surface
+      : menu_switch_2.output
+    switch_5 = menu_switch_2.attached ? group.surface_uv_map : surface_uv_map
+  }
+  "Distribute Base Points" .. {
+    distribute_points_on_faces = DistributePointsOnFaces(
+      switch_2,
+      density: Density * (switch_3 * density_mask),
+      seed: Seed)
+    distribute_points_on_faces_2 = DistributePointsOnFaces[POISSON](
+      switch_2,
+      distance_min: sqrt(0.3 / Density),
+      density_max: Density * 2.0 * switch_3,
+      density_factor: density_mask,
+      seed: Seed)
+    capture_attribute_4 = CaptureAttribute(
+      menu_switch.poisson_disk
+        ? distribute_points_on_faces_2.points
+        : distribute_points_on_faces.points,
+      Value: menu_switch.poisson_disk
+        ? distribute_points_on_faces_2.normal
+        : distribute_points_on_faces.normal)
+  }
+  "Remove by Density Texture" {
+    capture_attribute_2 = CaptureAttribute(capture_attribute_4.geometry, Value: switch_5)
+    switch = ImageInfo(image: mask_texture).width > 0
+      ? DeleteGeometry(
+        capture_attribute_2.geometry,
+        selection: not RandomValue[BOOLEAN](
+          probability: ImageTexture(image: mask_texture, vector: capture_attribute_2.value).color,
+          seed: Seed))
+      : capture_attribute_2.geometry
+  }
+  capture_attribute_3 = CaptureAttribute(switch, Value: ID())
+  capture_attribute = set_material
+    |> InterpolateCurves(
+      guide_up: vector,
+      points: capture_attribute_3.geometry,
+      point_up: capture_attribute_4.value,
+      max_neighbors: 1).curves
+    |> CaptureAttribute[CURVE](Value: capture_attribute_2.value)
+  store_named_attribute = StoreNamedAttribute[FLOAT2, CURVE](
+    capture_attribute.geometry,
+    name: "surface_uv_coordinate",
+    value: capture_attribute.value)
+  "Stable IDs" {
+    set_id = SetID(
+      store_named_attribute,
+      id: HashValue(value: capture_attribute_3.value, seed: CurveOfPoint().index_in_curve))
+  }
+  switch_4 = attach_to_surface
+    ? set_attachment_surface(
+      set_id,
+      mode: Geometry,
+      surface_geometry: menu_switch_2.output,
+      surface_uv_map: switch_5)
+    : set_id
+  return (
+    Geometry: hair_surface + switch_4,
+    Curves: switch_4,
+    "Surface Normal": capture_attribute_4.value)
+}

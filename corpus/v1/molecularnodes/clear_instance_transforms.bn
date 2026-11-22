@@ -1,0 +1,10 @@
+geometry(is_modifier: false) graph "Clear Instance Transforms"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    "Realize All": Bool(
+      description: "Realize all levels of nested instances for a top-level instances. Overrides the value of the Depth input")
+) -> Geometry {
+  return Geometry
+    |> SetInstanceTransform(selection: Selection, transform: CombineMatrix())
+    |> RealizeInstances(realize_all: realize_all)
+}

@@ -1,0 +1,43 @@
+geometry(is_modifier: false) graph Stretch(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Strength: Vector,
+    Offset: Vector in -1.0..1.0,
+    "Mid-Level": Float(subtype: FACTOR) = 0.5 in 0.0..1.0
+) -> Geometry {
+  {
+    vector_math = Strength * (1.0, 0.0, 0.0) * 0.5
+  }
+  {
+    vector_math_2 = Strength * (0.0, 1.0, 0.0) * 0.5
+  }
+  {
+    vector_math_3 = Strength * (0.0, 0.0, 1.0) * 0.5
+  }
+  {
+    bounding_box = BoundingBox(Geometry)
+    map_range = MapRange[FLOAT_VECTOR](
+      vector: Position(),
+      from_min: bounding_box.min,
+      from_max: bounding_box.max,
+      to_min: (-1.0, -1.0, -1.0))
+  }
+  {
+    switch = map_range.x >= Offset.x ? vector_math : -vector_math
+  }
+  {
+    switch_2 = map_range.y >= Offset.y ? vector_math_2 : -vector_math_2
+  }
+  {
+    switch_3 = map_range.z >= Offset.z ? vector_math_3 : -vector_math_3
+  }
+  {
+    vector_math_4 = switch
+      + switch_2
+      + switch_3
+      + Strength * Math[MULTIPLY_ADD](Value: mid_level, Value_001: -1.0)
+  }
+  {
+    return SetPosition(Geometry, selection: Selection, offset: vector_math_4)
+  }
+}

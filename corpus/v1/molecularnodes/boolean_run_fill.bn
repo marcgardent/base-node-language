@@ -1,0 +1,13 @@
+geometry graph "Boolean Run Fill"(
+    Boolean: Bool(
+      description: "The `Boolean` field to potentially fill gaps of `False` with",
+      hide_value: true) = true,
+    "Fill Size": Int(
+      description: "A run of `False` values equal to or less than this size will become `True`") = 3
+) -> (Boolean: Bool(description: "The `Boolean` array with gaps potentially filled")) {
+  "Moving down the points, fill in `False` values that are equal to or less than the `Fill Size`"
+  accumulate_field = AccumulateField[INT](group_id: AccumulateField[INT](value: Boolean).leading)
+  return (
+    Boolean: Boolean
+      or accumulate_field.trailing <= fill_size and accumulate_field.total <= fill_size)
+}

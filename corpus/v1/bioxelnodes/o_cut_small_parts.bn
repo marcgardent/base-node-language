@@ -1,0 +1,89 @@
+geometry graph "O Cut Structure"(
+    Structure: Bundle,
+    Selection: Bool(hide_value: true),
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Structure: Bundle) {
+  separate_bundle = SeparateBundle(
+    Structure) -> (
+    Solid: Bool(structure_type: GRID),
+    Albedo: Vector(structure_type: GRID),
+    Opacity: Float(structure_type: GRID),
+    Roughness: Float(structure_type: GRID),
+    Emission: Vector(structure_type: GRID),
+    Bump: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  boolean_math = separate_bundle.solid and xnor(Selection, Invert) @ hide
+  return (
+    Structure: CombineBundle(
+      Solid(structure_type: GRID): boolean_math,
+      Albedo(structure_type: GRID): separate_bundle.albedo,
+      Opacity(structure_type: GRID): separate_bundle.opacity,
+      Roughness(structure_type: GRID): separate_bundle.roughness,
+      Emission(structure_type: GRID): separate_bundle.emission,
+      Bump(structure_type: GRID): separate_bundle.bump,
+      Name(structure_type: SINGLE): separate_bundle.name,
+      ID(structure_type: SINGLE): separate_bundle.id))
+}
+
+geometry graph "O Region Selection"("Region Mesh": Geometry, Invert: Bool) -> (Selection: Bool) {
+  vector_math = (0.0, 0.0, -1.0) ⋅ Raycast(region_mesh).hit_normal
+  return (Selection: Switch[BOOLEAN](switch: Invert, false_: vector_math, true_: not vector_math))
+}
+
+geometry graph "O Cut to Region"(
+    Structure: Bundle,
+    "Region Mesh": Geometry,
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Structure: Bundle) {
+  return (
+    Structure: o_cut_structure(
+      structure: Structure,
+      selection: DomainSize(region_mesh).point_count
+        ? o_region_selection(region_mesh, invert: not Invert)
+        : false))
+}
+
+geometry(is_modifier: true) graph "O Delete Small Parts"(
+    Mesh: Geometry,
+    Threshold: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in 0.0..
+) -> (Mesh: Geometry) {
+  return (
+    Mesh: DeleteGeometry(
+      Mesh,
+      selection: AccumulateField(value: FaceArea(), group_id: MeshIsland().island_index).total
+        < Threshold))
+}
+
+geometry graph "O Cut Small Parts"(
+    Structure: Bundle,
+    Threshold: Float(force_non_field: true, structure_type: SINGLE) = 1.0 in 0.0..,
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE),
+        "Mesh Threshold": Float(
+          subtype: FACTOR,
+          description: "Values larger than the threshold are inside the generated mesh") = 0.1 in 0.0..1.0
+    }
+) -> (Structure: Bundle) {
+  return (
+    Structure: o_cut_to_region(
+      structure: Structure,
+      region_mesh: GridToMesh(
+          grid: (SeparateBundle(
+            Structure) -> (
+            Solid: Bool(structure_type: GRID),
+            Albedo: Vector(structure_type: GRID),
+            Opacity: Float(structure_type: GRID),
+            Roughness: Float(structure_type: GRID),
+            Emission: Vector(structure_type: GRID),
+            Bump: Float(structure_type: GRID),
+            Name: String(structure_type: SINGLE),
+            ID: Int(structure_type: DYNAMIC))).solid,
+          threshold: mesh_threshold)
+        |> o_delete_small_parts(threshold: Threshold * 0.01),
+      invert: Invert))
+}

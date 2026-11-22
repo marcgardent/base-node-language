@@ -1,0 +1,58 @@
+shader graph PT_CircleCoin(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0,
+    Scale: Float = 10.0 in -10000.0..10000.0,
+    Splited: Bool
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  vector_math = Vector * Scale
+  vector_math_2 = fract(vector_math)
+  {
+    math_2 = vector_math_2.x + vector_math_2.y < 1.0
+    math_4 = length(vector_math_2 - (1.0, 1.0, 0.0)) - 1.0
+    math_5 = length(vector_math_2) - 1.0
+    math = min(abs(math_5), abs(math_4)) @ hide
+    math_3 = max(math_4, math_5) < 0.0
+    mix_5 = math_2 ? (0.223368, 0.223368, 0.0) : (0.776632, 0.776632, 0.0) @ hide
+    mix_6 = math_2 ? (0.0, 0.0, 0.0) : (1.0, 1.0, 0.0) @ hide
+    mix = math_3 ? (0.5, 0.5, 0.0) : Splited ? mix_5 : mix_6
+  }
+  {
+    vector_rotate = VectorRotate(vector: vector_math_2, center: (0.5, 0.5, 0.0), angle: 1.5707964)
+    math_7 = vector_rotate.x + vector_rotate.y < 1.0
+    mix_2 = math_7 ? (0.223368, 0.776632, 0.0) : (0.776632, 0.223368, 0.0) @ hide
+    math_9 = length(vector_rotate - (1.0, 1.0, 0.0)) - 1.0
+    math_10 = length(vector_rotate) - 1.0
+    math_6 = min(abs(math_10), abs(math_9)) @ hide
+    math_8 = max(math_9, math_10) < 0.0
+    value = 0.7766321
+    mix_7 = math_7 ? (0.0, 1.0, 0.0) : (1.0, 0.0, 0.0) @ hide
+    mix_3 = math_8 ? (0.5, 0.5, 0.0) : Splited ? mix_2 : mix_7
+  }
+  "checker" {
+    vector_math_3 = floor(vector_math)
+    math_11 = Math[FLOORED_MODULO](
+      Value: Math[MULTIPLY](Value: vector_math_3, Value_001: 3.0),
+      Value_001: 2.0)
+  }
+  mix_4 = Mix(factor: math_11, a: math, b: math_6)
+  vector_math_4 = Mix[RGBA](factor: math_11, a: mix, b: mix_3) + vector_math_3
+  math_12 = 1.0 / Scale @ hide
+  vector_math_5 = vector_math_4 * math_12
+  vector_math_6 = vector_math_4 + (1000.0, 1000.0, 0.0) @ hide
+  "Rectangular edges" {
+    vector_math_7 = abs(vector_math_2 - (0.5, 0.5, 0.0)) @ hide
+    vector_math_8 = vector_math_7 - (0.5, 0.5, 0.0) @ hide
+    vector_math_10 = max(vector_math_8, 0.0) @ hide
+    vector_math_9 = length(vector_math_10) @ hide
+    separate_xyz = SeparateXYZ(vector: vector_math_8) @ hide
+    math_15 = max(separate_xyz.x, separate_xyz.y) @ hide
+    math_14 = min(math_15, 0.0) @ hide
+    math_16 = vector_math_9 + math_14 @ hide
+    math_13 = abs(math_16)
+  }
+  return (
+    Position: vector_math_5,
+    UV: Vector - vector_math_5,
+    Color: WhiteNoiseTexture(vector: vector_math_6).color,
+    Edge: (Splited ? min(mix_4, math_13) : mix_4) / Scale,
+    Masks: Mix[clamp_factor: false](factor: math_11, a: math_3 * 2.0, b: math_8))
+}

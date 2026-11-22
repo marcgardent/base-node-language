@@ -1,0 +1,19 @@
+geometry(is_modifier: false) graph "Apply Geo Cache - Deform Only"(
+    "New Geometry": Geometry,
+    "Cache Geometry": Geometry,
+    "Sim Attributes": String(
+      description: "List of attribute names (not) to transfer. A wildcard (*) at the end is allowed",
+      optional_label: true),
+    "Post Sim": Bool
+) -> ("Mixed Geometry": Geometry) {
+  return (
+    "Mixed Geometry": post_sim
+      ? TransferAttributes(
+        new_geometry,
+        source: cache_geometry,
+        attribute_names: FieldToList(Value: "*")).target
+      : TransferAttributes(
+        new_geometry,
+        source: cache_geometry,
+        attribute_names: sim_attributes).target)
+}

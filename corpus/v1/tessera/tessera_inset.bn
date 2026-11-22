@@ -1,0 +1,34 @@
+geometry(is_modifier: false) graph "Tessera · Inset"(
+    Geometry: Geometry,
+    Distance: Float,
+    Selection: Bool(hide_value: true) = true
+) -> Geometry {
+  index = Index()
+  position = Position()
+  evaluate_at_index = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: -1))
+  evaluate_at_index_2 = EvaluateAtIndex[CORNER, FLOAT_VECTOR](
+    value: position,
+    index: OffsetCornerInFace(corner_index: index, offset: 1))
+  vector_math = normalize((position - evaluate_at_index) * (1.0, 1.0, 0.0))
+  vector_math_2 = normalize((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0))
+  combine_xyz = CombineXYZ(x: -vector_math.y, y: vector_math.x)
+  combine_xyz_2 = CombineXYZ(x: -vector_math_2.y, y: vector_math_2.x)
+  vector_math_3 = (combine_xyz + combine_xyz_2)
+    * (Distance / max(combine_xyz ⋅ combine_xyz_2 + 1.0, 0.08))
+  return SetPosition(
+    Geometry,
+    offset: EvaluateOnDomain[CORNER, FLOAT_VECTOR](
+        value: Selection
+          ? vector_math_3
+            * min(
+              1.0,
+              min(
+                  length((position - evaluate_at_index) * (1.0, 1.0, 0.0)),
+                  length((evaluate_at_index_2 - position) * (1.0, 1.0, 0.0)))
+                * 0.45
+                / max(length(vector_math_3), 1e-12))
+          : (0.0, 0.0, 0.0))
+      * VertexNeighbors().face_count)
+}

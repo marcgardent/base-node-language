@@ -1,0 +1,13 @@
+geometry graph "Vector Clamp"(
+    Vector: Vector in -10000.0..10000.0,
+    Min: Vector in -10000.0..10000.0,
+    Max: Vector = (1.0, 1.0, 1.0) in -10000.0..10000.0
+) -> Vector {
+  "Clamping" {
+    combine_xyz = CombineXYZ(
+      x: Clamp(value: Vector.x, min: Min.x, max: Max.x),
+      y: Clamp(value: Vector.y, min: Min.y, max: Max.y),
+      z: Clamp(value: Vector.z, min: Min.z, max: Max.z))
+  }
+  return combine_xyz
+}

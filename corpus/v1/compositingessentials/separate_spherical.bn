@@ -1,0 +1,11 @@
+compositor graph "Separate Spherical"(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0
+) -> (
+    R: Float(description: "Radius - Length of the vector"),
+    Phi: Float(subtype: ANGLE, description: "Azimuth - Angle around the up axis"),
+    Theta: Float(subtype: ANGLE, description: "Zenith - Angle from the ground plane")
+) {
+  "Decompose into its cylindrical components"
+  vector_math = length(Vector)
+  return (R: vector_math, Phi: atan2(Vector.y, Vector.x), Theta: asin(Vector.z / vector_math))
+}

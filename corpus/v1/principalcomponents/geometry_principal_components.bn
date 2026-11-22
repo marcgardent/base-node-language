@@ -1,0 +1,113 @@
+geometry graph "Principal Components"(
+    Position: Vector(subtype: TRANSLATION) = Position(),
+    "Group ID": Int(
+      description: "An index used to group values together for multiple separate operations",
+      hide_value: true)
+) -> (
+    "Group Center": Vector,
+    Rotation: Rotation(description: "Rotation that defines the principal component basis"),
+    "Principal Components": Vector(description: "Variance of the data along each principal axis"),
+    "Principal Axes" {
+        "Longest Axis": Vector(description: "Axis along the most variance"),
+        "Intermediate Axis": Vector(
+          description: "Axis completing a right-handed orthogonal basis with the longest and shortest axis"),
+        "Shortest Axis": Vector(description: "Axis along the least variance")
+    }
+) {
+  "Principal Component Analysis (PCA) of a vector field"
+  "Centroid" {
+    field_average = FieldAverage[FLOAT_VECTOR](value: Position, group_id: group_id)
+  }
+  "Covariance matrix" {
+    vector_math = Position - field_average.mean @ hide
+    separate_xyz = SeparateXYZ(vector: vector_math) @ hide
+    vector_math_2 = vector_math * separate_xyz.x @ hide
+    field_average_2 = FieldAverage[FLOAT_VECTOR](value: vector_math_2, group_id: group_id) @ hide
+    vector_math_3 = vector_math * separate_xyz.y @ hide
+    vector_math_4 = vector_math * separate_xyz.z @ hide
+    field_average_3 = FieldAverage[FLOAT_VECTOR](value: vector_math_3, group_id: group_id) @ hide
+    field_average_4 = FieldAverage[FLOAT_VECTOR](value: vector_math_4, group_id: group_id) @ hide
+    separate_xyz_2 = SeparateXYZ(vector: field_average_2.mean) @ hide
+    separate_xyz_3 = SeparateXYZ(vector: field_average_3.mean) @ hide
+    separate_xyz_4 = SeparateXYZ(vector: field_average_4.mean) @ hide
+    combine_matrix = CombineMatrix(
+      column_1_row_1: separate_xyz_2.x,
+      column_1_row_2: separate_xyz_2.y,
+      column_1_row_3: separate_xyz_2.z,
+      column_2_row_1: separate_xyz_3.x,
+      column_2_row_2: separate_xyz_3.y,
+      column_2_row_3: separate_xyz_3.z,
+      column_3_row_1: separate_xyz_4.x,
+      column_3_row_2: separate_xyz_4.y,
+      column_3_row_3: separate_xyz_4.z)
+  }
+  "SVD of Covariance to find principal components" {
+    matrix_svd = MatrixSVD(matrix: combine_matrix)
+    matrix_determinant = MatrixDeterminant(matrix: matrix_svd.u)
+  }
+  separate_matrix = SeparateMatrix(matrix: matrix_svd.u)
+  combine_xyz = CombineXYZ(
+    x: separate_matrix.column_1_row_1,
+    y: separate_matrix.column_1_row_2,
+    z: separate_matrix.column_1_row_3) @ hide
+  combine_xyz_2 = CombineXYZ(
+    x: separate_matrix.column_2_row_1,
+    y: separate_matrix.column_2_row_2,
+    z: separate_matrix.column_2_row_3) @ hide
+  combine_xyz_3 = CombineXYZ(
+    x: separate_matrix.column_3_row_1,
+    y: separate_matrix.column_3_row_2,
+    z: separate_matrix.column_3_row_3) @ hide
+  return (
+    "Group Center": field_average.mean,
+    Rotation: AxesToRotation[primary_axis: X, secondary_axis: Z](
+      primary_axis: combine_xyz,
+      secondary_axis: combine_xyz_3),
+    "Principal Components": matrix_svd.s,
+    "Longest Axis": combine_xyz,
+    "Intermediate Axis": combine_xyz_2 * sign(matrix_determinant),
+    "Shortest Axis": combine_xyz_3)
+}
+
+geometry graph "Geometry Principal Components"(
+    Geometry: Geometry(
+      description: "Geometry to evaluate the given fields and store the resulting attributes on. All geometry types except volumes are supported"),
+    Position: Vector(subtype: TRANSLATION) = Position()
+) -> (
+    "Group Center": Vector,
+    Rotation: Rotation(description: "Rotation that defines the principal component basis"),
+    "Principal Components": Vector(description: "Variance of the data along each principal axis"),
+    "Principal Axes" {
+        "Longest Axis": Vector(description: "Axis along the most variance"),
+        "Intermediate Axis": Vector(
+          description: "Axis completing a right-handed orthogonal basis with the longest and shortest axis"),
+        "Shortest Axis": Vector(description: "Axis along the least variance")
+    }
+) {
+  "Principal Component Analysis (PCA) of a the positions of points"
+  capture_attribute = CaptureAttribute(Geometry, Position: Position)
+  group = principal_components(position: capture_attribute.position)
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: group.group_center) @ hide
+  sample_index_2 = SampleIndex[QUATERNION](capture_attribute.geometry, value: group.rotation) @ hide
+  sample_index_3 = SampleIndex[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: group.principal_components) @ hide
+  sample_index_4 = SampleIndex[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: group.longest_axis) @ hide
+  sample_index_5 = SampleIndex[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: group.intermediate_axis) @ hide
+  sample_index_6 = SampleIndex[FLOAT_VECTOR](
+    capture_attribute.geometry,
+    value: group.shortest_axis) @ hide
+  return (
+    "Group Center": sample_index,
+    Rotation: sample_index_2,
+    "Principal Components": sample_index_3,
+    "Longest Axis": sample_index_4,
+    "Intermediate Axis": sample_index_5,
+    "Shortest Axis": sample_index_6)
+}

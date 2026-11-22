@@ -1,0 +1,3 @@
+geometry graph "Boolean Any"(Boolean: Bool, "Group ID": Int(hide_value: true)) -> (Boolean: Bool) {
+  return (Boolean: AccumulateField[INT](value: Boolean, group_id: group_id).total > 0)
+}

@@ -1,0 +1,40 @@
+geometry(is_modifier: true) graph "Curve Ellipse"(
+    Resolution: Int = 32 in 4..,
+    "Radius X": Float(subtype: DISTANCE) = 2.0 in 0.0..,
+    "Radius Y": Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Trim Start": Float(subtype: FACTOR) in 0.0..1.0,
+    "Trim End": Float(subtype: FACTOR) = 1.0 in 0.0..1.0
+) -> (Curve: Geometry) {
+  "Index On Trim" {
+    map_range = MapRange[clamp: false](
+      value: Index() / (Resolution - 1.0),
+      to_min: MapRange[clamp: false](value: trim_start, to_max: 6.2831855),
+      to_max: MapRange[clamp: false](value: trim_end, to_max: 6.2831855))
+    switch = Index() == Resolution
+      ? (0.0, 0.0, 0.0)
+      : CombineXYZ(x: sin(map_range), y: cos(map_range))
+  }
+  "Radius" {
+    vector_math = switch * CombineXYZ(x: radius_x, y: radius_y)
+  }
+  "Trim" {
+    compare = Compare[EQUAL](
+      a: MapRange[clamp: false](value: trim_end, to_max: 6.2831855)
+        - MapRange[clamp: false](value: trim_start, to_max: 6.2831855),
+      b: 6.2831855,
+      epsilon: 0.0)
+  }
+  "Resampling" {
+    resample_curve = CurveCircle(resolution: Resolution)
+      |> ResampleCurve[keep_last_segment: false](
+        count: Switch[INT](switch: compare, false_: Resolution + 1.0, true_: Resolution))
+  }
+  "Output" {
+    mesh_to_curve = resample_curve
+      |> SetPosition(position: vector_math)
+      |> CurveToMesh()
+      |> MergeByDistance()
+      |> MeshToCurve()
+  }
+  return (Curve: mesh_to_curve)
+}

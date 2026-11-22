@@ -1,0 +1,51 @@
+geometry(is_modifier: true) graph Phyllotaxis(
+    Points: Int = 750 in 1..,
+    Angle: Float(subtype: ANGLE) = 2.3998277 in -6.2831855..6.2831855,
+    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    "Inner Radius": Float,
+    Depth: Float(subtype: DISTANCE),
+    Falloff: Float = 1.0 in 1.0..10000.0,
+    "Point Radius": Float(subtype: DISTANCE) = 0.025 in 0.0..
+) -> (Points: Geometry, Normal: Vector, Rotation: Rotation) {
+  "Radius" {
+    math_2 = sqrt(Index())
+    math = math_2 * Radius + (inner_radius + math_2)
+  }
+  {
+    math_4 = Index() * -Angle
+  }
+  "X" {
+    math_3 = cos(math_4) * math
+  }
+  "Y" {
+    math_5 = sin(math_4) * math
+  }
+  "Depth & Falloff" {
+    math_6 = Depth * pow(1.0 - Index() / (Points - 1.0), Falloff)
+  }
+  "Z" {
+    switch = math_6 < 0.0 ? -math_6 : math_6
+  }
+  "Radius & Angle" {
+    resample_curve = CurveLine(end: (0.0, 0.0, 0.0))
+      |> ResampleCurve[keep_last_segment: false](count: Points)
+  }
+  set_position = SetPosition(resample_curve, position: CombineXYZ(x: math_3, y: math_5, z: switch))
+  "Accurate Size" {
+    bounding_box = BoundingBox(set_position)
+    vector_math = CombineXYZ(x: Radius, y: Radius, z: Depth)
+      * (2.0, 2.0, 1.0)
+      / (bounding_box.max - bounding_box.min)
+      * Position()
+  }
+  "Point Radius" {
+    curve_to_points = set_position
+      |> SetPosition(position: vector_math)
+      |> CurveToPoints[EVALUATED]()
+    set_point_radius = SetPointRadius(curve_to_points.points, radius: point_radius)
+  }
+  return (
+    Points: set_point_radius,
+    Normal: curve_to_points.normal,
+    Rotation: curve_to_points.rotation)
+}

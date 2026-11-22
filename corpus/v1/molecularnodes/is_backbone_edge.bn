@@ -1,0 +1,137 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Chain ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    chain_id: Int(
+      description: "The `chain_id` attribute read from the points, corresponding to the different chains that were read from the structure")
+) {
+  "Integer representation of the Chain IDs that were present in the structure"
+  return (chain_id: attribute_at_index(index: Index, name: "chain_id"))
+}
+
+geometry graph "Edge Group ID"(
+    "Group ID": Int(hide_value: true)
+) -> (Difference: Int(attribute_domain: EDGE), "Is Equal": Bool(attribute_domain: EDGE)) {
+  edge_vertices = EdgeVertices()
+  evaluate_at_index = EvaluateAtIndex[INT](value: group_id, index: edge_vertices.vertex_index_2)
+  evaluate_at_index_2 = EvaluateAtIndex[INT](value: group_id, index: edge_vertices.vertex_index_1)
+  return (
+    Difference: IntegerMath[ABSOLUTE](
+      value: IntegerMath[SUBTRACT](Value: evaluate_at_index_2, Value_001: evaluate_at_index)),
+    "Is Equal": evaluate_at_index_2 == evaluate_at_index)
+}
+
+geometry graph ".MN_constants_atom_name_peptide"() -> (
+    "Backbone Lower": Int,
+    "Backbone Upper": Int,
+    "Side Chain Lower": Int,
+    "Side Chain Upper": Int,
+    "Alpha Carbon": Int
+) {
+  integer = 5
+  integer_2 = 49
+  integer_3 = 4
+  integer_4 = 1
+  integer_5 = 2
+  return (
+    "Backbone Lower": integer_4,
+    "Backbone Upper": integer_3,
+    "Side Chain Lower": integer,
+    "Side Chain Upper": integer_2,
+    "Alpha Carbon": integer_5)
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph ".MN_select_peptide"() -> (
+    "Is Backbone": Bool,
+    "Is Side Chain": Bool,
+    "Is Peptide": Bool,
+    "Is Alpha Carbon": Bool
+) {
+  group = mn_constants_atom_name_peptide()
+  group_2 = atom_name()
+  compare = group_2 == group.alpha_carbon
+  return (
+    "Is Backbone": group_2 >= group.backbone_lower and group_2 <= group.backbone_upper,
+    "Is Side Chain": group_2 >= group.side_chain_lower and group_2 <= group.side_chain_upper
+      or compare,
+    "Is Peptide": group_2 >= group.backbone_lower and group_2 <= group.side_chain_upper,
+    "Is Alpha Carbon": compare)
+}
+
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph "Fallback Boolean"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Bool(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Boolean: Bool(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  "Computes the boolean field if the given attribute doesn't exist. If it doesn't exist it just uses the attribute instead"
+  named_attribute = NamedAttribute[BOOLEAN](name: Name)
+  return (Boolean: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Is Alpha Carbon"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: fallback_boolean(
+      name: "is_alpha_carbon",
+      fallback: mn_select_peptide().is_alpha_carbon))
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry graph "Is Backbone Edge"() -> ("Is Backbone Edge": Bool(attribute_domain: EDGE)) {
+  return (
+    "Is Backbone Edge": edge_group_id(group_id: residue_id()).difference == 1
+      and edge_group_id(group_id: chain_id()).is_equal
+      and EvaluateOnDomain[EDGE, BOOLEAN](value: is_alpha_carbon().selection))
+}

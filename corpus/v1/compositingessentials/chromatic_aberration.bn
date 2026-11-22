@@ -1,0 +1,60 @@
+compositor graph "Chromatic Aberration"(
+    Image: Color = (1.0, 1.0, 1.0),
+    Type: Menu(description: "Different styles of aberrations", optional_label: true) = Scale,
+    Axis: Menu(
+      description: "Direction of the aberration effect",
+      menu_expanded: true,
+      optional_label: true) = Horizontal,
+    Factor: Float(
+      subtype: FACTOR,
+      description: "The intensity of the aberration effect") = 0.2 in 0.0001..1.0,
+    Center: Vector(
+      subtype: FACTOR,
+      description: "The position the transformations pivot around, in normalized coordinates. 0 means the lower left corner and 1 means the upper right corner of the image.") = (0.5, 0.5) in 0.0..1.0,
+    Samples: Int(
+      description: "The number of samples used to compute the blur. The more samples the smoother the result, at the expense of more compute time. The actual number of samples is two to the power of this input, so it increases exponentially.") = 3 in 1..32,
+    Fit: Bool(
+      description: "Scale the image such that it fits entirely in the frame, leaving no empty spaces at the corners")
+) -> (Image: Color) {
+  separate_color = SeparateColor(Image)
+  math = Factor * 0.1
+  math_2 = math + 1.0
+  math_3 = math * 0.5
+  math_4 = math_3 + 1.0
+  separate_color_2 = SeparateColor(Image)
+  separate_color_3 = SeparateColor(Image)
+  menu_switch = MenuSwitch(menu: Axis, Vertical: 1.0, Horizontal: 2.0)
+  math_5 = Factor * 20.0
+  math_6 = -math_5
+  math_7 = Math[COMPARE](Value: menu_switch.output, Value_001: 1.0, Value_002: 0.1) @ "== 1" hide
+  math_8 = Math[COMPARE](Value: menu_switch.output, Value_001: 2.0, Value_002: 0.1) @ "== 2" hide
+  math_9 = Factor * 0.5 @ "/2" hide
+  return (
+    Image: MenuSwitch(
+        menu: Type,
+        Offset: CombineColor(
+          red: Translate(separate_color_3.red, x: math_6 * math_8, y: math_6 * math_7),
+          green: separate_color_3.green,
+          blue: Translate(separate_color_3.blue, x: math_5 * math_8, y: math_5 * math_7),
+          alpha: separate_color_3.alpha),
+        Scale: CombineColor(
+          red: separate_color_2.red,
+          green: Scale(separate_color_2.green, x: math_4, y: math_4),
+          blue: Scale(separate_color_2.blue, x: math_2, y: math_2),
+          alpha: separate_color_2.alpha),
+        "Directional Blur": CombineColor(
+          red: DirectionalBlur(
+            separate_color.red,
+            samples: Samples,
+            center: Center,
+            scale: math_3 + 1.0),
+          green: separate_color.green
+            |> DirectionalBlur(samples: Samples, center: Center, scale: math_4)
+            |> Scale(x: math_4, y: math_4),
+          blue: separate_color.blue
+            |> DirectionalBlur(samples: Samples, center: Center, scale: math_2)
+            |> Scale(x: math_2, y: math_2),
+          alpha: separate_color.alpha),
+        "Lens Dispersion": LensDistortion(Image, dispersion: math_9, fit: Fit)).output
+      |> SetAlpha(alpha: SeparateColor(Image).alpha, type: "Replace Alpha"))
+}

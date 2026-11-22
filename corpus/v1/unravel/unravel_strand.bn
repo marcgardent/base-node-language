@@ -1,0 +1,124 @@
+geometry graph "Unravel Strand"(
+    Geometry: Geometry,
+    Path: Object(description: "The curve this strand follows"),
+    Fibers: Int(description: "Number of fibres twisted together in the strand") = 3 in 1..32,
+    "Fiber Spread": Float(
+      subtype: DISTANCE,
+      description: "Distance of each fibre from the centre of the strand") = 0.0008 in 0.0..,
+    Twist: Float(description: "Turns the fibres make around each other per metre") = 30.0,
+    "Tip Flare": Float(
+      description: "How much the fibres splay apart toward the end of the strand") = 1.0 in 0.0..,
+    "Root Width": Float(
+      subtype: DISTANCE,
+      description: "Fibre thickness at the start of the strand") = 0.0008 in 0.0..,
+    "Tip Width": Float(
+      subtype: DISTANCE,
+      description: "Fibre thickness at the end of the strand") = 0.0004 in 0.0..,
+    "Curl Radius": Float(
+      subtype: DISTANCE,
+      description: "How far the whole strand spirals around the drawn path") in 0.0..,
+    "Curl Turns": Float(
+      description: "How many spirals the strand makes along its length") = 3.0 in 0.0..,
+    Frizz: Float(
+      subtype: DISTANCE,
+      description: "Small random wiggles along each fibre") = 0.0005 in 0.0..,
+    "Point Spacing": Float(
+      subtype: DISTANCE,
+      description: "Distance between points along the strand. Smaller is smoother but heavier") = 0.002 in 0.0002..,
+    Seed: Int(description: "Changes the random look of the strand"),
+    Material: Material(description: "Material used by this strand"),
+    Scale: Float(
+      description: "Size of the cloth compared to real life. Set from the Unravel tab") = 1.0 in 0.001..1000.0,
+    Cloth: Object(
+      description: "The cloth this strand lies on. The strand follows it when it moves or simulates")
+) -> Geometry {
+  normal = Normal()
+  vector_math = CurveTangent() × normal.normal @ "Side"
+  spline_parameter = SplineParameter()
+  random_value = RandomValue(seed: Seed) @ "Strand Phase"
+  evaluate_on_domain = EvaluateOnDomain[CURVE](value: random_value) @ "Per Strand"
+  math_15 = Frizz * 2.0 @ "Frizz x2"
+  math_17 = 1.0 / Scale @ "One Over Scale"
+  transform_geometry = ObjectInfo[RELATIVE](object: Path).geometry
+    |> TransformGeometry(scale: math_17) @ "Shrink to Real Size"
+  resample_curve = ResampleCurve(
+    transform_geometry,
+    mode: Length,
+    length: point_spacing) @ "Even Points"
+  math_18 = Radius() * Scale @ "Radius x Scale"
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rest_position") @ "Rest Position"
+  vector_math_14 = named_attribute.attribute * math_17 @ "Rest x Scale"
+  switch = named_attribute.exists ? vector_math_14 : Position() @ "Rest or Current"
+  object_info = ObjectInfo[RELATIVE](object: Cloth) @ "Cloth Info"
+  transform_geometry_3 = TransformGeometry(object_info.geometry, scale: math_17) @ "Shrink Cloth"
+  capture_attribute_3 = CaptureAttribute(
+    transform_geometry_3,
+    Current: Position()) @ "Remember Current"
+  set_position_2 = SetPosition(capture_attribute_3.geometry, position: switch) @ "Cloth at Rest"
+  sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
+    set_position_2,
+    value: capture_attribute_3.current) @ "Spot Now"
+  geometry_proximity = GeometryProximity(set_position_2) @ "Spot at Rest"
+  vector_math_15 = Position() - geometry_proximity.position @ "Height Above Cloth"
+  vector_math_16 = sample_nearest_surface.value + vector_math_15 @ "On Moving Cloth"
+  set_position_3 = SetPosition(
+    resample_curve,
+    selection: geometry_proximity.is_valid,
+    position: vector_math_16) @ "Follow Cloth"
+  capture_attribute = CaptureAttribute(
+    set_position_3,
+    Up: normal.normal,
+    Side: vector_math,
+    t: spline_parameter.factor,
+    Distance: spline_parameter.length,
+    Phase: evaluate_on_domain) @ "Remember Path"
+  duplicate_elements = DuplicateElements[SPLINE](
+    capture_attribute.geometry,
+    amount: Fibers) @ "Fiber Copies"
+  capture_attribute_2 = CaptureAttribute[CURVE](
+    duplicate_elements.geometry,
+    Fiber: duplicate_elements.duplicate_index) @ "Remember Fiber"
+  math = capture_attribute_2.fiber / Fibers @ "Fiber Share"
+  math_2 = Twist * capture_attribute.distance @ "Twist Turns"
+  math_3 = math + math_2 @ "Fiber Turns"
+  math_4 = math_3 * 6.2832 @ "Fiber Angle"
+  math_5 = cos(math_4) @ "Fiber Cos"
+  math_6 = sin(math_4) @ "Fiber Sin"
+  vector_math_2 = capture_attribute.up * math_5 @ "Fiber Up Part"
+  vector_math_3 = capture_attribute.side * math_6 @ "Fiber Side Part"
+  vector_math_4 = vector_math_2 + vector_math_3 @ "Fiber Ring"
+  math_7 = Math[MULTIPLY_ADD](
+    Value: tip_flare,
+    Value_001: capture_attribute.t,
+    Value_002: 1.0) @ "Flare at t"
+  math_8 = fiber_spread * math_7 @ "Spread at t"
+  vector_math_5 = vector_math_4 * math_8 @ "Fiber Offset"
+  math_9 = curl_turns * capture_attribute.t @ "Curl Turns x t"
+  math_10 = math_9 + capture_attribute.phase @ "Curl Turns at t"
+  math_11 = math_10 * 6.2832 @ "Curl Angle"
+  math_12 = cos(math_11) @ "Curl Cos"
+  math_13 = sin(math_11) @ "Curl Sin"
+  vector_math_6 = capture_attribute.up * math_12 @ "Curl Up Part"
+  vector_math_7 = capture_attribute.side * math_13 @ "Curl Side Part"
+  vector_math_8 = vector_math_6 + vector_math_7 @ "Curl Ring"
+  vector_math_9 = vector_math_8 * curl_radius @ "Curl"
+  math_14 = Seed + capture_attribute_2.fiber @ "Fiber Seed"
+  noise_texture = NoiseTexture["4D"](vector: Position(), w: math_14, scale: 300.0) @ "Frizz Noise"
+  vector_math_10 = noise_texture.color - 0.5 @ "Frizz Centre"
+  vector_math_11 = vector_math_10 * math_15 @ "Frizz"
+  vector_math_12 = vector_math_5 + vector_math_9 @ "Add Curl"
+  vector_math_13 = vector_math_12 + vector_math_11 @ "Add Frizz"
+  set_position = SetPosition(capture_attribute_2.geometry, offset: vector_math_13) @ "Shape Strand"
+  map_range = MapRange(
+    value: capture_attribute.t,
+    to_min: root_width,
+    to_max: tip_width) @ "Width Root to Tip"
+  math_16 = map_range * 0.5 @ "Radius"
+  transform_geometry_2 = set_position
+    |> SetCurveRadius(radius: math_16)
+    |> SetMaterial(material: Material)
+    |> TransformGeometry(scale: Scale) @ "Grow Back"
+  set_curve_radius = SetCurveRadius(transform_geometry_2, radius: math_18) @ "Grow Radius"
+  join_geometry = Geometry + set_curve_radius @ "Add to Incoming"
+  return join_geometry
+}

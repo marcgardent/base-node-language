@@ -1,0 +1,125 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Rotate Hair Curves"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    Factor: Float(
+      subtype: FACTOR,
+      description: "Factor to influence the rotation angle") = 1.0 in 0.0..1.0,
+    Axis: Vector(
+      subtype: XYZ,
+      description: "Rotation axis (default: tangent at root)",
+      hide_value: true,
+      hide_in_modifier: true),
+    Angle: Float(subtype: ANGLE, description: "Angle of rotation"),
+    "Random Offset": Float(
+      subtype: ANGLE,
+      description: "Random offset to the rotation angle per curve") = 0.34906584 in 0.0..,
+    "Lock Ends": Bool(description: "Lock rotation to the axis between the curve ends"),
+    Seed: Int(description: "Random seed for the operation") in -10000..10000
+) -> Geometry {
+  "Fallback Axis" {
+    evaluate_on_domain = EvaluateOnDomain[CURVE, BOOLEAN](value: lock_ends) @ hide
+    switch_2 = evaluate_on_domain ? curve_info().direction : Axis
+    compare = Compare[EQUAL, VECTOR](a: switch_2, epsilon: 0.0) @ hide
+    switch = compare ? curve_root().root_direction : switch_2 @ hide
+  }
+  "Random Offset" {
+    math = EvaluateOnDomain[CURVE](
+        value: RandomValue(
+          min: -0.5,
+          max: 0.5,
+          id: curve_info().curve_id,
+          seed: HashValue(value: Seed, seed: -87614)))
+      * random_offset
+  }
+  "Rotate Position Attribute" {
+    vector_rotate = VectorRotate(
+      vector: Position(),
+      center: EvaluateOnDomain[FLOAT_VECTOR](value: curve_root().root_position),
+      axis: switch,
+      angle: Factor * (Angle + math))
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  "Optimization" {
+    capture_attribute = CaptureAttribute[CURVE](
+      get_geometry_component.component,
+      Value: SplineResolution())
+    set_spline_type = SetSplineType(capture_attribute.geometry)
+  }
+  set_position = SetPosition(set_spline_type, position: vector_rotate)
+  "Optimization" {
+    set_spline_resolution = set_position
+      |> SetSplineType[CATMULL_ROM]()
+      |> SetSplineResolution(
+        resolution: capture_attribute.value == 0 ? 12 : capture_attribute.value)
+  }
+  return get_geometry_component.geometry + set_spline_resolution
+}

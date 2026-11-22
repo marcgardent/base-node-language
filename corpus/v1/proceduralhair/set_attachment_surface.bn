@@ -1,0 +1,48 @@
+geometry(is_modifier: false, show_modifier_manage_panel: false) graph "Set Attachment Surface"(
+    Geometry: Geometry,
+    Mode: Menu(optional_label: true) = Object,
+    "Surface Geometry": Geometry,
+    "Surface Object": Object(optional_label: true),
+    "Surface UV Map": Vector(
+      hide_value: true,
+      default_attribute_name: "UVMap",
+      structure_type: FIELD) = (0.0, 0.0)
+) -> Geometry {
+  "Set provided attachment surface directly" {
+    get_geometry_bundle = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle = SetGeometryBundle(
+      get_geometry_bundle.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle.bundle,
+              path: "surface_geometry",
+              item: surface_geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  "Take attachment surface from object" {
+    get_geometry_bundle_2 = GetGeometryBundle(Geometry, remove: true)
+    set_geometry_bundle_2 = SetGeometryBundle(
+      get_geometry_bundle_2.geometry,
+      bundle: GetBundleItem[STRING](
+        bundle: GetBundleItem[OBJECT](
+          bundle: StoreBundleItem[VECTOR](
+            bundle: StoreBundleItem[GEOMETRY](
+              bundle: get_geometry_bundle_2.bundle,
+              path: "surface_geometry",
+              item: ObjectInfo[RELATIVE](object: surface_object).geometry),
+            path: "surface_uv_map",
+            item: surface_uv_map),
+          path: "surface_object",
+          remove: true).bundle,
+        path: "surface_uv_map_name",
+        remove: true).bundle)
+  }
+  return MenuSwitch(menu: Mode, Object: set_geometry_bundle_2, Geometry: set_geometry_bundle).output
+}

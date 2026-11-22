@@ -1,0 +1,28 @@
+geometry graph "LCh to OKLab"(L: Float, C: Float, h: Float(subtype: ANGLE)) -> (OKLab: Vector) {
+  "a" {
+    math = C * cos(h)
+  }
+  "b" {
+    math_2 = C * sin(h)
+  }
+  return (OKLab: CombineXYZ(x: L, y: math, z: math_2))
+}
+
+geometry graph "OKLab to LCh"(
+    OKLab: Vector in -10000.0..10000.0
+) -> (L: Float, C: Float, h: Float(subtype: ANGLE)) {
+  "C" {
+    integer = 2
+    math = sqrt(pow(OKLab.y, integer) + pow(OKLab.z, integer))
+  }
+  return (L: OKLab.x, C: math, h: atan2(OKLab.z, OKLab.y))
+}
+
+geometry graph "OKLab Offset LCh"(
+    OKLab: Vector = (0.64, 0.0, 0.0001) in -10000.0..10000.0,
+    L: Float in -10000.0..10000.0,
+    h: Float in -10000.0..10000.0
+) -> (OKLab: Vector) {
+  group = oklab_to_lch(oklab: OKLab)
+  return (OKLab: lch_to_oklab(l: L + group.l, c: group.c, h: group.h + h))
+}

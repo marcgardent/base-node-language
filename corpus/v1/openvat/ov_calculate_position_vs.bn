@@ -1,0 +1,236 @@
+geometry graph "ov_calculate-position-vs"(
+    Geometry: Geometry,
+    useNrm: Bool,
+    Frames: Int(default_attribute_name: "30") = 3 in 2..1000,
+    Wraps: Int(default_attribute_name: "1") = 1,
+    Object: Object(description: "Referenced deforming mesh object") = "01_vert",
+    Switch: Bool(hide_in_modifier: true, force_non_field: true, structure_type: SINGLE) = true,
+    x_min: Float(
+      subtype: DISTANCE,
+      force_non_field: true,
+      default_attribute_name: "-10",
+      structure_type: SINGLE) = -10.0,
+    x_max: Float(
+      subtype: DISTANCE,
+      force_non_field: true,
+      default_attribute_name: "10",
+      structure_type: SINGLE) = 10.0,
+    y_min: Float(force_non_field: true, default_attribute_name: "-10", structure_type: SINGLE),
+    y_max: Float(force_non_field: true, default_attribute_name: "10", structure_type: SINGLE),
+    z_min: Float(force_non_field: true, default_attribute_name: "-10", structure_type: SINGLE),
+    z_max: Float(force_non_field: true, default_attribute_name: "10", structure_type: SINGLE),
+    "Resolution X": Int(description: "Scene Resolution X", default_attribute_name: "2048") = 512,
+    "Resolution Y": Int(description: "Scene Resolution Y", default_attribute_name: "2048") = 512,
+    Proxy: Object,
+    Frame_Start: Int,
+    custom_attr_1: String,
+    custom_scalar: String,
+    remap_vector: Bool,
+    use_custom_vector: Bool,
+    remap_scalar: Bool,
+    custom_attr_2: String,
+    custom_attr_3: String,
+    StandardRemap: Bool = true
+) -> (
+    Geometry: Geometry,
+    colPos: Vector(attribute_domain: FACE, default_attribute_name: "colPos"),
+    colNrm: Vector(default_attribute_name: "colNrm"),
+    useNrm: Float(default_attribute_name: "useNrm")
+) {
+  value = 10.0 @ "CamSize"
+  combine_xyz = CombineXYZ(y: value / -2.0)
+  math = Frames * Wraps
+  "Split By Frame (Row)" {
+    math_2 = SceneTime().frame - Frame_Start @ "-1" hide
+    math_3 = Frames + 1.0 @ "+1" hide
+    math_5 = 10.0 / math_3 @ "10/" hide
+    math_6 = math_5 / 2.0 @ "/2" hide
+    math_4 = NamedAttribute[FLOAT_VECTOR](name: "colPos").attribute.y - math_6 @ hide
+    "Capture ColPos" #28273a {}
+  }
+  "Create X Encode Row Target Geometry" {
+    domain_size = ObjectInfo(object: Object).geometry
+      |> DomainSize()
+    "Return Pixel Grid" #1d1b26 {
+      math_7 = domain_size.point_count + 1.0 @ "+1" hide
+      math_8 = Frames + 1.0 @ "+1" hide
+    }
+    switch = Switch[FLOAT](
+      switch: Compare[GREATER_THAN](a: resolution_y, b: resolution_x),
+      false_: resolution_x,
+      true_: resolution_y)
+    "Return Greater Value" #1d1b26 {}
+    "Return Camera X Range In Units" #1d1b26 {}
+  }
+  value_2 = 10.0 @ "OrthoCamSize(10)" hide
+  math_9 = value_2 / switch @ hide
+  math_10 = value_2 / switch @ hide
+  math_11 = math_10 * Frames @ hide
+  math_12 = math_9 * domain_size.point_count @ hide
+  combine_xyz_2 = CombineXYZ(x: math_12, y: math_11)
+  Transform = Grid(vertices_x: 2, vertices_y: 2).mesh
+    |> TransformGeometry(scale: CombineXYZ(x: combine_xyz_2.x, y: combine_xyz_2.y, z: 1.0))
+  "Create X Encode Row Target Geometry" .. {
+    capture_attribute_2 = CaptureAttribute(Transform, Value: Position())
+    separate_xyz = SeparateXYZ(vector: capture_attribute_2.value) @ "X" hide
+    attribute_statistic = AttributeStatistic(
+      capture_attribute_2.geometry,
+      attribute: separate_xyz.x)
+    "Return Pixel Grid" .. {
+      grid = Grid(
+        size_x: attribute_statistic.range,
+        size_y: 10.0,
+        vertices_x: math_7,
+        vertices_y: math_8)
+    }
+  }
+  "Split By Frame (Row)" .. {
+    capture_attribute = CaptureAttribute[FACE](grid.mesh, Value: Position())
+    separate_geometry = capture_attribute.geometry
+      |> StoreNamedAttribute[FLOAT_VECTOR, FACE](name: "colPos", value: capture_attribute.value)
+      |> SeparateGeometry[FACE](
+        selection: Compare[EQUAL](
+          a: MapRange(value: math_4, from_min: -5.0, from_max: 5.0, to_max: Frames),
+          b: math_2,
+          epsilon: math_6))
+  }
+  capture_attribute_3 = separate_geometry.selection
+    |> SplitEdges()
+    |> CaptureAttribute[FACE](Value: Index())
+  index = Index()
+  named_attribute = NamedAttribute(name: "pixelWidth")
+  math_13 = floor(NamedAttribute(name: "vertFrame").attribute / resolution_x)
+  vector_math = (ObjectInfo(object: Object).geometry
+      |> SampleIndex[FLOAT_VECTOR](value: Position(), index: capture_attribute_3.value))
+    - (ObjectInfo(object: Proxy).geometry
+      |> SampleIndex[FLOAT_VECTOR](value: Position(), index: capture_attribute_3.value))
+  combine_xyz_3 = CombineXYZ(
+    x: MapRange[clamp: false](value: vector_math.x, from_min: x_min, from_max: x_max),
+    y: MapRange[clamp: false](value: vector_math.y, from_min: y_min, from_max: y_max),
+    z: MapRange[clamp: false](value: vector_math.z, from_min: z_min, from_max: z_max))
+  sample_index = ObjectInfo(object: Object).geometry
+    |> SampleIndex[FLOAT_VECTOR](
+      value: Normal[legacy_corner_normals: true]().normal,
+      index: capture_attribute_3.value)
+  "Define Colors" {
+    map_range = MapRange[FLOAT_VECTOR](
+      vector: sample_index,
+      from_min: (-1.0, -1.0, -1.0)) @ "Map Range for Normals" hide
+    object_info = ObjectInfo(object: Object)
+    combine_xyz_6 = CombineXYZ(
+      x: SampleIndex(
+        object_info.geometry,
+        value: NamedAttribute(name: custom_attr_1).attribute,
+        index: capture_attribute_3.value),
+      y: SampleIndex(
+        object_info.geometry,
+        value: NamedAttribute(name: custom_attr_2).attribute,
+        index: capture_attribute_3.value),
+      z: SampleIndex(
+        object_info.geometry,
+        value: NamedAttribute(name: custom_attr_3).attribute,
+        index: capture_attribute_3.value))
+    capture_attribute_4 = CaptureAttribute[FACE](
+      capture_attribute_3.geometry,
+      Value: use_custom_vector
+        ? (StandardRemap
+          ? CombineXYZ(
+            x: MapRange[clamp: false](value: combine_xyz_6.x, from_min: x_min, from_max: x_max),
+            y: MapRange[clamp: false](value: combine_xyz_6.y, from_min: y_min, from_max: y_max),
+            z: MapRange[clamp: false](value: combine_xyz_6.z, from_min: z_min, from_max: z_max))
+          : combine_xyz_6)
+        : StandardRemap ? combine_xyz_3 : vector_math)
+    switch_4 = StandardRemap ? map_range : sample_index
+  }
+  capture_attribute_5 = CaptureAttribute(capture_attribute_4.geometry, Value: switch_4)
+  store_named_attribute = capture_attribute_5.geometry
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "colPos", value: capture_attribute_4.value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "colNrm", value: capture_attribute_5.value)
+    |> CaptureAttribute[FACE](Value: index).geometry
+    |> StoreNamedAttribute[FACE](
+      name: "vertFrame",
+      value: AttributeStatistic[FACE](capture_attribute_4.geometry, attribute: index).max - index)
+  attribute_statistic_2 = AttributeStatistic(
+    store_named_attribute,
+    selection: NamedAttribute(name: "vertFrame").attribute < 1.0,
+    attribute: Position().x)
+  value_3 = 10.0 @ "CamSize"
+  set_position = store_named_attribute
+    |> StoreNamedAttribute[FACE](name: "pixelWidth", value: attribute_statistic_2.range)
+    |> SetPosition(
+      offset: CombineXYZ(
+        x: -attribute_statistic_2.min
+          + (resolution_x / 2.0 * named_attribute.attribute - named_attribute.attribute)))
+    |> SetPosition(
+      offset: CombineXYZ(
+        x: math_13 * (resolution_x * NamedAttribute(name: "pixelWidth").attribute),
+        y: math_13 * value_3))
+  "Position On Y Start" {
+    transform_geometry = TransformGeometry(
+      set_position,
+      translation: combine_xyz,
+      rotation: (0.0, 0.0, 3.1415927))
+  }
+  "Squash (Finalize Wrap)" {
+    transform_geometry_2 = TransformGeometry(
+      transform_geometry,
+      scale: CombineXYZ(
+        x: 1.0,
+        y: 1.0 / Wraps * (resolution_x > resolution_y ? resolution_y / resolution_x : 1.0),
+        z: 1.0))
+  }
+  "Make Geometry Frame/Wrap Size" #2c1f33 {
+    switch_2 = Switch[FLOAT](
+      switch: Compare[GREATER_THAN](a: resolution_y, b: resolution_x),
+      false_: resolution_x,
+      true_: resolution_y)
+    value_4 = 10.0 @ "CamSize" hide
+    value_5 = 10.0 @ "ArbitraryWidth" hide
+    combine_xyz_4 = CombineXYZ(x: value_4 / switch_2 * value_5, y: value_4 / switch_2 * math)
+    FlipY = (1.0, -1.0, -1.0) @ "FlipY"
+    math_14 = combine_xyz_4.y / 2.0 @ "HalfHeight"
+    math_15 = combine_xyz_4.x / 2.0 @ "HalfWidth"
+    transform_geometry_3 = Grid().mesh
+      |> TransformGeometry()
+      |> TransformGeometry(
+        translation: CombineXYZ(x: math_15, y: math_14) * FlipY,
+        scale: CombineXYZ(x: combine_xyz_4.x, y: combine_xyz_4.y, z: 1.0))
+  }
+  "Make Geometry Reference Size" #2c1f33 {
+    switch_3 = Switch[FLOAT](
+      switch: Compare[GREATER_THAN](a: resolution_y, b: resolution_x),
+      false_: resolution_x,
+      true_: resolution_y)
+    value_6 = 10.0 @ "CamSize" hide
+    value_7 = 10.0 @ "ArbitraryWidth" hide
+    combine_xyz_5 = CombineXYZ(
+      x: value_6 / switch_3 * value_7,
+      y: value_6 / switch_3 * resolution_y)
+    vector = (1.0, -1.0, -1.0) @ "FlipY"
+    math_16 = combine_xyz_5.y / 2.0 @ "HalfHeight"
+    math_17 = combine_xyz_5.x / 2.0 @ "HalfWidth"
+    transform_geometry_4 = Grid().mesh
+      |> TransformGeometry()
+      |> TransformGeometry(
+        translation: CombineXYZ(x: math_17, y: math_16) * vector,
+        scale: CombineXYZ(x: combine_xyz_5.x, y: combine_xyz_5.y, z: 1.0))
+  }
+  "Make Screen Size Geometry" #1d1b26 {}
+  "Find Pixel Width In Units" {}
+  "Calculate Wrap Offset" {}
+  "Calculate Per-Frame Offset" {}
+  "Comparative Difference" {}
+  "Return Display Attributes" {}
+  return (
+    Geometry: transform_geometry_2
+      |> TransformGeometry(
+        scale: CombineXYZ(
+          x: 1.0,
+          y: AttributeStatistic(transform_geometry_3, attribute: Position().y).range
+            / AttributeStatistic(transform_geometry_4, attribute: Position().y).range,
+          z: 1.0))
+      |> SetMaterial(material: "ov_color-pos.mat"),
+    colPos: NamedAttribute[FLOAT_VECTOR](name: "colPos").attribute,
+    colNrm: NamedAttribute[FLOAT_VECTOR](name: "colNrm").attribute,
+    useNrm: useNrm ? 1.0 : 0.0)
+}

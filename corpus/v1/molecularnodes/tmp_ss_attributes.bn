@@ -1,0 +1,18 @@
+geometry graph ".tmp_ss_attributes"() -> (
+    tmp_ss_is_first: Bool,
+    tmp_ss_is_last: Bool,
+    tmp_ss_size: Int,
+    tmp_idx: Int,
+    tmp_idx_curve: Int,
+    tmp_curve_normal: Vector,
+    tmp_curve_tangent: Vector
+) {
+  return (
+    tmp_ss_is_first: NamedAttribute[BOOLEAN](name: "tmp_ss_is_first").attribute,
+    tmp_ss_is_last: NamedAttribute[BOOLEAN](name: "tmp_ss_is_last").attribute,
+    tmp_ss_size: NamedAttribute[INT](name: "tmp_ss_size").attribute,
+    tmp_idx: NamedAttribute[INT](name: "tmp_idx").attribute,
+    tmp_idx_curve: NamedAttribute[INT](name: "tmp_idx_curve").attribute,
+    tmp_curve_normal: NamedAttribute[FLOAT_VECTOR](name: "tmp_curve_normal").attribute,
+    tmp_curve_tangent: NamedAttribute[FLOAT_VECTOR](name: "tmp_curve_tangent").attribute)
+}

@@ -1,0 +1,520 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "Dihedral Angle"(
+    A: Vector(description: "First vector for the calculation, which draws a line to B"),
+    B: Vector(
+      description: "Second vector for the calculation, which receives a line from A and draws a line to C"),
+    C: Vector(
+      description: "Third vector for the calculation, which receives a line from B and draws a line to D"),
+    D: Vector(
+      description: "Last vector for the calculation, which is the end point of the line from D")
+) -> (
+    Angle: Float(
+      subtype: ANGLE,
+      description: "The angle between the vectors AB and CD, when made perpendicular to BC."),
+    "BA⟂(BC)": Vector(description: "The vector BA when made perpendicular to  the axis BC"),
+    "CD⟂(BC)": Vector(description: "The Vector CD when makde perpendicular to the axis BC"),
+    BC: Vector(description: "The axis vector BC")
+) {
+  vector_math = D - C
+  vector_math_2 = A - B
+  vector_math_3 = C - B
+  vector_math_4 = vector_math_2
+    - VectorMath[PROJECT](Vector: vector_math_2, Vector_001: vector_math_3)
+  vector_math_5 = vector_math - VectorMath[PROJECT](Vector: vector_math, Vector_001: vector_math_3)
+  return (
+    Angle: vector_angle(a: vector_math_4, b: vector_math_5).angle
+      * sign((vector_math_4 × vector_math_5) ⋅ vector_math_3),
+    "BA⟂(BC)": vector_math_4,
+    "CD⟂(BC)": vector_math_5,
+    BC: vector_math_3)
+}
+
+geometry graph "Find Connected"(
+    Value: Int(hide_value: true),
+    Match: Int = 2,
+    Distance: Int = 2 in 1..3,
+    Method: Menu(optional_label: true) = Any
+) -> ("Is Valid": Bool, Length: Int, Index: Int) {
+  shortest_edge_paths = ShortestEdgePaths(end_vertex: Value == Match)
+  compare = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 2)
+  compare_2 = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 3)
+  evaluate_at_index = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: shortest_edge_paths.next_vertex_index)
+  evaluate_at_index_2 = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: evaluate_at_index)
+  switch = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 1)
+    ? shortest_edge_paths.next_vertex_index
+    : -1
+  switch_2 = compare ? evaluate_at_index : switch
+  menu_switch = MenuSwitch(
+    menu: Method,
+    Any: IndexSwitch(Distance, 0, switch, switch_2, compare_2 ? evaluate_at_index_2 : switch_2),
+    Exact: IndexSwitch(
+      Distance,
+      0,
+      switch,
+      compare ? evaluate_at_index : -1,
+      compare_2 ? evaluate_at_index_2 : -1))
+  return (
+    "Is Valid": menu_switch.output != -1,
+    Length: FloatToInteger(float: shortest_edge_paths.total_cost),
+    Index: menu_switch.output)
+}
+
+geometry graph "Menu Atom Name"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (atom_name: Int, Selection: Bool, atom_name as atom_name_string: String) {
+  index_switch = IndexSwitch(
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    50,
+    51,
+    51,
+    52,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77)
+  menu_switch = MenuSwitch(
+    menu: atom_name,
+    N: 1,
+    CA: 2,
+    C: 3,
+    O: 4,
+    CB: 5,
+    CG: 6,
+    CG1: 7,
+    CG2: 8,
+    OG: 9,
+    OG1: 10,
+    SG: 11,
+    CD: 12,
+    CD1: 13,
+    CD2: 14,
+    ND1: 15,
+    ND2: 16,
+    OD1: 17,
+    OD2: 18,
+    SD: 19,
+    CE: 20,
+    CE1: 21,
+    CE2: 23,
+    CE3: 24,
+    NE: 25,
+    NE1: 26,
+    NE2: 27,
+    OE1: 28,
+    OE2: 29,
+    CH2: 30,
+    NH1: 31,
+    NH2: 32,
+    OH: 33,
+    CZ: 34,
+    CZ2: 35,
+    CZ3: 36,
+    NZ: 37,
+    OXT: 38,
+    P: 50,
+    O1P: 51,
+    OP1: 51,
+    OP2: 52,
+    O2P: 52,
+    "O5'": 53,
+    "C5'": 54,
+    "C4'": 55,
+    "O4'": 56,
+    "C3'": 57,
+    "O3'": 58,
+    "C2'": 59,
+    "O2'": 60,
+    "C1'": 61,
+    N1: 62,
+    N9: 63,
+    N3: 64,
+    C8: 65,
+    N7: 66,
+    C5: 67,
+    C6: 68,
+    N6: 69,
+    C2: 70,
+    C4: 71,
+    O6: 72,
+    N2: 73,
+    N4: 74,
+    O2: 75,
+    O4: 76,
+    C7: 77)
+  menu_switch_2 = MenuSwitch(
+    menu: N,
+    N: "N",
+    CA: "CA",
+    C: "C",
+    O: "O",
+    CB: "CB",
+    CG: "CG",
+    CG1: "CG1",
+    CG2: "CG2",
+    OG: "OG",
+    OG1: "OG1",
+    SG: "SG",
+    CD: "CD",
+    CD1: "CD1",
+    CD2: "CD2",
+    ND1: "ND1",
+    ND2: "ND2",
+    OD1: "OD1",
+    OD2: "OD2",
+    SD: "SD",
+    CE: "CE",
+    CE1: "CE1",
+    CE2: "CE2",
+    CE3: "CE3",
+    NE: "NE",
+    NE1: "NE1",
+    NE2: "NE2",
+    OE1: "OE1",
+    OE2: "OE2",
+    CH2: "CH2",
+    NH1: "NH1",
+    NH2: "NH2",
+    OH: "OH",
+    CZ: "CZ",
+    CZ2: "CZ2",
+    CZ3: "CZ3",
+    NZ: "NZ",
+    OXT: "OXT",
+    P: "P",
+    O1P: "O1P",
+    OP1: "OP1",
+    OP2: "OP2",
+    O2P: "O2P",
+    "O5'": "O5'",
+    "C5'": "C5'",
+    "C4'": "C4'",
+    "O4'": "O4'",
+    "C3'": "C3'",
+    "O3'": "O3'",
+    "C2'": "C2'",
+    "O2'": "O2'",
+    "C1'": "C1'",
+    N1: "N1",
+    N9: "N9",
+    N3: "N3",
+    C8: "C8",
+    N7: "N7",
+    C5: "C5",
+    C6: "C6",
+    N6: "N6",
+    C2: "C2",
+    C4: "C4",
+    O6: "O6",
+    N2: "N2",
+    N4: "N4",
+    O2: "O2",
+    O4: "O4",
+    C7: "C7")
+  return (
+    atom_name: menu_switch.output,
+    Selection: menu_switch.output == atom_name(),
+    atom_name_string: IndexSwitch(
+      menu_switch.output,
+      "N",
+      "CA",
+      "C",
+      "O",
+      "CB",
+      "CG",
+      "CG1",
+      "CG2",
+      "OG",
+      "OG1",
+      "SG",
+      "CD",
+      "CD1",
+      "CD2",
+      "ND1",
+      "ND2",
+      "OD1",
+      "OD2",
+      "SD",
+      "CE",
+      "CE1",
+      "CE2",
+      "CE3",
+      "NE",
+      "NE1",
+      "NE2",
+      "OE1",
+      "OE2",
+      "CH2",
+      "NH1",
+      "NH2",
+      "OH",
+      "CZ",
+      "CZ2",
+      "CZ3",
+      "NZ",
+      "OXT",
+      "P",
+      "O1P",
+      "OP1",
+      "OP2",
+      "O2P",
+      "O5'",
+      "C5'",
+      "C4'",
+      "O4'",
+      "C3'",
+      "O3'",
+      "C2'",
+      "O2'",
+      "C1'",
+      "N1",
+      "N9",
+      "N3",
+      "C8",
+      "N7",
+      "C5",
+      "C6",
+      "N6",
+      "C2",
+      "C4",
+      "O6",
+      "N2",
+      "N4",
+      "O2",
+      "O4",
+      "C7"))
+}
+
+geometry graph "Find Bonded Atom"(
+    Index: Int = Index() in 0..,
+    Method: Menu(optional_label: true) = Exact,
+    "Atom Name": Menu(optional_label: true) = N,
+    Distance: Int = 2 in 1..3
+) -> ("Is Valid": Bool, Index: Int, Position: Vector) {
+  group = find_connected(
+    value: atom_name(),
+    match: menu_atom_name(atom_name: atom_name).atom_name,
+    distance: Distance,
+    method: Method)
+  evaluate_at_index = EvaluateAtIndex[INT](value: group.index, index: Index)
+  return (
+    "Is Valid": group.is_valid,
+    Index: evaluate_at_index,
+    Position: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_at_index))
+}
+
+geometry graph "Group Pick"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(
+      description: "Valid for the point only if there is 1 single `True` for the `Pick` field in the point's group in the `Group ID`"),
+    Index: Int(description: "Index of picked item. Returns -1 if not a valid pick")
+) {
+  "Get the item of the `True` in each `Group ID`, but only if there is a single `True` in each group"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total == 1
+  return (
+    "Is Valid": compare,
+    Index: compare ? AccumulateField[INT](value: Pick ? Index() : 0, group_id: group_id).total : -1)
+}
+
+geometry graph "Group Pick Vector"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true),
+    Position: Vector(
+      description: "Vector field to pick vlaue for, defaults to `Position`",
+      hide_value: true) = Position()
+) -> (
+    "Is Valid": Bool(description: "Whether the pick for the point's `Group ID` is valid"),
+    Index: Int(description: "Picked Index for the Group, -1 if not valid"),
+    Vector: Vector(description: "Picked vector for the group, `(0, 0, 0)` if not valid")
+) {
+  group = group_pick(pick: Pick, group_id: group_id)
+  return (
+    "Is Valid": group.is_valid,
+    Index: group.index,
+    Vector: group.is_valid
+      ? EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: group.index)
+      : (0.0, 0.0, 0.0))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}
+
+geometry graph "Residue Mask"(
+    atom_name: Int(description: "Atom to pick from the group") = 1 in 2..
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(pick: atom_name() == atom_name, group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph "Dihedral Nucleic Angle"() -> (
+    Angle: Float(
+      subtype: ANGLE,
+      description: "The angle between the vectors AB and CD, when made perpendicular to BC."),
+    Up: Vector(description: "The vector BA when made perpendicular to  the axis BC"),
+    Axis: Vector(description: "The axis vector BC")
+) {
+  integer_math = IntegerMath[SUBTRACT](Value: atom_name(), Value_001: 50)
+  group = residue_mask(atom_name: 54)
+  group_2 = residue_mask(atom_name: 50)
+  group_3 = residue_mask(atom_name: 55)
+  group_4 = residue_mask(atom_name: 53)
+  group_5 = residue_mask(atom_name: 57)
+  group_6 = dihedral_angle(
+    a: IndexSwitch(
+      integer_math,
+      find_bonded_atom(atom_name: "O5'").position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group.position,
+      group_3.position,
+      group_5.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      find_bonded_atom(atom_name: P, distance: 1).position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0)),
+    b: Position(),
+    c: IndexSwitch(
+      integer_math,
+      find_bonded_atom(atom_name: "O3'", distance: 1).position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_2.position,
+      group_4.position,
+      group.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_5.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0)),
+    d: IndexSwitch(
+      integer_math,
+      find_bonded_atom(atom_name: "C3'", distance: 1).position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      find_bonded_atom(atom_name: "O3'").position,
+      group_2.position,
+      group_4.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_3.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0)))
+  return (Angle: -group_6.angle, Up: group_6.ba_bc, Axis: group_6.bc)
+}

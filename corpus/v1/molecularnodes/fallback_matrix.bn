@@ -1,0 +1,13 @@
+geometry graph "Fallback Matrix"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Matrix(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Matrix: Matrix(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute[FLOAT4X4](name: Name)
+  return (Matrix: named_attribute.exists ? named_attribute.attribute : Fallback)
+}

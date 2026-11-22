@@ -1,0 +1,13 @@
+geometry graph "Flip UV"(
+    " UV Map": Vector(hide_value: true) in 0.0..1.0,
+    "Flip U": Bool(description: "Flip U (also use as selection if needed)") = true,
+    "Flip V": Bool(description: "Flip V (also use as selection if needed)")
+) -> (" UV Map": Vector(attribute_domain: CORNER)) {
+  {
+    switch = flip_u ? (uv_map + (-1.0, 0.0, 0.0)) * (-1.0, 1.0, 1.0) : uv_map
+  }
+  {
+    switch_2 = flip_v ? (switch + (0.0, -1.0, 0.0)) * (1.0, -1.0, 1.0) : switch
+  }
+  return (" UV Map": switch_2)
+}

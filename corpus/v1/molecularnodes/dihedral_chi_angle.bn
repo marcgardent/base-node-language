@@ -1,0 +1,737 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Atom Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    atom_name: Int(
+      description: "The `atom_name` attribute read from the points, an integer representation of the atom names. Corresponds to `CA` and `O` in the file etc. ")
+) {
+  "Geometry Nodes doesn't currently support text attributes, so strings like atom names have to be first converted to integers and mapping to atom names back and forth. Definitions for the atom names are available on the GitHub page"
+  return (atom_name: attribute_at_index(index: Index, name: "atom_name"))
+}
+
+geometry graph "Menu Atom Name"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (atom_name: Int, Selection: Bool, atom_name as atom_name_string: String) {
+  index_switch = IndexSwitch(
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    50,
+    51,
+    51,
+    52,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77)
+  menu_switch = MenuSwitch(
+    menu: atom_name,
+    N: 1,
+    CA: 2,
+    C: 3,
+    O: 4,
+    CB: 5,
+    CG: 6,
+    CG1: 7,
+    CG2: 8,
+    OG: 9,
+    OG1: 10,
+    SG: 11,
+    CD: 12,
+    CD1: 13,
+    CD2: 14,
+    ND1: 15,
+    ND2: 16,
+    OD1: 17,
+    OD2: 18,
+    SD: 19,
+    CE: 20,
+    CE1: 21,
+    CE2: 23,
+    CE3: 24,
+    NE: 25,
+    NE1: 26,
+    NE2: 27,
+    OE1: 28,
+    OE2: 29,
+    CH2: 30,
+    NH1: 31,
+    NH2: 32,
+    OH: 33,
+    CZ: 34,
+    CZ2: 35,
+    CZ3: 36,
+    NZ: 37,
+    OXT: 38,
+    P: 50,
+    O1P: 51,
+    OP1: 51,
+    OP2: 52,
+    O2P: 52,
+    "O5'": 53,
+    "C5'": 54,
+    "C4'": 55,
+    "O4'": 56,
+    "C3'": 57,
+    "O3'": 58,
+    "C2'": 59,
+    "O2'": 60,
+    "C1'": 61,
+    N1: 62,
+    N9: 63,
+    N3: 64,
+    C8: 65,
+    N7: 66,
+    C5: 67,
+    C6: 68,
+    N6: 69,
+    C2: 70,
+    C4: 71,
+    O6: 72,
+    N2: 73,
+    N4: 74,
+    O2: 75,
+    O4: 76,
+    C7: 77)
+  menu_switch_2 = MenuSwitch(
+    menu: N,
+    N: "N",
+    CA: "CA",
+    C: "C",
+    O: "O",
+    CB: "CB",
+    CG: "CG",
+    CG1: "CG1",
+    CG2: "CG2",
+    OG: "OG",
+    OG1: "OG1",
+    SG: "SG",
+    CD: "CD",
+    CD1: "CD1",
+    CD2: "CD2",
+    ND1: "ND1",
+    ND2: "ND2",
+    OD1: "OD1",
+    OD2: "OD2",
+    SD: "SD",
+    CE: "CE",
+    CE1: "CE1",
+    CE2: "CE2",
+    CE3: "CE3",
+    NE: "NE",
+    NE1: "NE1",
+    NE2: "NE2",
+    OE1: "OE1",
+    OE2: "OE2",
+    CH2: "CH2",
+    NH1: "NH1",
+    NH2: "NH2",
+    OH: "OH",
+    CZ: "CZ",
+    CZ2: "CZ2",
+    CZ3: "CZ3",
+    NZ: "NZ",
+    OXT: "OXT",
+    P: "P",
+    O1P: "O1P",
+    OP1: "OP1",
+    OP2: "OP2",
+    O2P: "O2P",
+    "O5'": "O5'",
+    "C5'": "C5'",
+    "C4'": "C4'",
+    "O4'": "O4'",
+    "C3'": "C3'",
+    "O3'": "O3'",
+    "C2'": "C2'",
+    "O2'": "O2'",
+    "C1'": "C1'",
+    N1: "N1",
+    N9: "N9",
+    N3: "N3",
+    C8: "C8",
+    N7: "N7",
+    C5: "C5",
+    C6: "C6",
+    N6: "N6",
+    C2: "C2",
+    C4: "C4",
+    O6: "O6",
+    N2: "N2",
+    N4: "N4",
+    O2: "O2",
+    O4: "O4",
+    C7: "C7")
+  return (
+    atom_name: menu_switch.output,
+    Selection: menu_switch.output == atom_name(),
+    atom_name_string: IndexSwitch(
+      menu_switch.output,
+      "N",
+      "CA",
+      "C",
+      "O",
+      "CB",
+      "CG",
+      "CG1",
+      "CG2",
+      "OG",
+      "OG1",
+      "SG",
+      "CD",
+      "CD1",
+      "CD2",
+      "ND1",
+      "ND2",
+      "OD1",
+      "OD2",
+      "SD",
+      "CE",
+      "CE1",
+      "CE2",
+      "CE3",
+      "NE",
+      "NE1",
+      "NE2",
+      "OE1",
+      "OE2",
+      "CH2",
+      "NH1",
+      "NH2",
+      "OH",
+      "CZ",
+      "CZ2",
+      "CZ3",
+      "NZ",
+      "OXT",
+      "P",
+      "O1P",
+      "OP1",
+      "OP2",
+      "O2P",
+      "O5'",
+      "C5'",
+      "C4'",
+      "O4'",
+      "C3'",
+      "O3'",
+      "C2'",
+      "O2'",
+      "C1'",
+      "N1",
+      "N9",
+      "N3",
+      "C8",
+      "N7",
+      "C5",
+      "C6",
+      "N6",
+      "C2",
+      "C4",
+      "O6",
+      "N2",
+      "N4",
+      "O2",
+      "O4",
+      "C7"))
+}
+
+geometry graph "Residue Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_name: Int(description: "Read the `res_name` attribute from the geometry")) {
+  return (res_name: attribute_at_index(index: Index, name: "res_name"))
+}
+
+geometry graph "Menu Residue Name"(
+    "Residue Name": Menu(optional_label: true) = ALA
+) -> (res_name: Int, Selection: Bool) {
+  menu_switch = MenuSwitch(
+    menu: residue_name,
+    UNK: -1,
+    ALA: 0,
+    ARG: 1,
+    ASN: 2,
+    ASP: 3,
+    CYS: 4,
+    GLU: 5,
+    GLN: 6,
+    GLY: 7,
+    HIS: 8,
+    ILE: 9,
+    LEU: 10,
+    LYS: 11,
+    MET: 12,
+    PHE: 13,
+    PRO: 14,
+    SER: 15,
+    THR: 16,
+    TRP: 17,
+    TYR: 18,
+    VAL: 19,
+    SNC: 15,
+    MSE: 12,
+    ASH: 3,
+    CYM: 4,
+    CYX: 4,
+    GLH: 5,
+    HID: 8,
+    HIE: 8,
+    HIP: 8,
+    HYP: 8,
+    LYN: 11,
+    DA: 30,
+    DC: 31,
+    DG: 32,
+    DT: 33,
+    PST: 33,
+    rA: 40,
+    rC: 41,
+    rG: 42,
+    rU: 43)
+  return (res_name: menu_switch.output, Selection: menu_switch.output == residue_name())
+}
+
+geometry graph "Switch Residue Name"(
+    ALA: Int = 6,
+    ARG: Int = 6,
+    ASN: Int = 6,
+    ASP: Int = 6,
+    CYS: Int = 6,
+    GLU: Int = 6,
+    GLN: Int = 6,
+    GLY: Int = 6,
+    HIS: Int = 6,
+    ILE: Int = 6,
+    LEU: Int = 6,
+    LYS: Int = 6,
+    MET: Int = 6,
+    PHE: Int = 6,
+    PRO: Int = 6,
+    SER: Int = 6,
+    THR: Int = 6,
+    TRP: Int = 6,
+    TYR: Int = 6,
+    VAL: Int = 6
+) -> (Output: Int) {
+  return (
+    Output: IndexSwitch(
+      residue_name(),
+      ALA,
+      ARG,
+      ASN,
+      ASP,
+      CYS,
+      GLU,
+      GLN,
+      GLY,
+      HIS,
+      ILE,
+      LEU,
+      LYS,
+      MET,
+      PHE,
+      PRO,
+      SER,
+      THR,
+      TRP,
+      TYR,
+      VAL))
+}
+
+geometry graph ".MN_chi_atom_names"() -> (X1: Int, X2: Int, X3: Int, X4: Int, X5: Int) {
+  group = menu_atom_name(atom_name: CG)
+  group_2 = menu_atom_name(atom_name: CG1)
+  group_3 = menu_atom_name(atom_name: CD)
+  group_4 = menu_atom_name(atom_name: OD1)
+  group_5 = menu_atom_name(atom_name: CD1)
+  group_6 = menu_atom_name(atom_name: OE1)
+  group_7 = menu_atom_name(atom_name: CE)
+  group_8 = menu_residue_name()
+  group_9 = residue_name()
+  return (
+    X1: switch_residue_name(
+      ala: group.atom_name,
+      arg: group.atom_name,
+      asn: group.atom_name,
+      asp: group.atom_name,
+      cys: menu_atom_name(atom_name: SG).atom_name,
+      glu: group.atom_name,
+      gln: group.atom_name,
+      gly: group.atom_name,
+      his: group.atom_name,
+      ile: group_2.atom_name,
+      leu: group.atom_name,
+      lys: group.atom_name,
+      met: group.atom_name,
+      phe: group.atom_name,
+      pro: group.atom_name,
+      ser: menu_atom_name(atom_name: OG).atom_name,
+      thr: menu_atom_name(atom_name: CG2).atom_name,
+      trp: group.atom_name,
+      tyr: group.atom_name,
+      val: group_2.atom_name),
+    X2: switch_residue_name(
+      ala: group_3.atom_name,
+      arg: group_3.atom_name,
+      asn: group_4.atom_name,
+      asp: group_4.atom_name,
+      cys: group_3.atom_name,
+      glu: group_3.atom_name,
+      gln: group_3.atom_name,
+      gly: group_3.atom_name,
+      his: menu_atom_name(atom_name: CD2).atom_name,
+      ile: group_3.atom_name,
+      leu: group_5.atom_name,
+      lys: group_3.atom_name,
+      met: menu_atom_name(atom_name: SD).atom_name,
+      phe: group_5.atom_name,
+      pro: group_3.atom_name,
+      ser: group_3.atom_name,
+      thr: group_3.atom_name,
+      trp: group_5.atom_name,
+      tyr: group_5.atom_name,
+      val: group_3.atom_name),
+    X3: switch_residue_name(
+      ala: 0,
+      arg: menu_atom_name(atom_name: NE).atom_name,
+      asn: 0,
+      asp: 0,
+      cys: 0,
+      glu: group_6.atom_name,
+      gln: group_6.atom_name,
+      gly: 0,
+      his: 0,
+      ile: 0,
+      leu: 0,
+      lys: group_7.atom_name,
+      met: group_7.atom_name,
+      phe: 0,
+      pro: 0,
+      ser: 0,
+      thr: 0,
+      trp: 0,
+      tyr: 0,
+      val: 0),
+    X4: switch_residue_name(
+      arg: menu_atom_name(atom_name: CZ).atom_name,
+      lys: menu_atom_name(atom_name: NZ).atom_name),
+    X5: switch_residue_name(lys: menu_atom_name(atom_name: NH1).atom_name))
+}
+
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "Dihedral Angle"(
+    A: Vector(description: "First vector for the calculation, which draws a line to B"),
+    B: Vector(
+      description: "Second vector for the calculation, which receives a line from A and draws a line to C"),
+    C: Vector(
+      description: "Third vector for the calculation, which receives a line from B and draws a line to D"),
+    D: Vector(
+      description: "Last vector for the calculation, which is the end point of the line from D")
+) -> (
+    Angle: Float(
+      subtype: ANGLE,
+      description: "The angle between the vectors AB and CD, when made perpendicular to BC."),
+    "BA⟂(BC)": Vector(description: "The vector BA when made perpendicular to  the axis BC"),
+    "CD⟂(BC)": Vector(description: "The Vector CD when makde perpendicular to the axis BC"),
+    BC: Vector(description: "The axis vector BC")
+) {
+  vector_math = D - C
+  vector_math_2 = A - B
+  vector_math_3 = C - B
+  vector_math_4 = vector_math_2
+    - VectorMath[PROJECT](Vector: vector_math_2, Vector_001: vector_math_3)
+  vector_math_5 = vector_math - VectorMath[PROJECT](Vector: vector_math, Vector_001: vector_math_3)
+  return (
+    Angle: vector_angle(a: vector_math_4, b: vector_math_5).angle
+      * sign((vector_math_4 × vector_math_5) ⋅ vector_math_3),
+    "BA⟂(BC)": vector_math_4,
+    "CD⟂(BC)": vector_math_5,
+    BC: vector_math_3)
+}
+
+geometry graph "Group Pick"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true)
+) -> (
+    "Is Valid": Bool(
+      description: "Valid for the point only if there is 1 single `True` for the `Pick` field in the point's group in the `Group ID`"),
+    Index: Int(description: "Index of picked item. Returns -1 if not a valid pick")
+) {
+  "Get the item of the `True` in each `Group ID`, but only if there is a single `True` in each group"
+  compare = AccumulateField[INT](value: Pick, group_id: group_id).total == 1
+  return (
+    "Is Valid": compare,
+    Index: compare ? AccumulateField[INT](value: Pick ? Index() : 0, group_id: group_id).total : -1)
+}
+
+geometry graph "Group Pick Vector"(
+    Pick: Bool(
+      description: "Selection for the point to pick for the `Group ID`. Will only be valid for a single `Pick` for each `Group ID`",
+      hide_value: true),
+    "Group ID": Int(
+      description: "Field definining the `Group ID` to pick from for the points",
+      hide_value: true),
+    Position: Vector(
+      description: "Vector field to pick vlaue for, defaults to `Position`",
+      hide_value: true) = Position()
+) -> (
+    "Is Valid": Bool(description: "Whether the pick for the point's `Group ID` is valid"),
+    Index: Int(description: "Picked Index for the Group, -1 if not valid"),
+    Vector: Vector(description: "Picked vector for the group, `(0, 0, 0)` if not valid")
+) {
+  group = group_pick(pick: Pick, group_id: group_id)
+  return (
+    "Is Valid": group.is_valid,
+    Index: group.index,
+    Vector: group.is_valid
+      ? EvaluateAtIndex[FLOAT_VECTOR](value: Position, index: group.index)
+      : (0.0, 0.0, 0.0))
+}
+
+geometry graph "URes ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (
+    ures_id: Int,
+    Size: Int(description: "The total of all of the values in the corresponding group")
+) {
+  group = attribute_at_index(index: Index, name: "ures_id")
+  return (ures_id: group, Size: AccumulateField[INT](group_id: group).total)
+}
+
+geometry graph "Menu Residue Mask"(
+    "Atom Name": Menu(optional_label: true) = N
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(
+    pick: menu_atom_name(atom_name: atom_name).selection,
+    group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph "Residue Mask"(
+    atom_name: Int(description: "Atom to pick from the group") = 1 in 2..
+) -> (
+    "Is Valid": Bool(
+      description: "Group contains only one occurrance of the selected atom. None or more than one returns False"),
+    Index: Int(
+      description: "Index for the group's atom with specified name, returns -1 if not valid"),
+    Position: Vector(
+      description: "Position of the picked point in the group, returns (0, 0, 0) if not valid")
+) {
+  group = group_pick_vector(pick: atom_name() == atom_name, group_id: ures_id().ures_id)
+  return ("Is Valid": group.is_valid, Index: group.index, Position: group.vector)
+}
+
+geometry graph "Dihedral Chi Angle"() -> (Angle: Float(subtype: ANGLE), Up: Vector, Axis: Vector) {
+  group = mn_chi_atom_names()
+  group_2 = atom_name()
+  group_3 = menu_residue_mask(atom_name: CA)
+  group_4 = menu_residue_mask(atom_name: CB)
+  group_5 = menu_residue_mask(atom_name: CG)
+  group_6 = menu_residue_mask(atom_name: CD)
+  group_7 = residue_mask(atom_name: group.x3)
+  group_8 = residue_mask(atom_name: group.x4)
+  group_9 = dihedral_angle(
+    a: IndexSwitch(
+      group_2,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      residue_mask(atom_name: group.x1).position,
+      residue_mask(atom_name: group.x2).position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_7.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_7.position,
+      group_8.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_8.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      residue_mask(atom_name: group.x5).position),
+    b: Position(),
+    c: IndexSwitch(
+      group_2,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_3.position,
+      group_4.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_5.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_5.position,
+      group_6.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_6.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      menu_residue_mask(atom_name: NE).position),
+    d: IndexSwitch(
+      group_2,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      menu_residue_mask().position,
+      group_3.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_4.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_4.position,
+      group_5.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_5.position,
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      (0.0, 0.0, 0.0),
+      group_6.position))
+  return (
+    Angle: -(EdgesOfVertex().total > 1 ? group_9.angle : 0.0),
+    Up: group_9.ba_bc,
+    Axis: group_9.bc)
+}

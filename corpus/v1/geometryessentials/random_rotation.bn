@@ -1,0 +1,28 @@
+geometry graph "Random Rotation"(
+    "Min Zenith": Float(
+      subtype: ANGLE,
+      description: "Lower limit of the tilt away from the +Z direction") in 0.0..3.1415927,
+    "Max Zenith": Float(
+      subtype: ANGLE,
+      description: "Upper limit of the tilt away from the +Z direction") = 3.1415927 in 0.0..3.1415927,
+    ID: Int(description: "Identifier per element used for randomization", hide_value: true) = ID(),
+    Seed: Int(
+      description: "Base value to control random variation in a reproducible way") in -10000..10000
+) -> (
+    Rotation: Rotation(
+      description: "Random rotations resulting in uniformly distributed directions. Rotation around the Z axis is fully random.")
+) {
+  random_value = RandomValue[FLOAT_VECTOR](max: (1.0, 6.2831855, 6.2831855), id: ID, seed: Seed)
+  map_range = MapRange(
+    value: random_value.x,
+    to_min: min_zenith / 3.1415927,
+    to_max: max_zenith / 3.1415927)
+  math = sqrt(map_range)
+  math_2 = sqrt(1.0 - map_range)
+  return (
+    Rotation: QuaternionToRotation(
+      w: math_2 * cos(random_value.z),
+      x: math * sin(random_value.y),
+      y: math * cos(random_value.y),
+      z: math_2 * sin(random_value.z)))
+}

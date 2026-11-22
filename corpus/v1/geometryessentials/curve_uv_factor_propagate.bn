@@ -1,0 +1,8 @@
+geometry graph ".curve_UV_factor_propagate"(Input: Float) -> (Output: Float) {
+  return (
+    Output: Compare[EQUAL](a: Input, epsilon: 0.0)
+        and (EvaluateAtIndex[CORNER](value: Input, index: OffsetCornerInFace(offset: -1)) > 0.5
+          or EvaluateAtIndex[CORNER](value: Input, index: OffsetCornerInFace(offset: 1)) > 0.5)
+      ? 1.0
+      : Input)
+}

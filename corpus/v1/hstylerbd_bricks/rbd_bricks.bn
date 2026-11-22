@@ -1,0 +1,531 @@
+geometry(is_modifier: true) graph "RBD Assemble"(
+    Geometry: Geometry(
+      description: "A model that is already in pieces: bricks, planks, hand-cut debris"),
+    "Constraint Geometry": Geometry(description: "Constraints made upstream: passed on"),
+    "Proxy Geometry": Geometry(
+      description: "Proxy geometry made upstream: passed on with the new one")
+) -> (
+    Geometry: Geometry(description: "The pieces, with piece_id"),
+    "Constraint Geometry": Geometry,
+    "Proxy Geometry": Geometry
+) {
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  store_named_attribute = Geometry
+    |> StoreNamedAttribute[INT](name: "piece_id", value: MeshIsland().island_index)
+    |> StoreNamedAttribute[BOOLEAN, FACE](name: "inside")
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "rbd_rest", value: Position())
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_pivot",
+      value: AccumulateField[FLOAT_VECTOR](
+          value: Position(),
+          group_id: named_attribute.attribute).total
+        * (1.0 / AccumulateField(group_id: named_attribute.attribute).total))
+  return (
+    Geometry: store_named_attribute,
+    "Constraint Geometry": constraint_geometry,
+    "Proxy Geometry": store_named_attribute + proxy_geometry)
+}
+
+geometry(is_modifier: true) graph "RBD Playback"(
+    Geometry: Geometry,
+    "Use Frozen Pieces": Bool(
+      description: "Read the pieces frozen at bake time instead of the modifiers above (set by Bake)"),
+    "Frozen Pieces": Object,
+    Cache: Object,
+    "Piece Count": Int in 0..,
+    "Frame Count": Int in 0..,
+    "Start Frame": Int = 1,
+    "Retime" {
+        Speed: Float(description: "Playback speed of the baked motion. 0.5 is slow motion") = 1.0,
+        "Frame Offset": Float(description: "Shift the baked motion in time, in cache frames")
+    }
+) -> Geometry {
+  object_info = ObjectInfo(object: Cache)
+  math = max(frame_count - 1.0, 0.0)
+  math_2 = min(max((SceneTime().frame - start_frame) * Speed + frame_offset, 0.0), math)
+  math_3 = floor(math_2)
+  math_4 = math_2 - math_3
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  math_5 = round(
+    Math[MULTIPLY_ADD](Value: math_3, Value_001: piece_count, Value_002: named_attribute.attribute))
+  math_6 = round(
+    Math[MULTIPLY_ADD](
+      Value: min(math_3 + 1.0, math),
+      Value_001: piece_count,
+      Value_002: named_attribute.attribute))
+  position = Position()
+  named_attribute_2 = NamedAttribute[QUATERNION](name: "rot")
+  return SetPosition(
+    use_frozen_pieces ? ObjectInfo(object: frozen_pieces).geometry : Geometry,
+    selection: named_attribute.attribute < piece_count and frame_count > 0,
+    position: TransformPoint(
+      vector: Mix[VECTOR](
+          factor: math_4,
+          a: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_5),
+          b: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_6))
+        + RotateVector(
+          vector: TransformPoint(vector: Position(), transform: object_info.transform)
+            - SampleIndex[FLOAT_VECTOR, clamp: true](
+              object_info.geometry,
+              value: NamedAttribute[FLOAT_VECTOR](name: "pivot").attribute,
+              index: named_attribute.attribute),
+          rotation: Mix[ROTATION](
+            factor: math_4,
+            a: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_5),
+            b: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_6))),
+      transform: InvertMatrix(matrix: object_info.transform).matrix))
+}
+
+geometry graph "RBD Bullet Solver"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    "Start Frame": Int(description: "The frame the simulation starts on") = 1,
+    "End Frame": Int(description: "The last frame that is baked") = 120,
+    "Time Scale": Float(
+      description: "Playback speed of the bake: 0.5 is slow motion") = 1.0 in 0.0..,
+    "Simulation" {
+        "Bullet Substeps": Int(
+          description: "Solver steps per frame. Raise for fast or thin pieces") = 10 in 1..200,
+        "Constraint Iterations": Int = 10 in 1..200,
+        "Glue Iterations": Int(
+          description: "Iterations spent on every glue bond: more makes glued pieces stiffer. 0 = as Constraint Iterations") = 30 in 0..500
+    },
+    "Properties" {
+        Density: Float(
+          description: "Mass per cubic metre, for pieces without a density attribute") = 100.0 in 0.001..,
+        Bounce: Float = 0.05 in 0.0..1.0,
+        Friction: Float = 0.6 in 0.0..,
+        "Collision Padding": Float(subtype: DISTANCE) in 0.0..,
+        "Linear Damping": Float(subtype: FACTOR) = 0.04 in 0.0..1.0,
+        "Angular Damping": Float(subtype: FACTOR) = 0.1 in 0.0..1.0,
+        "Start Asleep": Bool(description: "Pieces rest until something hits them")
+    },
+    "Collision" {
+        "Collision Objects": Collection(
+          description: "Objects the pieces collide with. They follow their own animation"),
+        "Ground Plane": Bool = true,
+        "Ground Height": Float(subtype: DISTANCE, description: "World height of the ground plane")
+    },
+    "Forces" {
+        Gravity: Vector(subtype: ACCELERATION) = (0.0, 0.0, -9.81),
+        "Force Fields": Bool(
+          description: "The force fields of the scene (Force, Wind, Vortex, Turbulence ...) act on the pieces, the way they act on Blender's own rigid bodies. Works together with initial velocities") = true,
+        "Field Weight": Float(
+          description: "Every force field is multiplied by this. Blender's rigid bodies feel a field of strength 1 as a force of 1 / frame rate newtons, so heavy pieces need strong fields") = 1.0 in 0.0..200.0,
+        "Limit To": Collection(
+          description: "Only the force fields in this collection act. Empty: every force field of the scene")
+    },
+    "Cache"(description: "Filled in by Bake. Free the bake to clear it", default_closed: true) {
+        Baked: Bool(
+          description: "The node plays the baked simulation instead of passing its input on"),
+        Cache: Object,
+        "Frozen Pieces": Object(
+          description: "The pieces as they were when the simulation was baked"),
+        "Piece Count": Int in 0..,
+        "Frame Count": Int in 0..,
+        "Cache Start Frame": Int = 1,
+        "Frame Offset": Float(description: "Shift the baked motion in time, in frames")
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  return (
+    Geometry: Switch[GEOMETRY](
+      switch: min(
+            start_frame
+              + end_frame
+              + bullet_substeps
+              + constraint_iterations
+              + glue_iterations
+              + Density
+              + Bounce
+              + Friction
+              + collision_padding
+              + linear_damping
+              + angular_damping
+              + start_asleep
+              + ground_plane
+              + ground_height
+              + length(Gravity)
+              + force_fields
+              + field_weight
+              + (CollectionInfo(collection: collision_objects) |> DomainSize[INSTANCES]())
+              + (CollectionInfo(collection: limit_to) |> DomainSize[INSTANCES]()),
+            1.0)
+          * 0.0
+        > 1.0,
+      false_: Baked
+        ? ObjectInfo(object: frozen_pieces).geometry
+          |> rbd_playback(
+            cache: Cache,
+            piece_count: piece_count,
+            frame_count: frame_count,
+            start_frame: cache_start_frame,
+            speed: time_scale,
+            frame_offset: frame_offset)
+        : Geometry),
+    "Constraint Geometry": constraint_geometry,
+    "Proxy Geometry": proxy_geometry)
+}
+
+geometry graph "RBD Configure"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    Selection: Bool(
+      description: "The pieces to configure. A piece counts as selected when most of it is") = true,
+    "Set Active" {
+        "Set Active": Bool(is_panel_toggle: true),
+        Active: Bool(
+          description: "Off: the selected pieces never move, but other pieces still collide with them") = true
+    },
+    "Set Initial Velocity"(default_closed: true) {
+        "Set Initial Velocity": Bool(is_panel_toggle: true),
+        "Velocity Type": Menu(
+          description: "Constant: the same velocity for every piece. Radial: away from a point, like an explosion") = Radial,
+        Velocity: Vector(subtype: VELOCITY),
+        Origin: Vector(
+          subtype: TRANSLATION,
+          description: "Centre of the blast, in the space of the object"),
+        Speed: Float(description: "Metres per second at the origin") = 8.0 in 0.0..,
+        "Falloff Radius": Float(
+          subtype: DISTANCE,
+          description: "The speed fades to zero at this distance. 0 = no fade") in 0.0..,
+        "Up Bias": Float(
+          subtype: FACTOR,
+          description: "0 = straight away from the origin, 1 = straight up") = 0.3 in 0.0..1.0,
+        "Speed Variance": Float(subtype: FACTOR) = 0.3 in 0.0..1.0,
+        Spin: Float(description: "Random tumbling, radians per second") = 3.0 in 0.0..,
+        Seed: Int in 0..
+    },
+    "Set Activation"(default_closed: true) {
+        "Set Activation": Bool(is_panel_toggle: true),
+        "Activation Type": Menu(
+          description: "When the pieces are handed to the solver; until then they hold still. Radial Wave: one after the other, by their distance from a point") = "Radial Wave",
+        Delay: Float(description: "Seconds after the start frame") in 0.0..,
+        "Wave Origin": Vector(subtype: TRANSLATION),
+        "Wave Speed": Float(description: "Metres per second") = 10.0 in 0.001..
+    },
+    "Set Physical Properties"(default_closed: true) {
+        "Set Physical Properties": Bool(is_panel_toggle: true),
+        Density: Float(description: "Mass per cubic metre") = 100.0 in 0.001..,
+        Friction: Float = 0.6 in 0.0..,
+        Bounce: Float = 0.05 in 0.0..1.0
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  named_attribute_2 = NamedAttribute[INT](name: "piece_id")
+  named_attribute_3 = NamedAttribute[BOOLEAN](name: "active")
+  switch = set_active
+    ? StoreNamedAttribute[BOOLEAN](
+      Geometry,
+      name: "active",
+      value: Selection ? Active : named_attribute_3.exists ? named_attribute_3.attribute : true)
+    : Geometry
+  menu_switch = MenuSwitch(menu: velocity_type, Constant: 0, Radial: 1)
+  vector_math = named_attribute.attribute - Origin
+  switch_2 = falloff_radius > 0.0
+    ? max(1.0 - length(vector_math) / max(falloff_radius, 1e-06), 0.0)
+    : 1.0
+  named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "v")
+  named_attribute_5 = NamedAttribute[FLOAT_VECTOR](name: "w")
+  switch_3 = set_initial_velocity
+    ? switch
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "v",
+        value: Selection
+          ? (menu_switch.radial
+            ? normalize(normalize(vector_math) * (1.0 - up_bias) + (0.0, 0.0, 1.0) * up_bias)
+              * (Speed
+                * switch_2
+                * (1.0
+                  + speed_variance
+                    * RandomValue(min: -1.0, id: named_attribute_2.attribute, seed: Seed + 11.0)))
+            : Velocity)
+          : named_attribute_4.exists ? named_attribute_4.attribute : (0.0, 0.0, 0.0))
+      |> StoreNamedAttribute[FLOAT_VECTOR](
+        name: "w",
+        value: Selection
+          ? (menu_switch.radial
+            ? normalize(
+                RandomValue[FLOAT_VECTOR](
+                  min: (-1.0, -1.0, -1.0),
+                  id: named_attribute_2.attribute,
+                  seed: Seed + 12.0))
+              * (Spin
+                * switch_2
+                * RandomValue(min: 0.3, id: named_attribute_2.attribute, seed: Seed + 13.0))
+            : (0.0, 0.0, 0.0))
+          : named_attribute_5.exists ? named_attribute_5.attribute : (0.0, 0.0, 0.0))
+    : switch
+  named_attribute_6 = NamedAttribute(name: "activate_time")
+  switch_4 = set_activation
+    ? StoreNamedAttribute(
+      switch_3,
+      name: "activate_time",
+      value: Selection
+        ? (MenuSwitch(menu: activation_type, "At Time": 0, "Radial Wave": 1).radial_wave
+          ? Delay + length(named_attribute.attribute - wave_origin) / wave_speed
+          : Delay)
+        : named_attribute_6.exists ? named_attribute_6.attribute : 0.0)
+    : switch_3
+  named_attribute_7 = NamedAttribute(name: "density")
+  named_attribute_8 = NamedAttribute(name: "friction")
+  named_attribute_9 = NamedAttribute(name: "bounce")
+  return (
+    Geometry: set_physical_properties
+      ? switch_4
+        |> StoreNamedAttribute(
+          name: "density",
+          value: Selection
+            ? Density
+            : named_attribute_7.exists ? named_attribute_7.attribute : -1.0)
+        |> StoreNamedAttribute(
+          name: "friction",
+          value: Selection
+            ? Friction
+            : named_attribute_8.exists ? named_attribute_8.attribute : -1.0)
+        |> StoreNamedAttribute(
+          name: "bounce",
+          value: Selection ? Bounce : named_attribute_9.exists ? named_attribute_9.attribute : -1.0)
+      : switch_4,
+    "Constraint Geometry": constraint_geometry,
+    "Proxy Geometry": proxy_geometry)
+}
+
+geometry graph "RBD Constraints From Rules"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    "Search Radius": Float(
+      subtype: DISTANCE,
+      description: "Pieces whose surfaces are closer to each other than this are glued together") = 0.02 in 0.0..,
+    Strength: Float(description: "Strength of the glue between neighbouring pieces") = 5.0 in 0.0..,
+    "Strength Variance": Float(subtype: FACTOR) in 0.0..1.0,
+    "Scale by Contact Area": Bool(
+      description: "Pieces that touch over a small area are held together less strongly") = true,
+    "Keep Incoming Constraints": Bool(
+      description: "Add to the constraints that come in. Off: they are replaced"),
+    "Advanced"(default_closed: true) {
+        "Samples per Piece": Int(
+          description: "Points scattered on every piece to find its neighbours. More finds smaller contacts") = 200 in 8..5000,
+        Seed: Int in 0..
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rbd_rest")
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  capture_attribute = Geometry
+    |> SetPosition(position: named_attribute.exists ? named_attribute.attribute : Position())
+    |> CaptureAttribute[FACE](
+      own: NamedAttribute[INT](name: "piece_id").attribute,
+      pivot: named_attribute_2.exists ? named_attribute_2.attribute : Position(),
+      area: FaceArea())
+  bounding_box = BoundingBox(capture_attribute.geometry)
+  math = max(search_radius * 0.5, length(bounding_box.max - bounding_box.min) * 0.0001)
+  math_2 = samples_per_piece
+    * (AttributeStatistic(
+        capture_attribute.geometry,
+        attribute: NamedAttribute[INT](name: "piece_id").attribute).max
+      + 1.0)
+    / max(
+      AttributeStatistic[FACE](capture_attribute.geometry, attribute: capture_attribute.area).sum,
+      1e-12)
+  distribute_points_on_faces = DistributePointsOnFaces(
+    capture_attribute.geometry,
+    density: math_2,
+    seed: Seed)
+  set_position = SetPosition(capture_attribute.geometry, offset: Normal().normal * (math * -0.1))
+  vector_math = Position() + distribute_points_on_faces.normal * math
+  sample_nearest_surface = SampleNearestSurface[INT](
+    set_position,
+    value: capture_attribute.own,
+    sample_position: vector_math)
+  sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
+    set_position,
+    value: capture_attribute.pivot,
+    sample_position: vector_math)
+  compare = capture_attribute.own < sample_nearest_surface.value
+  switch = compare ? capture_attribute.own : sample_nearest_surface.value
+  switch_2 = compare ? sample_nearest_surface.value : capture_attribute.own
+  named_attribute_3 = NamedAttribute[INT](name: "rbd_c_key")
+  named_attribute_4 = NamedAttribute(name: "rbd_c_area")
+  accumulate_field = AccumulateField(
+    value: named_attribute_4.attribute,
+    group_id: named_attribute_3.attribute)
+  delete_geometry = distribute_points_on_faces.points
+    |> StoreNamedAttribute[INT](name: "rbd_c_a", value: switch)
+    |> StoreNamedAttribute[INT](name: "rbd_c_b", value: switch_2)
+    |> StoreNamedAttribute[INT](
+      name: "rbd_c_key",
+      value: IntegerMath[MULTIPLY_ADD](Value: switch, Value_001: 100000, Value_002: switch_2))
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_pa",
+      value: compare ? capture_attribute.pivot : sample_nearest_surface_2.value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_pb",
+      value: compare ? sample_nearest_surface_2.value : capture_attribute.pivot)
+    |> StoreNamedAttribute(name: "rbd_c_area", value: 0.5 / max(math_2, 1e-12))
+    |> DeleteGeometry(selection: capture_attribute.own == sample_nearest_surface.value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_anchor",
+      value: AccumulateField[FLOAT_VECTOR](
+          value: Position() * named_attribute_4.attribute,
+          group_id: named_attribute_3.attribute).total
+        * (1.0 / max(accumulate_field.total, 1e-20)))
+    |> StoreNamedAttribute(name: "rbd_c_area", value: accumulate_field.total)
+    |> DeleteGeometry(
+      selection: not AccumulateField[INT](group_id: named_attribute_3.attribute).leading == 1)
+  delete_geometry_2 = DeleteGeometry(
+    delete_geometry,
+    selection: NamedAttribute(name: "rbd_c_area").attribute
+      < AttributeStatistic(
+          delete_geometry,
+          attribute: NamedAttribute(name: "rbd_c_area").attribute).median
+        * 0.05)
+  compare_2 = Math[FLOORED_MODULO](Value: Index(), Value_001: 2.0) == 1.0
+  return (
+    Geometry: Geometry,
+    "Constraint Geometry": (delete_geometry_2
+        |> StoreNamedAttribute(
+          name: "rbd_c_strength",
+          value: max(
+            Strength
+              * (scale_by_contact_area
+                ? min(
+                  max(
+                    sqrt(
+                      NamedAttribute(name: "rbd_c_area").attribute
+                        / max(
+                          AttributeStatistic(
+                            delete_geometry_2,
+                            attribute: NamedAttribute(name: "rbd_c_area").attribute).median,
+                          1e-20)),
+                    0.35),
+                  2.5)
+                : 1.0)
+              * (1.0
+                + strength_variance
+                  * RandomValue(
+                    min: -1.0,
+                    id: NamedAttribute[INT](name: "rbd_c_key").attribute,
+                    seed: Seed + 7.0)),
+            0.0))
+        |> InstanceOnPoints(instance: MeshLine(count: 2))
+        |> RealizeInstances()
+        |> SetPosition(
+          position: compare_2
+            ? NamedAttribute[FLOAT_VECTOR](name: "rbd_c_pb").attribute
+            : NamedAttribute[FLOAT_VECTOR](name: "rbd_c_pa").attribute)
+        |> StoreNamedAttribute[INT](
+          name: "piece_id",
+          value: compare_2
+            ? NamedAttribute[INT](name: "rbd_c_b").attribute
+            : NamedAttribute[INT](name: "rbd_c_a").attribute)
+        |> StoreNamedAttribute[EDGE](
+          name: "strength",
+          value: NamedAttribute(name: "rbd_c_strength").attribute)
+        |> StoreNamedAttribute[EDGE](
+          name: "area",
+          value: NamedAttribute(name: "rbd_c_area").attribute)
+        |> StoreNamedAttribute[FLOAT_VECTOR, EDGE](
+          name: "anchor",
+          value: NamedAttribute[FLOAT_VECTOR](name: "rbd_c_anchor").attribute)
+        |> RemoveNamedAttribute(name: "rbd_c_a")
+        |> RemoveNamedAttribute(name: "rbd_c_b")
+        |> RemoveNamedAttribute(name: "rbd_c_key")
+        |> RemoveNamedAttribute(name: "rbd_c_pa")
+        |> RemoveNamedAttribute(name: "rbd_c_pb")
+        |> RemoveNamedAttribute(name: "rbd_c_area")
+        |> RemoveNamedAttribute(name: "rbd_c_anchor")
+        |> RemoveNamedAttribute(name: "rbd_c_strength"))
+      + Switch[GEOMETRY](switch: keep_incoming_constraints, true_: constraint_geometry),
+    "Proxy Geometry": proxy_geometry)
+}
+
+geometry graph "RBD Select"(
+    Type: Menu(
+      description: "Below Height: pieces that reach down to a height, to hold the bottom of a wall in place. Box, Sphere: pieces whose centre is inside. Attribute: a vertex group or attribute") = "Below Height",
+    Height: Float(subtype: DISTANCE, description: "In the space of the object") = 0.1,
+    Center: Vector(subtype: TRANSLATION, description: "In the space of the object"),
+    Size: Vector(subtype: XYZ) = (1.0, 1.0, 1.0) in 0.0..,
+    Radius: Float(subtype: DISTANCE) = 1.0 in 0.0..,
+    Attribute: String(
+      description: "Name of a vertex group or attribute. After a fracture: one named in its Keep Vertex Group"),
+    Threshold: Float(description: "Selected where the attribute is at least this") = 0.5,
+    "Whole Pieces": Bool(
+      description: "Decide per piece: by its lowest point, its centre, the average of the attribute. Off: per vertex (a piece then counts as selected when most of it is)") = true,
+    Invert: Bool
+) -> (Selection: Bool(description: "True on the selected pieces")) {
+  menu_switch = MenuSwitch(menu: Type, "Below Height": 0, Box: 1, Sphere: 2, Attribute: 3)
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  boolean_math = whole_pieces and named_attribute_2.exists
+  switch = boolean_math ? named_attribute_2.attribute : Position()
+  position = Position()
+  vector_math = abs(switch - Center)
+  vector_math_2 = Size * 0.5
+  named_attribute_3 = NamedAttribute(name: Attribute)
+  return (
+    Selection: (menu_switch.attribute
+        ? (boolean_math
+            ? AccumulateField(
+                value: named_attribute_3.attribute,
+                group_id: named_attribute.attribute).total
+              / AccumulateField(group_id: named_attribute.attribute).total
+            : named_attribute_3.attribute)
+          >= Threshold
+        : menu_switch.sphere
+          ? length(switch - Center) <= Radius
+          : menu_switch.box
+            ? vector_math.x <= vector_math_2.x
+              and vector_math.y <= vector_math_2.y
+              and vector_math.z <= vector_math_2.z
+            : (boolean_math
+                ? FieldMinAndMax(value: position.z, group_id: named_attribute.attribute).min
+                : position.z)
+              <= Height)
+      xor Invert)
+}
+
+geometry graph "RBD Bricks"(Geometry: Geometry) -> Geometry {
+  group = rbd_assemble(Geometry) @ "RBD Assemble"
+  group_2 = rbd_constraints_from_rules(
+    group.geometry,
+    constraint_geometry: group.constraint_geometry,
+    proxy_geometry: group.proxy_geometry,
+    strength: 0.6,
+    strength_variance: 0.5) @ "RBD Constraints From Rules"
+  group_5 = rbd_select(type: Attribute, attribute: "Stay") @ "RBD Select"
+  group_6 = rbd_select(height: 0.02) @ "RBD Select"
+  group_4 = rbd_configure(
+    group_2.geometry,
+    constraint_geometry: group_2.constraint_geometry,
+    proxy_geometry: group_2.proxy_geometry,
+    selection: group_5 or group_6,
+    set_active: true,
+    active: false) @ "RBD Configure"
+  group_3 = rbd_bullet_solver(
+    group_4.geometry,
+    constraint_geometry: group_4.constraint_geometry,
+    proxy_geometry: group_4.proxy_geometry,
+    end_frame: 110,
+    start_asleep: true,
+    collision_objects: "Colliders.001",
+    baked: true,
+    cache: "RBD Cache.Bricks",
+    frozen_pieces: "RBD Rest.Bricks",
+    piece_count: 120,
+    frame_count: 110) @ "RBD Bullet Solver"
+  return group_3.geometry
+}

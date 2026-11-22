@@ -1,0 +1,29 @@
+geometry graph "O Cut Structure"(
+    Structure: Bundle,
+    Selection: Bool(hide_value: true),
+    "Options"(default_closed: true) {
+        Invert: Bool(force_non_field: true, structure_type: SINGLE)
+    }
+) -> (Structure: Bundle) {
+  separate_bundle = SeparateBundle(
+    Structure) -> (
+    Solid: Bool(structure_type: GRID),
+    Albedo: Vector(structure_type: GRID),
+    Opacity: Float(structure_type: GRID),
+    Roughness: Float(structure_type: GRID),
+    Emission: Vector(structure_type: GRID),
+    Bump: Float(structure_type: GRID),
+    Name: String(structure_type: SINGLE),
+    ID: Int(structure_type: SINGLE))
+  boolean_math = separate_bundle.solid and xnor(Selection, Invert) @ hide
+  return (
+    Structure: CombineBundle(
+      Solid(structure_type: GRID): boolean_math,
+      Albedo(structure_type: GRID): separate_bundle.albedo,
+      Opacity(structure_type: GRID): separate_bundle.opacity,
+      Roughness(structure_type: GRID): separate_bundle.roughness,
+      Emission(structure_type: GRID): separate_bundle.emission,
+      Bump(structure_type: GRID): separate_bundle.bump,
+      Name(structure_type: SINGLE): separate_bundle.name,
+      ID(structure_type: SINGLE): separate_bundle.id))
+}

@@ -1,0 +1,61 @@
+geometry graph "RBD Playback"(
+    Geometry: Geometry,
+    "Use Frozen Pieces": Bool(
+      description: "Read the pieces frozen at bake time instead of the modifiers above (set by Bake)"),
+    "Frozen Pieces": Object,
+    Cache: Object,
+    "Piece Count": Int in 0..,
+    "Frame Count": Int in 0..,
+    "Start Frame": Int = 1,
+    "Retime" {
+        Speed: Float(description: "Playback speed of the baked motion. 0.5 is slow motion") = 1.0,
+        "Frame Offset": Float(description: "Shift the baked motion in time, in cache frames")
+    }
+) -> Geometry {
+  object_info = ObjectInfo(object: Cache)
+  math = max(frame_count - 1.0, 0.0)
+  math_2 = min(max((SceneTime().frame - start_frame) * Speed + frame_offset, 0.0), math)
+  math_3 = floor(math_2)
+  math_4 = math_2 - math_3
+  named_attribute = NamedAttribute[INT](name: "piece_id")
+  math_5 = round(
+    Math[MULTIPLY_ADD](Value: math_3, Value_001: piece_count, Value_002: named_attribute.attribute))
+  math_6 = round(
+    Math[MULTIPLY_ADD](
+      Value: min(math_3 + 1.0, math),
+      Value_001: piece_count,
+      Value_002: named_attribute.attribute))
+  position = Position()
+  named_attribute_2 = NamedAttribute[QUATERNION](name: "rot")
+  return SetPosition(
+    use_frozen_pieces ? ObjectInfo(object: frozen_pieces).geometry : Geometry,
+    selection: named_attribute.attribute < piece_count and frame_count > 0,
+    position: TransformPoint(
+      vector: Mix[VECTOR](
+          factor: math_4,
+          a: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_5),
+          b: SampleIndex[FLOAT_VECTOR, clamp: true](
+            object_info.geometry,
+            value: position,
+            index: math_6))
+        + RotateVector(
+          vector: TransformPoint(vector: Position(), transform: object_info.transform)
+            - SampleIndex[FLOAT_VECTOR, clamp: true](
+              object_info.geometry,
+              value: NamedAttribute[FLOAT_VECTOR](name: "pivot").attribute,
+              index: named_attribute.attribute),
+          rotation: Mix[ROTATION](
+            factor: math_4,
+            a: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_5),
+            b: SampleIndex[QUATERNION, clamp: true](
+              object_info.geometry,
+              value: named_attribute_2.attribute,
+              index: math_6))),
+      transform: InvertMatrix(matrix: object_info.transform).matrix))
+}

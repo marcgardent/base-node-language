@@ -1,0 +1,6 @@
+geometry graph ".Check End Face Corner"("Captured Index": Int) -> ("Is End Face Corner": Bool) {
+  return (
+    "Is End Face Corner": captured_index == 0
+      and EvaluateAtIndex[CORNER, INT](value: captured_index, index: OffsetCornerInFace(offset: 2))
+        != 1)
+}

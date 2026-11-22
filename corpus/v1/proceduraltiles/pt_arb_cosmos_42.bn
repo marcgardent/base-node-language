@@ -1,0 +1,43 @@
+shader graph "PT_ARB_Cosmos(42)"(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 5.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Masks: Int) {
+  "A node tree :)"
+  "p4m(11)" #7b2a1b {
+    vector_math_5 = Vector * Scale
+    vector_math_6 = fract(vector_math_5) - (0.5, 0.5, 0.0)
+    vector_math_7 = abs(vector_math_6)
+    vector_math_8 = floor(vector_math_5) + (0.5, 0.5, 0.0) @ hide
+    math_4 = sign(vector_math_6.x) @ hide
+    math_5 = sign(vector_math_6.y) @ hide
+    vector_math_9 = (1.0, 0.0, 0.0) * math_4 @ hide
+    vector_math_10 = (0.0, 1.0, 0.0) * math_5 @ hide
+    math_6 = vector_math_7.x - vector_math_7.y < 0.0
+    mix_2 = math_6 ? vector_math_10 : vector_math_9 @ hide
+    mix_3 = math_6 ? vector_math_9 : vector_math_10 @ hide
+    mix_4 = math_6 ? CombineXYZ(x: vector_math_7.y, y: vector_math_7.x) : vector_math_7
+  }
+  vector_math = mix_4 - (0.35355338, 0.353553, 0.0)
+  vector_math_2 = vector_math ⋅ (0.382683, -0.92388, 0.0)
+  vector_math_3 = (mix_4 - (0.5, 0.0, 0.0)) ⋅ (0.38268343, 0.9238795, 0.0)
+  vector_math_4 = vector_math ⋅ (-0.92388, 0.382683, 0.0)
+  math = vector_math_2 < 0.0 @ hide
+  math_2 = vector_math_4 < 0.0 @ hide
+  math_3 = vector_math_3 < 0.0 @ hide
+  mix = math
+    ? (0.5, 0.5, 0.0)
+    : math_2
+      ? (math_3 ? (0.3190356, 0.0, 0.0) : (0.5, 0.19928709, 0.0))
+      : math_3 ? (0.0, 0.0, 0.0) : (0.22559223, 0.225592, 0.0)
+  vector_math_11 = mix_2 * mix.x + mix_3 * mix.y + vector_math_8
+  vector_math_12 = vector_math_11 / Scale
+  math_7 = vector_math_2 < 0.0 @ hide
+  math_8 = vector_math_4 < 0.0 @ hide
+  math_9 = vector_math_3 < 0.0 @ hide
+  return (
+    Position: vector_math_12,
+    UV: Vector - vector_math_12,
+    Color: WhiteNoiseTexture(vector: vector_math_11 + (1000.0, 1000.0, 0.0)).color,
+    Edge: min(min(abs(vector_math_3), abs(vector_math_2)), abs(vector_math_4)) / Scale,
+    Masks: math_7 ? 1.0 : math_8 ? (math_9 ? 3.0 : 4.0) : math_9 ? 0.0 : 2.0)
+}

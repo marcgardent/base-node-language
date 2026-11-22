@@ -1,0 +1,13 @@
+geometry graph "Transform Local"(
+    Origin: Vector(
+      subtype: TRANSLATION,
+      description: "Vector that defines the local space origin, defaults to `Position`") = Position(),
+    Transform: Matrix(description: "Transform to apply in local space")
+) -> (Transform: Matrix(description: "The final transform")) {
+  "Apply the transform after first moving to world origin, then returning to original position"
+  combine_transform = CombineTransform(translation: Origin)
+  return (
+    Transform: MultiplyMatrices(
+      Matrix: MultiplyMatrices(Matrix: combine_transform, Matrix_001: Transform),
+      Matrix_001: InvertMatrix(matrix: combine_transform).matrix))
+}

@@ -1,0 +1,139 @@
+geometry graph "Boolean AndOr"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    Boolean: Bool = true
+) -> (Boolean: Bool, Inverted: Bool(description: "The inverse of the calculated selection")) {
+  boolean_math = And and Boolean or Or
+  return (Boolean: boolean_math, Inverted: not boolean_math)
+}
+
+geometry graph ".MN_select_sec_struct_id"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true),
+    id: Int(description: "Secondary structure component to select") = 1
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = boolean_andor(
+    and_: And,
+    or_: Or,
+    boolean: id == NamedAttribute[INT](name: "sec_struct").attribute)
+  return (Selection: group.boolean, Inverted: group.inverted)
+}
+
+geometry graph "Is Helix"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph "Is Loop"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or, id: 3)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph "Is Sheet"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true,
+    Or: Bool(
+      description: "The resulting selection can be calculated from this node or be from this input selection",
+      hide_value: true)
+) -> (
+    Selection: Bool(description: "The calculated selection"),
+    Inverted: Bool(description: "The inverse of the calculated selection")
+) {
+  group = mn_select_sec_struct_id(and_: And, or_: Or, id: 2)
+  return (Selection: group.selection, Inverted: group.inverted)
+}
+
+geometry graph ".MN_select_sec_struct"(
+    And: Bool(
+      description: "The resulting selection must overlap with this input selection",
+      hide_value: true) = true
+) -> ("Is Helix": Bool, "Is Sheet": Bool, "Is Structured": Bool, "Is Loop": Bool) {
+  group = is_loop(and_: And)
+  return (
+    "Is Helix": is_helix(and_: And).selection,
+    "Is Sheet": is_sheet(and_: And).selection,
+    "Is Structured": not group.selection,
+    "Is Loop": group.selection)
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Boolean"(
+    Boolean: Bool(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Boolean: Bool(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Boolean: EvaluateAtIndex[BOOLEAN](
+      value: Boolean,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Expand Boolean"(
+    Boolean: Bool(hide_value: true),
+    Expand: Int in -2147483647..
+) -> (Boolean: Bool) {
+  return (
+    Boolean: Boolean
+      or (offset_boolean(boolean: Boolean, offset: Expand)
+        or offset_boolean(boolean: Boolean, offset: IntegerMath[NEGATE](value: Expand))))
+}
+
+geometry(is_modifier: false) graph ".MN_bs_smooth"(
+    Geometry: Geometry,
+    Factor: Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Iterations: Int = 2 in 0..
+) -> Geometry {
+  group = mn_select_sec_struct()
+  position = Position()
+  return SetPosition(
+    Geometry,
+    selection: group.is_sheet,
+    position: Mix[VECTOR](
+      factor: Factor,
+      a: position,
+      b: BlurAttribute[FLOAT_VECTOR](
+        value: position,
+        iterations: Iterations,
+        weight: expand_boolean(boolean: group.is_structured, expand: 1))))
+}

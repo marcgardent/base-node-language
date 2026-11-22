@@ -1,0 +1,125 @@
+geometry graph "Unravel Tears"(
+    Geometry: Geometry,
+    Mask: String(
+      description: "Name of the vertex group that marks where the cloth tears") = "Tears",
+    "Hole Size": Float(
+      subtype: FACTOR,
+      description: "How far the holes eat into the painted area. 0 means no holes") = 0.5 in 0.0..1.0,
+    "Edge Noise": Float(
+      subtype: FACTOR,
+      description: "How ragged the torn edges are") = 0.3 in 0.0..1.0,
+    "Noise Scale": Float(
+      description: "Size of the ragged bits along the edge. Higher means smaller, busier bits") = 20.0 in 0.0..,
+    Detail: Int(
+      description: "Extra subdivision for finer edges. Each step makes the cloth about 4 times heavier") = 1 in 0..4,
+    Seed: Int(description: "Changes the random raggedness without changing your paint"),
+    Thickness: Float(
+      subtype: DISTANCE,
+      description: "How thick the cloth looks at its torn edges") = 0.01 in 0.0..,
+    "Lip Width": Float(
+      subtype: DISTANCE,
+      description: "How far the thick edge reaches from the hole before fading back to thin cloth") = 0.06 in 0.0..,
+    "Whole Cloth": Bool(
+      description: "Make the entire cloth solid instead of only thickening around the holes"),
+    "Edge Smoothing": Int(
+      description: "Smooths the stepped outline of each hole. 0 keeps the raw edge") = 6 in 0..30,
+    Scale: Float(
+      description: "Size of the cloth compared to real life. Set from the Unravel tab") = 1.0 in 0.001..1000.0,
+    "Holes Baked": Bool(
+      description: "Set by Bake Tears. On means the holes are already in the mesh and only the thickness is added")
+) -> Geometry {
+  named_attribute = NamedAttribute(name: Mask)
+  math = NoiseTexture["4D"](w: Seed, scale: noise_scale).factor - 0.5 @ "Noise - Centre"
+  math_2 = math * edge_noise @ "Noise - Strength"
+  math_3 = named_attribute.attribute + math_2 @ "Tear Score"
+  math_4 = 1.0 - hole_size @ "Threshold"
+  compare_2 = named_attribute.attribute > 0.001 @ "Is Painted?"
+  math_5 = Math[MULTIPLY_ADD](Value: edge_noise, Value_002: 1.0) @ "Noise Headroom"
+  math_6 = math_4 * math_5 @ "Threshold - Raised"
+  compare = math_3 > math_6 @ "Score above Threshold?"
+  boolean_math = compare and compare_2 @ "Faces to Cut"
+  edge_neighbors = EdgeNeighbors() @ "Edge Neighbors - Before"
+  compare_3 = edge_neighbors == 1 @ "Was Open Edge?"
+  edge_neighbors_2 = EdgeNeighbors() @ "Edge Neighbors - After"
+  compare_4 = edge_neighbors_2 == 1 @ "Is Open Edge?"
+  math_8 = Thickness * 0.5 @ "Half Thickness"
+  compare_8 = Thickness > 0.0 @ "Has Thickness?"
+  math_9 = 1.0 / Scale @ "One Over Scale"
+  transform_geometry = TransformGeometry(Geometry, scale: math_9) @ "Shrink to Real Size"
+  capture_attribute = transform_geometry
+    |> SubdivideMesh(level: Detail)
+    |> CaptureAttribute[EDGE]("Was Border": compare_3) @ "Remember Border"
+  delete_geometry = DeleteGeometry[FACE](
+    capture_attribute.geometry,
+    selection: boolean_math) @ "Cut Holes"
+  boolean_math_2 = nimply(compare_4, capture_attribute.was_border) @ "Hole Edges - Boolean"
+  evaluate_on_domain_2 = EvaluateOnDomain[EDGE, BOOLEAN](value: boolean_math_2) @ "Hole Points"
+  switch_4 = evaluate_on_domain_2 ? 1.0 : 0.0 @ "Hole Weight"
+  blur_attribute = BlurAttribute[FLOAT_VECTOR](
+    value: Position(),
+    iterations: edge_smoothing,
+    weight: switch_4) @ "Smooth Outline"
+  set_position_2 = SetPosition(
+    delete_geometry,
+    selection: evaluate_on_domain_2,
+    position: blur_attribute) @ "Smooth Hole Edges"
+  store_named_attribute = StoreNamedAttribute[BOOLEAN, EDGE](
+    set_position_2,
+    name: "unravel_hole_edge",
+    value: boolean_math_2) @ "Store Hole Edges"
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "rest_position") @ "Rest Position"
+  vector_math_4 = named_attribute_2.attribute * math_9 @ "Rest x Scale"
+  switch_5 = named_attribute_2.exists ? vector_math_4 : Position() @ "Rest or Current"
+  named_attribute_3 = NamedAttribute[BOOLEAN](name: "unravel_hole_edge") @ "Stored Hole Edges"
+  boolean_math_3 = named_attribute_3.attribute or whole_cloth @ "Hole or Whole Cloth"
+  boolean_math_4 = boolean_math_3 and compare_4 @ "Wall Edges"
+  evaluate_on_domain = EvaluateOnDomain[EDGE, BOOLEAN](
+    value: named_attribute_3.attribute) @ "Hole Edges - Points"
+  switch_6 = holes_baked ? transform_geometry : store_named_attribute @ "Baked or Live Holes"
+  mesh_to_points = MeshToPoints(switch_6, selection: evaluate_on_domain, position: switch_5)
+  map_range = MapRange[SMOOTHSTEP](
+    value: GeometryProximity[POINTS](mesh_to_points, sample_position: switch_5).distance,
+    from_max: lip_width,
+    to_min: 1.0,
+    to_max: 0.0) @ "Lip Falloff"
+  compare_5 = DomainSize[POINTCLOUD](mesh_to_points) > 0 @ "Has Holes?"
+  switch = compare_5 ? map_range : 0.0 @ "No Holes - No Lip"
+  switch_2 = whole_cloth ? 1.0 : switch @ "Whole Cloth - Full"
+  math_7 = switch_2 * Thickness @ "Push Depth"
+  vector_math = Normal().normal * math_7 @ "Push Along Normal"
+  vector_math_2 = -vector_math @ "Push Backward"
+  capture_attribute_2 = CaptureAttribute(switch_6, Offset: vector_math_2) @ "Remember Push"
+  extrude_mesh = ExtrudeMesh[EDGES](
+    capture_attribute_2.geometry,
+    selection: boolean_math_4,
+    offset: capture_attribute_2.offset,
+    offset_scale: 0.0) @ "Walls"
+  compare_6 = switch_2 <= 0.1 @ "Outside Lip?"
+  delete_geometry_2 = DeleteGeometry[FACE](
+    capture_attribute_2.geometry,
+    selection: compare_6) @ "Keep Lip Faces"
+  set_position = SetPosition(
+    delete_geometry_2,
+    offset: capture_attribute_2.offset) @ "Push Back Surface"
+  vector_math_3 = length(capture_attribute_2.offset) @ "Push Length"
+  compare_7 = vector_math_3 > math_8 @ "Pushed Enough?"
+  store_named_attribute_2 = set_position
+    |> FlipFaces()
+    |> StoreNamedAttribute[BOOLEAN](name: "unravel_back", value: true) @ "Mark Back"
+  set_position_3 = SetPosition(
+    extrude_mesh.mesh,
+    selection: extrude_mesh.top,
+    offset: capture_attribute_2.offset) @ "Push Wall Tops"
+  store_named_attribute_3 = StoreNamedAttribute[BOOLEAN](
+    set_position_3,
+    selection: extrude_mesh.top,
+    name: "unravel_back",
+    value: true) @ "Mark Wall Bottoms"
+  merge_by_distance = MergeByDistance(
+    store_named_attribute_3 + store_named_attribute_2,
+    selection: compare_7,
+    distance: 0.0001) @ "Weld Walls"
+  switch_3 = compare_8 ? merge_by_distance : switch_6 @ "Thickness - On/Off"
+  transform_geometry_2 = TransformGeometry(switch_3, scale: Scale) @ "Grow Back"
+  return transform_geometry_2
+}

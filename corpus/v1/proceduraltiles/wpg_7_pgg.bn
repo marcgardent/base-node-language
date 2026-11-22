@@ -1,0 +1,31 @@
+shader graph "WPG_7(pgg)"(
+    Vector: Vector(hide_value: true),
+    scale: Float = 5.0,
+    "aspect ratio" {
+        "ratio a": Float = 2.0,
+        "ratio b": Float = 1.0
+    }
+) -> (UV: Vector, position: Vector, mx: Vector, my: Vector) {
+  "Wallpaper group tile pattern more on :https://en.wikipedia.org/wiki/Wallpaper_group"
+  "pgg(7)" #624317 {
+    combine_xyz = CombineXYZ(x: ratio_a, y: ratio_b)
+    math = max(combine_xyz.x, combine_xyz.y) @ hide
+    vector_math_4 = combine_xyz / math
+    vector_math = Vector * scale / vector_math_4
+    vector_math_2 = fract(vector_math)
+    math_2 = vector_math_2.x > 0.5 @ hide
+    mix = math_2 ? (0.0, -1.0, 0.0) : (0.0, 1.0, 0.0) @ hide
+    math_3 = vector_math_2.y > 0.5 @ hide
+    mix_2 = math_3 ? (-1.0, 0.0, 0.0) : (1.0, 0.0, 0.0) @ hide
+    math_4 = math_2 + math_3 @ hide
+    math_5 = math_4 * 0.5 @ hide
+    combine_xyz_2 = CombineXYZ(x: math_5, y: math_5) @ hide
+    vector_math_5 = vector_math_2 - combine_xyz_2 @ hide
+    vector_math_7 = mix + mix_2 @ hide
+    vector_math_6 = vector_math_5 * vector_math_7 @ hide
+    vector_math_3 = vector_math_6 * vector_math_4 @ hide
+    vector_math_8 = combine_xyz_2 + floor(vector_math) @ hide
+    vector_math_9 = vector_math_8 * vector_math_4 @ hide
+  }
+  return (UV: vector_math_3, position: vector_math_9, mx: mix_2, my: mix)
+}

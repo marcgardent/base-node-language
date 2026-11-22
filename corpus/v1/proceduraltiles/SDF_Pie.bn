@@ -1,0 +1,26 @@
+shader graph SDF_Pie(
+    Vector: Vector(hide_value: true),
+    Arc: Float(subtype: FACTOR) = 0.4 in 0.0..1.0,
+    Radius: Float = 0.5 in 0.0..,
+    Orientation: Float(subtype: ANGLE)
+) -> (Value: Float) {
+  "SDF node"
+  map_range = MapRange(
+    value: Arc,
+    from_min: 1.0,
+    from_max: 0.0,
+    to_min: -1.5707964,
+    to_max: 1.5707964)
+  combine_xyz_2 = CombineXYZ(x: cos(map_range), y: sin(map_range))
+  vector_rotate = VectorRotate(vector: Vector, angle: Orientation)
+  math = abs(vector_rotate.x)
+  combine_xyz = CombineXYZ(x: math, y: vector_rotate.y, z: vector_rotate.z)
+  math_2 = length(combine_xyz) - Radius @ "l"
+  vector_math = length(
+    combine_xyz - combine_xyz_2 * Clamp(value: combine_xyz_2 ⋅ combine_xyz, max: Radius)) @ "m"
+  return (
+    Value: max(
+      math_2,
+      (combine_xyz_2.y * math - combine_xyz_2.x * vector_rotate.y > 0.0 ? 1.0 : -1.0)
+        * vector_math))
+}

@@ -1,0 +1,148 @@
+geometry(is_modifier: false) graph "RBD Constraints From Rules"(
+    Geometry: Geometry(description: "The pieces"),
+    "Constraint Geometry": Geometry(description: "One edge per glue bond"),
+    "Proxy Geometry": Geometry(description: "What collides"),
+    "Search Radius": Float(
+      subtype: DISTANCE,
+      description: "Pieces whose surfaces are closer to each other than this are glued together") = 0.02 in 0.0..,
+    Strength: Float(description: "Strength of the glue between neighbouring pieces") = 5.0 in 0.0..,
+    "Strength Variance": Float(subtype: FACTOR) in 0.0..1.0,
+    "Scale by Contact Area": Bool(
+      description: "Pieces that touch over a small area are held together less strongly") = true,
+    "Keep Incoming Constraints": Bool(
+      description: "Add to the constraints that come in. Off: they are replaced"),
+    "Advanced"(default_closed: true) {
+        "Samples per Piece": Int(
+          description: "Points scattered on every piece to find its neighbours. More finds smaller contacts") = 200 in 8..5000,
+        Seed: Int in 0..
+    }
+) -> (Geometry: Geometry, "Constraint Geometry": Geometry, "Proxy Geometry": Geometry) {
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "rbd_rest")
+  named_attribute_2 = NamedAttribute[FLOAT_VECTOR](name: "rbd_pivot")
+  capture_attribute = Geometry
+    |> SetPosition(position: named_attribute.exists ? named_attribute.attribute : Position())
+    |> CaptureAttribute[FACE](
+      own: NamedAttribute[INT](name: "piece_id").attribute,
+      pivot: named_attribute_2.exists ? named_attribute_2.attribute : Position(),
+      area: FaceArea())
+  bounding_box = BoundingBox(capture_attribute.geometry)
+  math = max(search_radius * 0.5, length(bounding_box.max - bounding_box.min) * 0.0001)
+  math_2 = samples_per_piece
+    * (AttributeStatistic(
+        capture_attribute.geometry,
+        attribute: NamedAttribute[INT](name: "piece_id").attribute).max
+      + 1.0)
+    / max(
+      AttributeStatistic[FACE](capture_attribute.geometry, attribute: capture_attribute.area).sum,
+      1e-12)
+  distribute_points_on_faces = DistributePointsOnFaces(
+    capture_attribute.geometry,
+    density: math_2,
+    seed: Seed)
+  set_position = SetPosition(capture_attribute.geometry, offset: Normal().normal * (math * -0.1))
+  vector_math = Position() + distribute_points_on_faces.normal * math
+  sample_nearest_surface = SampleNearestSurface[INT](
+    set_position,
+    value: capture_attribute.own,
+    sample_position: vector_math)
+  sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
+    set_position,
+    value: capture_attribute.pivot,
+    sample_position: vector_math)
+  compare = capture_attribute.own < sample_nearest_surface.value
+  switch = compare ? capture_attribute.own : sample_nearest_surface.value
+  switch_2 = compare ? sample_nearest_surface.value : capture_attribute.own
+  named_attribute_3 = NamedAttribute[INT](name: "rbd_c_key")
+  named_attribute_4 = NamedAttribute(name: "rbd_c_area")
+  accumulate_field = AccumulateField(
+    value: named_attribute_4.attribute,
+    group_id: named_attribute_3.attribute)
+  delete_geometry = distribute_points_on_faces.points
+    |> StoreNamedAttribute[INT](name: "rbd_c_a", value: switch)
+    |> StoreNamedAttribute[INT](name: "rbd_c_b", value: switch_2)
+    |> StoreNamedAttribute[INT](
+      name: "rbd_c_key",
+      value: IntegerMath[MULTIPLY_ADD](Value: switch, Value_001: 100000, Value_002: switch_2))
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_pa",
+      value: compare ? capture_attribute.pivot : sample_nearest_surface_2.value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_pb",
+      value: compare ? sample_nearest_surface_2.value : capture_attribute.pivot)
+    |> StoreNamedAttribute(name: "rbd_c_area", value: 0.5 / max(math_2, 1e-12))
+    |> DeleteGeometry(selection: capture_attribute.own == sample_nearest_surface.value)
+    |> StoreNamedAttribute[FLOAT_VECTOR](
+      name: "rbd_c_anchor",
+      value: AccumulateField[FLOAT_VECTOR](
+          value: Position() * named_attribute_4.attribute,
+          group_id: named_attribute_3.attribute).total
+        * (1.0 / max(accumulate_field.total, 1e-20)))
+    |> StoreNamedAttribute(name: "rbd_c_area", value: accumulate_field.total)
+    |> DeleteGeometry(
+      selection: not AccumulateField[INT](group_id: named_attribute_3.attribute).leading == 1)
+  delete_geometry_2 = DeleteGeometry(
+    delete_geometry,
+    selection: NamedAttribute(name: "rbd_c_area").attribute
+      < AttributeStatistic(
+          delete_geometry,
+          attribute: NamedAttribute(name: "rbd_c_area").attribute).median
+        * 0.05)
+  compare_2 = Math[FLOORED_MODULO](Value: Index(), Value_001: 2.0) == 1.0
+  return (
+    Geometry: Geometry,
+    "Constraint Geometry": (delete_geometry_2
+        |> StoreNamedAttribute(
+          name: "rbd_c_strength",
+          value: max(
+            Strength
+              * (scale_by_contact_area
+                ? min(
+                  max(
+                    sqrt(
+                      NamedAttribute(name: "rbd_c_area").attribute
+                        / max(
+                          AttributeStatistic(
+                            delete_geometry_2,
+                            attribute: NamedAttribute(name: "rbd_c_area").attribute).median,
+                          1e-20)),
+                    0.35),
+                  2.5)
+                : 1.0)
+              * (1.0
+                + strength_variance
+                  * RandomValue(
+                    min: -1.0,
+                    id: NamedAttribute[INT](name: "rbd_c_key").attribute,
+                    seed: Seed + 7.0)),
+            0.0))
+        |> InstanceOnPoints(instance: MeshLine(count: 2))
+        |> RealizeInstances()
+        |> SetPosition(
+          position: compare_2
+            ? NamedAttribute[FLOAT_VECTOR](name: "rbd_c_pb").attribute
+            : NamedAttribute[FLOAT_VECTOR](name: "rbd_c_pa").attribute)
+        |> StoreNamedAttribute[INT](
+          name: "piece_id",
+          value: compare_2
+            ? NamedAttribute[INT](name: "rbd_c_b").attribute
+            : NamedAttribute[INT](name: "rbd_c_a").attribute)
+        |> StoreNamedAttribute[EDGE](
+          name: "strength",
+          value: NamedAttribute(name: "rbd_c_strength").attribute)
+        |> StoreNamedAttribute[EDGE](
+          name: "area",
+          value: NamedAttribute(name: "rbd_c_area").attribute)
+        |> StoreNamedAttribute[FLOAT_VECTOR, EDGE](
+          name: "anchor",
+          value: NamedAttribute[FLOAT_VECTOR](name: "rbd_c_anchor").attribute)
+        |> RemoveNamedAttribute(name: "rbd_c_a")
+        |> RemoveNamedAttribute(name: "rbd_c_b")
+        |> RemoveNamedAttribute(name: "rbd_c_key")
+        |> RemoveNamedAttribute(name: "rbd_c_pa")
+        |> RemoveNamedAttribute(name: "rbd_c_pb")
+        |> RemoveNamedAttribute(name: "rbd_c_area")
+        |> RemoveNamedAttribute(name: "rbd_c_anchor")
+        |> RemoveNamedAttribute(name: "rbd_c_strength"))
+      + Switch[GEOMETRY](switch: keep_incoming_constraints, true_: constraint_geometry),
+    "Proxy Geometry": proxy_geometry)
+}

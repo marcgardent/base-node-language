@@ -1,0 +1,83 @@
+geometry graph "For Each Sim Geometry"(World: Bundle, Closure: Closure) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Data Type",
+    data_type: Geometry)
+  repeat_output = repeat(ListLength[STRING](list: get_nested_bundle_paths), World: World) -> {
+    get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+    get_bundle_item = GetBundleItem[GEOMETRY](bundle: World, path: get_list_item, remove: true)
+    evaluate_closure = EvaluateClosure[define_signature: true](
+      Closure,
+      World(structure_type: SINGLE): get_bundle_item.bundle,
+      Geometry(structure_type: SINGLE): get_bundle_item.item,
+      Path(structure_type: SINGLE): get_list_item) -> (
+      World: Bundle(structure_type: SINGLE),
+      Geometry: Geometry(structure_type: SINGLE))
+    return StoreBundleItem[GEOMETRY](
+      bundle: evaluate_closure.world,
+      path: get_list_item,
+      item: evaluate_closure.geometry)
+  }
+  return (World: repeat_output)
+}
+
+geometry graph "Is Effector for Geometry"(
+    Effector: Bundle,
+    "Effector Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE),
+    Geometry: Geometry,
+    "Geometry Path": String(force_non_field: true, optional_label: true, structure_type: SINGLE)
+) -> ("Affects Geometry": Bool) {
+  return (
+    "Affects Geometry": TagFilter(
+      tag_filter: SeparateBundle(Effector) -> (filter: String),
+      tags: GetBundleItem[STRING](bundle: GetGeometryBundle(Geometry).bundle, path: "tags").item))
+}
+
+geometry graph "Evaluate Forces"(
+    World: Bundle,
+    "To World Transform": Matrix,
+    Name: String(optional_label: true) = "external_force"
+) -> (World: Bundle) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: World,
+    mode: "Bundle Type",
+    bundle_type: "Blender.Force")
+  closure_output = graph(
+    World: Bundle(structure_type: SINGLE),
+    Geometry: Geometry(structure_type: SINGLE),
+    Path: String(structure_type: SINGLE)
+  ) -> (World: Bundle(structure_type: SINGLE), Geometry: Geometry(structure_type: SINGLE)) {
+    repeat_output = repeat(
+      ListLength[STRING](list: get_nested_bundle_paths),
+      "Total Force": (0.0, 0.0, 0.0)) -> {
+      get_list_item = GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)
+      get_bundle_item = GetBundleItem[BUNDLE](bundle: World, path: get_list_item)
+      evaluate_closure = EvaluateClosure(
+        SeparateBundle(get_bundle_item.item) -> (closure: Closure),
+        Geometry: Geometry,
+        "To World Transform": to_world_transform) -> (
+        Geometry: Geometry,
+        Selection: Bool,
+        Force: Vector)
+      capture_attribute = CaptureAttribute(
+        evaluate_closure.geometry,
+        selection: evaluate_closure.selection,
+        Force: evaluate_closure.force)
+      return is_effector_for_geometry(
+          effector: get_bundle_item.item,
+          effector_path: get_list_item,
+          geometry: Geometry,
+          geometry_path: Path)
+        ? total_force
+          + SampleIndex[FLOAT_VECTOR](
+            capture_attribute.geometry,
+            value: capture_attribute.force,
+            index: Index())
+        : total_force
+    }
+    return (
+      World: World,
+      Geometry: StoreNamedAttribute[FLOAT_VECTOR](Geometry, name: Name, value: repeat_output))
+  }
+  return (World: for_each_sim_geometry(world: World, closure: closure_output))
+}

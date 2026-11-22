@@ -1,0 +1,115 @@
+shader graph PT_WireHexOverlap(
+    Vector: Vector(hide_value: true),
+    Scale: Float = 10.0,
+    Thickness: Float(subtype: FACTOR) = 1.0 in 0.0..1.0
+) -> (Position: Vector, UV: Vector, Color: Color, Edge: Float, Height: Float, Masks: Int) {
+  {
+    vector_math = Vector * Scale
+    combine_xyz = CombineXYZ(x: 1.7320508, y: 1.0)
+    {
+      vector_math_2 = vector_math / combine_xyz
+      vector_math_3 = (fract(vector_math_2) - (0.5, 0.5, 0.0)) * combine_xyz
+      vector_math_5 = floor(vector_math_2) * combine_xyz + combine_xyz * 0.5
+      combine_xyz_2 = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k" hide
+      vector_math_6 = abs(vector_math_3) @ hide
+      separate_xyz_2 = SeparateXYZ(vector: combine_xyz_2) @ hide
+      math_4 = -separate_xyz_2.z @ hide
+      vector_math_13 = combine_xyz_2 * (1.0, 1.0, 0.0) @ hide
+      vector_math_8 = vector_math_13 ⋅ vector_math_6 @ hide
+      math_3 = min(vector_math_8, 0.0) @ hide
+      vector_math_9 = vector_math_13 * math_3 @ hide
+      vector_math_10 = vector_math_9 * 2.0 @ hide
+      vector_math_7 = vector_math_6 - vector_math_10 @ hide
+      separate_xyz = SeparateXYZ(vector: vector_math_7) @ hide
+      clamp = Clamp(value: separate_xyz.x, min: math_4, max: separate_xyz_2.z) @ hide
+      combine_xyz_3 = CombineXYZ(x: clamp, y: 0.5) @ "k" hide
+      vector_math_11 = vector_math_7 - combine_xyz_3 @ hide
+      vector_math_12 = length(vector_math_11) @ hide
+      separate_xyz_3 = SeparateXYZ(vector: vector_math_11) @ hide
+      math_6 = separate_xyz_3.y > 0.0 @ hide
+      mix_3 = math_6 ? 1.0 : -1.0 @ hide
+      math_5 = vector_math_12 * mix_3 @ hide
+      math_2 = abs(math_5)
+    }
+    math = math_5 > 0.0
+    vector_math_4 = (vector_math - combine_xyz * 0.5) / combine_xyz
+    mix = math ? floor(vector_math_4) * combine_xyz + combine_xyz : vector_math_5
+    mix_2 = math ? (fract(vector_math_4) - (0.5, 0.5, 0.0)) * combine_xyz : vector_math_3
+  }
+  {
+    value = 3.0 @ hide
+    value_2 = 0.57735026
+    separate_xyz_4 = SeparateXYZ(vector: mix_2) @ hide
+    math_7 = atan2(separate_xyz_4.y, separate_xyz_4.x) @ hide
+    math_8 = separate_xyz_4.y < 0.0 @ hide
+    math_10 = math_8 * 6.2831855 @ hide
+    math_9 = math_7 + math_10 @ hide
+    math_11 = math_9 / 6.2831855 @ hide
+    math_12 = math_11 * value @ hide
+    math_13 = floor(math_12) @ hide
+    math_16 = math_13 + 0.5 @ hide
+    math_14 = math_16 / value @ hide
+    math_15 = math_14 * 6.28319 @ hide
+    math_17 = -math_15 @ hide
+    math_18 = value_2 * 2.0 @ hide
+    math_19 = 0.5 * value_2 @ hide
+    vector_math_14 = (VectorRotate(vector: mix_2, angle: math_17) - CombineXYZ(x: math_19))
+      * (-1.0, 1.0, 0.0)
+    combine_xyz_4 = CombineXYZ(x: vector_math_14.y, y: vector_math_14.x)
+  }
+  vector_math_15 = length(combine_xyz_4 - (0.0, 0.28867513, 0.0))
+  vector_math_16 = length(combine_xyz_4 - (0.0, -0.288675, 0.0))
+  vector_math_17 = length(CombineXYZ(x: abs(combine_xyz_4.x), y: combine_xyz_4.y) - (0.5, 0.0, 0.0))
+  map_range = MapRange(
+    value: Thickness,
+    from_min: 1.0,
+    from_max: 0.0,
+    to_min: 0.33333334,
+    to_max: 0.5)
+  math_20 = vector_math_15 - map_range
+  math_21 = vector_math_16 - map_range
+  math_22 = vector_math_17 - map_range
+  math_23 = max(math_21, abs(math_22)) @ hide
+  math_25 = max(math_20, abs(math_21)) @ hide
+  math_24 = min(math_25, math_23) @ hide
+  math_26 = max(abs(math_20), math_22) @ hide
+  math_27 = min(math_24, math_26) @ hide
+  "height" {
+    math_28 = math_20 > 0.0
+    math_29 = math_21 > 0.0
+    math_30 = Math[SUBTRACT, use_clamp: true](Value: math_22 > 0.0, Value_001: math_29)
+    map_range_2 = MapRange(
+      value: Mix(
+          factor: math_30,
+          a: math_28 ? vector_math_17 : math_29 ? vector_math_15 : 1.0,
+          b: vector_math_16)
+        / map_range,
+      to_min: 1.0,
+      to_max: 0.0)
+  }
+  math_31 = combine_xyz_4.x > 0.0
+  {
+    math_32 = math_13 / value @ hide
+    math_33 = math_32 * 6.28319 @ hide
+  }
+  vector_math_18 = mix
+    + VectorRotate(
+      vector: Mix[VECTOR](
+        factor: math_30,
+        a: math_28
+          ? (math_31 ? (-0.28867513, 0.5, 0.0) : (0.57735026, 0.0, 0.0))
+          : math_29
+            ? (0.0, 0.0, 0.0)
+            : math_31 ? (0.166667, 0.288675, 0.0) : (0.288675, 0.166667, 0.0),
+        b: (0.288675, 0.5, 0.0)),
+      angle: math_33)
+  vector_math_19 = vector_math_18 / Scale
+  vector_math_20 = vector_math_18 + (1000.0, 1000.0, 0.0) @ hide
+  return (
+    Position: vector_math_19,
+    UV: Vector - vector_math_19,
+    Color: WhiteNoiseTexture(vector: vector_math_20).color,
+    Edge: math_27 / Scale,
+    Height: map_range_2,
+    Masks: Mix(factor: math_30, a: math_28 ? 2.0 : math_29 ? 1.0 : 0.0, b: 3.0))
+}

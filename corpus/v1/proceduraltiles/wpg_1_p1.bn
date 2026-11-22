@@ -1,0 +1,37 @@
+shader graph "WPG_1(p1)"(
+    Vector: Vector(hide_value: true),
+    scale: Float = 5.0,
+    shift: Float = 1.0,
+    "aspect ratio" {
+        "ratio a": Float = 1.0,
+        "ratio b": Float = 2.0
+    }
+) -> (UV: Vector, position: Vector, mx: Vector, my: Vector) {
+  "Wallpaper group tile pattern more on :https://en.wikipedia.org/wiki/Wallpaper_group"
+  "p1(1)" #094419 {
+    combine_xyz = CombineXYZ(x: ratio_a, y: ratio_b)
+    math = max(combine_xyz.x, combine_xyz.y) @ hide
+    vector_math_2 = combine_xyz / math
+    separate_xyz = SeparateXYZ(vector: Vector * scale / vector_math_2) @ hide
+    vector_math_3 = (1.0, 0.0, 0.0) * separate_xyz.x @ hide
+    combine_xyz_3 = CombineXYZ(x: shift, y: 1.0) @ hide
+    math_2 = -shift @ hide
+    combine_xyz_2 = CombineXYZ(x: math_2, y: 1.0) @ hide
+    vector_math_4 = combine_xyz_2 * separate_xyz.y @ hide
+    vector_math_5 = vector_math_3 + vector_math_4 @ hide
+    separate_xyz_2 = SeparateXYZ(vector: fract(vector_math_5)) @ hide
+    vector_math_6 = (1.0, 0.0, 0.0) * separate_xyz_2.x @ hide
+    vector_math_7 = combine_xyz_3 * separate_xyz_2.y @ hide
+    vector_math_8 = vector_math_6 + vector_math_7 @ hide
+    vector_math = vector_math_8 * vector_math_2
+    separate_xyz_3 = SeparateXYZ(vector: floor(vector_math_5)) @ hide
+    vector_math_9 = (1.0, 0.0, 0.0) * separate_xyz_3.x @ hide
+    combine_xyz_4 = CombineXYZ(x: shift, y: 1.0) @ hide
+    vector_math_10 = combine_xyz_4 * separate_xyz_3.y @ hide
+    vector_math_11 = vector_math_9 + vector_math_10 @ hide
+    vector_math_12 = vector_math_11 * vector_math_2
+    vector_math_13 = (1.0, 0.0, 0.0) * 1.0 @ hide
+    vector_math_14 = (0.0, 1.0, 0.0) * 1.0 @ hide
+  }
+  return (UV: vector_math, position: vector_math_12, mx: vector_math_13, my: vector_math_14)
+}

@@ -1,0 +1,13 @@
+geometry graph "Normalize Field"(
+    Field: Float,
+    "Group ID": Int(
+      description: "An index used to group values together for multiple separate operations",
+      hide_value: true)
+) -> (Result: Float) {
+  field_min_and_max = FieldMinAndMax(value: Field, group_id: group_id)
+  return (
+    Result: MapRange(
+      value: Field,
+      from_min: field_min_and_max.min,
+      from_max: field_min_and_max.max))
+}

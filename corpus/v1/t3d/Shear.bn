@@ -1,0 +1,51 @@
+geometry graph Shear(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true, hide_in_modifier: true) = true,
+    "X / Y / Z": Int = 1 in 1..3,
+    Strength: Float = 0.5,
+    Angle: Float(subtype: ANGLE),
+    "Mid-Level": Float(subtype: FACTOR) = 0.5 in 0.0..1.0,
+    "Limit Lower": Float(subtype: FACTOR) in 0.0..1.0,
+    "Limit Higher": Float(subtype: FACTOR) = 1.0 in 0.0..1.0,
+    Smoothness: Float(subtype: FACTOR) in 0.0..1.0
+) -> Geometry {
+  "Strength" {
+    bounding_box = BoundingBox(Geometry)
+    math_2 = Strength * -1.0000001
+    math = VectorRotate[Y_AXIS, invert: true](vector: Position(), angle: 1.5707964).x * math_2
+      + math_2
+        * (MapRange[clamp: false](value: mid_level, to_min: -1.0)
+          * ((bounding_box.max - bounding_box.min) * 0.5).z)
+  }
+  "Limits" {
+    attribute_statistic = AttributeStatistic(Geometry, attribute: math)
+    mix = Mix(factor: limit_lower, a: attribute_statistic.min, b: attribute_statistic.max)
+    mix_2 = Mix(factor: limit_higher, a: attribute_statistic.min, b: attribute_statistic.max)
+    mix_3 = Mix(
+      factor: Smoothness,
+      a: MapRange(
+        value: math,
+        from_min: mix,
+        from_max: mix_2,
+        to_min: attribute_statistic.min,
+        to_max: attribute_statistic.max),
+      b: MapRange[SMOOTHERSTEP](
+        value: math,
+        from_min: mix,
+        from_max: mix_2,
+        to_min: attribute_statistic.min,
+        to_max: attribute_statistic.max))
+  }
+  "Axis" {
+    combine_xyz = CombineXYZ(x: x_y_z == 1, y: x_y_z == 2, z: x_y_z == 3)
+  }
+  "Angle" {
+    vector_rotate = VectorRotate[Z_AXIS](
+      vector: VectorMath[MULTIPLY](Vector: mix_3, Vector_001: combine_xyz),
+      angle: Angle)
+  }
+  {
+    set_position = SetPosition(Geometry, selection: Selection, offset: vector_rotate)
+  }
+  return set_position
+}

@@ -1,0 +1,216 @@
+geometry graph "Curve Root"() -> (
+    "Root Selection": Bool(description: "Boolean selection of curve root points"),
+    "Root Position": Vector(
+      description: "Position of the root point of a curve",
+      attribute_domain: CURVE),
+    "Root Direction": Vector(
+      description: "Direction of the root segment of a curve",
+      attribute_domain: CURVE),
+    "Root Index": Int(description: "Index of the root point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: PointsOfCurve().point_index)
+  return (
+    "Root Selection": EndpointSelection(end_size: 0),
+    "Root Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Root Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Root Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Tip"() -> (
+    "Tip Selection": Bool(description: "Boolean selection of curve tip points"),
+    "Tip Position": Vector(
+      description: "Position of the tip point of a curve",
+      attribute_domain: CURVE),
+    "Tip Direction": Vector(
+      description: "Direction of the tip segment of a curve",
+      attribute_domain: CURVE),
+    "Tip Index": Int(description: "Index of the tip point of a curve", attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](
+    value: PointsOfCurve(sort_index: -1).point_index)
+  return (
+    "Tip Selection": EndpointSelection(start_size: 0),
+    "Tip Position": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: evaluate_on_domain)),
+    "Tip Direction": EvaluateOnDomain[CURVE, FLOAT_VECTOR](
+      value: EvaluateAtIndex[FLOAT_VECTOR](value: CurveTangent(), index: evaluate_on_domain)),
+    "Tip Index": evaluate_on_domain)
+}
+
+geometry graph "Curve Info"() -> (
+    "Curve Index": Int(description: "Index of each curve", attribute_domain: CURVE),
+    "Curve ID": Int(description: "ID of each curve", attribute_domain: CURVE),
+    Length: Float(description: "Length of each curve", attribute_domain: CURVE),
+    Direction: Vector(
+      description: "Direction from root to tip of each curve",
+      attribute_domain: CURVE),
+    Random: Float(description: "Random vector for each curve", attribute_domain: CURVE),
+    "Surface UV": Vector(
+      description: "Attachment surface UV coordinates of each curve",
+      attribute_domain: CURVE)
+) {
+  evaluate_on_domain = EvaluateOnDomain[CURVE, INT](value: Index()) @ hide
+  "ID per Curve" {
+    evaluate_on_domain_2 = EvaluateOnDomain[CURVE, INT](
+      value: EvaluateAtIndex[INT](value: ID(), index: curve_root().root_index))
+  }
+  return (
+    "Curve Index": evaluate_on_domain,
+    "Curve ID": evaluate_on_domain_2,
+    Length: SplineLength().length,
+    Direction: normalize(curve_tip().tip_position - curve_root().root_position),
+    Random: EvaluateOnDomain[CURVE](
+      value: EvaluateAtIndex(
+        value: RandomValue(id: evaluate_on_domain_2),
+        index: curve_root().root_index)),
+    "Surface UV": NamedAttribute[FLOAT_VECTOR](name: "surface_uv_coordinate").attribute)
+}
+
+geometry graph "Curve Segment"() -> (
+    "Segment Length": Float(description: "Distance to the previous point on the curve"),
+    "Segment Direction": Vector(
+      description: "Direction from the previous neighboring point on the segment"),
+    "Neighbor Index": Int(description: "Index of the previous neighboring point on the segment")
+) {
+  boolean = true
+  evaluate_on_domain_2 = EvaluateOnDomain[CURVE, BOOLEAN](value: boolean)
+  offset_point_in_curve = OffsetPointInCurve(offset: -1)
+  switch_4 = offset_point_in_curve.is_valid_offset ? offset_point_in_curve.point_index : Index()
+  switch_3 = evaluate_on_domain_2 ? EvaluateOnDomain[INT](value: switch_4) : 0 @ hide
+  position = Position()
+  evaluate_on_domain = EvaluateOnDomain[FLOAT_VECTOR](
+    value: position - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: switch_4))
+  switch = evaluate_on_domain_2 ? normalize(evaluate_on_domain) : (0.0, 0.0, 0.0) @ hide
+  switch_2 = evaluate_on_domain_2 ? length(evaluate_on_domain) : 0.0 @ hide
+  return ("Segment Length": switch_2, "Segment Direction": switch, "Neighbor Index": switch_3)
+}
+
+geometry(is_modifier: true, show_modifier_manage_panel: false) graph "Redistribute Curve Points"(
+    Curves: Geometry,
+    Factor: Float(subtype: FACTOR, description: "Factor to blend overall effect") = 1.0 in 0.0..1.0,
+    "Feature Awareness": Bool(
+      description: "Use simple feature awareness to keep feature definition")
+) -> (Curves: Geometry) {
+  {
+    blur_attribute = BlurAttribute(
+      value: SplineParameter().factor,
+      iterations: 10,
+      weight: (not EndpointSelection())
+        * MapRange[SMOOTHSTEP](value: abs(CurveTangent() ⋅ curve_segment().segment_direction)))
+  }
+  "Equidistant Distribution" {
+    math = PointsOfCurve(curve_index: curve_info().curve_index).total - 1.0 @ hide
+    math_2 = SplineParameter().index / math
+  }
+  {
+    mix = Mix(
+      factor: Factor,
+      a: SplineParameter().factor,
+      b: feature_awareness ? blur_attribute : math_2)
+  }
+  "Mask Selection" {
+    boolean_math = not EndpointSelection() and Factor > 0.0
+  }
+  "Resample Position Along Curves" {
+    set_position = SetPosition(
+      Curves,
+      selection: boolean_math,
+      position: SampleCurve[FLOAT_VECTOR](
+        Curves,
+        factor: mix,
+        curve_index: curve_info().curve_index).position)
+  }
+  return (Curves: set_position)
+}
+
+geometry(show_modifier_manage_panel: false) graph "Trim Hair Curves"(
+    Geometry: Geometry(description: "Input geometry (may include geometry other than curves)"),
+    "Scale Uniform": Bool(description: "Scale each curve uniformly to reach the target length"),
+    "Length Factor": Float(
+      description: "Multiply the original length by a factor") = 1.0 in 0.0..10000.0,
+    "Replace Length": Bool(
+      description: "Use the length input to fully replace the original length") = true,
+    Length: Float(subtype: DISTANCE, description: "Target length for the operation") = 1.0 in 0.0..,
+    Mask: Float(subtype: FACTOR, description: "Mask to blend overall effect") = 1.0 in 0.0..1.0,
+    "Random Offset": Float(
+      subtype: DISTANCE,
+      description: "Trim hair curves randomly up to a certain amount") in 0.0..,
+    "Pin at Parameter": Float(
+      subtype: FACTOR,
+      description: "Pin each curve at a certain point for the operation") in 0.0..1.0,
+    Seed: Int(description: "Random seed for the operation") in -10000..10000
+) -> Geometry {
+  curve_of_point = CurveOfPoint()
+  "Extrapolation" {
+    group = curve_tip()
+    group_2 = curve_root()
+    vector_math = -group_2.root_direction @ hide
+  }
+  "Calculate Trimmed Ends" {
+    math_10 = 1.0 - pin_at_parameter @ hide
+  }
+  get_geometry_component = GetGeometryComponent(Geometry, type: Curve)
+  capture_attribute = CaptureAttribute[CURVE](
+    get_geometry_component.component,
+    Value: curve_info().length)
+  "Scale Uniform" {
+    sample_curve_2 = SampleCurve(
+      capture_attribute.geometry,
+      factor: pin_at_parameter,
+      curve_index: curve_info().curve_index)
+  }
+  "Calculate Trimmed Ends" .. {
+    math_4 = pin_at_parameter * capture_attribute.value @ hide
+    math_7 = pin_at_parameter * capture_attribute.value @ hide
+  }
+  "Calculate Length" {
+    math_11 = max(
+      (replace_length ? Length : capture_attribute.value) * length_factor
+        + RandomValue(
+            min: -1.0,
+            max: 0.0,
+            id: curve_info().curve_id,
+            seed: HashValue(value: Seed, seed: 14699))
+          * random_offset,
+      0.0001) @ hide
+    mix = Mix(factor: Mask, a: capture_attribute.value, b: math_11)
+  }
+  "Scale Uniform" .. {
+    set_position = SetPosition(
+      capture_attribute.geometry,
+      position: (Position() - sample_curve_2.position) * (mix / curve_info().length)
+        + sample_curve_2.position)
+  }
+  "Calculate Trimmed Ends" .. {
+    math_6 = pin_at_parameter * mix @ hide
+    math_5 = math_4 - math_6 @ hide
+    math_9 = mix * math_10 @ hide
+    math_8 = math_9 + math_7 @ hide
+  }
+  "Extrapolation" .. {
+    compare = math_5 < 0.0 @ hide
+    compare_2 = math_8 > capture_attribute.value @ hide
+    math = math_8 - capture_attribute.value @ hide
+    boolean_math = compare_2 and group.tip_selection @ hide
+    boolean_math_2 = compare and group_2.root_selection @ hide
+    vector_math_2 = vector_math * math_5 * boolean_math_2
+    vector_math_3 = group.tip_direction * math * boolean_math
+    math_2 = max(math_5, 0.0) @ hide
+    math_3 = min(math_8, capture_attribute.value) @ hide
+  }
+  sample_curve = SampleCurve[LENGTH](
+    capture_attribute.geometry,
+    length: Mix(
+      factor: curve_of_point.index_in_curve / (SplineLength().point_count - 1.0),
+      a: math_2,
+      b: math_3),
+    curve_index: curve_of_point.curve_index)
+  "Reposition Points for Trimmed Curves" {
+    group_3 = capture_attribute.geometry
+      |> SetPosition(offset: sample_curve.position - vector_math_2 + vector_math_3 - Position())
+      |> redistribute_curve_points()
+  }
+  return get_geometry_component.geometry + (scale_uniform ? set_position : group_3)
+}

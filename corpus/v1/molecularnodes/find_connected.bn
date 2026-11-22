@@ -1,0 +1,33 @@
+geometry graph "Find Connected"(
+    Value: Int(hide_value: true),
+    Match: Int = 2,
+    Distance: Int = 2 in 1..3,
+    Method: Menu(optional_label: true) = Any
+) -> ("Is Valid": Bool, Length: Int, Index: Int) {
+  shortest_edge_paths = ShortestEdgePaths(end_vertex: Value == Match)
+  compare = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 2)
+  compare_2 = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 3)
+  evaluate_at_index = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: shortest_edge_paths.next_vertex_index)
+  evaluate_at_index_2 = EvaluateAtIndex[INT](
+    value: shortest_edge_paths.next_vertex_index,
+    index: evaluate_at_index)
+  switch = Compare[EQUAL, INT](a: shortest_edge_paths.total_cost, b: 1)
+    ? shortest_edge_paths.next_vertex_index
+    : -1
+  switch_2 = compare ? evaluate_at_index : switch
+  menu_switch = MenuSwitch(
+    menu: Method,
+    Any: IndexSwitch(Distance, 0, switch, switch_2, compare_2 ? evaluate_at_index_2 : switch_2),
+    Exact: IndexSwitch(
+      Distance,
+      0,
+      switch,
+      compare ? evaluate_at_index : -1,
+      compare_2 ? evaluate_at_index_2 : -1))
+  return (
+    "Is Valid": menu_switch.output != -1,
+    Length: FloatToInteger(float: shortest_edge_paths.total_cost),
+    Index: menu_switch.output)
+}

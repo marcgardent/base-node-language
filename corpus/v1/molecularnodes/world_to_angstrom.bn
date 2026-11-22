@@ -1,0 +1,8 @@
+geometry graph ".MN_world_scale"() -> (world_scale: Float) {
+  value = 0.1
+  return (world_scale: value)
+}
+
+geometry graph "World to Angstrom"(World: Float = 0.5 in -10000.0..10000.0) -> (Angstrom: Float) {
+  return (Angstrom: World / mn_world_scale())
+}

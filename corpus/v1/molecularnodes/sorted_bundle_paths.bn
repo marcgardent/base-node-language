@@ -1,0 +1,24 @@
+geometry graph "Sorted Bundle Paths"(
+    Bundle: Bundle,
+    "Bundle Type": String(optional_label: true) = "MN*"
+) -> (List: String) {
+  get_nested_bundle_paths = GetNestedBundlePaths(
+    bundle: Bundle,
+    mode: "Bundle Type",
+    pattern_mode: Wildcard,
+    bundle_type: bundle_type)
+  format_string = FormatString(format: "{v}/step", v: get_nested_bundle_paths)
+  closure_output = graph(
+    Index: Int(structure_type: SINGLE)
+  ) -> (Item: Int(structure_type: DYNAMIC)) {
+    return GetBundleItem[INT](
+      bundle: Bundle,
+      path: GetListItem[STRING](list: format_string, index: Index)).item
+  }
+  return (
+    List: SortList[STRING](
+      list: get_nested_bundle_paths,
+      sort_weight: ClosureToList(
+        ListLength[STRING](list: format_string),
+        closure_output) -> (Item: Int(structure_type: DYNAMIC))))
+}

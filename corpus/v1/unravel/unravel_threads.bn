@@ -1,0 +1,314 @@
+geometry graph "Unravel Threads"(
+    Geometry: Geometry,
+    Cloth: Object(description: "The torn cloth these threads grow from"),
+    "UV Map": String(
+      description: "UV map that gives the weave direction. Threads follow it") = "UVMap",
+    Density: Float(description: "Threads per metre of torn edge") = 400.0 in 1.0..,
+    Length: Float(subtype: DISTANCE, description: "Longest thread length") = 0.03 in 0.0..,
+    "Root Width": Float(
+      subtype: DISTANCE,
+      description: "Thread thickness where it leaves the cloth") = 0.0012 in 0.0..,
+    "Tip Width": Float(
+      subtype: DISTANCE,
+      description: "Thread thickness at its loose end") = 0.0004 in 0.0..,
+    Resolution: Int(
+      description: "Points along each thread. More gives smoother curls but heavier scenes") = 8 in 2..32,
+    Seed: Int(description: "Changes the random look of the threads"),
+    "Length Random": Float(
+      subtype: FACTOR,
+      description: "How much shorter some threads are. 0 makes them all full length") = 0.6 in 0.0..1.0,
+    Clumping: Float(
+      subtype: FACTOR,
+      description: "How much thread tips gather into small bunches") = 0.3 in 0.0..1.0,
+    "Curl Radius": Float(
+      subtype: DISTANCE,
+      description: "How far threads curl around their own direction") = 0.001 in 0.0..,
+    "Curl Turns": Float(
+      description: "How many curls each thread makes along its length") = 2.0 in 0.0..,
+    Frizz: Float(
+      subtype: FACTOR,
+      description: "Small random wiggles along each thread") = 0.3 in 0.0..1.0,
+    Droop: Float(
+      subtype: FACTOR,
+      description: "How much threads sag under their own weight") = 0.3 in 0.0..1.0,
+    "Surface Contact": Bool(description: "Keep threads from sinking into the cloth") = true,
+    "Contact Offset": Float(
+      subtype: DISTANCE,
+      description: "How high above the cloth surface threads are kept") = 0.0005 in 0.0..,
+    "Contact Depth": Float(
+      subtype: DISTANCE,
+      description: "Threads deeper than this below the cloth are left alone, so they can hang behind it") = 0.02 in 0.0..,
+    "Viewport Density": Float(
+      subtype: FACTOR,
+      description: "Share of threads shown in the viewport. Renders always show all of them") = 1.0 in 0.0..1.0,
+    Material: Material(description: "Material used by these threads"),
+    "Direction Random": Float(
+      subtype: FACTOR,
+      description: "Tilts threads away from the weave by a random angle. 0 keeps them neatly aligned") in 0.0..1.0,
+    "Frizz Waves": Float(
+      description: "How many big wiggles each thread makes. Low gives lazy bends, high gives tight frizz") = 3.0 in 0.1..,
+    Bridges: Float(
+      subtype: FACTOR,
+      description: "Share of threads that stay connected across narrow gaps. 0 means none") in 0.0..1.0,
+    "Bridge Gap": Float(
+      subtype: DISTANCE,
+      description: "Widest gap a thread can bridge. Narrower gaps get more bridges") = 0.1 in 0.0..,
+    "Bridge Sag": Float(
+      subtype: FACTOR,
+      description: "How much bridging threads sag in the middle") = 0.1 in 0.0..1.0,
+    Scale: Float(
+      description: "Size of the cloth compared to real life. Set from the Unravel tab") = 1.0 in 0.001..1000.0
+) -> (Geometry: Geometry, Socket: Float) {
+  named_attribute = NamedAttribute[BOOLEAN](name: "unravel_back") @ "Is Back?"
+  named_attribute_2 = NamedAttribute[BOOLEAN](name: "unravel_hole_edge") @ "Is Hole Edge?"
+  math = 1.0 / Density @ "Thread Spacing"
+  named_attribute_3 = NamedAttribute[FLOAT_VECTOR](name: uv_map) @ "UV"
+  position = Position()
+  random_value = RandomValue[BOOLEAN](seed: Seed) @ "Coin Flip"
+  math_2 = Resolution - 1.0 @ "Last Step"
+  map_range = MapRange(
+    value: SplineParameter().factor,
+    to_min: root_width,
+    to_max: tip_width) @ "Width Root to Tip"
+  math_5 = map_range * 0.5 @ "Radius"
+  random_value_2 = RandomValue(seed: Seed) @ "Length Variation"
+  math_6 = length_random * random_value_2 @ "Random Cut"
+  math_7 = 1.0 - math_6 @ "Keep Fraction"
+  math_8 = Length * math_7 @ "Thread Length"
+  math_9 = Seed + 1.0 @ "Phase Seed"
+  random_value_3 = RandomValue(seed: math_9) @ "Curl Phase"
+  math_10 = Seed + 2.0 @ "Guide Seed"
+  random_value_4 = RandomValue[BOOLEAN](probability: 0.15, seed: math_10) @ "Pick Guides"
+  evaluate_on_domain = EvaluateOnDomain[FACE, FLOAT_VECTOR](value: Normal().normal) @ "Face Normal"
+  math_23 = -contact_depth @ "Depth Limit"
+  math_24 = 1.0 - viewport_density @ "Hide Share"
+  random_value_5 = RandomValue[BOOLEAN](probability: math_24, seed: 3) @ "Thin Pick"
+  boolean_math_11 = IsViewport() and random_value_5 @ "Hide in Viewport?"
+  math_25 = Seed + 4.0 @ "Tilt Seed"
+  random_value_6 = RandomValue(min: -1.0, seed: math_25) @ "Tilt Pick"
+  math_26 = direction_random * 1.2217 @ "Max Tilt"
+  math_27 = random_value_6 * math_26 @ "Tilt Angle"
+  math_29 = bridge_gap * 0.2 @ "Curtain Height"
+  vector_math_37 = Normal().normal * math_29 @ "Curtain Up"
+  math_30 = math_29 * 0.5 @ "Half Height"
+  math_31 = bridge_gap * 0.03 @ "Nudge"
+  math_32 = bridge_gap * 0.15 @ "Min Gap"
+  math_34 = Seed + 6.0 @ "Bridge Seed"
+  math_41 = 1.0 / Scale @ "One Over Scale"
+  transform_geometry = ObjectInfo[RELATIVE](object: Cloth).geometry
+    |> TransformGeometry(scale: math_41) @ "Shrink to Real Size"
+  delete_geometry = DeleteGeometry(
+    transform_geometry,
+    selection: named_attribute.attribute) @ "Front Only"
+  mesh_to_curve = MeshToCurve(
+    delete_geometry,
+    selection: named_attribute_2.attribute) @ "Hole Outlines"
+  sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: Normal().normal) @ "Root Normal"
+  geometry_proximity = GeometryProximity(delete_geometry) @ "Nearest Cloth"
+  sample_nearest_surface_3 = SampleNearestSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: evaluate_on_domain) @ "Cloth Normal"
+  vector_math_29 = Position() - geometry_proximity.position @ "From Cloth"
+  vector_math_30 = vector_math_29 ⋅ sample_nearest_surface_3.value @ "Height"
+  vector_math_31 = sample_nearest_surface_3.value * vector_math_30 @ "Straight Up Part"
+  vector_math_32 = vector_math_29 - vector_math_31 @ "Sideways Part"
+  vector_math_33 = length(vector_math_32) @ "Sideways Distance"
+  compare = vector_math_33 < 0.0001 @ "Over Cloth?"
+  compare_2 = vector_math_30 < contact_offset @ "Too Low?"
+  compare_3 = vector_math_30 > math_23 @ "Not Too Deep?"
+  boolean_math_8 = compare and compare_2 @ "Inside Cloth?"
+  boolean_math_9 = boolean_math_8 and compare_3 @ "Within Depth?"
+  boolean_math_10 = boolean_math_9 and surface_contact @ "Push Up?"
+  vector_math_34 = sample_nearest_surface_3.value * contact_offset @ "Lift"
+  vector_math_35 = geometry_proximity.position + vector_math_34 @ "On Surface"
+  extrude_mesh = ExtrudeMesh[EDGES](
+    delete_geometry,
+    selection: named_attribute_2.attribute,
+    offset: vector_math_37) @ "Curtain"
+  separate_geometry_2 = SeparateGeometry[FACE](
+    extrude_mesh.mesh,
+    selection: extrude_mesh.side) @ "Curtain Only"
+  math_42 = Radius() * Scale @ "Radius x Scale"
+  named_attribute_4 = NamedAttribute[FLOAT_VECTOR](name: "rest_position") @ "Rest Position"
+  vector_math_51 = named_attribute_4.attribute * math_41 @ "Rest x Scale"
+  switch_5 = named_attribute_4.exists ? vector_math_51 : Position() @ "Rest or Current"
+  position_2 = Position()
+  capture_attribute_4 = CaptureAttribute(mesh_to_curve, Current: position_2) @ "Remember Current"
+  set_position_3 = SetPosition(capture_attribute_4.geometry, position: switch_5) @ "Outline to Rest"
+  resample_curve = ResampleCurve(set_position_3, mode: "Length", length: math) @ "Space Roots"
+  capture_attribute_5 = CaptureAttribute(
+    resample_curve,
+    "Rest Root": position_2) @ "Remember Rest Root"
+  set_position_4 = SetPosition(
+    capture_attribute_5.geometry,
+    position: capture_attribute_4.current) @ "Roots Back on Cloth"
+  curve_to_points = CurveToPoints[EVALUATED](set_position_4) @ "Roots"
+  set_position_5 = SetPosition(delete_geometry, position: switch_5) @ "Cloth at Rest"
+  sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
+    set_position_5,
+    value: named_attribute_3.attribute,
+    sample_position: capture_attribute_5.rest_root) @ "Root UV"
+  vector_math = sample_nearest_surface.value + (0.004, 0.0, 0.0) @ "UV +U"
+  vector_math_2 = sample_nearest_surface.value + (-0.004, 0.0, 0.0) @ "UV -U"
+  vector_math_3 = sample_nearest_surface.value + (0.0, 0.004, 0.0) @ "UV +V"
+  vector_math_4 = sample_nearest_surface.value + (0.0, -0.004, 0.0) @ "UV -V"
+  sample_uvsurface = SampleUVSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: position,
+    uv_map: named_attribute_3.attribute,
+    sample_uv: vector_math) @ "Sample +U"
+  sample_uvsurface_2 = SampleUVSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: position,
+    uv_map: named_attribute_3.attribute,
+    sample_uv: vector_math_2) @ "Sample -U"
+  sample_uvsurface_3 = SampleUVSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: position,
+    uv_map: named_attribute_3.attribute,
+    sample_uv: vector_math_3) @ "Sample +V"
+  sample_uvsurface_4 = SampleUVSurface[FLOAT_VECTOR](
+    delete_geometry,
+    value: position,
+    uv_map: named_attribute_3.attribute,
+    sample_uv: vector_math_4) @ "Sample -V"
+  vector_math_5 = position - sample_uvsurface.value @ "Away from +U"
+  vector_math_6 = position - sample_uvsurface_2.value @ "Away from -U"
+  vector_math_7 = position - sample_uvsurface_3.value @ "Away from +V"
+  vector_math_8 = position - sample_uvsurface_4.value @ "Away from -V"
+  switch = sample_uvsurface.is_valid ? vector_math_5 : vector_math_6 @ "Dir U"
+  switch_2 = sample_uvsurface_3.is_valid ? vector_math_7 : vector_math_8 @ "Dir V"
+  boolean_math = sample_uvsurface.is_valid xor sample_uvsurface_2.is_valid @ "Crosses U?"
+  boolean_math_2 = sample_uvsurface_3.is_valid xor sample_uvsurface_4.is_valid @ "Crosses V?"
+  boolean_math_3 = not boolean_math_2 @ "No V?"
+  boolean_math_4 = boolean_math_3 or random_value @ "V Missing or Coin"
+  boolean_math_5 = boolean_math and boolean_math_4 @ "Use U?"
+  switch_3 = boolean_math_5 ? switch : switch_2 @ "Pick Direction"
+  vector_math_9 = normalize(switch_3) @ "Thread Direction"
+  boolean_math_6 = boolean_math or boolean_math_2 @ "Has Direction?"
+  vector_rotate = VectorRotate(
+    vector: vector_math_9,
+    axis: sample_nearest_surface_2.value,
+    angle: math_27) @ "Tilt Direction"
+  capture_attribute = CaptureAttribute(
+    curve_to_points.points,
+    Dir: vector_rotate,
+    Normal: sample_nearest_surface_2.value,
+    Length: math_8,
+    Keep: boolean_math_6,
+    "Root ID": Index(),
+    Root: Position(),
+    Phase: random_value_3,
+    UV: sample_nearest_surface.value) @ "Remember Root"
+  boolean_math_7 = not capture_attribute.keep @ "Skip?"
+  delete_geometry_2 = DeleteGeometry(
+    capture_attribute.geometry,
+    selection: boolean_math_7) @ "Drop Skipped"
+  separate_geometry = SeparateGeometry(delete_geometry_2, selection: random_value_4) @ "Guides"
+  vector_math_11 = capture_attribute.dir * capture_attribute.length @ "Root to Tip"
+  vector_math_12 = capture_attribute.root + vector_math_11 @ "Straight Tip"
+  sample_nearest = SampleNearest(separate_geometry.selection) @ "Nearest Guide"
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    separate_geometry.selection,
+    value: vector_math_12,
+    index: sample_nearest) @ "Guide Tip"
+  vector_math_13 = sample_index - vector_math_12 @ "Clump Pull"
+  capture_attribute_2 = CaptureAttribute(delete_geometry_2, Pull: vector_math_13) @ "Remember Clump"
+  math_12 = Droop * capture_attribute.length @ "Droop Amount"
+  vector_math_15 = capture_attribute.dir × capture_attribute.normal @ "Side"
+  vector_math_16 = normalize(vector_math_15) @ "Side Unit"
+  math_20 = Math[MULTIPLY, use_clamp: true](
+    Value: Frizz,
+    Value_001: capture_attribute.length) @ "Frizz Amount"
+  math_28 = frizz_waves / capture_attribute.length @ "Wave Scale"
+  vector_math_38 = capture_attribute.normal * math_30 @ "Ray Lift"
+  vector_math_39 = capture_attribute.dir * math_31 @ "Ray Nudge"
+  vector_math_40 = capture_attribute.root + vector_math_38 @ "Root Lifted"
+  vector_math_41 = vector_math_39 + vector_math_40 @ "Ray Start"
+  raycast = Raycast(
+    separate_geometry_2.selection,
+    source_position: vector_math_41,
+    ray_direction: capture_attribute.dir,
+    ray_length: bridge_gap) @ "Look Across"
+  compare_4 = raycast.hit_distance > math_32 @ "Far Enough?"
+  boolean_math_12 = raycast.is_hit and compare_4 @ "Real Hit?"
+  map_range_2 = MapRange(
+    value: raycast.hit_distance,
+    from_max: bridge_gap,
+    to_min: 1.0,
+    to_max: 0.0) @ "Gap Chance"
+  math_33 = map_range_2 * Bridges @ "Bridge Chance"
+  random_value_7 = RandomValue[BOOLEAN](probability: math_33, seed: math_34) @ "Bridge Pick"
+  boolean_math_13 = boolean_math_12 and random_value_7 @ "Is Bridge?"
+  vector_math_42 = raycast.hit_position - vector_math_38 @ "Bridge End"
+  capture_attribute_3 = CaptureAttribute(
+    capture_attribute_2.geometry,
+    "Is Bridge": boolean_math_13,
+    End: vector_math_42) @ "Remember Bridge"
+  delete_geometry_3 = DeleteGeometry(
+    capture_attribute_3.geometry,
+    selection: boolean_math_11) @ "Viewport Thin"
+  duplicate_elements = DuplicateElements(delete_geometry_3, amount: Resolution) @ "Thread Points"
+  math_3 = duplicate_elements.duplicate_index / math_2 @ "Along Thread"
+  math_4 = capture_attribute.length * math_3 @ "Length at t"
+  vector_math_10 = capture_attribute.dir * math_4 @ "Straight Out"
+  math_11 = math_3 * math_3 @ "t Squared"
+  math_13 = math_12 * math_11 @ "Droop at t"
+  vector_math_14 = (0.0, 0.0, -1.0) * math_13 @ "Droop"
+  math_14 = curl_turns * math_3 @ "Turns at t"
+  math_15 = math_14 + capture_attribute.phase @ "Turns plus Phase"
+  math_16 = math_15 * 6.2832 @ "Curl Angle"
+  math_17 = cos(math_16) @ "Cos"
+  math_18 = sin(math_16) @ "Sin"
+  vector_math_17 = vector_math_16 * math_17 @ "Side Swing"
+  vector_math_18 = capture_attribute.normal * math_18 @ "Up Swing"
+  vector_math_19 = vector_math_17 + vector_math_18 @ "Swing"
+  math_19 = curl_radius * math_3 @ "Curl at t"
+  vector_math_20 = vector_math_19 * math_19 @ "Curl"
+  vector_math_21 = capture_attribute.root + vector_math_10 @ "Straight Point"
+  math_21 = math_20 * math_3 @ "Frizz at t"
+  math_22 = Clumping * math_11 @ "Clump at t"
+  vector_math_24 = capture_attribute_2.pull * math_22 @ "Clump"
+  vector_math_25 = vector_math_10 + vector_math_20 @ "Add Curl"
+  vector_math_26 = vector_math_25 + vector_math_14 @ "Add Droop"
+  vector_math_36 = vector_math_21 * math_28 @ "Frizz Space"
+  noise_texture = NoiseTexture["4D"](vector: vector_math_36, w: Seed, scale: 1.0) @ "Frizz Noise"
+  vector_math_22 = noise_texture.color - 0.5 @ "Frizz Center"
+  vector_math_23 = vector_math_22 * math_21 @ "Frizz"
+  vector_math_27 = vector_math_26 + vector_math_23 @ "Add Frizz"
+  vector_math_28 = vector_math_27 + vector_math_24 @ "Add Clump"
+  vector_math_43 = capture_attribute_3.end - capture_attribute.root @ "Span"
+  vector_math_44 = vector_math_43 * math_3 @ "Span at t"
+  math_35 = 1.0 - math_3 @ "One minus t"
+  math_36 = math_35 * math_3 @ "Pin Both Ends"
+  math_37 = math_36 * 4.0 @ "Sag Curve"
+  vector_math_45 = length(vector_math_43) @ "Span Length"
+  math_38 = bridge_sag * vector_math_45 @ "Sag x Span"
+  math_39 = math_38 * math_37 @ "Sag Amount"
+  vector_math_46 = (0.0, 0.0, -1.0) * math_39 @ "Sag"
+  vector_math_47 = vector_math_44 + vector_math_46 @ "Span plus Sag"
+  math_40 = math_35 * 2.0 @ "Wiggle Pin"
+  vector_math_50 = vector_math_20 + vector_math_23 @ "Curl and Frizz"
+  vector_math_48 = vector_math_50 * math_40 @ "Bridge Wiggle"
+  vector_math_49 = vector_math_47 + vector_math_48 @ "Bridge Offset"
+  switch_4 = capture_attribute_3.is_bridge ? vector_math_49 : vector_math_28 @ "Free or Bridge"
+  set_position = SetPosition(duplicate_elements.geometry, offset: switch_4) @ "Lay Out Thread"
+  set_position_2 = SetPosition(
+    set_position,
+    selection: boolean_math_10,
+    position: vector_math_35) @ "Keep Above Cloth"
+  points_to_curves = PointsToCurves(
+    set_position_2,
+    curve_group_id: capture_attribute.root_id,
+    weight: math_3) @ "Make Threads"
+  store_named_attribute = points_to_curves
+    |> SetCurveRadius(radius: math_5)
+    |> StoreNamedAttribute[FLOAT2, CURVE](name: uv_map, value: capture_attribute.uv) @ "Store UV"
+  set_material = SetMaterial(store_named_attribute, material: Material) @ "Thread Material"
+  transform_geometry_2 = TransformGeometry(set_material, scale: Scale) @ "Grow Back"
+  set_curve_radius = SetCurveRadius(transform_geometry_2, radius: math_42) @ "Grow Radius"
+  join_geometry = set_curve_radius + Geometry @ "Add to Incoming"
+  return (Geometry: join_geometry)
+}

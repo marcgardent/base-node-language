@@ -1,0 +1,15 @@
+geometry graph "Transform and Project"(
+    Vector: Vector(subtype: XYZ),
+    Transform: Matrix,
+    Projection: Matrix
+) -> (Normalized: Vector(dimensions: 2), Depth: Float) {
+  transform_point = TransformPoint(vector: Vector, transform: Transform)
+  vector_math = VectorMath[MULTIPLY_ADD](
+    Vector: ProjectPoint(vector: transform_point, transform: Projection),
+    Vector_001: (0.5, 0.5, 0.5),
+    Vector_002: (0.5, 0.5, 0.5)) @ "[0, 1] range unclamped"
+  "Depth in scene units" {
+    math = abs(transform_point.z)
+  }
+  return (Normalized: vector_math, Depth: math)
+}

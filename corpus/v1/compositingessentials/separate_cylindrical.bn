@@ -1,0 +1,10 @@
+compositor graph "Separate Cylindrical"(
+    Vector: Vector(hide_value: true) in -10000.0..10000.0
+) -> (
+    R: Float(description: "Radius - Length of the vector"),
+    Phi: Float(subtype: ANGLE, description: "Azimuth - Angle around the up axis"),
+    Z: Float(description: "Offset from the ground plane")
+) {
+  "Decompose into its cylindrical components"
+  return (R: length(Vector * (1.0, 1.0, 0.0)), Phi: atan2(Vector.y, Vector.x), Z: Vector.z)
+}

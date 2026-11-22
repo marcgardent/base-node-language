@@ -1,0 +1,292 @@
+geometry(is_modifier: false) graph "Tessera · Color"(
+    Geometry: Geometry,
+    Motif: Geometry,
+    "Region Min": Vector,
+    "Region Max": Vector,
+    Scale: Float,
+    Rotation: Float,
+    Seed: Int,
+    Mapping: Int,
+    "UV Scale": Float,
+    "Color Mode": Int,
+    Colors: Int,
+    "Class Shift": Int,
+    "Accent Chance": Float,
+    "Gradient Angle": Float,
+    "Band Size": Float,
+    "Cluster Scale": Float,
+    Dither: Float,
+    Symmetry: Int,
+    Folds: Int,
+    "Hue Jitter": Float,
+    "Saturation Jitter": Float,
+    "Value Jitter": Float,
+    "Color 1": Color,
+    "Color 2": Color,
+    "Color 3": Color,
+    "Color 4": Color,
+    "Color 5": Color,
+    "Color 6": Color,
+    "Color 7": Color,
+    "Color 8": Color,
+    "Weight 1": Float,
+    "Weight 2": Float,
+    "Weight 3": Float,
+    "Weight 4": Float,
+    "Weight 5": Float,
+    "Weight 6": Float,
+    "Weight 7": Float,
+    "Weight 8": Float,
+    "Metal 1": Float,
+    "Metal 2": Float,
+    "Metal 3": Float,
+    "Metal 4": Float,
+    "Metal 5": Float,
+    "Metal 6": Float,
+    "Metal 7": Float,
+    "Metal 8": Float,
+    Image: Image,
+    "Image Fit": Int,
+    "Image Mix": Float,
+    "Flow Align": Float,
+    "Rhythm Class": Int,
+    "Rhythm Period": Int,
+    "Rhythm Start": Int
+) -> Geometry {
+  math = max(region_max.x - region_min.x, 1e-06)
+  math_2 = max(region_max.y - region_min.y, 1e-06)
+  compare = Mapping == 2
+  sample_index = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_la").attribute)
+  sample_index_2 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_lb").attribute)
+  sample_index_3 = SampleIndex[FLOAT_VECTOR](
+    Motif,
+    value: NamedAttribute[FLOAT_VECTOR](name: "ts_cc").attribute)
+  math_3 = sample_index.x * sample_index_2.y - sample_index.y * sample_index_2.x
+  switch = abs(math_3) > 1e-09 ? math_3 : 1.0
+  named_attribute = NamedAttribute[FLOAT_VECTOR](name: "ts_c")
+  vector_math = named_attribute.attribute
+    - CombineXYZ(x: (region_min.x + region_max.x) * 0.5, y: (region_min.y + region_max.y) * 0.5)
+  math_4 = abs(vector_math.x)
+  vector_math_2 = length(CombineXYZ(x: vector_math.x, y: vector_math.y))
+  math_5 = 6.2831855 / max(Folds, 1.0)
+  math_6 = Math[FLOORED_MODULO](Value: atan2(vector_math.y, vector_math.x), Value_001: math_5)
+  math_7 = min(math_6, math_5 - math_6)
+  index_switch = IndexSwitch(
+    Symmetry,
+    CombineXYZ(x: vector_math.x, y: vector_math.y),
+    CombineXYZ(x: math_4, y: vector_math.y),
+    CombineXYZ(x: math_4, y: abs(vector_math.y)),
+    CombineXYZ(x: vector_math_2 * cos(math_7), y: vector_math_2 * sin(math_7)))
+  white_noise_texture = WhiteNoiseTexture["4D"](
+    vector: VectorMath[SNAP](
+      Vector: index_switch * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+      Vector_001: (0.0625, 0.0625, 1.0)),
+    w: Seed + 0.531)
+  separate_color = SeparateColor(color: white_noise_texture.color)
+  separate_color_2 = SeparateColor(
+    color: WhiteNoiseTexture["4D"](
+      vector: VectorMath[SNAP](
+        Vector: index_switch * (1.0 / Scale) + (0.03125, 0.03125, 0.0),
+        Vector_001: (0.0625, 0.0625, 1.0)),
+      w: Seed + 0.917).color)
+  math_8 = min(max(Colors, 1.0), 8.0)
+  math_9 = NamedAttribute[INT](name: "ts_class").attribute + class_shift
+  math_10 = Math[FLOORED_MODULO](Value: math_9, Value_001: math_8)
+  math_11 = max(weight_1, 0.0) * (0.0 < math_8)
+  math_12 = math_11 + max(weight_2, 0.0) * (1.0 < math_8)
+  math_13 = math_12 + max(weight_3, 0.0) * (2.0 < math_8)
+  math_14 = math_13 + max(weight_4, 0.0) * (3.0 < math_8)
+  math_15 = math_14 + max(weight_5, 0.0) * (4.0 < math_8)
+  math_16 = math_15 + max(weight_6, 0.0) * (5.0 < math_8)
+  math_17 = math_16 + max(weight_7, 0.0) * (6.0 < math_8)
+  math_18 = max(math_17 + max(weight_8, 0.0) * (7.0 < math_8), 1e-06)
+  math_19 = separate_color.red * math_18
+  math_20 = min(
+    (math_19 > math_11 ? 1.0 : 0.0)
+      + (math_19 > math_12 ? 1.0 : 0.0)
+      + (math_19 > math_13 ? 1.0 : 0.0)
+      + (math_19 > math_14 ? 1.0 : 0.0)
+      + (math_19 > math_15 ? 1.0 : 0.0)
+      + (math_19 > math_16 ? 1.0 : 0.0)
+      + (math_19 > math_17 ? 1.0 : 0.0),
+    math_8 - 1.0)
+  math_21 = (separate_color.blue - 0.5) * Dither
+  math_22 = cos(gradient_angle)
+  math_23 = sin(gradient_angle)
+  math_24 = min(
+      max(
+        (vector_math.x * math_22 + vector_math.y * math_23)
+            / (0.5 * (math * abs(math_22) + math_2 * abs(math_23)) + 1e-06)
+            * 0.5
+          + 0.5
+          + math_21,
+        0.0),
+      0.9999)
+    * math_18
+  math_25 = min(
+      max(
+        (NoiseTexture["4D"](
+                vector: named_attribute.attribute * (1.0 / max(cluster_scale, 1e-05)),
+                w: Seed * 1.37,
+                scale: 1.0).factor
+              - 0.5)
+            * 2.6
+          + 0.5
+          + math_21,
+        0.0),
+      0.9999)
+    * math_18
+  math_26 = min(
+    (math_25 > math_11 ? 1.0 : 0.0)
+      + (math_25 > math_12 ? 1.0 : 0.0)
+      + (math_25 > math_13 ? 1.0 : 0.0)
+      + (math_25 > math_14 ? 1.0 : 0.0)
+      + (math_25 > math_15 ? 1.0 : 0.0)
+      + (math_25 > math_16 ? 1.0 : 0.0)
+      + (math_25 > math_17 ? 1.0 : 0.0),
+    math_8 - 1.0)
+  vector_math_3 = NamedAttribute[FLOAT_VECTOR](name: "ts_cp").attribute
+    - NamedAttribute[FLOAT_VECTOR](name: "ts_lc").attribute
+  math_27 = sample_index_3.x
+      * round((vector_math_3.x * sample_index_2.y - vector_math_3.y * sample_index_2.x) / switch)
+    + sample_index_3.y
+      * round((sample_index.x * vector_math_3.y - sample_index.y * vector_math_3.x) / switch)
+  switch_2 = compare
+    ? named_attribute.attribute * (1.0 / uv_scale)
+    : CombineXYZ(
+      x: (named_attribute.attribute.x - region_min.x) / math,
+      y: (named_attribute.attribute.y - region_min.y) / math_2)
+  image_info = ImageInfo(image: Image)
+  math_28 = max(image_info.width, 1.0) / max(image_info.height, 1.0)
+  switch_3 = compare ? 1.0 : math / math_2
+  compare_2 = switch_3 > math_28
+  math_29 = (switch_2.x - 0.5) * (switch_3 / math_28) + 0.5
+  math_30 = (switch_2.y - 0.5) * (math_28 / switch_3) + 0.5
+  index_switch_2 = IndexSwitch(
+    image_fit,
+    switch_2,
+    compare_2 ? CombineXYZ(x: math_29, y: switch_2.y) : CombineXYZ(x: switch_2.x, y: math_30),
+    compare_2 ? CombineXYZ(x: switch_2.x, y: math_30) : CombineXYZ(x: math_29, y: switch_2.y))
+  image_texture = ImageTexture[CLIP](image: Image, vector: index_switch_2)
+  math_31 = distance(image_texture.color, color_1) + (0.0 >= math_8) * 1000.0
+  math_32 = distance(image_texture.color, color_2) + (1.0 >= math_8) * 1000.0
+  math_33 = min(math_32, math_31)
+  math_34 = distance(image_texture.color, color_3) + (2.0 >= math_8) * 1000.0
+  math_35 = min(math_34, math_33)
+  math_36 = distance(image_texture.color, color_4) + (3.0 >= math_8) * 1000.0
+  math_37 = min(math_36, math_35)
+  math_38 = distance(image_texture.color, color_5) + (4.0 >= math_8) * 1000.0
+  math_39 = min(math_38, math_37)
+  math_40 = distance(image_texture.color, color_6) + (5.0 >= math_8) * 1000.0
+  math_41 = min(math_40, math_39)
+  math_42 = distance(image_texture.color, color_7) + (6.0 >= math_8) * 1000.0
+  math_43 = min(math_42, math_41)
+  math_44 = distance(image_texture.color, color_8) + (7.0 >= math_8) * 1000.0
+  math_45 = min(math_44, math_43)
+  math_46 = round(
+    IndexSwitch(
+      color_mode,
+      math_10,
+      math_20,
+      separate_color.green < accent_chance ? math_20 : math_10,
+      min(
+        (math_24 > math_11 ? 1.0 : 0.0)
+          + (math_24 > math_12 ? 1.0 : 0.0)
+          + (math_24 > math_13 ? 1.0 : 0.0)
+          + (math_24 > math_14 ? 1.0 : 0.0)
+          + (math_24 > math_15 ? 1.0 : 0.0)
+          + (math_24 > math_16 ? 1.0 : 0.0)
+          + (math_24 > math_17 ? 1.0 : 0.0),
+        math_8 - 1.0),
+      math_26,
+      Math[FLOORED_MODULO](
+        Value: floor(vector_math_2 / max(band_size, 1e-06) + math_21),
+        Value_001: math_8),
+      Math[FLOORED_MODULO](Value: math_27 + math_9, Value_001: math_8),
+      math_10,
+      image_info.width > 0
+        ? (math_44 < math_43
+          ? 7.0
+          : math_42 < math_41
+            ? 6.0
+            : math_40 < math_39
+              ? 5.0
+              : math_38 < math_37
+                ? 4.0
+                : math_36 < math_35 ? 3.0 : math_34 < math_33 ? 2.0 : math_32 < math_31 ? 1.0 : 0.0)
+        : math_26,
+      Math[FLOORED_MODULO](
+        Value: rhythm_class < 0 or NamedAttribute[INT](name: "ts_class").attribute == rhythm_class
+          ? rhythm_start
+            - 1.0
+            + Math[FLOORED_MODULO](Value: math_27, Value_001: max(rhythm_period, 1.0))
+          : math_10,
+        Value_001: math_8)))
+  index_switch_3 = IndexSwitch(
+    math_46,
+    color_1,
+    color_2,
+    color_3,
+    color_4,
+    color_5,
+    color_6,
+    color_7,
+    color_8)
+  separate_color_3 = SeparateColor[HSV](
+    color: color_mode == 7
+      ? Mix[RGBA](
+        factor: image_texture.alpha * image_mix,
+        a: index_switch_3,
+        b: image_texture.color)
+      : index_switch_3)
+  math_47 = Scale / max(math, math_2) * 0.6
+  math_48 = -math_47
+  math_49 = ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(x: math_47)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+    - ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(x: math_48)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+  math_50 = ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(y: math_47)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+    - ImageTexture[CLIP](image: Image, vector: index_switch_2 + CombineXYZ(y: math_48)).color
+      ⋅ (0.2126, 0.7152, 0.0722)
+  return Geometry
+    |> StoreNamedAttribute[FLOAT_COLOR, FACE](
+      name: "ts_color",
+      value: CombineColor[HSV](
+        red: fract(separate_color_3.red + (separate_color_2.red * 2.0 - 1.0) * hue_jitter),
+        green: min(
+          max(
+            separate_color_3.green
+              * (1.0 + (separate_color_2.green * 2.0 - 1.0) * saturation_jitter),
+            0.0),
+          1.0),
+        blue: max(
+          separate_color_3.blue * (1.0 + (separate_color_2.blue * 2.0 - 1.0) * value_jitter),
+          0.0)))
+    |> StoreNamedAttribute[FACE](
+      name: "ts_metal",
+      value: IndexSwitch(
+        math_46,
+        metal_1,
+        metal_2,
+        metal_3,
+        metal_4,
+        metal_5,
+        metal_6,
+        metal_7,
+        metal_8))
+    |> StoreNamedAttribute[FACE](name: "ts_rand", value: white_noise_texture.value)
+    |> StoreNamedAttribute[FACE](
+      name: "ts_flow",
+      value: flow_align > 0.0
+        ? (Math[FLOORED_MODULO](
+              Value: atan2(math_50, math_49) - Rotation + 0.7853982,
+              Value_001: 1.5707964)
+            - 0.7853982)
+          * (min(length(CombineXYZ(x: math_49, y: math_50)) * 12.0, 1.0) * flow_align)
+        : 0.0)
+}

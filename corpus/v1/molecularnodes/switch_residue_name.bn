@@ -1,0 +1,60 @@
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Residue Name"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_name: Int(description: "Read the `res_name` attribute from the geometry")) {
+  return (res_name: attribute_at_index(index: Index, name: "res_name"))
+}
+
+geometry graph "Switch Residue Name"(
+    ALA: Int = 6,
+    ARG: Int = 6,
+    ASN: Int = 6,
+    ASP: Int = 6,
+    CYS: Int = 6,
+    GLU: Int = 6,
+    GLN: Int = 6,
+    GLY: Int = 6,
+    HIS: Int = 6,
+    ILE: Int = 6,
+    LEU: Int = 6,
+    LYS: Int = 6,
+    MET: Int = 6,
+    PHE: Int = 6,
+    PRO: Int = 6,
+    SER: Int = 6,
+    THR: Int = 6,
+    TRP: Int = 6,
+    TYR: Int = 6,
+    VAL: Int = 6
+) -> (Output: Int) {
+  return (
+    Output: IndexSwitch(
+      residue_name(),
+      ALA,
+      ARG,
+      ASN,
+      ASP,
+      CYS,
+      GLU,
+      GLN,
+      GLY,
+      HIS,
+      ILE,
+      LEU,
+      LYS,
+      MET,
+      PHE,
+      PRO,
+      SER,
+      THR,
+      TRP,
+      TYR,
+      VAL))
+}

@@ -1,0 +1,82 @@
+geometry graph "Vector Angle"(
+    A: Vector(description: "The first vector for angle calculation") in -10000.0..10000.0,
+    B: Vector(description: "The second vector for the angle calculation") in -10000.0..10000.0
+) -> (
+    Angle: Float(subtype: ANGLE, description: "The angle between the two vectors in radians"),
+    "A×B": Vector(description: "Axis around which the angle rotates (cross product of A and B)")
+) {
+  "The angle between two vectors, in radians"
+  vector_math = normalize(A)
+  vector_math_2 = normalize(B)
+  return (Angle: acos(vector_math ⋅ vector_math_2), "A×B": vector_math × vector_math_2)
+}
+
+geometry graph "Dihedral Angle"(
+    A: Vector(description: "First vector for the calculation, which draws a line to B"),
+    B: Vector(
+      description: "Second vector for the calculation, which receives a line from A and draws a line to C"),
+    C: Vector(
+      description: "Third vector for the calculation, which receives a line from B and draws a line to D"),
+    D: Vector(
+      description: "Last vector for the calculation, which is the end point of the line from D")
+) -> (
+    Angle: Float(
+      subtype: ANGLE,
+      description: "The angle between the vectors AB and CD, when made perpendicular to BC."),
+    "BA⟂(BC)": Vector(description: "The vector BA when made perpendicular to  the axis BC"),
+    "CD⟂(BC)": Vector(description: "The Vector CD when makde perpendicular to the axis BC"),
+    BC: Vector(description: "The axis vector BC")
+) {
+  vector_math = D - C
+  vector_math_2 = A - B
+  vector_math_3 = C - B
+  vector_math_4 = vector_math_2
+    - VectorMath[PROJECT](Vector: vector_math_2, Vector_001: vector_math_3)
+  vector_math_5 = vector_math - VectorMath[PROJECT](Vector: vector_math, Vector_001: vector_math_3)
+  return (
+    Angle: vector_angle(a: vector_math_4, b: vector_math_5).angle
+      * sign((vector_math_4 × vector_math_5) ⋅ vector_math_3),
+    "BA⟂(BC)": vector_math_4,
+    "CD⟂(BC)": vector_math_5,
+    BC: vector_math_3)
+}
+
+geometry graph "Offset Index"(
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(description: "The `Offset` to apply to the `Index` of the point")
+) -> (Index: Int(description: "The `Index` + `Offset`")) {
+  return (Index: IntegerMath[ADD](Value: Index, Value_001: Offset))
+}
+
+geometry graph "Offset Vector"(
+    Vector: Vector(
+      description: "The field to evaluate at the given `Index` + `Offset` on the point domain",
+      hide_value: true) = Position(),
+    Index: Int(description: "The `Index` at which to evaluate this offset from") = Index() in 0..,
+    Offset: Int(
+      description: "The offset to apply to the `Index` before evaluating the input field") in -2147483647..
+) -> (Value: Vector(description: "The field evaluated at the offset `Index` value")) {
+  return (
+    Value: EvaluateAtIndex[FLOAT_VECTOR](
+      value: Vector,
+      index: offset_index(index: Index, offset: Offset)))
+}
+
+geometry graph "Curve Offset Dihedral"(
+    Position: Vector(
+      description: "The vector to use as the B & C components for `Dihedral Angle` calculation") = Position(),
+    Normal: Vector(
+      description: "The normal that will be added the `Position` to create the A & D components of the dihedral calcaulation") = Normal(),
+    Index: Int(
+      description: "The index of the current point to calculate from") = Index() in -2147483647..,
+    Offset: Int(description: "The number of points to offset before calculating the angle")
+) -> (Angle: Float(subtype: ANGLE, description: "The calculated angle in radians")) {
+  "Offset from the current point a number of points, then use their `Position` and `Normal` to calculat a dihdral angle between them"
+  group = offset_vector(vector: Position, index: Index, offset: Offset)
+  return (
+    Angle: dihedral_angle(
+      a: offset_vector(vector: Normal, index: Index, offset: Offset) + group,
+      b: group,
+      c: Position,
+      d: Position + Normal).angle)
+}

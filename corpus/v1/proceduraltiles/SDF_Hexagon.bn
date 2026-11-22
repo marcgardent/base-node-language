@@ -1,0 +1,15 @@
+shader graph SDF_Hexagon(
+    Vector: Vector(hide_value: true),
+    Radius: Float = 0.5 in -10000.0..10000.0
+) -> (Value: Float) {
+  "SDF node"
+  combine_xyz = CombineXYZ(x: -0.8660254, y: 0.5, z: 0.57735026) @ "k"
+  vector_math = abs(Vector)
+  vector_math_4 = combine_xyz * (1.0, 1.0, 0.0)
+  vector_math_2 = vector_math - vector_math_4 * min(vector_math_4 ⋅ vector_math, 0.0) * 2.0
+  combine_xyz_2 = CombineXYZ(
+    x: Clamp(value: vector_math_2.x, min: -combine_xyz.z, max: combine_xyz.z),
+    y: Radius) @ "k"
+  vector_math_3 = vector_math_2 - combine_xyz_2
+  return (Value: length(vector_math_3) * (vector_math_3.y > 0.0 ? 1.0 : -1.0))
+}

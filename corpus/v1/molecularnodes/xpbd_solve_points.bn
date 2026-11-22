@@ -1,0 +1,86 @@
+geometry graph "Constraint Distance"(
+    Target: Vector in -10000.0..10000.0,
+    Self: Vector = Position() in -10000.0..10000.0,
+    Distance: Float = 0.5 in -10000.0..10000.0,
+    W1: Float = 0.5 in 0.0..10000.0,
+    W2: Float = 0.5 in 0.0..10000.0,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> (Correction: Vector, Value: Float) {
+  vector_math = Target - Self
+  vector_math_2 = length(vector_math)
+  return (
+    Correction: normalize(vector_math)
+      * ((vector_math_2 - Distance) * (W1 / (W1 + W2 + alpha / (deltaT * deltaT)))),
+    Value: vector_math_2)
+}
+
+geometry graph "Fallback Float"(
+    Name: String(
+      description: "Name of the attribute to attempt to read from the geometry",
+      optional_label: true),
+    Fallback: Float(
+      description: "Value to use instead if the named attribute doesn't exist on the geometry")
+) -> (
+    Value: Float(
+      description: "The named attribute read from the geometry if it exists, or the fallback value if it doesn't")
+) {
+  named_attribute = NamedAttribute(name: Name)
+  return (Value: named_attribute.exists ? named_attribute.attribute : Fallback)
+}
+
+geometry graph "Inverse Mass"() -> (Exists: Bool, w: Float, mass: Float) {
+  group = fallback_float(name: "mass", fallback: 1.0)
+  string = "inverse_mass"
+  return (
+    Exists: NamedAttribute(name: string).exists,
+    w: fallback_float(name: string, fallback: 1.0 / group),
+    mass: group)
+}
+
+geometry graph "Attribute at Index"(
+    Index: Int = Index() in 0..,
+    Name: String = "res_id"
+) -> (Value: Int) {
+  return (
+    Value: EvaluateAtIndex[INT](value: NamedAttribute[INT](name: Name).attribute, index: Index))
+}
+
+geometry graph "Residue ID"(
+    Index: Int(hide_value: true) = Index() in 0..
+) -> (res_id: Int(description: "Read the `res_id` attribute from the geometry")) {
+  return (res_id: attribute_at_index(index: Index))
+}
+
+geometry(is_modifier: false) graph "XPBD Solve Points"(
+    Geometry: Geometry,
+    Selection: Bool(hide_value: true) = true,
+    Radius: Float,
+    alpha: Float in -10000.0..10000.0,
+    deltaT: Float(force_non_field: true, structure_type: SINGLE) in -10000.0..10000.0
+) -> Geometry {
+  group = inverse_mass()
+  group_2 = residue_id()
+  capture_attribute = Geometry
+    |> CaptureAttribute(
+      Vector: Position() + RandomValue[FLOAT_VECTOR](min: (-1.0, -1.0, -1.0)) * 0.001).geometry
+    |> CaptureAttribute(Index: IndexOfNearest().index)
+  evaluate_at_index = EvaluateAtIndex[INT](value: group_2, index: capture_attribute.index)
+  compare = IntegerMath[ABSOLUTE](
+      value: IntegerMath[SUBTRACT](Value: group_2, Value_001: evaluate_at_index))
+    != 1
+  math = EvaluateAtIndex(value: Radius, index: capture_attribute.index) + Radius
+  group_3 = constraint_distance(
+    target: EvaluateAtIndex[FLOAT_VECTOR](value: Position(), index: capture_attribute.index),
+    distance: math,
+    w1: group.w,
+    w2: EvaluateAtIndex(value: group.w, index: capture_attribute.index),
+    alpha: alpha,
+    deltat: deltaT)
+  return SetPosition(
+    capture_attribute.geometry,
+    selection: ShortestEdgePaths(end_vertex: evaluate_at_index == Index()).next_vertex_index
+        != capture_attribute.index
+      and (Selection and math > group_3.value),
+    offset: group_3.correction)
+}

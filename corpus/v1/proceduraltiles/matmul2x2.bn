@@ -1,0 +1,11 @@
+shader graph ".matmul2x2"(
+    Vector: Vector in -10000.0..10000.0,
+    "Vector x": Vector in -10000.0..10000.0,
+    "Vector y": Vector in -10000.0..10000.0
+) -> Vector {
+  separate_xyz = SeparateXYZ(vector: Vector) @ hide
+  vector_math = vector_x * separate_xyz.x @ hide
+  vector_math_2 = vector_y * separate_xyz.y @ hide
+  vector_math_3 = vector_math + vector_math_2 @ hide
+  return vector_math_3
+}

@@ -1,0 +1,19 @@
+geometry graph "Component Selection"() -> (
+    "Is Mesh": Bool,
+    "Is Curve": Bool,
+    "Is Instance": Bool,
+    "Is Point Cloud": Bool
+) {
+  {
+    index = Index()
+    compare = AccumulateField[INT, EDGE](group_id: index).total > 0
+    compare_2 = AccumulateField[INT, CURVE](group_id: index).total > 0
+    compare_3 = AccumulateField[INT, INSTANCE](group_id: index).total > 0
+    boolean_math = AccumulateField[INT](group_id: index).total > 0 and Radius() > 0.0
+  }
+  return (
+    "Is Mesh": compare,
+    "Is Curve": compare_2,
+    "Is Instance": compare_3,
+    "Is Point Cloud": boolean_math)
+}

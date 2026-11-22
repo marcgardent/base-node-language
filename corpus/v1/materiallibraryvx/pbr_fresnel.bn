@@ -1,0 +1,20 @@
+shader graph "Math.Root"(
+    Value: Float = 0.5 in -10000.0..10000.0,
+    Root: Float = 0.5 in -10000.0..10000.0
+) -> (Value: Float) {
+  return (Value: pow(Value, 1.0 / Root))
+}
+
+shader graph "PBR.Fresnel"(
+    "Fresnel Power": Float = 5.0 in -10000.0..10000.0,
+    "F-0": Float = 0.04 in 0.0..1.0,
+    Roughness: Float in 0.0..1.0,
+    Normal: Vector(hide_value: true) in -1.0..1.0
+) -> (Output: Float) {
+  mix = Mix[RGBA](
+    factor: pow(LayerWeight(normal: Normal).facing, fresnel_power),
+    a: f_0,
+    b: (1.0, 1.0, 1.0, 1.0)) @ hide
+  mix_2 = Mix[RGBA](factor: math_root(value: Roughness, root: fresnel_power), a: mix, b: f_0) @ hide
+  return (Output: mix_2)
+}
