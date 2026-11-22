@@ -6,4 +6,4 @@
 - License: CC0-1.0 ([LICENSE](LICENSE))
 - Groups: 55
 
-These texts are the node groups of Geometry Nodes Dynamics Assets read as Base Node text by Base Node 1.0.0-rc.3 on Blender 5.3.0, a derived work of Geometry Nodes Dynamics Assets under its license, CC0-1.0.
+These texts are the node groups of Geometry Nodes Dynamics Assets read as Base Node text by Base Node 1.0.0-rc.4 on Blender 5.3.0, a derived work of Geometry Nodes Dynamics Assets under its license, CC0-1.0.
