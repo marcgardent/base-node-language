@@ -431,6 +431,18 @@ def test_normal_holds_its_vector():
         assert tuple(round(v, 5) for v in made.outputs["Normal"].default_value) == (0.0, 0.6, 0.8)
         assert export_tree(rebuilt)[0] == text, export_tree(rebuilt)[0]
         bpy.data.node_groups.remove(rebuilt)
+    # A number reads back as the shortest decimal Blender keeps it by: it builds again with no warning
+    tree = hand_tree("normal_digits", "ShaderNodeTree")
+    tree.interface.new_socket("n", in_out="OUTPUT", socket_type="NodeSocketVector")
+    node = tree.nodes.new("ShaderNodeNormal")
+    tree.links.new(node.outputs["Normal"], tree.nodes.new("NodeGroupOutput").inputs[0])
+    node.outputs["Normal"].default_value = (0.000990887, 0.6, 0.8)
+    text, _ = export_tree(tree)
+    assert "Normal[normal: (0.000990887, 0.6, 0.8)]()" in text, text
+    bpy.data.node_groups.remove(tree)
+    warnings = []
+    bpy.data.node_groups.remove(build_source(text, "digits.bn", warnings=warnings)[0])
+    assert not warnings, warnings
     print("   ✓ Normal[normal: (…)]() in a shader and a compositor tree")
 
 

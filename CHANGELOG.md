@@ -23,7 +23,9 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   `precision lost: 16777217.0 is stored as 16777216.0 (IEEE 754 single precision)`. Every number
   with a point or an exponent lands in a 32-bit float; the warning comes when the shortest decimal
   that reads back as that float is another number (`0.1`, `1e-7`, `3.141593` read back as written).
-  The tree holds Blender's value. `base-node check` and the add-on show it.
+  The tree holds Blender's value. `base-node check` and the add-on show it. Tree → Text writes each
+  number as that shortest decimal, so a text read back is never warned of (rc.3 wrote 7 digits at
+  least: `0.0009908871` for `0.000990887`).
 
 ### Blender add-on
 

@@ -8,7 +8,6 @@ around their statements, reroutes are followed. What text cannot hold
 yet is reported as warnings, never as a failed export.
 """
 
-import math
 import re
 import struct
 from collections import Counter
@@ -19,7 +18,7 @@ from ..blender import sugar
 from ..lang import ast
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..blender.typecheck import (MIX_TYPES, OUTPUT_PROPS, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
+from ..blender.typecheck import (MIX_TYPES, OUTPUT_PROPS, stored, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
                                 branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
@@ -1810,13 +1809,9 @@ def bounded(value, fresh):
 
 
 def number(v):
-    """A float as few digits as give Blender's float32 back: 7, up to 9 when 7 would not."""
-    v = float(v)
-    for digits in (7, 8, 9):
-        written = float(f"{v:.{digits}g}")
-        if math.isfinite(v) and float32(written) == float32(v):
-            break
-    return ast.Number(written, False, 0, 0)
+    """A float as few digits as give Blender's float32 back: the shortest decimal that reads back as
+    it, the one the checker compares a number with (`precision lost: …` warns of any other)."""
+    return ast.Number(stored(float(v)), False, 0, 0)
 
 
 def float32(v):
