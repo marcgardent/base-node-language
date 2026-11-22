@@ -119,6 +119,38 @@ fn the_written_setting_decides_the_modifier() {
 }
 
 #[test]
+fn a_graph_named_with_escapes() {
+    // The string of a directive is a string of the language: a graph named with a `"` is named there
+    let lift = MODIFIER.replace("graph lift", r#"graph "the \"lift\"""#);
+    let h = ok(&format!("{}\n{lift}", r#"// @modifier "the \"lift\"""#));
+    assert_eq!(h.modifier.as_deref(), Some("the \"lift\""));
+    let field = MAKER.replace("graph field", r#"graph "C:\\field \u{1F600}""#);
+    let h = ok(&format!(
+        "{}\n{field}",
+        r#"// @example "C:\\field \u{1F600}""#
+    ));
+    assert_eq!(h.example.as_deref(), Some("C:\\field \u{1F600}"));
+    // An unknown escape, or quotes that are not one string, name no graph
+    for written in [r#""the \qlift""#, r#""the" "lift""#, r#""""#] {
+        let e = errors(&format!("// @modifier {written}\n{lift}"));
+        assert_eq!(e.len(), 1);
+        assert_eq!(
+            e[0].2,
+            format!("@modifier {written}: a graph's name, quoted, or a bare identifier")
+        );
+    }
+    assert_eq!(ok(&format!("// @mesh \"grid\"\n{MODIFIER}")).mesh, "grid");
+    assert_eq!(
+        errors(&format!("// @mesh \"grid\n{MODIFIER}")),
+        [(
+            1,
+            10,
+            "@mesh '\"grid': one of cube, plane, sphere, cylinder, grid".to_owned()
+        )]
+    );
+}
+
+#[test]
 fn the_last_graph_is_used_unless_named() {
     let two = format!("{MAKER}{}", MAKER.replace("field", "meadow"));
     assert_eq!(ok(&two).example.as_deref(), Some("meadow"));

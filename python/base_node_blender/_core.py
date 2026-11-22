@@ -9,7 +9,7 @@ if "." in __package__:
     from ..lang import (EDITION, MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, STDLIB_VERSION, BnError, Diagnostic,
                         __version__, ast, colors, format_source, parse, printer, to_source, tokenize, too_deep)
     from ..lang.header import Header as CoreHeader
-    from ..lang.header import read_head, unquote
+    from ..lang.header import read_head, unquote, unquoted
     from ..lang.names import RESERVED, key, snake
     from ..lang.parser import WORDS
 else:
@@ -17,6 +17,6 @@ else:
                            __version__, ast, colors, format_source, parse, to_source, tokenize, too_deep)
     from base_node import printer
     from base_node.header import Header as CoreHeader
-    from base_node.header import read_head, unquote
+    from base_node.header import read_head, unquote, unquoted
     from base_node.names import RESERVED, key, snake
     from base_node.parser import WORDS

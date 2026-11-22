@@ -22,6 +22,7 @@ use serde::Serialize;
 
 use crate::ast::is_identifier;
 use crate::errors::{BnError, Diagnostic};
+use crate::lexer::string_literal;
 
 const TEXT: [&str; 5] = ["title", "author", "license", "version", "edition"];
 const KNOWN: [&str; 7] = [
@@ -114,24 +115,22 @@ fn directive(text: &str) -> Option<(String, String, usize)> {
     Some((name, value, i))
 }
 
-/// A quoted name, or a bare one, as written: none when it is neither.
+/// A name written in a directive: a string, its escapes read as in any string
+/// (`"say \"hi\""` is `say "hi"`), or a bare one as written. None when it is neither, or empty.
 pub fn unquote(value: &str) -> Option<String> {
-    let chars: Vec<char> = value.chars().collect();
-    if chars.len() >= 2 && chars[0] == '"' && chars[chars.len() - 1] == '"' {
-        let inner: String = chars[1..chars.len() - 1].iter().collect();
-        return (!inner.contains('"') && !inner.is_empty()).then_some(inner);
+    if value.starts_with('"') {
+        return string_literal(value).filter(|s| !s.is_empty());
     }
     is_identifier(value).then(|| value.to_owned())
 }
 
-/// `value` without the quotes around it, when it has them.
-fn unquoted_text(value: &str) -> String {
-    let chars: Vec<char> = value.chars().collect();
-    if chars.len() >= 2 && chars[0] == '"' && chars[chars.len() - 1] == '"' {
-        chars[1..chars.len() - 1].iter().collect()
-    } else {
-        value.to_owned()
-    }
+/// A directive's free text: the string it is, its escapes read, when it is one, else as written.
+pub fn unquoted(value: &str) -> String {
+    value
+        .starts_with('"')
+        .then(|| string_literal(value))
+        .flatten()
+        .unwrap_or_else(|| value.to_owned())
 }
 
 fn unknown_edition(value: &str) -> String {
@@ -147,7 +146,7 @@ pub fn edition_error(source: &str, filename: &str) -> Option<Diagnostic> {
     let d = directives(source)
         .into_iter()
         .find(|d| d.name == "edition")?;
-    let value = unquoted_text(&d.value);
+    let value = unquoted(&d.value);
     (!d.value.is_empty() && !EDITIONS.contains(&value.as_str())).then(|| Diagnostic {
         filename: filename.to_owned(),
         line: d.line,
@@ -232,7 +231,7 @@ pub fn read_head_by(
     let get = |name: &str| written.get(name).filter(|d| !d.value.is_empty()).cloned();
 
     for name in TEXT {
-        let value = get(name).map(|d| unquoted_text(&d.value));
+        let value = get(name).map(|d| unquoted(&d.value));
         match name {
             "title" => h.title = value,
             "author" => h.author = value,
@@ -249,7 +248,7 @@ pub fn read_head_by(
     if let Some(d) = get("target") {
         let mut at = d.col;
         for part in d.value.split(',') {
-            let word = part.trim().trim_matches('"');
+            let word = unquoted(part.trim());
             let word = word.split_whitespace().collect::<Vec<_>>().join(" ");
             let lead = part.chars().count() - part.trim_start().chars().count();
             let where_ = at + lead;

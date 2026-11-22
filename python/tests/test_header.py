@@ -114,6 +114,30 @@ def test_a_graph_named_of_the_wrong_shape():
     assert "a graph's name, quoted, or a bare identifier" in message
 
 
+def test_a_graph_named_with_escapes():
+    # The string of a directive is a string of the language: a graph named with a `"` is named there
+    lift = MODIFIER.replace("graph lift", r'graph "the \"lift\""')
+    assert header(r'// @modifier "the \"lift\""' + "\n" + lift).modifier == 'the "lift"'
+    field = MAKER.replace("graph field", r'graph "C:\\field \u{1F600}"')
+    assert header(r'// @example "C:\\field \u{1F600}"' + "\n" + field).example == "C:\\field \U0001F600"
+    # An unknown escape, or quotes that are not one string, name no graph
+    for written in (r'"the \qlift"', '"the" "lift"', '""'):
+        (_, _, message), = errors(f"// @modifier {written}\n" + lift)
+        assert message == f"@modifier {written}: a graph's name, quoted, or a bare identifier"
+    assert header('// @mesh "grid"\n' + MODIFIER).mesh == "grid"
+    assert errors('// @mesh "grid\n' + MODIFIER) == [(1, 10, "@mesh '\"grid': one of cube, plane, sphere, cylinder, grid")]
+
+
+def test_text_directives_read_escapes():
+    from base_node.header import header as core_header
+    h = core_header(r'// @title "Say \"hi\" \u{1F600}"' + "\n" + r'// @author "A\\B"' + "\n"
+                    + r'// @target "blender@5.3", "bl\u{61}de"' + "\n" + r'// @module "waves"' + "\n" + MAKER)
+    assert (h.title, h.author, h.target, h.module) == ('Say "hi" \U0001F600', "A\\B", ["blender@5.3", "blade"], "waves")
+    # Free text that is not one string stays as written
+    assert core_header('// @title "Waves" and "Ripples"\n' + MAKER).title == '"Waves" and "Ripples"'
+    assert core_header('// @title "Waves\n' + MAKER).title == '"Waves'
+
+
 def test_a_malformed_module_name():
     assert errors("// @module mesh-maps\n" + MAKER) == [
         (1, 12, "@module 'mesh-maps': a module is named by an identifier (letters, digits, _), "

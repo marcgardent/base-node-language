@@ -17,6 +17,10 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   told of a `#rrggbb` color value that no parser reads: `#` writes the color of a frame or of a look
   alone, and a value written so is refused (`expression expected, found '#ff8800'`), by the parsers
   of Python and Rust alike, whose messages now agree.
+- Fixed: a quoted value of the head is a string of the language, its escapes read: a graph named
+  with a `"` is named in `// @example` and `// @modifier` (`@modifier "the \"lift\""`), and so are
+  `@title`, `@author`, `@license`, `@target`, `@module`, `@edition` and `@mesh` read. The quotes were
+  cut off as written, and a name holding a `"` was refused.
 
 ## [1.0.0-rc.5] - 2026-11-22
 

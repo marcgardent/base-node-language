@@ -4,7 +4,7 @@ A text promises nothing unless it says so: the panel then only tells which targe
 With a promise, the highlight colors what it uses outside and the panel lists where.
 """
 
-from ..lang.header import directives
+from ..lang.header import directives, unquoted
 from ..blender.targets import promise_refusal
 
 # text name -> (source, Inference or None, issues of the promise)
@@ -16,7 +16,7 @@ def promised(text):
     may not promise left out: the unknown ones, and the aliases of a command line."""
     for name, value, _line, _col in directives(text.as_string()):
         if name == "target":
-            words = (" ".join(p.strip().strip('"').split()) for p in value.split(","))
+            words = (" ".join(unquoted(p.strip()).split()) for p in value.split(","))
             return [w for w in words if promise_refusal(w) is None]
     return []
 

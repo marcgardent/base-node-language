@@ -167,6 +167,19 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
     Ok(tokens)
 }
 
+/// The value of `text` when it is one string literal and nothing else, its escapes read as in any
+/// string (`"a \"b\""` is `a "b"`), else none: what a quoted value outside the grammar (a
+/// directive of the head) reads by.
+pub fn string_literal(text: &str) -> Option<String> {
+    let tokens = tokenize(text, "", true).ok()?;
+    match tokens.as_slice() {
+        [t, _] if t.kind == TokenKind::String && t.width == text.chars().count() => {
+            Some(t.text.clone())
+        }
+        _ => None,
+    }
+}
+
 /// The escape at `chars[i]`, a `\`: (the character it stands for, or None when it is none the
 /// language knows, the index after it). An unknown one ends after its letter, or after the hex
 /// digits and the `}` of a `\u{…}`.

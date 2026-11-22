@@ -161,14 +161,15 @@ def draw_highlight():
     p = prefs.get()
     mode = getattr(p, "highlight_mode", "standard")
 
-    # Fast scan of text for declared local graphs
+    # Fast scan of text for declared local graphs: the name after `graph`, a string read as any
     declared = set()
     for line in text.lines:
-        b = line.body.strip()
-        if " graph " in b:
-            after = b.split(" graph ", 1)[1]
-            gname = after.split("(")[0].strip().strip('"')
-            declared.add(gname)
+        if " graph " in line.body:
+            tokens = tokenize(line.body, strict=False)
+            for t, after in zip(tokens, tokens[1:]):
+                if t.kind == "KEYWORD" and t.text == "graph" and after.kind in ("IDENT", "STRING"):
+                    declared.add(after.text)
+                    break
 
     # What the text's `// @target` allows: what it uses outside is drawn as a warning
     allowed_nodes = allowed_types = None

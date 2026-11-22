@@ -123,6 +123,18 @@ def tokenize(source, filename="<text>", strict=True):
     return tokens
 
 
+def string_literal(text):
+    r"""The value of `text` when it is one string literal and nothing else, its escapes read as
+    in any string (`"a \"b\""` is `a "b"`), else None: what a quoted value outside the grammar
+    (a directive of the head) reads by."""
+    try:
+        tokens = tokenize(text)
+    except BnError:
+        return None
+    t = tokens[0]
+    return t.text if len(tokens) == 2 and t.kind == "STRING" and t.width == len(text) else None
+
+
 def escape(source, i):
     r"""The escape at `source[i]`, a `\`: (the character it stands for, or None when it is none
     the language knows, the index after it). An unknown one ends after its letter, or after

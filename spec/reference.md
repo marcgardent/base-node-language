@@ -53,8 +53,10 @@ The comment lines before the first `use` or graph may hold directives, `// @name
 | `@target` | The targets the file promises to fit, separated by commas; optional: see [targets](targets.md) |
 | `@title`, `@author`, `@license` | Free text (an SPDX identifier for the license), shown to whoever opens the file |
 | `@offer` | What the file offers, separated by commas: `library` (install it as a module), `groups` (build its graphs into the file), `example` (an object carrying a graph that makes its own geometry), `modifier` (a modifier graph on an object) |
-| `@example`, `@modifier` | The graph each uses, by its name quoted or as an identifier, when several could |
+| `@example`, `@modifier` | The graph each uses, by its name as a string or as an identifier, when several could: `@modifier "the \"lift\""` names the graph `the "lift"` |
 | `@mesh` | The mesh `modifier` makes when no object takes it: `cube` (default), `plane`, `sphere`, `cylinder`, `grid` |
+
+A value written in quotes is a string ([2](#2-identifiers-and-keywords)), its escapes read as in any string, wherever a directive is read: a name, a title, a target, a mesh. Free text that is not one string (`"a" and "b"`) is read as written.
 
 Without `@offer`, a file offers `library` when it has a `@module`, `groups` always, `example` when a geometry graph nobody calls has a `Geometry` output and no `Geometry` input, and `modifier` when a geometry graph nobody calls has `Geometry` as its first input and first output (as Blender decides `is_modifier`, unless the graph's settings write it). With several such graphs and no `@example` or `@modifier`, the last one is used. A directive written twice or without a value, a `@module` that is not an identifier, an unknown `@offer` or `@mesh` value, a choice offered that no graph allows, and an `@example` or `@modifier` naming no graph of the file, or one of the wrong shape, are errors at their line and column. So is an `@edition` the reader does not know (`@edition '2028': not an edition this reader knows (2026)`): the parser and the formatter refuse the text too, a later edition being another language to them.
 

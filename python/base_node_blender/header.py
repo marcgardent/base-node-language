@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields, is_dataclass
 
-from ._core import BnError, CoreHeader, Diagnostic, ast, key, parse, read_head, unquote
+from ._core import BnError, CoreHeader, Diagnostic, ast, key, parse, read_head, unquote, unquoted
 from .targets import promise_refusal
 
 # What a dropped file may be used for, in the order a dialog lists them
@@ -100,8 +100,8 @@ def header(source, filename="<text>", file=None):
 
     value, line, col = get("mesh")
     if value is not None:
-        if value.strip('"') in MESHES:
-            h.mesh = value.strip('"')
+        if unquoted(value) in MESHES:
+            h.mesh = unquoted(value)
         else:
             error(line, col, f"@mesh '{value}': one of {', '.join(MESHES)}")
 

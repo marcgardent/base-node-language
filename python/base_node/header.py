@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass, field
 
 from .errors import BnError, Diagnostic
+from .lexer import string_literal
 
 TEXT = ("title", "author", "license", "version", "edition")
 KNOWN = {"module", "target", *TEXT}
@@ -60,16 +61,17 @@ def directives(source):
 
 
 def unquote(value):
-    """A quoted name, or a bare one, as written: None when it is neither."""
-    if len(value) >= 2 and value[0] == value[-1] == '"':
-        inner = value[1:-1]
-        return inner if '"' not in inner and inner else None
+    r"""A name written in a directive: a string, its escapes read as in any string
+    (`"say \"hi\""` is `say "hi"`), or a bare one as written. None when it is neither, or empty."""
+    if value.startswith('"'):
+        return string_literal(value) or None
     return value if value.isidentifier() else None
 
 
 def unquoted(value):
-    """`value` without the quotes around it, when it has them."""
-    return value[1:-1] if len(value) >= 2 and value[0] == value[-1] == '"' else value
+    """A directive's free text: the string it is, its escapes read, when it is one, else as written."""
+    text = string_literal(value) if value.startswith('"') else None
+    return value if text is None else text
 
 
 def unknown_edition(value):
@@ -130,7 +132,7 @@ def read_head(source, filename="<text>", targets=(), extra=()):
     if value is not None:
         known, at = targets, col
         for part in value.split(","):
-            word = " ".join(part.strip().strip('"').split())
+            word = " ".join(unquoted(part.strip()).split())
             where = at + len(part) - len(part.lstrip())
             at += len(part) + 1
             if callable(known):

@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 
 use base_node::ast::{flatten, key, AssignValue, Expr, File, Graph, ReturnValue, Stmt};
-use base_node::header::{read_head_by, unquote};
+use base_node::header::{read_head_by, unquote, unquoted};
 use base_node::{parse, BnError, Diagnostic};
 
 use crate::targets::promise_refusal;
@@ -199,9 +199,9 @@ pub fn header_of(source: &str, filename: &str, file: &File) -> Result<Header, Bn
     };
 
     if let Some(d) = get("mesh") {
-        let mesh = d.value.trim_matches('"');
-        if MESHES.contains(&mesh) {
-            h.mesh = mesh.to_owned();
+        let mesh = unquoted(&d.value);
+        if MESHES.contains(&mesh.as_str()) {
+            h.mesh = mesh;
         } else {
             let message = format!("@mesh '{}': one of {}", d.value, MESHES.join(", "));
             error(&mut diags, d.line, d.col, message);
