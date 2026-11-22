@@ -7,7 +7,7 @@
  "groups": {
   ".Halation 3.021": {
    "status": "ok",
-   "text": "3a433c02afbdefc0"
+   "text": "213fb92e9ed1794f"
   },
   ".Multisample Displace Group 2.010": {
    "status": "ok",
@@ -15,11 +15,11 @@
   },
   ".Noise Maschine 3.022": {
    "status": "ok",
-   "text": "b6954dd8b55dcf08"
+   "text": "21c95740b0fb9ef7"
   },
   ".Noisegroup Internal 3.022": {
    "status": "ok",
-   "text": "98e82dd3dff3a7cf",
+   "text": "c4e501a9b49a20dd",
    "blender_quirk": [
     "composite Result"
    ]
@@ -30,50 +30,50 @@
   },
   "3D to Screen Space": {
    "status": "ok",
-   "text": "05b6b8b297fb29b9"
+   "text": "6863cfa2ea28dd40"
   },
   "Cheap Blur 2.001": {
    "status": "ok",
-   "text": "0bf2347c2bb21da1"
+   "text": "7b25ca739fccef14"
   },
   "Chromatic Aberration": {
    "status": "ok",
-   "text": "da4544c430a5c50a"
+   "text": "13a218a69b7b9dd2"
   },
   "Combine Cylindrical": {
    "status": "ok",
-   "text": "69e72dbb59b71ae6"
+   "text": "42292f362d85a2f3"
   },
   "Combine Spherical": {
    "status": "ok",
-   "text": "e4530c49775e2538"
+   "text": "51d855999d0174c9"
   },
   "Film Grain": {
    "status": "ok",
-   "text": "5970e73700e8bdcf",
+   "text": "0fb53be876f54ccc",
    "blender_quirk": [
     "composite Result"
    ]
   },
   "Project with Depth": {
    "status": "ok",
-   "text": "14022b0cacecb206"
+   "text": "0fee678f292c05b9"
   },
   "Retime": {
    "status": "ok",
-   "text": "70f98c581c8f9b9c"
+   "text": "edfaab13f96fca9e"
   },
   "Rounded Square Mask": {
    "status": "ok",
-   "text": "e55652ee2909bf19"
+   "text": "6d6ee1defe933362"
   },
   "Screen to 3D Space": {
    "status": "ok",
-   "text": "65088a211b8d25d8"
+   "text": "5a29a54f71f55b77"
   },
   "Sensor Noise": {
    "status": "ok",
-   "text": "e80f7c2a86bd1f3b"
+   "text": "f9719ed5e2191a96"
   },
   "Separate Cylindrical": {
    "status": "ok",
@@ -89,23 +89,23 @@
   },
   "Split Toning": {
    "status": "ok",
-   "text": "9b7604ee46937de6"
+   "text": "57b3aed7e977f8f2"
   },
   "Transform and Project": {
    "status": "ok",
-   "text": "78ff62b5501752ea"
+   "text": "5d8bdfd06d4c4ef2"
   },
   "Tune Image": {
    "status": "ok",
-   "text": "2ea88b21bd36a0db"
+   "text": "3107b01482338819"
   },
   "Unsharp Mask": {
    "status": "ok",
-   "text": "a93889db047b0e11"
+   "text": "e2f5d03bf29f308a"
   },
   "Vignette": {
    "status": "ok",
-   "text": "1bb631a337c8229d"
+   "text": "4a731fb0df46fa4b"
   }
  }
 }
