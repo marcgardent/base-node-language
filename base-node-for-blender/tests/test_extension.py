@@ -193,7 +193,9 @@ def test_datablock_inputs():
 
     src = '''
 geometry graph datablocks(geometry: Geometry, font: Font = "Bfont Regular", sound: Sound, paint: Material) -> Geometry {
-  return StringToCurves(string: "Hi", font: font).curve_instances |> SetMaterial(material: paint)
+  loud = SampleSoundFrequencies(sound: sound)
+  quiet = SampleSoundFrequencies()
+  return StringToCurves(string: "Hi", size: loud + quiet, font: font).curve_instances |> SetMaterial(material: paint)
 }
 '''
     tree = build_source(src, filename="datablocks.bn")[0]
@@ -204,6 +206,8 @@ geometry graph datablocks(geometry: Geometry, font: Font = "Bfont Regular", soun
     assert font.default_value and font.default_value.name == "Bfont Regular", font.default_value
     exported, _ = export_tree(tree)
     assert 'font: Font = "Bfont Regular"' in exported and "sound: Sound" in exported, exported
+    # A Sound has no input node: a group input links one, a node holds one by its name or none
+    assert "SampleSoundFrequencies(sound: sound)" in exported and "SampleSoundFrequencies()" in exported, exported
     again, _ = export_tree(build_source(exported, filename="datablocks.bn")[0])
     assert again == exported, f"not stable:\n{exported}\n---\n{again}"
     print("   ✓ Font and Sound inputs round trip")
@@ -310,49 +314,68 @@ geometry graph label(font: Font = "Bfont Regular") -> Geometry {
         bpy.data.node_groups.remove(bpy.data.node_groups["label"])
         if font.users == 0:
             bpy.data.fonts.remove(font)
+
     print("   ✓ Bfont Regular.001 reads as Bfont Regular")
 
 
 def test_font_everywhere():
-    """A font in every place it goes: a node's socket, a Font node, a named constant (a switch's too),
-    a font other than Blender's own, and no font at all (`_`), read back to the same tree."""
+    """A font in every place it goes: a node's socket, a Font node (named, used twice, in a switch, feeding
+    nothing, holding none), a font other than Blender's own, and no font at all (`_`), read back to the
+    same tree. A named string is no font: the checker says to write the name in place or a Font node."""
     print("-> Test: fonts in every place...")
     from base_node.host import build_source, export_tree
+    from base_node.lang import BnError
 
     other = bundled_font().name
-    src = f'''
-geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
-  plain = StringToCurves(string: "a").curve_instances
-  mono = StringToCurves(string: "b", font: "{other}").curve_instances
-  bare = StringToCurves(string: "c", font: _).curve_instances
-  title = "{other}"
-  named = StringToCurves(string: "d", font: title).curve_instances
-  own = "Bfont Regular"
-  builtin = StringToCurves(string: "e", font: own).curve_instances
-  empty = StringToCurves(string: "f", font: Font(font: _)).curve_instances
-  switched = StringToCurves(string: "g", font: Switch(b, title, own, input_type: FONT)).curve_instances
-  return JoinGeometry(geometry, plain, mono, bare, named, builtin, empty, switched)
+    src = f'''geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
+  plain = StringToCurves(string: "a")
+  mono = StringToCurves(string: "b", font: "{other}")
+  bare = StringToCurves(string: "c", font: _)
+  title = Font(font: "{other}")
+  named = StringToCurves(string: "d", font: title)
+  own = Font()
+  builtin = StringToCurves(string: "e", font: own)
+  empty = StringToCurves(string: "f", font: Font(font: _))
+  switched = StringToCurves(string: "g", font: b ? own : title)
+  lone = Font(font: "{other}")
+  return geometry
+    + plain.curve_instances
+    + mono.curve_instances
+    + bare.curve_instances
+    + named.curve_instances
+    + builtin.curve_instances
+    + empty.curve_instances
+    + switched.curve_instances
 }}
 '''
     tree = build_source(src, filename="fonts.bn")[0]
     stc = {n.inputs["String"].default_value: n for n in tree.nodes if n.bl_idname == "GeometryNodeStringToCurves"}
     held = {k: n.inputs["Font"].default_value for k, n in stc.items()}
     assert held["a"].filepath == "<builtin>" and held["b"].name == other and held["c"] is None, held
-    # A named font is a Font node of that name, linked; a Font node may hold none
+    # A Font node keeps its name and its font, or none; a switch of two is a Font switch
+    assert next(n for n in tree.nodes if n.bl_idname == "GeometryNodeSwitch").input_type == "FONT"
     fed = {k: n.inputs["Font"].links[0].from_node for k, n in stc.items() if n.inputs["Font"].is_linked}
     assert sorted(fed) == ["d", "e", "f", "g"], fed
     assert (fed["d"].name, fed["d"].bl_idname, fed["d"].font.name) == ("title", "GeometryNodeInputFont", other)
     assert fed["e"].name == "own" and fed["e"].font.filepath == "<builtin>"
     assert fed["f"].font is None
-    assert not [n for n in tree.nodes if n.bl_idname == "FunctionNodeInputString"], "no String node left"
+    lone = tree.nodes["lone"]
+    assert lone.bl_idname == "GeometryNodeInputFont" and lone.font.name == other and not lone.outputs[0].is_linked
 
     exported, warnings = export_tree(tree)
     assert not warnings, warnings
-    for line in (f'font: "{other}"', "font: _", f'title = "{other}"', "font: title", 'own = "Bfont Regular"',
-                 "font: own", "Font(font: _)", "input_type: FONT"):
-        assert line in exported, f"'{line}' lost:\n{exported}"
+    assert exported == src, f"not the text built:\n{exported}"
     again, _ = export_tree(build_source(exported, filename="fonts.bn")[0])
     assert again == exported, f"not stable:\n{exported}\n---\n{again}"
+
+    # A named string is a String node: a font input says what to write instead
+    try:
+        build_source('geometry graph f() -> Geometry {\n  t = "Bfont Regular"\n'
+                     '  return StringToCurves(font: t).curve_instances\n}\n', filename="named.bn")
+        raise AssertionError("a named string given to a font built")
+    except BnError as e:
+        message = str(e.diagnostics[0])
+        assert 'font: "Bfont Regular", or name a Font node: t = Font(font: "Bfont Regular")' in message, message
 
     # Made in Blender: a String to Curves without its font, a Font node of another font
     tree = hand_tree("fonts_by_hand")
@@ -369,7 +392,7 @@ geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
     for n in (none, fed):
         tree.links.new(n.outputs[0], join.inputs[0])
     exported, _ = export_tree(tree)
-    assert "font: _" in exported and f'font = "{other}"' in exported, exported
+    assert "font: _" in exported and f'StringToCurves(font: Font(font: "{other}"))' in exported, exported
     tree.name = "fonts_by_hand.original"
     rebuilt = build_source(exported, filename="fonts_by_hand.bn")[0]
     fonts = sorted((n.inputs["Font"].default_value is None, n.inputs["Font"].is_linked)
@@ -381,10 +404,16 @@ geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
     print("   ✓ Fonts read back to the same tree")
 
 
+# The datablock input nodes of each tree kind: the compositor has the Object and Font nodes alone
+DATABLOCK_KINDS = [("GeometryNodeTree", ("material", "image", "object", "collection", "font")),
+                   ("CompositorNodeTree", ("object", "font"))]
+
+
 def test_constant_nodes_by_hand():
     """Every input node that holds one value, made in Blender with a value of its own, reads to a
     text that builds the same node with that value: Rotation, a 4D Vector and an Integer Vector by
-    their value, the datablock nodes (Object, Collection, Material, Image, Font) as named constants."""
+    their value, the datablock nodes (Object, Collection, Material, Image, Font) by their datablock, in
+    each tree kind that has them, linked or not, holding one or none."""
     print("-> Test: constant nodes made by hand...")
     from base_node.host import build_source, export_tree
 
@@ -402,10 +431,9 @@ def test_constant_nodes_by_hand():
          "Rotation(rotation_euler: (0.5, 0.0, 0.0))"),
         ("CompositorNodeTree", "FunctionNodeInputIntVector", "vector", (1, 2, 3), "NodeSocketVector",
          "IntegerVector(vector: (1, 2, 3))"),
-    ] + [("GeometryNodeTree", f"GeometryNodeInput{prop.title()}", prop, value, f"NodeSocket{prop.title()}",
-          f'{prop} = "{value.name}"') for prop, value in stuff.items()] \
-      + [("CompositorNodeTree", f"GeometryNodeInput{prop.title()}", prop, stuff[prop], f"NodeSocket{prop.title()}",
-          f'{prop} = "{stuff[prop].name}"') for prop in ("object", "font")]
+    ] + [(kind, f"GeometryNodeInput{prop.title()}", prop, stuff[prop], f"NodeSocket{prop.title()}",
+          f'(out: {prop.title()}({prop}: "{stuff[prop].name}"))') for kind, props in DATABLOCK_KINDS
+         for prop in props]
 
     def held(node, prop):
         value = getattr(node, prop)
@@ -428,6 +456,31 @@ def test_constant_nodes_by_hand():
         assert export_tree(rebuilt)[0] == exported, f"{idname}: not stable"
         for t in (tree, rebuilt):
             bpy.data.node_groups.remove(t)
+
+    # A datablock node that feeds nothing, and one that holds none, are calls alike
+    for kind, props in DATABLOCK_KINDS:
+        for prop in props:
+            Node, idname = prop.title(), f"GeometryNodeInput{prop.title()}"
+            tree = hand_tree(f"datablock_{prop}", kind)
+            tree.interface.new_socket("out", in_out="OUTPUT", socket_type=f"NodeSocket{Node}")
+            lone, empty = tree.nodes.new(idname), tree.nodes.new(idname)
+            lone.name = "lone"
+            setattr(lone, prop, stuff[prop])
+            setattr(empty, prop, None)
+            tree.links.new(empty.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
+            exported, warnings = export_tree(tree)
+            none = f"{prop}: _" if prop == "font" else ""  # a new Font node holds Blender's own
+            for line in (f'lone = {Node}({prop}: "{stuff[prop].name}")', f"return (out: {Node}({none}))"):
+                assert line in exported and not warnings, f"{kind} {idname}: '{line}' not in\n{exported}{warnings}"
+            tree.name = f"datablock_{prop}.original"
+            rebuilt = build_source(exported, filename=f"datablock_{prop}.bn")[0]
+            made = sorted((getattr(n, prop) is None, n.outputs[0].is_linked)
+                          for n in rebuilt.nodes if n.bl_idname == idname)
+            assert made == [(False, False), (True, True)], (kind, idname, made)
+            assert rebuilt.nodes["lone"].bl_idname == idname and getattr(rebuilt.nodes["lone"], prop) == stuff[prop]
+            assert export_tree(rebuilt)[0] == exported, f"{kind} {idname}: not stable"
+            for t in (tree, rebuilt):
+                bpy.data.node_groups.remove(t)
     bpy.data.batch_remove([v for k, v in stuff.items() if k != "font"])
 
     # A Menu node has its items once linked to the menu it feeds: the builder picks its item then
@@ -2670,7 +2723,7 @@ def test_smooth_functions_and_shader_keys():
     Blender's identifiers (`Shader`, `Shader_001`) are still read."""
     print("-> Test: smooth_min, smooth_max, MixShader(a:, b:)...")
     from base_node.host import build_source, export_tree
-    from base_node.lang.errors import BnError
+    from base_node.lang import BnError
 
     smooth = ("geometry graph blend(a: Float, b: Float, k: Float = 0.25) -> Float {\n"
               "  return smooth_min(a, b, k) + smooth_max(a, 2.0, 0.5)\n}\n")
@@ -2716,7 +2769,7 @@ def test_comparisons_in_a_shader_tree():
     giving a Float 0 or 1, and read back as written. A geometry tree keeps its Compare."""
     print("-> Test: Comparisons in a shader tree...")
     from base_node.host import build_source, export_tree
-    from base_node.lang.errors import BnError
+    from base_node.lang import BnError
 
     def math(tree):
         return [n.operation for n in tree.nodes if n.bl_idname == "ShaderNodeMath"]
@@ -2790,7 +2843,7 @@ def test_ternary():
     print("-> Test: Ternary...")
     from base_node.host import build_source, export_tree
     from base_node.host.schema import BlenderSchema
-    from base_node.lang.errors import BnError
+    from base_node.lang import BnError
 
     # Blender 5.2 has no Switch in a shader tree and no Compare in the compositor, where a comparison
     # is Math nodes (spec/targets.md, what 5.3 has that 5.2 has not)
@@ -3019,7 +3072,7 @@ def test_tuples_choose_the_type():
     from base_node.host import build_source, export_tree
     from base_node.host.schema import BlenderSchema
     from base_node.blender import compile_source
-    from base_node.lang.errors import BnError
+    from base_node.lang import BnError
 
     tree = build_source(TUPLE_TYPES, filename="tuple_types.bn")[-1]
     types = sorted((n.bl_idname, getattr(n, "input_type", None) or n.data_type) for n in tree.nodes

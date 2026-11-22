@@ -7,6 +7,19 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Blender add-on
+
+- Changed, a text of 1.0.0-rc.2 may need an edit: a datablock's input node is a call, linked or
+  not, holding a datablock or none: `o = Object(object: "Thing")`,
+  `ObjectInfo(object: Object(object: "Thing"))`, `Font(font: _)`. A named string is a String node,
+  whatever reads it: rc.2 made `o = "Thing"` an Object node when an Object input read it first, a
+  type the text did not show, and read the same node as `Object(object: "Thing")` once it fed
+  nothing or held nothing.
+- Changed: a named string given to a datablock input is an error that says what to write, the name
+  in place or the input node: `font: "Bfont Regular", or name a Font node: t = Font(font: "Bfont
+  Regular")`. Before rc.2 the input took its value and the String node stayed, linked to nothing. A
+  Sound, which has no input node, comes from a graph input or its name in place.
+
 ## [1.0.0-rc.2] - 2026-11-22
 
 ### Blender add-on

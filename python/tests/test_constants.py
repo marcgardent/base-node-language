@@ -1,5 +1,5 @@
-"""Constant input nodes the checker makes: a named datablock, no datablock at all (`_`), and the
-values no literal holds (a Rotation, a 4D Vector, an Integer Vector)."""
+"""Constant input nodes: a datablock's input node, a named string a datablock input refuses, no
+datablock at all (`_`), and the values no literal holds (a Rotation, a 4D Vector, an Integer Vector)."""
 
 import pytest
 
@@ -13,7 +13,7 @@ def S(name, type, identifier=None):
     return Socket(name, identifier or name, type)
 
 
-# Like Blender's: the input nodes of a constant, and two nodes that read a font
+# Like Blender's: the input nodes of a constant, and nodes that read a font, an object, a sound
 NODES = {
     "String": (NodeSpec("String", "FunctionNodeInputString", {"string": Prop("string", "STRING")}),
                [], [S("String", "String")]),
@@ -28,6 +28,8 @@ NODES = {
                    [S("Object", "Object")], [S("Geometry", "Geometry")]),
     "JoinStrings": (NodeSpec("JoinStrings", "GeometryNodeStringJoin"),
                     [S("Delimiter", "String")], [S("String", "String")]),
+    "SampleSoundFrequencies": (NodeSpec("SampleSoundFrequencies", "GeometryNodeSampleSoundFrequencies"),
+                               [S("Sound", "Sound")], [S("Amplitude", "Float")]),
     "Rotation": (NodeSpec("Rotation", "FunctionNodeInputRotation"), [], [S("Rotation", "Rotation")]),
     "Vector": (NodeSpec("Vector", "FunctionNodeInputVector",
                         {"vector_dimensions": Prop("vector_dimensions", "INT")}), [], [S("Vector", "Vector")]),
@@ -61,38 +63,38 @@ def errors(body):
     return [str(d) for d in err.value.diagnostics]
 
 
-def test_a_named_font_is_a_font_node():
-    g = compile_one('  f = "Bfont Regular"\n  return StringToCurves(string: "Hi", font: f)')
+def test_a_datablock_node_is_a_call_that_names_it():
+    g = compile_one('  f = Font(font: "Bfont Regular")\n  return StringToCurves(string: "Hi", font: f)')
     f = next(n for n in g.nodes if n.name == "f")
     assert (f.bl_idname, f.props) == ("GeometryNodeInputFont", {"font": "Bfont Regular"})
     stc = next(n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves")
     assert [(ident, link.node) for ident, link in stc.links] == [("Font", f.id)]
     assert "Font" not in stc.values
-
-
-def test_a_named_object_feeds_every_input_of_its_type():
-    g = compile_one('  o = "Cube"\n  a = ObjectInfo(o)\n  return ObjectInfo(o)')
+    g = compile_one('  o = Object(object: "Cube")\n  a = ObjectInfo(o)\n  return ObjectInfo(o)')
     o = next(n for n in g.nodes if n.name == "o")
     assert (o.bl_idname, o.props) == ("GeometryNodeInputObject", {"object": "Cube"})
     infos = [n for n in g.nodes if n.bl_idname == "GeometryNodeObjectInfo"]
     assert [[link.node for _i, link in n.links] for n in infos] == [[o.id], [o.id]]
 
 
-def test_a_string_read_as_a_string_first_stays_one():
-    # Its String node is linked already: the font takes its value
-    g = compile_one('  f = "Bfont Regular"\n  s = JoinStrings(f)\n'
-                    '  return StringToCurves(string: s, font: f)')
-    f = next(n for n in g.nodes if n.name == "f")
-    assert f.bl_idname == "FunctionNodeInputString"
-    stc = next(n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves")
-    assert stc.values == {"Font": "Bfont Regular"}
-    # And a Font node read as a String afterwards gives its name
-    g = compile_one('  f = "Bfont Regular"\n  c = StringToCurves(font: f)\n'
-                    '  return StringToCurves(string: f, font: f)')
-    f = next(n for n in g.nodes if n.name == "f")
-    last = [n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves"][-1]
-    assert f.bl_idname == "GeometryNodeInputFont"
-    assert last.values == {"String": "Bfont Regular"} and [i for i, _l in last.links] == ["Font"]
+def test_a_name_in_place_is_the_value_of_the_input():
+    g = compile_one('  return ObjectInfo(object: "Cube")')
+    info = next(n for n in g.nodes if n.bl_idname == "GeometryNodeObjectInfo")
+    assert (info.values, info.links) == ({"Object": "Cube"}, [])
+
+
+def test_a_named_string_is_no_datablock():
+    # A String node, which no datablock input reads: the message says what to write
+    assert errors('  f = "Bfont Regular"\n  return StringToCurves(string: "Hi", font: f)') == [
+        't.bn:3:39  StringToCurves.font expects Font, receives a String (f): write the name in place, '
+        'font: "Bfont Regular", or name a Font node: f = Font(font: "Bfont Regular")']
+    # A Sound has no input node: the name in place only
+    assert errors('  s = "Beep"\n  a = SampleSoundFrequencies(sound: s)\n  return geometry') == [
+        't.bn:3:30  SampleSoundFrequencies.sound expects Sound, receives a String (s): write the name '
+        'in place, sound: "Beep"']
+    # A String node it stays, wherever a string goes
+    g = compile_one('  f = "Bfont Regular"\n  return StringToCurves(string: f)')
+    assert next(n for n in g.nodes if n.name == "f").bl_idname == "FunctionNodeInputString"
 
 
 def test_no_datablock_is_an_underscore():

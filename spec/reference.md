@@ -125,7 +125,7 @@ compositor graph look(image: Color) -> Color {
   }
   ```
 - **Pipes**: the image a filter works on is written first and passed on with `|>`, through the output it picks when the filter has several (`Glare(…).image`), as a geometry is in a geometry tree.
-- **Datablocks**: a node property that points to a datablock is written by its name: `ImageTexture(vector: uv, image: "Bricks")`. The datablock must be in the file. Blender's own font is `"Bfont Regular"`, whatever the file names it (a library appended beside it brings its copy as `Bfont Regular.001`): Tree → Text writes it by that name, and Text → Tree finds it under any name, loading it when the file has none. `_` is no datablock at all, where a new node holds one: `StringToCurves(string: s, font: _)`, `Font(font: _)`.
+- **Datablocks**: a datablock is written by its name, in the input or the setting that holds it: `ObjectInfo(object: "Thing")`, `ImageTexture(vector: uv, image: "Bricks")`; a datablock's input node is a call like any other, `o = Object(object: "Thing")`, linked or not, and a named string is a String node, which a datablock input refuses with what to write. The datablock must be in the file. Blender's own font is `"Bfont Regular"`, whatever the file names it (a library appended beside it brings its copy as `Bfont Regular.001`): Tree → Text writes it by that name, and Text → Tree finds it under any name, loading it when the file has none. `_` is no datablock at all, where a new node holds one: `StringToCurves(string: s, font: _)`, `Font(font: _)`. A Sound has no input node: a graph input (`sound: Sound`) or its name in place gives it.
 - **Materials by name**: a material is written by its bare name, as a graph is called: `SetMaterial(material: Clay)`, `m: Material = Clay`. It is the material a graph of the text defines, else the file's. A name bound in the graph is that value, not a material: a material named like a binding of the graph, or whose name makes no identifier (`"Old Brick"`), is written in quotes, as is any other datablock (object, collection, image).
 
 ### 3.1 Types
@@ -305,7 +305,7 @@ toolchain before 0.12.0: it is refused there at the `<`.
 | Syntax | Meaning |
 |---|---|
 | `x = expr` | Bind expression output |
-| `size = 10` | Named constant: an input node of its own (`Value`, `Integer`, `Boolean`, `Vector`, `Color`, `String`) named `size`; a tuple, a node setting or a menu takes its value. A string that a datablock input reads first is that datablock's input node (`Font`, `Object`, `Collection`, `Material`, `Image`, where the tree has it): `title = "Bfont Regular"` then `StringToCurves(font: title)` is a Font node named `title`; a datablock input that reads a string already linked elsewhere takes its value |
+| `size = 10` | Named constant: an input node of its own (`Value`, `Integer`, `Boolean`, `Vector`, `Color`, `String`) named `size`; a tuple, a node setting or a menu takes its value. A datablock is no literal: its input node is a call, `title = Font(font: "Bfont Regular")` ([Datablocks](#30-shader-and-compositor-graphs)) |
 | `return expr` | Single output return |
 | `return (A: e1, B: e2)` | Multi-output return |
 | `"Title" #color { ... }` | Visual frame (`#e73` or named color `#teal`) |

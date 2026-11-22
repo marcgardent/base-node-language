@@ -63,14 +63,11 @@ CONST_NODES = {"Float": ("Value", None, "ShaderNodeValue"), "Int": ("Integer", "
                "String": ("String", "string", "FunctionNodeInputString")}
 # The Color node of a shader or a compositor tree (the RGB) holds its color on its output
 RGB_NODES = {b: ("Color", None, b) for b in ("ShaderNodeRGB", "CompositorNodeRGB")}
-# A named string that a datablock input takes first, by its type: (the input node it makes instead of
-# a String node, its property holding the datablock, its bl_idname). `font = "Bfont Regular"` read by
-# StringToCurves(font: font) is a Font node, where the tree kind has one
-DATABLOCK_NODES = {"Font": ("Font", "font", "GeometryNodeInputFont"),
-                   "Object": ("Object", "object", "GeometryNodeInputObject"),
-                   "Collection": ("Collection", "collection", "GeometryNodeInputCollection"),
-                   "Material": ("Material", "material", "GeometryNodeInputMaterial"),
-                   "Image": ("Image", "image", "GeometryNodeInputImage")}
+# The input node of a datablock, by its type: (its text name, its property holding the datablock).
+# A datablock bound to a name is that node, written as a call: `o = Object(object: "Thing")`
+DATABLOCK_NODES = {"Font": ("Font", "font"), "Object": ("Object", "object"),
+                   "Collection": ("Collection", "collection"), "Material": ("Material", "material"),
+                   "Image": ("Image", "image")}
 # Input nodes whose value is an array the schema does not list among their settings, by bl_idname:
 # (the property, whether it holds integers). Written as an argument: Rotation(rotation_euler: (0.1, 0.0, 0.0))
 VALUE_PROPS = {"FunctionNodeInputRotation": ("rotation_euler", False),
@@ -1036,25 +1033,16 @@ class GraphChecker:
         self.nodes.append(node)
         return Const(node.id, outputs, None, stmt.name, lit)
 
-    def datablock_const(self, const, type):
-        """`font = "Bfont Regular"` first read by a Font input: its String node becomes a Font node,
-        which holds the font by that name. A String node something already reads stays one, and so
-        does one of a tree kind without that input node: the datablock input takes its value."""
-        made = DATABLOCK_NODES[type]
-        node = next((n for n in self.nodes if n.id == const.node), None)
-        if node is None or node.bl_idname != CONST_NODES["String"][2] \
-                or any(link.node == node.id for n in self.nodes for _ident, link in n.links):
-            return
-        spec = self.schema.node(self.g.kind, made[0])
-        if spec is None or spec.bl_idname != made[2]:
-            return
-        inputs, outputs = self.schema.sockets(self.g.kind, spec, {})
-        if inputs or len(outputs) != 1 or outputs[0].type != type:
-            return
-        node.bl_idname = spec.bl_idname
-        node.props = {made[1]: const.lit.value}
-        node.n_inputs, node.n_outputs = 0, 1
-        const.outputs = outputs
+    def named_string(self, const, sock, where):
+        """What to write for a named string given to a datablock input: `o = "Thing"` is a String
+        node, which no datablock input reads. The name in place, or the datablock's input node."""
+        value = const.lit.value
+        hint = f'write the name in place, {sock.key}: "{value}"'
+        made = DATABLOCK_NODES.get(sock.type)
+        spec = self.schema.node(self.g.kind, made[0]) if made else None
+        if spec is not None:
+            hint += f', or name a {made[0]} node: {const.label} = {made[0]}({made[1]}: "{value}")'
+        return f"{where} expects {sock.type}, receives a String ({const.label}): {hint}"
 
     def value_prop(self, spec, node, v, a):
         """`Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))`: the value
@@ -2474,8 +2462,9 @@ class GraphChecker:
             self.error(at, f"{label}: a bare type ({v.type}) only applies to an item")
             return
         where = where or (f"{label}.{sock.key}" if label != "return" else f"output '{sock.name}'")
-        if isinstance(v, Const) and v.lit.type == "String" and sock.type in DATABLOCK_NODES:
-            self.datablock_const(v, sock.type)
+        if isinstance(v, Const) and v.lit.type == "String" and sock.type in DATABLOCKS:
+            self.error(at, self.named_string(v, sock, where))
+            return
         if isinstance(v, Const) and not can_link(v.socket.type, sock.type):
             v = v.lit
         if isinstance(v, Out):
