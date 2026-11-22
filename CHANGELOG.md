@@ -9,6 +9,14 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ### Language
 
+- Changed, a text needs an edit: a node's settings leave the parentheses for square brackets
+  between its name and its inputs, `Math[ADD, use_clamp: true](a, b)`, `Object[object: "Thing"]()`,
+  `r = foreach[FACE](mesh, item: f) -> { … }`, `attribute_or<Vector>[POINT](…)` after a template's
+  types. Three delimiters, three meanings: `<>` the types of a template, `[]` what no wire can feed,
+  `()` what a wire can feed. A setting takes a literal, an enum value, `_`, a template's type, a
+  tuple or a call of them (`Ramp(…)`), never a name that holds a value, which is refused where it
+  is written; empty brackets are refused. The parsers and formatters of Python and Rust read and
+  print them alike (`conformance/bracket-cases.json`).
 - Fixed: a name that holds a value takes no types, so `Math(a < b, c > (d))` compares `a`, an input or a
   bound name, instead of calling it as a template `a<b, c>(d)`.
 

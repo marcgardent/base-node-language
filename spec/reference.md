@@ -332,7 +332,45 @@ Flags: `"Label"`, `#color`, `hide` (collapsed), `mute` (bypassed).
 
 ## 5. Expressions
 
-- **Node call**: `NodeName(geometry, socket: value, PROP: ENUM_VAL)`, the node by its UI name in one word ([5.1](#51-node-names)). Inputs are named by their socket's key: the canonical form, the one a tree reads back to, names every input but those a name cannot tell — the geometry the node works on (its first input, linked: the pipe's), the items of a switch (`IndexSwitch(0, a, b)`) and the values of a multi-input (joined in the order written, the first one at the top of the socket in Blender), with the inputs before them. A value may still be written by position, in socket order and before the named ones
+A call writes up to three lists after its name, each in its own delimiters: `<>` the types of a
+template ([3.4](#34-templates)), `[]` the node's settings, what no wire can feed, and `()` what a
+wire can feed.
+
+```
+call      := name type_args? settings? '(' args ')' ('->' outputs)?
+body_call := name settings? '(' args ')' '->' block          (6)
+name      := IDENT ('::' (IDENT | STRING))*
+settings  := '[' setting (',' setting)* ','? ']'
+setting   := IDENT ':' value | value                          positional ones first
+value     := NUMBER | '-' NUMBER | STRING | 'true' | 'false'
+           | IDENT                                            an enum value, a template's type, `_`
+           | '(' value (',' value)* ','? ')'                  a tuple
+           | IDENT '(' (value | IDENT ':' value) (',' …)* ')'  a call of values: Ramp(…), Curve(…)
+```
+
+```bn
+x = Math[WRAP](angle, 3.141593, -3.141593)
+y = Math[ADD, use_clamp: true](a, b)
+o = Object[object: "Thing"]()
+c = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0)), (1.0, (1.0, 0.5, 0.0)))](factor: f)
+r = foreach[FACE](geometry, selection: s, item: f) -> { … }
+g |> StoreNamedAttribute[INT, CURVE](name: "i", value: Index())
+a = NamedAttribute[T](name: name)        // T, a template's type, as a setting's value
+```
+
+- A `[` right after a call's name, or after its types, always opens its settings; brackets
+  anywhere else are an error (`expression expected, found '['`). The parentheses follow the
+  settings, empty when the node takes no input: `Object[object: "Thing"]()`. Empty brackets are
+  refused: a call with no settings writes none.
+- A setting holds no wire: a name in brackets is an enum value or a template's type parameter,
+  never a name that holds a value. A graph's input, a name a statement before bound or an item of
+  the body around, as a setting, in a tuple or in a call there, is refused where it is written:
+  `'a' holds a value, and no wire feeds a setting: give it in the parentheses`. Nor does a setting
+  take an operator: `Math[1.0 + 2.0]` is refused at the `+`.
+- The language does not know which names are settings: the brackets keep them apart in the syntax
+  tree (the call's `settings`, in source order, each with its key or none), and the host says what
+  each node has.
+- **Node call**: `NodeName[SETTING, setting: value](geometry, socket: value)`, the node by its UI name in one word ([5.1](#51-node-names)). Inputs are named by their socket's key: the canonical form, the one a tree reads back to, names every input but those a name cannot tell — the geometry the node works on (its first input, linked: the pipe's), the items of a switch (`IndexSwitch(0, a, b)`) and the values of a multi-input (joined in the order written, the first one at the top of the socket in Blender), with the inputs before them. A value may still be written by position, in socket order and before the named ones
 - **Inputs of one name**: a socket's key is its UI name in snake case (`Base Color` is `base_color`). When two inputs of a node share a name, text tells them apart by Blender's identifier: `Math(Value: a, Value_001: b, operation: PINGPONG)`. The two `Shader` inputs of Mix Shader and Add Shader have keys of their own instead, `a` and `b`, as the Mix node names its inputs A and B: `MixShader(factor: f, a: metal, b: paint)`, `AddShader(a: glow, b: coat)`. Their identifiers (`Shader`, `Shader_001`) are still read; a tree reads back to `a` and `b`
 - **A tuple chooses the type**: a tuple only fits a `Vector` (`Rotation`) or a `Color` socket, of as many numbers as it holds (a `Color` also takes `(r, g, b)`, its alpha 1). A node whose socket types follow a setting the call does not write (`input_type` of `Switch`, `data_type` of `Mix`, `Compare`, `StoreNamedAttribute`…) takes the type of its tuples when one would reach a number input: `Switch(b, (1.0, 0.0, 0.0), Position())` is a Vector switch, a `Color` one when a tuple has 4 numbers. The items of `IndexSwitch` and `MenuSwitch` take the type of their first item, or of their tuples when it cannot hold them. A linked value, a named constant among them, chooses nothing: `Switch(b, Position(), Position())` stays a Float switch. A tuple no socket of the node can hold is an error. Example: [`examples/tuple_tiles.bn`](../examples/tuple_tiles.bn), its [render](../site/images/showcase-tuple-tiles.png) and the [nodes it builds](../site/images/tuple-tiles-nodes.png)
 - **Group with no tree**: `Group()` is a Group node that calls no node group (its group is missing from the file). It has no sockets: it takes no input and gives no output
@@ -388,6 +426,10 @@ The formatter and a tree read back print one layout, set by a width of 100 chara
   - a chain of operators of one strength (`a + b - c`, `a * b / c`, `a and b`): the first operand stays on the line, each operator starts a line of its own with its operand (`+ b`);
   - a ternary: the condition stays on the line, `? a` and `: b` each start a line of their own; a branch too long for its line follows the same rule in turn, one indent further in;
   - the options of a parameter, of a panel or of a named argument (`description: …`).
+  - the settings of a call (`Name[…]`) stay with its name while that first line fits, and its
+    arguments spread. When they make that line too long, they spread first, one per line, the last
+    one ending with `](`; the arguments follow on that line while they fit there, else they spread
+    in turn, one per line at the same indent.
 - **The first item stays apart.** When the head of a pipe or the first operand of a chain spreads too, its own lines go one indent further in than the `|>` and operators that follow it, so they never line up with them.
 - **A pipe that is the whole value of a statement** (`x = …`, `return …`) always puts each step, the first one included, on a line of its own, short or not.
 - A line stays longer than 100 only where nothing is left to spread: a single string or name longer than the room it has.
@@ -420,7 +462,7 @@ The layout depends on the syntax tree alone: printing the parse of a printed tex
 Two forms hold a body of statements. Both are written only as the value of an assignment (`name = …`), and their body sees the names outside it.
 
 ```bn
-name = call(arguments...) -> {
+name = call[settings...](arguments...) -> {
   body...
 }
 
@@ -429,7 +471,7 @@ name = graph(inputs...) -> outputs {
 }
 ```
 
-- **A call with a body**: a call, its name qualified or not and its arguments as any call's, then `->` and the body in braces. The arrow makes the body: `x = f(a)` followed by `{ … }` on the next line is a call, then a frame with no title ([4](#4-statements)). Which names take a body, what their arguments are, what the body sees beside the names outside and what it returns, the host says; a body given to any other name is an error at the call (`'Grid' takes no body: repeat, simulate and foreach do`).
+- **A call with a body**: a call, its name qualified or not, its settings in brackets if any and its arguments as any call's, then `->` and the body in braces. The arrow makes the body: `x = f(a)` followed by `{ … }` on the next line is a call, then a frame with no title ([4](#4-statements)). Which names take a body, what their arguments are, what the body sees beside the names outside and what it returns, the host says; a body given to any other name is an error at the call (`'Grid' takes no body: repeat, simulate and foreach do`).
 - **A nameless graph**: `graph` followed by `(`. It writes no tree kind: it has the kind of the graph that holds it. Its inputs and outputs are written as a graph's (`-> Float` or `-> (name: Type, …)`, quoted names, options), without panels or `as` keys. In the body the inputs are names; the names outside are seen too, and their values are captured. The value is called by the name it is assigned to, its inputs by name: `shape(t: 0.25)`.
 
 Elsewhere than as the value of an assignment, both are errors: `a call with a body is the value of an assignment: r = repeat(…) -> { … }`, `a graph with no name is the value of an assignment: f = graph(x: Float) -> Float { … }`.
