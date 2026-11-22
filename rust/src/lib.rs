@@ -17,5 +17,5 @@ pub use errors::{BnError, Diagnostic};
 pub use format::{format_file, format_source};
 pub use header::{header, read_head, read_head_by, Header, EDITIONS};
 pub use lexer::tokenize;
-pub use parser::{parse, MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES};
+pub use parser::{parse, MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, ZONE_NAMES};
 pub use tokens::{Token, TokenKind};

@@ -1,5 +1,5 @@
 {
-  "about": "How `name < … > (` reads: the types of a template's call, or comparisons when name holds a value where it is written (spec/reference.md, 3.4). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "about": "How `name < … > (` reads: the types of a template's call, or comparisons when name holds a value where it is written, the names a zone gives its body among them (spec/reference.md, 3.4). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
   "cases": [
     {
       "name": "comparisons_in_arguments",
@@ -72,6 +72,42 @@
       "about": "A name that is no value: read as a call with types, the reader's checker refuses it",
       "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(x < b, c > (d))\n}\n",
       "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(x<b, c>(d))\n}\n"
+    },
+    {
+      "name": "zone_name_repeat",
+      "about": "iteration, the name a repeat gives its body",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    return max(iteration < n, b > (v))\n  }\n  return r\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    return max(iteration < n, b > v)\n  }\n  return r\n}\n"
+    },
+    {
+      "name": "zone_name_simulate",
+      "about": "delta_time, the name a simulate gives its body",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  s = simulate(v: a) -> {\n    return (v: max(delta_time < b, c > (v)))\n  }\n  return s.v\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  s = simulate(v: a) -> {\n    return (v: max(delta_time < b, c > v))\n  }\n  return s.v\n}\n"
+    },
+    {
+      "name": "zone_names_foreach",
+      "about": "index and element, the names a foreach gives its body",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  f = foreach[FACE](geometry, v: a) -> {\n    return (v: max(index < n, b > (d)), w: max(element < c, d > (n)))\n  }\n  return f.v\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  f = foreach[FACE](geometry, v: a) -> {\n    return (v: max(index < n, b > d), w: max(element < c, d > n))\n  }\n  return f.v\n}\n"
+    },
+    {
+      "name": "zone_name_stays_inside",
+      "about": "After the body, the name its zone gave it is no value",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return max(iteration < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return max(iteration<b, c>(d))\n}\n"
+    },
+    {
+      "name": "zone_name_of_its_zone_only",
+      "about": "Each zone gives its own names: iteration is no value in a simulate",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  s = simulate(v: a) -> {\n    return (v: max(iteration < b, c > (d)))\n  }\n  return s.v\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  s = simulate(v: a) -> {\n    return (v: max(iteration<b, c>(d)))\n  }\n  return s.v\n}\n"
+    },
+    {
+      "name": "zone_name_nested",
+      "about": "A body inside a body sees the names of both zones",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    s = simulate(w: v) -> {\n      return (w: max(iteration < b, delta_time > (w)))\n    }\n    return s.w\n  }\n  return r\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int, geometry: Geometry) -> Float {\n  r = repeat(n, v: a) -> {\n    s = simulate(w: v) -> {\n      return (w: max(iteration < b, delta_time > w))\n    }\n    return s.w\n  }\n  return r\n}\n"
     }
   ]
 }

@@ -20,6 +20,10 @@ WORDS = {"dot": "⋅", "cross": "×", "·": "⋅"}
 # The words of a node's look after `@`, in the order they are printed
 LOOK_FLAGS = ("hide", "mute")
 
+# The names each zone gives its body, beside its items: they hold a value there, so `iteration < n`
+# compares (spec/reference.md, 6.1). The same whatever the version of Blender and the settings
+ZONE_NAMES = {"repeat": ("iteration",), "simulate": ("delta_time",), "foreach": ("index", "element")}
+
 
 # What a reader accepts, the same in every implementation (spec/reference.md, "Limits"): a .bn text
 # may come from anyone, and reading it must end with a tree or an error, never a crash or a hang
@@ -379,8 +383,10 @@ class Parser:
         args = self.args()
         self.advance()
         self.advance()
-        # Its body sees the names around and its items, by their keys: `r = f(n, v: 0.0) -> {`
-        body, end = self.block({a.alias or ast.key(a.name) for a in args if a.name is not None})
+        # Its body sees the names around, its items by their keys and the names its zone gives it:
+        # `r = repeat(n, v: 0.0) -> {` sees `v` and `iteration`
+        items = {a.alias or ast.key(a.name) for a in args if a.name is not None}
+        body, end = self.block(items | set(ZONE_NAMES.get(name, ())))
         return ast.BodyCall(name, args, body, t.line, t.col, end.line, settings)
 
     def block(self, names=None):

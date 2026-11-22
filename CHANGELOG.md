@@ -7,6 +7,13 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Language
+
+- Fixed: the names a zone gives its body hold a value there, as its items do, so `<` after them
+  compares: `iteration < n, m > (k)` in a `repeat`, `delta_time` in a `simulate`, `index` and
+  `element` in a `foreach` are comparisons, no longer a call with types. The parsers of Python and
+  Rust know these names (`conformance/chevron-cases.json`).
+
 ## [1.0.0-rc.5] - 2026-11-22
 
 ### Language

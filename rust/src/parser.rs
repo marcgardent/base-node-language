@@ -19,6 +19,15 @@ pub const MAX_NESTING: usize = 32;
 /// Height of an expression: operators, calls and `.socket`s one inside another.
 pub const MAX_HEIGHT: usize = 256;
 
+/// The names each zone gives its body, beside its items: they hold a value there, so
+/// `iteration < n` compares (spec/reference.md, 6.1). The same whatever the version of Blender
+/// and the settings.
+pub const ZONE_NAMES: [(&str, &[&str]); 3] = [
+    ("repeat", &["iteration"]),
+    ("simulate", &["delta_time"]),
+    ("foreach", &["index", "element"]),
+];
+
 pub fn parse(source: &str, filename: &str) -> Result<File, BnError> {
     if source.len() > MAX_SOURCE_BYTES {
         return Err(BnError::new(
@@ -737,11 +746,17 @@ impl<'a> Parser<'a> {
         self.advance(); // "->"
         self.advance(); // "{"
 
-        // Its body sees the names around and its items, by their keys: `r = f(n, v: 0.0) -> {`
-        let items = args
+        // Its body sees the names around, its items by their keys and the names its zone gives it:
+        // `r = repeat(n, v: 0.0) -> {` sees `v` and `iteration`
+        let mut items: HashSet<String> = args
             .iter()
             .filter_map(|a| a.alias.clone().or_else(|| a.name.as_deref().map(key)))
             .collect();
+        for (zone, names) in ZONE_NAMES {
+            if zone == name {
+                items.extend(names.iter().map(|n| n.to_string()));
+            }
+        }
         let (body, end) = self.block(Some(items))?;
         Ok(BodyCall {
             name,
