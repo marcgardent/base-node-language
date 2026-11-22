@@ -859,9 +859,9 @@
                         "type": "solid",
                         "color": {
                           "model": "rgb",
-                          "r": 0.16078432,
-                          "g": 0.67058825,
-                          "b": 0.8862745
+                          "r": 0.94509804,
+                          "g": 0.3529412,
+                          "b": 0.14117648
                         }
                       },
                       "stroke": {
@@ -905,12 +905,12 @@
                   0.0,
                   0.0,
                   0.44826387522425226,
-                  1226.405136358601,
-                  1033.6958758018409
+                  1883.4036270338788,
+                  919.6349164317498
                 ],
                 "runs": [
                   {
-                    "text": "100% Reversible",
+                    "text": "100% Reversible\n100% Standard Blend File",
                     "style": {
                       "font_family": "Source Sans 3",
                       "font_style": "Bold",
@@ -924,9 +924,9 @@
                         "type": "solid",
                         "color": {
                           "model": "rgb",
-                          "r": 0.16078432,
-                          "g": 0.67058825,
-                          "b": 0.8862745
+                          "r": 0.94509804,
+                          "g": 0.3529412,
+                          "b": 0.14117648
                         }
                       },
                       "stroke": {
@@ -946,7 +946,7 @@
                   }
                 ],
                 "para": {
-                  "justify": "Left",
+                  "justify": "Right",
                   "left_indent": 0.0,
                   "right_indent": 0.0,
                   "first_line_indent": 0.0,
@@ -959,88 +959,8 @@
               }
             },
             {
-              "id": 17,
-              "kind": {
-                "type": "text",
-                "kind": {
-                  "kind": "point"
-                },
-                "xf": [
-                  0.1804234076802081,
-                  0.0,
-                  0.0,
-                  0.1632554258557308,
-                  13.718849046600013,
-                  162.4324991174579
-                ],
-                "runs": [
-                  {
-                    "text": "Compatibility checks for EEVEE, Cycles, glTF\nSyntactic sugar, auto-completion, inline errors\nComments, frames, groups\nShader, Geometry and Compositor nodes",
-                    "style": {
-                      "font_family": "Source Sans 3",
-                      "font_style": "Bold",
-                      "size": 180.0,
-                      "tracking": 0.0,
-                      "baseline_shift": 0.0,
-                      "h_scale": 100.0,
-                      "v_scale": 100.0,
-                      "rotation": 0.0,
-                      "fill": {
-                        "type": "solid",
-                        "color": {
-                          "model": "rgb",
-                          "r": 0.16078432,
-                          "g": 0.67058825,
-                          "b": 0.8862745
-                        }
-                      },
-                      "stroke": {
-                        "type": "solid",
-                        "color": {
-                          "model": "gray",
-                          "k": 0.1
-                        }
-                      },
-                      "stroke_width": 52.43994853601715,
-                      "underline": false,
-                      "strikethrough": false,
-                      "all_caps": false,
-                      "stroke_join": "Round",
-                      "stroke_align": "Outside"
-                    }
-                  }
-                ],
-                "para": {
-                  "justify": "Left",
-                  "left_indent": 0.0,
-                  "right_indent": 0.0,
-                  "first_line_indent": 0.0,
-                  "space_before": 0.0,
-                  "space_after": 0.0,
-                  "hyphenate": false,
-                  "mojikumi": "lineEndHalf",
-                  "burasagari": "standard"
-                }
-              }
-            }
-          ],
-          "clip": true
-        }
-      },
-      {
-        "id": 19,
-        "name": "Icon",
-        "kind": {
-          "type": "layer",
-          "color": {
-            "Preset": 3
-          },
-          "template": false,
-          "printable": true,
-          "children": [
-            {
-              "id": 20,
-              "name": "Icon background",
+              "id": 37,
+              "name": "Box IDE",
               "appearance": {
                 "items": [
                   {
@@ -1049,9 +969,9 @@
                       "type": "solid",
                       "color": {
                         "model": "rgb",
-                        "r": 0.13725491,
-                        "g": 0.13725491,
-                        "b": 0.13725491
+                        "r": 0.94509804,
+                        "g": 0.3529412,
+                        "b": 0.14117648
                       }
                     }
                   },
@@ -1060,7 +980,7 @@
                     "paint": {
                       "type": "none"
                     },
-                    "width": 1.0
+                    "width": 13.0
                   }
                 ]
               },
@@ -1072,82 +992,82 @@
                       "anchors": [
                         {
                           "p": [
-                            2040.0,
-                            0.0
+                            48.0,
+                            168.0
                           ],
                           "in": [
-                            2017.9086100067682,
-                            0.0
+                            34.745166004060955,
+                            168.0
                           ]
                         },
                         {
                           "p": [
-                            2216.0,
-                            0.0
+                            680.0,
+                            168.0
                           ],
                           "out": [
-                            2238.0913899932316,
-                            0.0
+                            693.2548339959391,
+                            168.0
                           ]
                         },
                         {
                           "p": [
-                            2256.0,
-                            40.0
+                            704.0,
+                            192.0
                           ],
                           "in": [
-                            2256.0,
-                            17.908610006768257
+                            704.0,
+                            178.74516600406096
                           ]
                         },
                         {
                           "p": [
-                            2256.0,
-                            216.0
+                            704.0,
+                            264.0
                           ],
                           "out": [
-                            2256.0,
-                            238.09138999323176
+                            704.0,
+                            277.25483399593907
                           ]
                         },
                         {
                           "p": [
-                            2216.0,
-                            256.0
+                            680.0,
+                            288.0
                           ],
                           "in": [
-                            2238.0913899932316,
-                            256.0
+                            693.2548339959391,
+                            288.0
                           ]
                         },
                         {
                           "p": [
-                            2040.0,
-                            256.0
+                            48.0,
+                            288.0
                           ],
                           "out": [
-                            2017.9086100067682,
-                            256.0
+                            34.745166004060955,
+                            288.0
                           ]
                         },
                         {
                           "p": [
-                            2000.0,
-                            216.0
+                            24.0,
+                            264.0
                           ],
                           "in": [
-                            2000.0,
-                            238.09138999323176
+                            24.0,
+                            277.25483399593907
                           ]
                         },
                         {
                           "p": [
-                            2000.0,
-                            40.0
+                            24.0,
+                            192.0
                           ],
                           "out": [
-                            2000.0,
-                            17.908610006768257
+                            24.0,
+                            178.74516600406096
                           ]
                         }
                       ],
@@ -1157,52 +1077,48 @@
                 },
                 "live": {
                   "shape": "rectangle",
-                  "w": 256.0,
-                  "h": 256.0,
+                  "w": 680.0,
+                  "h": 120.0,
                   "radii": [
-                    40.0,
-                    40.0,
-                    40.0,
-                    40.0
+                    24.0,
+                    24.0,
+                    24.0,
+                    24.0
                   ],
                   "xf": [
                     1.0,
                     0.0,
                     0.0,
                     1.0,
-                    2000.0,
-                    0.0
+                    24.0,
+                    168.0
                   ]
                 }
               }
             },
             {
-              "id": 21,
+              "id": 38,
+              "name": "Box Checks",
               "appearance": {
                 "items": [
                   {
                     "kind": "fill",
                     "paint": {
-                      "type": "none"
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.94509804,
+                        "g": 0.3529412,
+                        "b": 0.14117648
+                      }
                     }
                   },
                   {
                     "kind": "stroke",
                     "paint": {
-                      "type": "solid",
-                      "color": {
-                        "model": "rgb",
-                        "r": 0.16078432,
-                        "g": 0.67058825,
-                        "b": 0.8862745
-                      }
+                      "type": "none"
                     },
-                    "width": 32.0,
-                    "end_arrow": "Arrow",
-                    "arrow_scale": [
-                      100.0,
-                      70.0
-                    ]
+                    "width": 13.0
                   }
                 ]
               },
@@ -1214,60 +1130,133 @@
                       "anchors": [
                         {
                           "p": [
-                            2047.6393271478398,
-                            92.56810177786674
+                            48.0,
+                            306.0
                           ],
-                          "out": [
-                            2097.2777010346017,
-                            35.05980770039032
-                          ],
-                          "kind": "Smooth"
+                          "in": [
+                            34.745166004060955,
+                            306.0
+                          ]
                         },
                         {
                           "p": [
-                            2208.5738728521605,
-                            101.5001853684454
+                            680.0,
+                            306.0
+                          ],
+                          "out": [
+                            693.2548339959391,
+                            306.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            704.0,
+                            330.0
                           ],
                           "in": [
-                            2173.5913228506333,
-                            47.28964684670759
+                            704.0,
+                            316.74516600406093
+                          ]
+                        },
+                        {
+                          "p": [
+                            704.0,
+                            402.0
                           ],
-                          "kind": "Smooth"
+                          "out": [
+                            704.0,
+                            415.25483399593907
+                          ]
+                        },
+                        {
+                          "p": [
+                            680.0,
+                            426.0
+                          ],
+                          "in": [
+                            693.2548339959391,
+                            426.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            48.0,
+                            426.0
+                          ],
+                          "out": [
+                            34.745166004060955,
+                            426.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            24.0,
+                            402.0
+                          ],
+                          "in": [
+                            24.0,
+                            415.25483399593907
+                          ]
+                        },
+                        {
+                          "p": [
+                            24.0,
+                            330.0
+                          ],
+                          "out": [
+                            24.0,
+                            316.74516600406093
+                          ]
                         }
                       ],
-                      "closed": false
+                      "closed": true
                     }
+                  ]
+                },
+                "live": {
+                  "shape": "rectangle",
+                  "w": 680.0,
+                  "h": 120.0,
+                  "radii": [
+                    24.0,
+                    24.0,
+                    24.0,
+                    24.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    24.0,
+                    306.0
                   ]
                 }
               }
             },
             {
-              "id": 22,
+              "id": 39,
+              "name": "Box Ready",
               "appearance": {
                 "items": [
                   {
                     "kind": "fill",
                     "paint": {
-                      "type": "none"
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.94509804,
+                        "g": 0.3529412,
+                        "b": 0.14117648
+                      }
                     }
                   },
                   {
                     "kind": "stroke",
                     "paint": {
-                      "type": "solid",
-                      "color": {
-                        "model": "rgb",
-                        "r": 0.16078432,
-                        "g": 0.67058825,
-                        "b": 0.8862745
-                      }
+                      "type": "none"
                     },
-                    "width": 32.0,
-                    "end_arrow": "Arrow",
-                    "arrow_scale": [
-                      100.0,
-                      70.0
-                    ]
+                    "width": 13.0
                   }
                 ]
               },
@@ -1279,36 +1268,112 @@
                       "anchors": [
                         {
                           "p": [
-                            2208.5738728521605,
-                            163.43452554351376
+                            48.0,
+                            444.0
                           ],
-                          "out": [
-                            2158.935498965399,
-                            220.9428196209903
-                          ],
-                          "kind": "Smooth"
+                          "in": [
+                            34.745166004060955,
+                            444.0
+                          ]
                         },
                         {
                           "p": [
-                            2047.6393271478398,
-                            154.50244195293527
+                            680.0,
+                            444.0
+                          ],
+                          "out": [
+                            693.2548339959391,
+                            444.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            704.0,
+                            468.0
                           ],
                           "in": [
-                            2082.621877149367,
-                            208.71298047467292
+                            704.0,
+                            454.74516600406093
+                          ]
+                        },
+                        {
+                          "p": [
+                            704.0,
+                            540.0
                           ],
-                          "kind": "Smooth"
+                          "out": [
+                            704.0,
+                            553.2548339959391
+                          ]
+                        },
+                        {
+                          "p": [
+                            680.0,
+                            564.0
+                          ],
+                          "in": [
+                            693.2548339959391,
+                            564.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            48.0,
+                            564.0
+                          ],
+                          "out": [
+                            34.745166004060955,
+                            564.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            24.0,
+                            540.0
+                          ],
+                          "in": [
+                            24.0,
+                            553.2548339959391
+                          ]
+                        },
+                        {
+                          "p": [
+                            24.0,
+                            468.0
+                          ],
+                          "out": [
+                            24.0,
+                            454.74516600406093
+                          ]
                         }
                       ],
-                      "closed": false
+                      "closed": true
                     }
                   ]
+                },
+                "live": {
+                  "shape": "rectangle",
+                  "w": 680.0,
+                  "h": 120.0,
+                  "radii": [
+                    24.0,
+                    24.0,
+                    24.0,
+                    24.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    24.0,
+                    444.0
+                  ]
                 }
-              },
-              "bbox_angle": 180.0
+              }
             },
             {
-              "id": 23,
+              "id": 40,
               "kind": {
                 "type": "text",
                 "kind": {
@@ -1319,16 +1384,16 @@
                   0.0,
                   0.0,
                   1.0,
-                  2128.0,
-                  148.0
+                  148.0,
+                  214.0
                 ],
                 "runs": [
                   {
-                    "text": ".bn",
+                    "text": "Built-in IDE",
                     "style": {
-                      "font_family": "Archivo",
-                      "font_style": "Regular",
-                      "size": 58.0,
+                      "font_family": "Source Sans 3",
+                      "font_style": "Bold",
+                      "size": 40.0,
                       "tracking": 0.0,
                       "baseline_shift": 0.0,
                       "h_scale": 100.0,
@@ -1354,7 +1419,8 @@
                   }
                 ],
                 "para": {
-                  "justify": "Center",
+                  "justify": "Left",
+                  "justify_auto": true,
                   "left_indent": 0.0,
                   "right_indent": 0.0,
                   "first_line_indent": 0.0,
@@ -1365,8 +1431,2100 @@
                   "burasagari": "standard"
                 }
               }
+            },
+            {
+              "id": 41,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  148.0,
+                  246.0
+                ],
+                "runs": [
+                  {
+                    "text": "Syntactic sugar, auto-completion, inline errors\nComments, frames, groups",
+                    "style": {
+                      "font_family": "Source Sans 3",
+                      "font_style": "SemiBold",
+                      "size": 25.0,
+                      "leading": 28.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.9019608,
+                          "g": 0.9019608,
+                          "b": 0.9019608
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 42,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  148.0,
+                  362.0
+                ],
+                "runs": [
+                  {
+                    "text": "Checks by Profiles",
+                    "style": {
+                      "font_family": "Source Sans 3",
+                      "font_style": "Bold",
+                      "size": 40.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.9019608,
+                          "g": 0.9019608,
+                          "b": 0.9019608
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 43,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  148.0,
+                  397.0
+                ],
+                "runs": [
+                  {
+                    "text": "EEVEE, Cycles, glTF",
+                    "style": {
+                      "font_family": "Source Sans 3",
+                      "font_style": "SemiBold",
+                      "size": 25.0,
+                      "leading": 28.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.9019608,
+                          "g": 0.9019608,
+                          "b": 0.9019608
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 44,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  148.0,
+                  500.0
+                ],
+                "runs": [
+                  {
+                    "text": "Ready for",
+                    "style": {
+                      "font_family": "Source Sans 3",
+                      "font_style": "Bold",
+                      "size": 40.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.9019608,
+                          "g": 0.9019608,
+                          "b": 0.9019608
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 45,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  148.0,
+                  535.0
+                ],
+                "runs": [
+                  {
+                    "text": "Shader, Geometry and Compositor nodes",
+                    "style": {
+                      "font_family": "Source Sans 3",
+                      "font_style": "SemiBold",
+                      "size": 25.0,
+                      "leading": 28.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.9019608,
+                          "g": 0.9019608,
+                          "b": 0.9019608
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 46,
+              "name": "Icon IDE",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "none"
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    },
+                    "width": 7.0,
+                    "cap": "Round",
+                    "join": "Round"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            66.0,
+                            206.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            46.0,
+                            228.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            66.0,
+                            250.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    },
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            102.0,
+                            206.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            122.0,
+                            228.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            102.0,
+                            250.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    },
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            92.0,
+                            200.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            76.0,
+                            256.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": 47,
+              "name": "Icon checks circle",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "none"
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    },
+                    "width": 7.0
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            52.0,
+                            366.0
+                          ],
+                          "in": [
+                            52.0,
+                            383.6731119945854
+                          ],
+                          "out": [
+                            52.0,
+                            348.3268880054146
+                          ],
+                          "kind": "Smooth"
+                        },
+                        {
+                          "p": [
+                            84.0,
+                            334.0
+                          ],
+                          "in": [
+                            66.3268880054146,
+                            334.0
+                          ],
+                          "out": [
+                            101.6731119945854,
+                            334.0
+                          ],
+                          "kind": "Smooth"
+                        },
+                        {
+                          "p": [
+                            116.0,
+                            366.0
+                          ],
+                          "in": [
+                            116.0,
+                            348.3268880054146
+                          ],
+                          "out": [
+                            116.0,
+                            383.6731119945854
+                          ],
+                          "kind": "Smooth"
+                        },
+                        {
+                          "p": [
+                            84.0,
+                            398.0
+                          ],
+                          "in": [
+                            101.6731119945854,
+                            398.0
+                          ],
+                          "out": [
+                            66.3268880054146,
+                            398.0
+                          ],
+                          "kind": "Smooth"
+                        }
+                      ],
+                      "closed": true
+                    }
+                  ]
+                },
+                "live": {
+                  "shape": "ellipse",
+                  "w": 64.0,
+                  "h": 64.0,
+                  "pie": [
+                    0.0,
+                    360.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    52.0,
+                    334.0
+                  ]
+                }
+              }
+            },
+            {
+              "id": 48,
+              "name": "Icon checks mark",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "none"
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    },
+                    "width": 7.0,
+                    "cap": "Round",
+                    "join": "Round"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            69.0,
+                            367.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            80.0,
+                            379.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            100.0,
+                            354.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": 49,
+              "name": "Icon nodes links",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "none"
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    },
+                    "width": 5.0,
+                    "cap": "Round"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            72.0,
+                            484.0
+                          ],
+                          "out": [
+                            86.0,
+                            484.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            98.0,
+                            504.0
+                          ],
+                          "in": [
+                            84.0,
+                            504.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    },
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            72.0,
+                            524.0
+                          ],
+                          "out": [
+                            86.0,
+                            524.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            98.0,
+                            504.0
+                          ],
+                          "in": [
+                            84.0,
+                            504.0
+                          ]
+                        }
+                      ],
+                      "closed": false
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": 50,
+              "name": "Icon node A",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "none"
+                    },
+                    "width": 5.0
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            49.0,
+                            474.0
+                          ],
+                          "in": [
+                            46.23857625084603,
+                            474.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            69.0,
+                            474.0
+                          ],
+                          "out": [
+                            71.76142374915398,
+                            474.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            74.0,
+                            479.0
+                          ],
+                          "in": [
+                            74.0,
+                            476.23857625084605
+                          ]
+                        },
+                        {
+                          "p": [
+                            74.0,
+                            489.0
+                          ],
+                          "out": [
+                            74.0,
+                            491.76142374915395
+                          ]
+                        },
+                        {
+                          "p": [
+                            69.0,
+                            494.0
+                          ],
+                          "in": [
+                            71.76142374915398,
+                            494.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            49.0,
+                            494.0
+                          ],
+                          "out": [
+                            46.23857625084603,
+                            494.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            44.0,
+                            489.0
+                          ],
+                          "in": [
+                            44.0,
+                            491.76142374915395
+                          ]
+                        },
+                        {
+                          "p": [
+                            44.0,
+                            479.0
+                          ],
+                          "out": [
+                            44.0,
+                            476.23857625084605
+                          ]
+                        }
+                      ],
+                      "closed": true
+                    }
+                  ]
+                },
+                "live": {
+                  "shape": "rectangle",
+                  "w": 30.0,
+                  "h": 20.0,
+                  "radii": [
+                    5.0,
+                    5.0,
+                    5.0,
+                    5.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    44.0,
+                    474.0
+                  ]
+                }
+              }
+            },
+            {
+              "id": 51,
+              "name": "Icon node B",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "none"
+                    },
+                    "width": 5.0
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            49.0,
+                            514.0
+                          ],
+                          "in": [
+                            46.23857625084603,
+                            514.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            69.0,
+                            514.0
+                          ],
+                          "out": [
+                            71.76142374915398,
+                            514.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            74.0,
+                            519.0
+                          ],
+                          "in": [
+                            74.0,
+                            516.238576250846
+                          ]
+                        },
+                        {
+                          "p": [
+                            74.0,
+                            529.0
+                          ],
+                          "out": [
+                            74.0,
+                            531.761423749154
+                          ]
+                        },
+                        {
+                          "p": [
+                            69.0,
+                            534.0
+                          ],
+                          "in": [
+                            71.76142374915398,
+                            534.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            49.0,
+                            534.0
+                          ],
+                          "out": [
+                            46.23857625084603,
+                            534.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            44.0,
+                            529.0
+                          ],
+                          "in": [
+                            44.0,
+                            531.761423749154
+                          ]
+                        },
+                        {
+                          "p": [
+                            44.0,
+                            519.0
+                          ],
+                          "out": [
+                            44.0,
+                            516.238576250846
+                          ]
+                        }
+                      ],
+                      "closed": true
+                    }
+                  ]
+                },
+                "live": {
+                  "shape": "rectangle",
+                  "w": 30.0,
+                  "h": 20.0,
+                  "radii": [
+                    5.0,
+                    5.0,
+                    5.0,
+                    5.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    44.0,
+                    514.0
+                  ]
+                }
+              }
+            },
+            {
+              "id": 52,
+              "name": "Icon node C",
+              "appearance": {
+                "items": [
+                  {
+                    "kind": "fill",
+                    "paint": {
+                      "type": "solid",
+                      "color": {
+                        "model": "rgb",
+                        "r": 0.9019608,
+                        "g": 0.9019608,
+                        "b": 0.9019608
+                      }
+                    }
+                  },
+                  {
+                    "kind": "stroke",
+                    "paint": {
+                      "type": "none"
+                    },
+                    "width": 5.0
+                  }
+                ]
+              },
+              "kind": {
+                "type": "path",
+                "path": {
+                  "subpaths": [
+                    {
+                      "anchors": [
+                        {
+                          "p": [
+                            101.0,
+                            492.0
+                          ],
+                          "in": [
+                            98.23857625084604,
+                            492.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            121.0,
+                            492.0
+                          ],
+                          "out": [
+                            123.76142374915398,
+                            492.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            126.0,
+                            497.0
+                          ],
+                          "in": [
+                            126.0,
+                            494.23857625084605
+                          ]
+                        },
+                        {
+                          "p": [
+                            126.0,
+                            511.0
+                          ],
+                          "out": [
+                            126.0,
+                            513.761423749154
+                          ]
+                        },
+                        {
+                          "p": [
+                            121.0,
+                            516.0
+                          ],
+                          "in": [
+                            123.76142374915398,
+                            516.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            101.0,
+                            516.0
+                          ],
+                          "out": [
+                            98.23857625084604,
+                            516.0
+                          ]
+                        },
+                        {
+                          "p": [
+                            96.0,
+                            511.0
+                          ],
+                          "in": [
+                            96.0,
+                            513.761423749154
+                          ]
+                        },
+                        {
+                          "p": [
+                            96.0,
+                            497.0
+                          ],
+                          "out": [
+                            96.0,
+                            494.23857625084605
+                          ]
+                        }
+                      ],
+                      "closed": true
+                    }
+                  ]
+                },
+                "live": {
+                  "shape": "rectangle",
+                  "w": 30.0,
+                  "h": 24.0,
+                  "radii": [
+                    5.0,
+                    5.0,
+                    5.0,
+                    5.0
+                  ],
+                  "xf": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    96.0,
+                    492.0
+                  ]
+                }
+              }
+            }
+          ],
+          "clip": true
+        }
+      },
+      {
+        "id": 19,
+        "name": "Icon",
+        "kind": {
+          "type": "layer",
+          "color": {
+            "Preset": 3
+          },
+          "template": false,
+          "printable": true,
+          "children": [
+            {
+              "id": 53,
+              "kind": {
+                "type": "group",
+                "children": [
+                  {
+                    "id": 20,
+                    "name": "Icon background",
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.13725491,
+                              "g": 0.13725491,
+                              "b": 0.13725491
+                            }
+                          }
+                        },
+                        {
+                          "kind": "stroke",
+                          "paint": {
+                            "type": "none"
+                          },
+                          "width": 1.0
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  2040.0,
+                                  0.0
+                                ],
+                                "in": [
+                                  2017.9086100067682,
+                                  0.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2216.0,
+                                  0.0
+                                ],
+                                "out": [
+                                  2238.0913899932316,
+                                  0.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2256.0,
+                                  40.0
+                                ],
+                                "in": [
+                                  2256.0,
+                                  17.908610006768257
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2256.0,
+                                  216.0
+                                ],
+                                "out": [
+                                  2256.0,
+                                  238.09138999323176
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2216.0,
+                                  256.0
+                                ],
+                                "in": [
+                                  2238.0913899932316,
+                                  256.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2040.0,
+                                  256.0
+                                ],
+                                "out": [
+                                  2017.9086100067682,
+                                  256.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2000.0,
+                                  216.0
+                                ],
+                                "in": [
+                                  2000.0,
+                                  238.09138999323176
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2000.0,
+                                  40.0
+                                ],
+                                "out": [
+                                  2000.0,
+                                  17.908610006768257
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      },
+                      "live": {
+                        "shape": "rectangle",
+                        "w": 256.0,
+                        "h": 256.0,
+                        "radii": [
+                          40.0,
+                          40.0,
+                          40.0,
+                          40.0
+                        ],
+                        "xf": [
+                          1.0,
+                          0.0,
+                          0.0,
+                          1.0,
+                          2000.0,
+                          0.0
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 35,
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.16078432,
+                              "g": 0.67058825,
+                              "b": 0.8862745
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  2196.7851004114996,
+                                  64.55262987575748
+                                ],
+                                "in": [
+                                  2151.2238164367027,
+                                  27.449093883014868
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2214.638055439542,
+                                  28.273391846218164
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2221.671092589068,
+                                  92.29059966035521
+                                ],
+                                "out": [
+                                  2221.787017077931,
+                                  92.46825065414757
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2222.017714350604,
+                                  92.8247530584837
+                                ],
+                                "in": [
+                                  2221.9025582714503,
+                                  92.64630200032222
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2221.7488375206353,
+                                  92.99826170468296
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2225.5777201796855,
+                                  127.85011470539473
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2195.3989081836858,
+                                  110.00210903220793
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2195.130031353717,
+                                  110.17561767840711
+                                ],
+                                "out": [
+                                  2195.01345728496,
+                                  109.99496923955094
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2194.7786659202075,
+                                  109.63529249089483
+                                ],
+                                "in": [
+                                  2194.896334299204,
+                                  109.81486026589526
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2139.3525430482578,
+                                  76.8558127820037
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2154.424171059242,
+                                  76.36353480006724
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2154.4241692749392,
+                                  76.36353480006724
+                                ],
+                                "out": [
+                                  2124.19695641106,
+                                  64.4176617151926
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2059.7513995078657,
+                                  103.0226559599207
+                                ],
+                                "in": [
+                                  2087.559882263776,
+                                  70.80527495095424
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2035.5272547878142,
+                                  82.11354759581279
+                                ],
+                                "out": [
+                                  2082.275887213128,
+                                  27.953149284461354
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 36,
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.16078432,
+                              "g": 0.67058825,
+                              "b": 0.8862745
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  2034.464362479365,
+                                  163.00436561669767
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2030.635479820315,
+                                  128.15251261598593
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2060.814291816315,
+                                  146.00051828917276
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2061.0831686462834,
+                                  145.8270096429736
+                                ],
+                                "out": [
+                                  2061.1997427150377,
+                                  146.00765808182567
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2061.4345340797745,
+                                  146.36733483047368
+                                ],
+                                "in": [
+                                  2061.316865700792,
+                                  146.1877670554773
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2116.8606569517424,
+                                  179.1468145393771
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2101.7890307250614,
+                                  179.6390925213135
+                                ],
+                                "out": [
+                                  2132.0162435889415,
+                                  191.58496560618786
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2196.461800492135,
+                                  152.97997136145986
+                                ],
+                                "in": [
+                                  2168.6533177362244,
+                                  185.19735237042642
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2220.685945212186,
+                                  173.88907972556765
+                                ],
+                                "out": [
+                                  2173.937312786871,
+                                  228.04947803692087
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2059.428099588501,
+                                  191.4499974456233
+                                ],
+                                "in": [
+                                  2104.989383563297,
+                                  228.5535334383642
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2041.5751445604583,
+                                  227.7292354751625
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2034.5421074109322,
+                                  163.71202766102613
+                                ],
+                                "out": [
+                                  2034.426182922069,
+                                  163.53437666723354
+                                ]
+                              },
+                              {
+                                "p": [
+                                  2034.1954856493962,
+                                  163.17787426289695
+                                ],
+                                "in": [
+                                  2034.3106417285499,
+                                  163.35632532105865
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 23,
+                    "kind": {
+                      "type": "text",
+                      "kind": {
+                        "kind": "point"
+                      },
+                      "xf": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        1.0,
+                        2128.0,
+                        148.0
+                      ],
+                      "runs": [
+                        {
+                          "text": ".bn",
+                          "style": {
+                            "font_family": "Archivo",
+                            "font_style": "Regular",
+                            "size": 58.0,
+                            "tracking": 0.0,
+                            "baseline_shift": 0.0,
+                            "h_scale": 100.0,
+                            "v_scale": 100.0,
+                            "rotation": 0.0,
+                            "fill": {
+                              "type": "solid",
+                              "color": {
+                                "model": "rgb",
+                                "r": 0.9019608,
+                                "g": 0.9019608,
+                                "b": 0.9019608
+                              }
+                            },
+                            "stroke": {
+                              "type": "none"
+                            },
+                            "stroke_width": 0.0,
+                            "underline": false,
+                            "strikethrough": false,
+                            "all_caps": false
+                          }
+                        }
+                      ],
+                      "para": {
+                        "justify": "Center",
+                        "left_indent": 0.0,
+                        "right_indent": 0.0,
+                        "first_line_indent": 0.0,
+                        "space_before": 0.0,
+                        "space_after": 0.0,
+                        "hyphenate": false,
+                        "mojikumi": "lineEndHalf",
+                        "burasagari": "standard"
+                      }
+                    }
+                  }
+                ],
+                "clip": false
+              }
+            },
+            {
+              "id": 54,
+              "kind": {
+                "type": "group",
+                "children": [
+                  {
+                    "id": 55,
+                    "name": "Icon background",
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.13725491,
+                              "g": 0.13725491,
+                              "b": 0.13725491
+                            }
+                          }
+                        },
+                        {
+                          "kind": "stroke",
+                          "paint": {
+                            "type": "none"
+                          },
+                          "width": 1.0
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  1812.0,
+                                  20.0
+                                ],
+                                "in": [
+                                  1789.9086100067682,
+                                  20.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1860.0,
+                                  20.0
+                                ],
+                                "out": [
+                                  1882.0913899932316,
+                                  20.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1900.0,
+                                  60.0
+                                ],
+                                "in": [
+                                  1900.0,
+                                  37.90861000676826
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1900.0,
+                                  108.0
+                                ],
+                                "out": [
+                                  1900.0,
+                                  130.09138999323176
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1860.0,
+                                  148.0
+                                ],
+                                "in": [
+                                  1882.0913899932316,
+                                  148.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1812.0,
+                                  148.0
+                                ],
+                                "out": [
+                                  1789.9086100067682,
+                                  148.0
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1772.0,
+                                  108.0
+                                ],
+                                "in": [
+                                  1772.0,
+                                  130.09138999323176
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1772.0,
+                                  60.0
+                                ],
+                                "out": [
+                                  1772.0,
+                                  37.90861000676826
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      },
+                      "live": {
+                        "shape": "rectangle",
+                        "w": 128.0,
+                        "h": 128.0,
+                        "radii": [
+                          40.0,
+                          40.0,
+                          40.0,
+                          40.0
+                        ],
+                        "xf": [
+                          1.0,
+                          0.0,
+                          0.0,
+                          1.0,
+                          1772.0,
+                          20.0
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 56,
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.16078432,
+                              "g": 0.67058825,
+                              "b": 0.8862745
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  1870.39255020575,
+                                  52.27631493787874
+                                ],
+                                "in": [
+                                  1847.6119082183513,
+                                  33.724546941507434
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1879.319027719771,
+                                  34.13669592310908
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1882.8355462945337,
+                                  66.1452998301776
+                                ],
+                                "out": [
+                                  1882.8935085389658,
+                                  66.23412532707378
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1883.0088571753022,
+                                  66.41237652924184
+                                ],
+                                "in": [
+                                  1882.9512791357251,
+                                  66.32315100016112
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1882.874418760318,
+                                  66.49913085234148
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1884.7888600898427,
+                                  83.92505735269737
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1869.699454091843,
+                                  75.00105451610396
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1869.5650156768588,
+                                  75.08780883920355
+                                ],
+                                "out": [
+                                  1869.50672864248,
+                                  74.99748461977546
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1869.3893329601037,
+                                  74.8176462454474
+                                ],
+                                "in": [
+                                  1869.4481671496023,
+                                  74.90743013294764
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1841.6762715241289,
+                                  58.42790639100185
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1849.2120855296207,
+                                  58.18176740003362
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1849.2120846374696,
+                                  58.18176740003362
+                                ],
+                                "out": [
+                                  1834.0984782055302,
+                                  52.2088308575963
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1801.8756997539328,
+                                  71.51132797996036
+                                ],
+                                "in": [
+                                  1815.779941131888,
+                                  55.40263747547712
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1789.763627393907,
+                                  61.056773797906395
+                                ],
+                                "out": [
+                                  1813.137943606564,
+                                  33.97657464223067
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 57,
+                    "appearance": {
+                      "items": [
+                        {
+                          "kind": "fill",
+                          "paint": {
+                            "type": "solid",
+                            "color": {
+                              "model": "rgb",
+                              "r": 0.16078432,
+                              "g": 0.67058825,
+                              "b": 0.8862745
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "path",
+                      "path": {
+                        "subpaths": [
+                          {
+                            "anchors": [
+                              {
+                                "p": [
+                                  1789.2321812396826,
+                                  101.50218280834883
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1787.3177399101573,
+                                  84.07625630799296
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1802.4071459081574,
+                                  93.00025914458638
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1802.5415843231417,
+                                  92.9135048214868
+                                ],
+                                "out": [
+                                  1802.5998713575189,
+                                  93.00382904091283
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1802.7172670398872,
+                                  93.18366741523684
+                                ],
+                                "in": [
+                                  1802.658432850396,
+                                  93.09388352773865
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1830.4303284758712,
+                                  109.57340726968854
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1822.894515362531,
+                                  109.81954626065675
+                                ],
+                                "out": [
+                                  1838.0081217944708,
+                                  115.79248280309393
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1870.2309002460674,
+                                  96.48998568072993
+                                ],
+                                "in": [
+                                  1856.3266588681122,
+                                  112.59867618521321
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1882.342972606093,
+                                  106.94453986278383
+                                ],
+                                "out": [
+                                  1858.9686563934356,
+                                  134.02473901846042
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1801.7140497942505,
+                                  115.72499872281165
+                                ],
+                                "in": [
+                                  1824.4946917816487,
+                                  134.2767667191821
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1792.7875722802291,
+                                  133.86461773758126
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1789.271053705466,
+                                  101.85601383051306
+                                ],
+                                "out": [
+                                  1789.2130914610345,
+                                  101.76718833361677
+                                ]
+                              },
+                              {
+                                "p": [
+                                  1789.0977428246981,
+                                  101.58893713144847
+                                ],
+                                "in": [
+                                  1789.155320864275,
+                                  101.67816266052932
+                                ]
+                              }
+                            ],
+                            "closed": true
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "id": 58,
+                    "kind": {
+                      "type": "text",
+                      "kind": {
+                        "kind": "point"
+                      },
+                      "xf": [
+                        0.5,
+                        0.0,
+                        0.0,
+                        0.5,
+                        1836.0,
+                        94.0
+                      ],
+                      "runs": [
+                        {
+                          "text": ".bn",
+                          "style": {
+                            "font_family": "Archivo",
+                            "font_style": "Regular",
+                            "size": 58.0,
+                            "tracking": 0.0,
+                            "baseline_shift": 0.0,
+                            "h_scale": 100.0,
+                            "v_scale": 100.0,
+                            "rotation": 0.0,
+                            "fill": {
+                              "type": "solid",
+                              "color": {
+                                "model": "rgb",
+                                "r": 0.9019608,
+                                "g": 0.9019608,
+                                "b": 0.9019608
+                              }
+                            },
+                            "stroke": {
+                              "type": "none"
+                            },
+                            "stroke_width": 0.0,
+                            "underline": false,
+                            "strikethrough": false,
+                            "all_caps": false
+                          }
+                        }
+                      ],
+                      "para": {
+                        "justify": "Center",
+                        "left_indent": 0.0,
+                        "right_indent": 0.0,
+                        "first_line_indent": 0.0,
+                        "space_before": 0.0,
+                        "space_after": 0.0,
+                        "hyphenate": false,
+                        "mojikumi": "lineEndHalf",
+                        "burasagari": "standard"
+                      }
+                    }
+                  }
+                ],
+                "clip": false
+              }
             }
           ]
+        }
+      },
+      {
+        "id": 30,
+        "name": "Layer 5",
+        "kind": {
+          "type": "layer",
+          "color": {
+            "Preset": 4
+          },
+          "template": false,
+          "printable": true,
+          "children": []
         }
       }
     ],
@@ -2302,7 +4460,7 @@
     },
     "raster_effects_ppi": 72.0,
     "images": {},
-    "next_id": 26,
+    "next_id": 59,
     "metadata": {
       "author": "",
       "authorTitle": "",
@@ -2313,15 +4471,15 @@
       "copyrightNotice": "",
       "copyrightUrl": "",
       "created": 1795344079,
-      "modified": 1795349024
+      "modified": 1795350569
     },
     "last_view": {
       "name": "",
       "center": {
-        "x": 1252.68257452229,
-        "y": 381.2000714469644
+        "x": 443.5502241145144,
+        "y": 736.7587594104211
       },
-      "zoom": 0.7671678963007662,
+      "zoom": 0.6401916423790637,
       "rotation": 0.0
     },
     "layers_open": [
