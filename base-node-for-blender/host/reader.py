@@ -14,11 +14,11 @@ from collections import Counter
 
 import bpy
 
-from ..blender import sugar
+from ..blender import compile_source, sugar
 from ..lang import ast
 from ..lang.lexer import KEYWORDS
-from ..lang.printer import to_source
-from ..blender.typecheck import (MIX_TYPES, OUTPUT_PROPS, stored, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
+from ..lang.printer import quote, to_source
+from ..blender.typecheck import (float32, MIX_TYPES, OUTPUT_PROPS, stored, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
                                 branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
@@ -29,7 +29,7 @@ from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
 from .schema import (DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema,
                      data_value, fresh_item, fresh_item_options, fresh_item_value, fresh_options,
-                     item_option_names, option_names, root_panel, prop_value, rounded, same_option, snapshot,
+                     item_option_names, option_names, root_panel, prop_value, same_option, snapshot,
                      socket_keys, text_name, ui_name)
 
 KINDS = {v: k for k, v in TREE_TYPES.items()}
@@ -111,6 +111,7 @@ def read_tree(tree, schema, holders=None, portable=False):
     # A group another module built is written as a use of that module, not copied
     home = module_of(tree)
     uses = {}
+    checked = {}  # group -> whether it reads as its module builds it
 
     def visit(t, seen):
         if t in graphs or t in seen:
@@ -124,6 +125,9 @@ def read_tree(tree, schema, holders=None, portable=False):
         # The groups its nodes call are exported with it
         for callee in sorted(reader.callees, key=lambda c: c.name):
             module = module_of(callee)
+            if module is not None and module != home and not as_built(callee, module, schema, checked):
+                # Edited since its module built it: the text holds it, as it is
+                module = None
             if module is not None and module != home and portable:
                 shared = modules.shared(module)
                 if shared is None and graph_name(callee) == callee.name:
@@ -144,6 +148,59 @@ def read_tree(tree, schema, holders=None, portable=False):
     visit(tree, frozenset())
     return ast.File(order, [ast.Use(name, sorted(names), source, 0, 0)
                             for (name, source), names in uses.items()]), warnings
+
+
+def as_built(group, module, schema, checked):
+    """Whether a group a module built reads as the module builds it now: the text of the group against
+    the text of the module's graph built afresh beside it, for the same kind of tree and the same
+    types, both read as any tree is. A group edited in the file, or a module that changed or that is
+    not found, is not: the text then writes the group as it is."""
+    if group in checked:
+        return checked[group]
+    from .builder import Builder, mark
+
+    checked[group] = False
+    # The stdlib's module is read where it is bundled, whatever path File > Import kept
+    name, source = modules.shared(module) or module
+    kind = KINDS.get(group.bl_idname)
+    call = key(graph_name(group))
+    template = template_of(group)
+    types = f"<{', '.join(template[0])}>" if template else ""
+    use = f"use {name} ({call})" + (f" from {quote(source)}" if source else "")
+    probe = f"{use}\n\n{kind} graph probe() -> () {{\n  x = {call}{types}()\n}}\n"
+    try:
+        graphs = compile_source(probe, schema, "probe.bn", modules.load, [])
+    except Exception:
+        return False
+    if not any(g.module is not None and g.name == group.name for g in graphs):
+        return False
+    builder = Builder("probe.bn", graphs, [])
+    made, scratch = [], {}
+    try:
+        for g in graphs:
+            if g.module is None:
+                continue
+            t = bpy.data.node_groups.new(f".base_node_check_{g.name}", TREE_TYPES[g.kind])
+            made.append(t)
+            scratch[g.name] = t
+            builder.build(g, t, scratch)
+            mark(t, g.module, g.called_as, g.types, g.type_inputs)
+            t[modules.GRAPH] = g.called_as or g.name  # called by the name its group has
+        checked[group] = graph_text(scratch[group.name], group.name, schema) == graph_text(group, group.name, schema)
+    except Exception:
+        checked[group] = False
+    finally:
+        bpy.data.batch_remove(made)
+    return checked[group]
+
+
+def graph_text(tree, name, schema):
+    """The canonical text of one tree's graph, by `name`, without its comments."""
+    reader = GraphReader(tree, schema, [])
+    reader.called = True
+    graph = reader.read()
+    graph.name = name
+    return to_source(ast.File([graph], []))
 
 
 class GraphReader:
@@ -219,13 +276,18 @@ class GraphReader:
                     user[src.name] = n
         self.user = user
         # A Separate XYZ of a vector, a color or an integer vector reads as v.x: it vanishes, and v is written
-        # once per component
+        # once per component. The text makes one Separate XYZ per vector: a second one of the same vector
+        # stays a call
         self.separates = {}
-        for n in reached:
+        separated = set()
+        for n in sorted(reached, key=lambda n: self.index[n.name]):
             vector = self.incoming.get(n.name, {}).get("Vector")
+            source = vector and ("GI" if vector[0][0].bl_idname == "NodeGroupInput" else vector[0][0].name,
+                                 vector[0][1].identifier)
             if n.bl_idname == "ShaderNodeSeparateXYZ" and vector \
-                    and vector[0][1].type in ("VECTOR", "RGBA", "INT_VECTOR") \
+                    and vector[0][1].type in ("VECTOR", "RGBA", "INT_VECTOR") and source not in separated \
                     and not self.hand_named(n) and not self.look(n) and comments.KEY not in n:
+                separated.add(source)
                 self.separates[n.name] = vector[0]
                 src = vector[0][0].name
                 uses[src] = uses.get(src, 0) + uses.get(n.name, 0) - 1
@@ -267,9 +329,15 @@ class GraphReader:
             shared = [o.name for o in outputs]
             for sock, o in zip(out_inputs, outputs):
                 links = self.incoming.get(out.name, {}).get(sock.identifier)
+                name = o.alias or (o.name if shared.count(o.name) == 1 else o.key)
                 if links:
-                    name = o.alias or (o.name if shared.count(o.name) == 1 else o.key)
                     fields.append((name, self.use(*links[0])))
+                elif self.material is None:
+                    # The value of an output nothing feeds, which a shader group gives: written when
+                    # it is not the one a new output starts with
+                    value = self.output_value(sock)
+                    if value is not None:
+                        fields.append((name, value))
         for name in self.statement_order(None):
             node = self.tree.nodes[name]
             body.append((node, self.assign(node)))
@@ -277,8 +345,9 @@ class GraphReader:
             value = fields[0][1]
         else:
             value = ast.Record([ast.Arg(n, v, 0, 0) for n, v in fields], 0, 0)
-        # A tree without a Group Output node still returns: nothing, with no look
-        body.append((out, ast.Return(value, 0, 0, self.looked(out) if out is not None else None)))
+        # A tree with no Group Output node has no return
+        if out is not None or self.material is not None:
+            body.append((out, ast.Return(value, 0, 0, self.looked(out) if out is not None else None)))
         body = self.framed(body)
         self.continuations(body)
         self.frame_comments(body)
@@ -290,7 +359,7 @@ class GraphReader:
             graph.output_tree = output_tree
         graph.settings = self.settings()
         if tree.description:
-            graph.description = tree.description.replace('"', "'").replace("\n", " ")
+            graph.description = tree.description
         self.unwritten()
         return graph
 
@@ -354,7 +423,7 @@ class GraphReader:
             else:
                 subs = [c for c in subs if holds(c, "OUTPUT")]
             for c in subs:
-                out.append(ast.Panel(c.name.replace('"', "'"), items(c, io), 0, 0, self.panel_options(c, given)))
+                out.append(ast.Panel(c.name, items(c, io), 0, 0, self.panel_options(c, given)))
             return out
 
         root = root_panel(self.tree)
@@ -402,7 +471,7 @@ class GraphReader:
         """`@ "Label" #color hide mute` for a node shown otherwise than a new one, else None."""
         if node.bl_idname in ("NodeGroupInput", *ZONE_INPUTS):
             return None  # not a statement of the text
-        label = node.label.replace('"', "'").replace("\n", " ") or None
+        label = node.label or None
         color = tuple(node.color) if node.use_custom_color else None
         flags = [f for f in ("hide", "mute") if getattr(node, f)]
         if label is None and color is None and not flags:
@@ -470,7 +539,7 @@ class GraphReader:
         if type == "Material" and value:
             return bare_name(value)
         if isinstance(value, str):
-            return ast.String(value.replace('"', "'").replace("\n", " "), 0, 0)
+            return ast.String(value, 0, 0)
         self.warn(f"default value of '{item.name}' ({type}) not exported")
         return None
 
@@ -646,8 +715,7 @@ class GraphReader:
         if node.bl_idname == "FunctionNodeInputBool":
             return ast.Bool(bool(value), 0, 0)
         if node.bl_idname == "FunctionNodeInputString":
-            # Written as its rebuilt node will be read back: a string has no quotes nor newlines in text
-            return self.string(value, node, node.outputs[0])
+            return ast.String(value, 0, 0)
         return ast.Tuple([number(v) for v in value], 0, 0)
 
     def spec(self, node):
@@ -1077,7 +1145,7 @@ class GraphReader:
             fresh = self.schema.fresh_data(self.kind, spec) if spec.data else {}
             for p in spec.data.values():
                 value = data_value(getattr(node, p.name))
-                if rounded(value) != rounded(fresh[p.name]):
+                if not same(value, fresh[p.name]):
                     data[p.name] = data_literal(p, value, fresh[p.name])
             _values, prop_defaults = self.schema.defaults(self.kind, spec, {})
             for p in spec.props.values():
@@ -1207,9 +1275,6 @@ class GraphReader:
         positional, named = [], []
         for pname, value in props.items():
             prop = spec.props[pname]
-            if isinstance(value, str) and ('"' in value or "\n" in value):
-                self.warn(f"'{node.name}.{pname}': quotes and newlines replaced")
-                value = value.replace('"', "'").replace("\n", " ")
             holders = [p for p in spec.props.values() if p.kind == "ENUM" and value in p.items] \
                 if prop.kind == "ENUM" else []
             if holders == [prop]:
@@ -1356,9 +1421,6 @@ class GraphReader:
             value = getattr(item, option)
             if option not in fresh or same(value, fresh[option]) or option in shape.field_only and not field:
                 continue
-            if isinstance(value, str) and ('"' in value or "\n" in value):
-                self.warn(f"'{node.name}': {option} of item '{item.name}': "
-                          "quotes and newlines replaced")
             options.append(ast.Arg(option, option_literal(item, option, value), 0, 0))
         if options and not shape.named:
             # Items given by position have no name to hang options on
@@ -1463,8 +1525,10 @@ class GraphReader:
 
         if (name, operation) in (("Math", "MULTIPLY"), ("VectorMath", "SCALE")) and len(operands) == 2:
             last = operands[1][-1][0]
-            if isinstance(last, ast.Number) and last.value == -1.0 and not self.incoming.get(
-                    node.name, {}).get(node.inputs[1].identifier if name == "Math" else "Scale"):
+            linked = self.incoming.get(node.name, {})
+            # `-x` of a name or a node; of a literal it is a number, `-0.5`, which no node computes
+            if isinstance(last, ast.Number) and last.value == -1.0 and linked.get(node.inputs[0].identifier) \
+                    and not linked.get(node.inputs[1].identifier if name == "Math" else "Scale"):
                 expr, t = operands[0][0]
                 if means("neg", [t, "Float"]):
                     return ast.Neg(expr, 0, 0)
@@ -1511,8 +1575,22 @@ class GraphReader:
                 return ast.BinOp(sugar.math_comparison(src.operation, True), inner.left, inner.right, 0, 0)
         return None
 
-    def literal(self, node, sock, defaults):
-        if not hasattr(sock, "default_value") or node.bl_idname == "NodeGroupOutput":
+    def output_value(self, sock):
+        """The literal of an unlinked input of the Group Output, None when a new output holds it."""
+        item = next((i for i in self.tree.interface.items_tree if i.item_type == "SOCKET"
+                     and i.in_out == "OUTPUT" and i.identifier == sock.identifier), None)
+        if item is None or not hasattr(sock, "default_value"):
+            return None
+        fresh = fresh_item(item.socket_type, self.tree.bl_idname, "OUTPUT").get("default_value")
+        value = snapshot(sock)
+        if isinstance(value, tuple) and isinstance(fresh, tuple):
+            fresh = fresh[:len(value)]  # a vector of 2 dimensions holds the first two of a new one's
+        if fresh is None or same(value, fresh):
+            return None
+        return self.literal(sock.node, sock, {}, output=True)
+
+    def literal(self, node, sock, defaults, output=False):
+        if not hasattr(sock, "default_value") or node.bl_idname == "NodeGroupOutput" and not output:
             return None
         value = snapshot(sock)
         if sock.identifier in defaults and same(value, defaults[sock.identifier]):
@@ -1543,15 +1621,9 @@ class GraphReader:
             return bare_name(value)
         if t in ("STRING",) or SOCKET_TYPES.get(t) in ("Object", "Collection", "Material", "Image", "Texture", "Font",
                                                                  "Sound", "Scene", "Mask", "Text"):
-            return self.string(value, node, sock)
+            return ast.String(value, 0, 0)
         self.warn(f"value of '{node.name}.{sock.name}' ({t}) not exported")
         return None
-
-    def string(self, value, node, sock):
-        if '"' in value or "\n" in value:
-            self.warn(f"'{node.name}.{sock.name}': quotes and newlines replaced")
-            value = value.replace('"', "'").replace("\n", " ")
-        return ast.String(value, 0, 0)
 
     def statement_order(self, zone):
         """Bound nodes of a zone's body (None: the graph's), each after the ones it uses,
@@ -1685,7 +1757,7 @@ class GraphReader:
         walk(body)
 
     def frame(self, f):
-        label = f.label.replace('"', "'") or None
+        label = f.label or None
         color = tuple(f.color) if f.use_custom_color else None
         return ast.Frame(label, color, [], 0, 0)
 
@@ -1740,7 +1812,7 @@ def option_literal(item, option, value):
         return number(value) if isinstance(value, float) else ast.Number(value, True, 0, 0)
     if item.bl_rna.properties[option].type == "ENUM":
         return enum_literal(value)
-    return ast.String(value.replace('"', "'").replace("\n", " "), 0, 0)
+    return ast.String(value, 0, 0)
 
 
 def literal_type(value, sock):
@@ -1794,28 +1866,31 @@ def group_keys(node, io):
 
 
 def same(a, b):
+    """Bit for bit: a value is written unless it is the one compared with, and -0.0 is not 0.0. A
+    NaN is a NaN, whatever its payload."""
     if isinstance(a, float) or isinstance(b, float):
-        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-6
-    if isinstance(a, tuple) and isinstance(b, tuple):
+        if not (isinstance(a, (int, float)) and isinstance(b, (int, float))):
+            return False
+        a, b = float(a), float(b)
+        return struct.pack("<d", a) == struct.pack("<d", b) or a != a and b != b
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
+    if isinstance(a, (tuple, list)) and isinstance(b, (tuple, list)):
         return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))
-    if hasattr(a, "__len__") and not isinstance(a, str) and hasattr(b, "__len__"):
+    if hasattr(a, "__len__") and not isinstance(a, str) and hasattr(b, "__len__") and not isinstance(b, str):
         return same(tuple(a), tuple(b))
     return a == b
 
 
 def bounded(value, fresh):
-    """No bound written: the new socket's, or one so far out it means none (old files hold ±3.40282e38)."""
-    return same(value, fresh) or abs(value) >= 1e30
+    """No bound written: the new socket's, bit for bit."""
+    return same(value, fresh)
 
 
 def number(v):
     """A float as few digits as give Blender's float32 back: the shortest decimal that reads back as
     it, the one the checker compares a number with (`precision lost: …` warns of any other)."""
     return ast.Number(stored(float(v)), False, 0, 0)
-
-
-def float32(v):
-    return struct.unpack("f", struct.pack("f", v))[0]
 
 
 def enum_literal(value):
@@ -1828,12 +1903,14 @@ def bare_name(value):
     """A name written bare when the text reads it back as that name, else in quotes."""
     if value.isidentifier() and value not in KEYWORDS and value not in ("dot", "cross", NO_VALUE):
         return ast.Ref(value, 0, 0)
-    return ast.String(value.replace('"', "'").replace("\n", " "), 0, 0)
+    return ast.String(value, 0, 0)
 
 
 def prop_literal(prop, value):
     if prop.kind == "ENUM":
         return enum_literal(value)
+    if prop.kind == "ENUM_FLAG":
+        return ast.Tuple([enum_literal(v) for v in value], 0, 0)
     if prop.kind == "BOOLEAN":
         return ast.Bool(bool(value), 0, 0)
     if prop.kind == "INT":
@@ -1853,7 +1930,7 @@ def data_literal(prop, value, fresh):
 
     def options():
         return [ast.Arg(o, option_value(v), 0, 0) for o, v in value["options"].items()
-                if rounded(v) != rounded(fresh["options"][o])]
+                if not same(v, fresh["options"][o])]
 
     if prop.kind == "RAMP":
         stops = [ast.Arg(None, ast.Tuple([number(pos), tup(color)], 0, 0), 0, 0) for pos, color in value["stops"]]
@@ -1866,7 +1943,7 @@ def data_literal(prop, value, fresh):
     if not prop.items:
         return ast.Call(CURVE, curve(value["curves"][0]) + options(), 0, 0)
     curves = [ast.Arg(name, ast.Call(CURVE, curve(value["curves"][i]), 0, 0), 0, 0)
-              for i, name in enumerate(prop.items) if rounded(value["curves"][i]) != rounded(fresh["curves"][i])]
+              for i, name in enumerate(prop.items) if not same(value["curves"][i], fresh["curves"][i])]
     return ast.Call(CURVES, curves + options(), 0, 0)
 
 

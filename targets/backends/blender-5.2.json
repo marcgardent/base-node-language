@@ -26330,6 +26330,25 @@
        }
       ],
       "default": "AUTO"
+     },
+     {
+      "name": "mode",
+      "kind": "ENUM_FLAG",
+      "description": "Whether to check the type of left and right handles",
+      "items": [
+       {
+        "value": "LEFT",
+        "label": "Left"
+       },
+       {
+        "value": "RIGHT",
+        "label": "Right"
+       }
+      ],
+      "default": [
+       "LEFT",
+       "RIGHT"
+      ]
      }
     ],
     "inputs": [],
@@ -43427,6 +43446,25 @@
        }
       ],
       "default": "AUTO"
+     },
+     {
+      "name": "mode",
+      "kind": "ENUM_FLAG",
+      "description": "Whether to update left and right handles",
+      "items": [
+       {
+        "value": "LEFT",
+        "label": "Left"
+       },
+       {
+        "value": "RIGHT",
+        "label": "Right"
+       }
+      ],
+      "default": [
+       "LEFT",
+       "RIGHT"
+      ]
      }
     ],
     "inputs": [

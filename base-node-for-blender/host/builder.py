@@ -420,6 +420,8 @@ class Builder:
                     if found is None:
                         self.missing(n, datablock, value)
                     value = found
+                if isinstance(value, tuple) and getattr(node.bl_rna.properties.get(prop), "is_enum_flag", False):
+                    value = set(value)  # a set of enum values
                 try:
                     setattr(node, prop, value)
                 except (TypeError, ValueError, AttributeError) as e:

@@ -282,7 +282,7 @@ class Socket:
 @dataclass(frozen=True)
 class Prop:
     name: str
-    kind: str  # ENUM, BOOLEAN, INT, FLOAT, STRING, or ID: a datablock, written by its name
+    kind: str  # ENUM, ENUM_FLAG (a set of enum values), BOOLEAN, INT, FLOAT, STRING, or ID: a datablock, by its name
     items: tuple = ()  # enum values; empty when Blender computes them at runtime
     datablock: str = ""  # for an ID: its Blender type, e.g. Image
 

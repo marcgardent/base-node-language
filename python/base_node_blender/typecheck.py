@@ -114,6 +114,12 @@ class Sym:
     name: str
 
 
+@dataclass
+class Flags:
+    """A set of enum values, a setting's tuple of names: `mode: (LEFT, RIGHT)`, `mode: ()`."""
+    names: tuple
+
+
 def check(file, schema, filename="<text>", load=None, warnings=None):
     """Checked graphs, callees before callers, those of the modules first. Raises BnError.
 
@@ -196,8 +202,11 @@ def deprecations(file, filename="<text>", find=None):
 
 
 def float32(v):
-    """The number Blender keeps of a float: the nearest IEEE 754 single precision one."""
-    return struct.unpack("f", struct.pack("f", v))[0]
+    """The nearest float32 of v, IEEE 754's: past the largest one by half a step and more, infinity."""
+    try:
+        return struct.unpack("f", struct.pack("f", v))[0]
+    except OverflowError:
+        return math.copysign(math.inf, v)
 
 
 def stored(v):
@@ -208,6 +217,17 @@ def stored(v):
         if float32(written) == kept:
             return written
     return kept
+
+
+def unreturned_warnings(file, filename="<text>"):
+    """A warning at each graph of outputs with no return: its tree has no Group Output node, and the outputs
+    give nothing."""
+    def returns(body):
+        return any(isinstance(s, ast.Return) or isinstance(s, ast.Frame) and returns(s.body) for s in body)
+
+    return [Diagnostic(filename, g.line, g.col, f"no return in '{g.name}': its tree has no Group Output node, "
+                                                "its outputs give nothing", "warning")
+            for g in file.graphs if g.outputs and not returns(g.body)]
 
 
 def precision_warnings(file, filename="<text>"):
@@ -396,7 +416,8 @@ class Modules:
             raise BnError(diags)
         if ident is None:
             self.warnings += sorted(deprecated_calls(file.graphs, callable_, filename)
-                                    + precision_warnings(file, filename), key=lambda d: (d.line, d.col))
+                                    + precision_warnings(file, filename) + unreturned_warnings(file, filename),
+                                    key=lambda d: (d.line, d.col))
         for g in own:
             g.module = ident
         seen = set()
@@ -699,8 +720,11 @@ class GraphChecker:
             keys.add(o.key)
 
         self.statements(g.body, gout, None)
-        if not self.returned:
+        if not self.returned and MATERIAL in [a.name for a in g.settings]:
             self.error(g, f"missing return in '{g.name}'")
+        elif not self.returned:
+            # A graph that returns nothing has no Group Output node (unreturned_warnings)
+            self.nodes.remove(gout)
 
         graph = ir.Graph(g.kind, g.name, [(p.name, p.type) for p in g.params],
                          [(o.name, o.type) for o in g.outputs], self.nodes, g.line, g.col, self.frames, defaults)
@@ -2411,6 +2435,9 @@ class GraphChecker:
             return Sym(v.name)
         if isinstance(v, ast.Call):
             return v
+        if isinstance(v, ast.Tuple) and all(isinstance(i, (ast.Ref, ast.String)) for i in v.items) \
+                and not any(isinstance(i, ast.Ref) and i.name in self.env for i in v.items):
+            return Flags(tuple(i.name if isinstance(i, ast.Ref) else i.value for i in v.items))
         return self.eval(v)
 
     def positional_setting(self, c, spec, s, v):
@@ -2460,6 +2487,21 @@ class GraphChecker:
                 hint = f"; did you mean {close[0]}?" if close else ""
                 self.error(a, f"{prop.name}: unknown {value}{hint}; values: {short_list(prop.items)}")
                 return
+        elif prop.kind == "ENUM_FLAG":
+            if not isinstance(v, Flags):
+                example = prop.items[0] if prop.items else "MODE"
+                self.error(a, f"{prop.name} is a set of values, in parentheses: {prop.name}: ({example},)")
+                return
+            unknown = [x for x in v.names if prop.items and x not in prop.items]
+            if unknown:
+                close = difflib.get_close_matches(unknown[0], prop.items, 1)
+                hint = f"; did you mean {close[0]}?" if close else ""
+                self.error(a, f"{prop.name}: unknown {unknown[0]}{hint}; values: {short_list(prop.items)}")
+                return
+            if len(set(v.names)) < len(v.names):
+                self.error(a, f"{prop.name}: a value given twice")
+                return
+            value = tuple(x for x in prop.items if x in v.names) if prop.items else v.names
         elif prop.kind == "BOOLEAN" and isinstance(v, Lit) and v.type == "Bool":
             value = v.value
         elif prop.kind == "INT" and isinstance(v, Lit) and v.type == "Int":

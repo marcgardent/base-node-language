@@ -41,9 +41,10 @@ def layout(graph):
         depth_of(n.id)
 
     last = max(depth.values(), default=0)
-    if preds[ir.GROUP_OUTPUT] or len(graph.nodes) > 2:
+    if preds.get(ir.GROUP_OUTPUT) or len(graph.nodes) > 2:
         last = max(last, 1)
-    depth[ir.GROUP_OUTPUT] = last
+    if ir.GROUP_OUTPUT in preds:  # a graph that returns nothing of no output has none
+        depth[ir.GROUP_OUTPUT] = last
     depth[ir.GROUP_INPUT] = 0
 
     # A source with no input (Position, a constant) sits just before its first user

@@ -67,11 +67,15 @@ def from_missing_image(node, name):
 
 
 def prop_value(node, name):
-    """A setting of a node as the text holds it, a datablock by its name; "" for an enum of an
-    image it has not, without reading it (see from_missing_image)."""
+    """A setting of a node as the text holds it, a datablock by its name, a set of enum values as a
+    tuple; "" for an enum of an image it has not, without reading it (see from_missing_image)."""
     if from_missing_image(node, name):
         return ""
-    return id_name(getattr(node, name))
+    value = getattr(node, name)
+    if isinstance(value, (set, frozenset)):
+        # A set of enum values, in the order of its items
+        return tuple(i.identifier for i in node.bl_rna.properties[name].enum_items if i.identifier in value)
+    return id_name(value)
 
 
 # Node data the text writes in calls of its own: a Color Ramp's stops (Ramp), a curve's points (Curve)
@@ -100,17 +104,6 @@ def data_value(data):
                for o in MAPPING_OPTIONS}
     return {"curves": {i: [(p.location[0], p.location[1], p.handle_type) for p in c.points]
                        for i, c in enumerate(data.curves)}, "options": options}
-
-
-def rounded(value):
-    """A data_value, or a part of it, rounded as Blender's UI shows it: comparable."""
-    if isinstance(value, float):
-        return round(value, 5)
-    if isinstance(value, (list, tuple)):
-        return tuple(rounded(v) for v in value)
-    if isinstance(value, dict):
-        return {k: rounded(v) for k, v in value.items()}
-    return value
 
 
 # Per Blender version and kind: ({text name: NodeSpec}, {bl_idname: NodeSpec}),
@@ -217,10 +210,12 @@ class BlenderSchema:
                     continue
                 if getattr(p, "is_array", False) or getattr(p, "array_length", 0):
                     continue  # a color or a vector property: not in the text yet
-                if p.type == "ENUM" and p.is_enum_flag or (idname, p.identifier) in SHARED_STORAGE:
+                if (idname, p.identifier) in SHARED_STORAGE:
                     continue
                 items = tuple(i.identifier for i in p.enum_items) if p.type == "ENUM" else ()
-                props[p.identifier] = Prop(p.identifier, p.type, items)
+                # A set of enum values: `mode: (LEFT, RIGHT)`
+                prop_kind = "ENUM_FLAG" if p.type == "ENUM" and p.is_enum_flag else p.type
+                props[p.identifier] = Prop(p.identifier, prop_kind, items)
             tree.nodes.remove(node)
             found[idname] = (props, data)
 
@@ -323,6 +318,8 @@ class BlenderSchema:
             node = tree.nodes.new(spec.bl_idname)
             try:
                 for name, value in props.items():
+                    if isinstance(value, tuple) and getattr(node.bl_rna.properties.get(name), "is_enum_flag", False):
+                        value = set(value)
                     try:
                         setattr(node, name, value)
                     except (TypeError, ValueError, AttributeError):
@@ -380,17 +377,18 @@ INTERFACE_FIELDS = ("default_value", "min_value", "max_value", "default_input")
 _fresh_items = {}
 
 
-def fresh_item(socket_type, tree_type="GeometryNodeTree"):
-    """{field: value} of a new group input of `socket_type` in a tree of `tree_type`, fields it has only."""
-    if (socket_type, tree_type) not in _fresh_items:
+def fresh_item(socket_type, tree_type="GeometryNodeTree", in_out="INPUT"):
+    """{field: value} of a new group input (or output) of `socket_type` in a tree of `tree_type`, fields it has only."""
+    k = (socket_type, tree_type, in_out)
+    if k not in _fresh_items:
         tree = bpy.data.node_groups.new(".base_node_fresh", tree_type)
         try:
-            item = tree.interface.new_socket("x", in_out="INPUT", socket_type=socket_type)
-            _fresh_items[(socket_type, tree_type)] = {f: snapshot(item) if f == "default_value" else getattr(item, f)
-                                                      for f in INTERFACE_FIELDS if hasattr(item, f)}
+            item = tree.interface.new_socket("x", in_out=in_out, socket_type=socket_type)
+            _fresh_items[k] = {f: snapshot(item) if f == "default_value" else getattr(item, f)
+                               for f in INTERFACE_FIELDS if hasattr(item, f)}
         finally:
             bpy.data.node_groups.remove(tree)
-    return _fresh_items[(socket_type, tree_type)]
+    return _fresh_items[k]
 
 
 _socket_types = {}

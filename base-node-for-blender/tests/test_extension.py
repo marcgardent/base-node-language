@@ -916,8 +916,166 @@ def test_edition_and_deprecated():
     assert actions.check_text(text) and text.name not in actions.LINT
 
 
+def test_exact_round_trip():
+    """A tree read as text and built back holds what it held, on Blender's data (tree_compare.py), but
+    what the text does not carry (tree_compare.NOT_CARRIED): strings of any character, floats near a
+    default, -0.0, infinity and NaN, bounds near the largest float, flag sets, an unconnected Math, two
+    Separate XYZ of one vector, a tree of no output, the value of an unlinked output, an edited group of
+    the stdlib."""
+    print("-> Test: Exact round trip...")
+    import math
+    import struct
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import tree_compare as TC
+    from base_node.blender.schema import key
+    from base_node.host import build_source, export_tree
+
+    def after(x, ulps=1):
+        """The float32 `ulps` steps above x."""
+        return struct.unpack("f", struct.pack("i", struct.unpack("i", struct.pack("f", x))[0] + ulps))[0]
+
+    def geometry(name):
+        t = bpy.data.node_groups.new(name, "GeometryNodeTree")
+        t.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+        t.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+        return t, t.nodes.new("NodeGroupInput"), t.nodes.new("NodeGroupOutput")
+
+    def trip(tree, before_build=None):
+        name = tree.name
+        text, _ = export_tree(tree)
+        tree.name = "original " + name
+        if before_build is not None:
+            before_build()
+        rebuilt = build_source(text, filename=f"{key(name)}.bn")[-1]
+        found = [d for d in TC.compare_trees(tree, rebuilt, name=lambda i: i.name.removeprefix("original "))
+                 if not TC.not_carried(d)]
+        assert not found, f"{name} built back otherwise:\n{text}\n" + "\n".join(map(str, found))
+        return text
+
+    # Strings: quotes, line breaks, a backslash, a tab, a control character, wherever a string is written
+    odd = 'say "hi"\nthen \\ go\tnow\x1b.'
+    t, gi, go = geometry("Strings")
+    t.description = odd
+    size = t.interface.new_socket(odd, in_out="INPUT", socket_type="NodeSocketFloat")
+    size.description = odd
+    panel = t.interface.new_panel('Pane "1"')
+    t.interface.new_socket("In panel", in_out="INPUT", socket_type="NodeSocketFloat", parent=panel)
+    store = t.nodes.new("GeometryNodeStoreNamedAttribute")
+    store.label = odd
+    text_node = t.nodes.new("FunctionNodeInputString")
+    text_node.string = odd
+    store2 = t.nodes.new("GeometryNodeStoreNamedAttribute")
+    store2.inputs["Name"].default_value = odd
+    t.links.new(gi.outputs[0], store.inputs[0])
+    t.links.new(text_node.outputs[0], store.inputs["Name"])
+    t.links.new(gi.outputs[1], store.inputs["Value"])
+    t.links.new(store.outputs[0], store2.inputs[0])
+    t.links.new(store2.outputs[0], go.inputs[0])
+    frame = t.nodes.new("NodeFrame")
+    frame.label = odd
+    store2.parent = frame
+    text = trip(t)
+    assert '"say \\"hi\\"\\nthen \\\\ go\\tnow\\u{1b}."' in text, text
+
+    # Floats: each as Blender holds it, bit for bit
+    t, gi, go = geometry("Floats")
+    sp = t.nodes.new("GeometryNodeSetPosition")
+    xyz = t.nodes.new("ShaderNodeCombineXYZ")
+    xyz.inputs[0].default_value = after(0.0, 8)  # a default + 1e-44
+    xyz.inputs[1].default_value = -0.0
+    xyz.inputs[2].default_value = 5e-7
+    mix = t.nodes.new("ShaderNodeMath")
+    mix.operation = "ADD"
+    mix.inputs[1].default_value = after(0.5, -1)  # just under a new node's 0.5
+    value = t.nodes.new("ShaderNodeValue")
+    value.outputs[0].default_value = math.inf
+    nan = t.nodes.new("ShaderNodeValue")
+    nan.outputs[0].default_value = math.nan
+    t.links.new(value.outputs[0], mix.inputs[0])
+    scale = t.nodes.new("ShaderNodeVectorMath")
+    scale.operation = "SCALE"
+    t.links.new(xyz.outputs[0], scale.inputs[0])
+    t.links.new(mix.outputs[0], scale.inputs["Scale"])
+    t.links.new(gi.outputs[0], sp.inputs[0])
+    t.links.new(scale.outputs[0], sp.inputs["Offset"])
+    t.links.new(sp.outputs[0], go.inputs[0])
+    t.links.new(nan.outputs[0], sp.inputs["Selection"])
+    bound = t.interface.new_socket("Bounded", in_out="INPUT", socket_type="NodeSocketFloat")
+    bound.min_value, bound.max_value, bound.default_value = -3.40282e38, 3.40282e38, after(0.0, -1)
+    text = trip(t)
+    assert "-0.0" in text and "nan" in text and "3.40282e+38" in text, text
+
+    # Flag sets: one value, none, both
+    t, gi, go = geometry("Flags")
+    one, none = t.nodes.new("GeometryNodeCurveSetHandles"), t.nodes.new("GeometryNodeCurveSetHandles")
+    one.mode, none.mode = {"LEFT"}, set()
+    pick = t.nodes.new("GeometryNodeCurveHandleTypeSelection")
+    pick.mode = {"RIGHT"}
+    t.links.new(gi.outputs[0], one.inputs[0])
+    t.links.new(one.outputs[0], none.inputs[0])
+    t.links.new(pick.outputs[0], none.inputs["Selection"])
+    t.links.new(none.outputs[0], go.inputs[0])
+    text = trip(t)
+    assert "mode: (LEFT,)" in text and "mode: ()" in text and "mode: (RIGHT,)" in text, text
+
+    # An unconnected Math of two numbers stays a Math; two Separate XYZ of one vector stay two
+    t, gi, go = geometry("Nodes")
+    m = t.nodes.new("ShaderNodeMath")
+    m.operation = "MULTIPLY"
+    m.inputs[0].default_value, m.inputs[1].default_value = 0.5, -1.0
+    pos = t.nodes.new("GeometryNodeInputPosition")
+    s1, s2 = t.nodes.new("ShaderNodeSeparateXYZ"), t.nodes.new("ShaderNodeSeparateXYZ")
+    add = t.nodes.new("ShaderNodeMath")
+    for s in (s1, s2):
+        t.links.new(pos.outputs[0], s.inputs[0])
+    t.links.new(s1.outputs[0], add.inputs[0])
+    t.links.new(s2.outputs[1], add.inputs[1])
+    sp = t.nodes.new("GeometryNodeSetPosition")
+    xyz = t.nodes.new("ShaderNodeCombineXYZ")
+    t.links.new(add.outputs[0], xyz.inputs[2])
+    t.links.new(gi.outputs[0], sp.inputs[0])
+    t.links.new(xyz.outputs[0], sp.inputs["Offset"])
+    t.links.new(sp.outputs[0], go.inputs[0])
+    trip(t)
+
+    # A tree of no output and no Group Output stays without one
+    t = bpy.data.node_groups.new("Nothing out", "GeometryNodeTree")
+    t.nodes.new("GeometryNodeInputPosition")
+    assert "return" not in trip(t)
+
+    # The value of an unlinked output of a shader group, its alpha 0 too
+    t = bpy.data.node_groups.new("Tinted", "ShaderNodeTree")
+    item = t.interface.new_socket("Color", in_out="OUTPUT", socket_type="NodeSocketColor")
+    item.default_value = (0.0, 0.0, 0.0, 0.0)
+    out = t.nodes.new("NodeGroupOutput")
+    out.inputs[0].default_value = (0.0, 0.0, 0.0, 0.0)
+    assert "return (0.0, 0.0, 0.0, 0.0)" in trip(t)
+
+    # A group of the stdlib edited in the file: the text holds it, its edit kept
+    caller = build_source("use math (bias)\n\ngeometry graph uses_math(x: Float) -> Float {\n"
+                          "  return bias(x: x, force: 0.3)\n}\n", filename="uses_math.bn")[-1]
+    group = next(n for n in caller.nodes if n.bl_idname == "GeometryNodeGroup")
+    module = group.node_tree
+    unedited, _ = export_tree(caller)
+    assert unedited.startswith("use math (bias)"), unedited
+    next(n for n in module.nodes if n.bl_idname == "ShaderNodeMath").operation = "MAXIMUM"
+
+    def keep():
+        kept = module.copy()
+        kept.name = "original " + module.name
+        group.node_tree = kept
+
+    text = trip(caller, keep)
+    assert "use math" not in text and "graph bias(" in text, text
+    for g in [g for g in bpy.data.node_groups if g.name in ("bias", "original bias", "uses_math", "original uses_math")
+              or g.name.startswith("original ") or g.name in ("Strings", "Floats", "Flags", "Nodes", "Nothing out",
+                                                              "Tinted")]:
+        bpy.data.node_groups.remove(g)
+    print("   ✓ Exact round trip verified")
+
+
 def test_tree_without_output():
-    """A tree with no Group Output node reads as a graph that returns nothing, and builds again."""
+    """A tree with no Group Output node reads as a graph with no return, and builds again without one."""
     print("-> Test: Tree without output...")
     from base_node.host import build_source, export_tree
 
@@ -926,9 +1084,11 @@ def test_tree_without_output():
     tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
     tree.nodes.new("NodeGroupInput")
     source, _ = export_tree(tree)
-    assert "return ()" in source, source
-    build_source(source, "no_output.bn")
+    assert "return" not in source, source
     bpy.data.node_groups.remove(tree)
+    rebuilt = build_source(source, "no_output.bn")[-1]
+    assert not [n for n in rebuilt.nodes if n.bl_idname == "NodeGroupOutput"], [n.name for n in rebuilt.nodes]
+    bpy.data.node_groups.remove(rebuilt)
     print("   ✓ Tree without output verified")
 
 
@@ -2505,13 +2665,12 @@ def test_copy_paste():
     assert copied == ('geometry(is_modifier: true) graph "picked selection"() -> () {\n'
                       "  offset = CombineXYZ(z: 2.0)\n"
                       "  set_position = SetPosition(offset: offset)\n"
-                      "  return ()\n"
                       "}\n"), copied
     assert file_state() == before and export_tree(tree)[0] == whole, "copying the selection changed the file"
     pasted, = actions.paste_text(copied)
     assert pasted.name == "picked selection" and \
         sorted(n.bl_idname for n in pasted.nodes) == ["GeometryNodeSetPosition", "NodeGroupInput",
-                                                      "NodeGroupOutput", "ShaderNodeCombineXYZ"], \
+                                                      "ShaderNodeCombineXYZ"], \
         [n.bl_idname for n in pasted.nodes]
     # With the Group Input and Output, the interface goes along
     for n in tree.nodes:
@@ -3969,6 +4128,7 @@ def main():
         test_live_diagnostics,
         test_edition_and_deprecated,
         test_tree_without_output,
+        test_exact_round_trip,
         test_multi_input_order,
         test_planar2d_shape_builder_pick,
         test_shader_and_compositor,
