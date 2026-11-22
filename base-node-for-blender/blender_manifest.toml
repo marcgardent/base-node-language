@@ -15,7 +15,7 @@ license = ["SPDX:GPL-3.0-or-later"]
 copyright = [
   "2026 Marc Gardent",
   # host/sugiyama.py and host/sockets.py follow Node Arrange (GPL-2.0-or-later)
-  "2024 Leonardo Pike-Excell",
+  "2024 Leonardo Pike-Excell (Node Arrange)",
 ]
 
 [permissions]
