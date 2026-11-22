@@ -11,14 +11,50 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 - Changed, a text needs an edit: a node's settings leave the parentheses for square brackets
   between its name and its inputs, `Math[ADD, use_clamp: true](a, b)`, `Object[object: "Thing"]()`,
-  `r = foreach[FACE](mesh, item: f) -> { … }`, `attribute_or<Vector>[POINT](…)` after a template's
-  types. Three delimiters, three meanings: `<>` the types of a template, `[]` what no wire can feed,
+  `r = foreach[FACE](mesh, item: f) -> { … }`, and after a call's types in the syntax,
+  `f<Vector>[…](…)`. Three delimiters, three meanings: `<>` the types of a template, `[]` what no wire can feed,
   `()` what a wire can feed. A setting takes a literal, an enum value, `_`, a template's type, a
   tuple or a call of them (`Ramp(…)`), never a name that holds a value, which is refused where it
   is written; empty brackets are refused. The parsers and formatters of Python and Rust read and
   print them alike (`conformance/bracket-cases.json`).
 - Fixed: a name that holds a value takes no types, so `Math(a < b, c > (d))` compares `a`, an input or a
   bound name, instead of calling it as a template `a<b, c>(d)`.
+- Changed: a number Blender cannot keep as written is a warning where it is written:
+  `precision lost: 16777217.0 is stored as 16777216.0 (IEEE 754 single precision)`. Every number
+  with a point or an exponent lands in a 32-bit float; the warning comes when the shortest decimal
+  that reads back as that float is another number (`0.1`, `1e-7`, `3.141593` read back as written).
+  The tree holds Blender's value. `base-node check` and the add-on show it.
+
+### Blender add-on
+
+- Changed, every text needs an edit: the checker reads a node's settings from its brackets only. A
+  setting by position is an enum value, which goes to the first enum setting of the node, in
+  Blender's order, that holds it (`Compare[INT, EQUAL]`, `AlignEulerToVector[X, pivot_axis: Z]`);
+  a template's type by position goes to the first setting that has a value for it
+  (`NamedAttribute[T](name: n)`, `Switch[T](…)`). An argument in parentheses is always an input:
+  `Math(a, b, operation: ADD)` is refused as any unknown input (`Math has no input 'operation'`),
+  where rc.3 guessed a setting from the kind of value. The domain of a For Each zone is its setting,
+  `foreach[FACE](geometry, item: f) -> { … }`; so are ramps and curves
+  (`ColorRamp[color_ramp: Ramp(…)](factor: f)`), datablocks (`Object[object: "Thing"]()`), `_` and
+  the values of the input nodes no literal makes (`Rotation[rotation_euler: (0.1, 0.0, 0.0)]()`).
+  Errors: an unknown setting, a value no enum setting of the node holds, a setting given twice, a
+  value of the wrong kind, settings on a graph, a group, a function, `repeat` or `simulate`.
+- Changed: Tree → Text writes the settings in brackets, those by position first: an enum value by
+  position when no other enum setting of that node holds it, else by name.
+- Fixed: the Normal node of a shader or a compositor tree keeps its vector, which it holds on its
+  output: `Normal[normal: (0.0, 0.7071, 0.7071)]()`. rc.3 read it back as `Normal()`, at (0, 0, 1).
+- Changed: a datablock the file does not have no longer stops the build: the input or the setting
+  stays empty and a warning says `missing datablock: Font "Title"`, once per datablock.
+- Removed: the messages that told of a former spelling or name: a node's name of before
+  (`it is now written Grid`), a zone with no arrow or `closure(…)` (`repeat takes a body after
+  '->'`), a target's name of before (`'gltf' is now 'blender gltf'`). An unknown name is unknown,
+  with the names it looks like. Removed too: rc.3's warning on a font of the file named
+  `Bfont Regular`.
+- Targets: a rule reads a setting from the brackets, by name or by position, and a translator
+  renames the settings given by name; the catalogs `targets/blender/<x.y>.json` list each node's
+  enum settings (`enums`) for that. The web viewer draws a node's settings from its brackets.
+- Completion offers a node's settings inside its brackets (its enum values, then the names of its
+  settings) and its inputs inside its parentheses; the editor colors a call and its enum values.
 
 ## [1.0.0-rc.3] - 2026-11-22
 

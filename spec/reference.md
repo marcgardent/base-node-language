@@ -63,7 +63,7 @@ Without `@offer`, a file offers `library` when it has a `@module`, `groups` alwa
 - **Quoted name**: `"Point Count"`. Referenced in expressions by its `snake_case` key (`point_count`), or given an explicit key via `as`: `"Scale" as random_scale: Float`.
 - **Reserved words**: `graph`, `return`, `true`, `false`, `and`, `or`, `xor`, `not`, `dot`, `cross`. Host sockets matching a reserved word take a trailing `_` (`not_`).
 - **Contextual keywords**: `use`, `from`, `_`. The zones are no words of the language: `repeat`, `simulate` and `foreach` are names a host gives to calls that take a body ([6](#6-calls-with-a-body-and-nameless-graphs)), and may name a state, a local or a graph.
-- **Enum values**: Unbound identifiers in argument positions resolve as enum literals (`domain: FACE`, `operation: POWER`).
+- **Enum values**: an identifier in a call's settings is an enum value, or a template's type: `Math[POWER]`, `StoreNamedAttribute[domain: FACE]` ([5](#5-expressions)).
 
 ## 3. Graph Declaration
 
@@ -81,6 +81,7 @@ A graph with a name is declared at the top of a file. Inside a body, `graph(inpu
 - **Vector size**: an input's is the size of its default (`uv: Vector = (0.5, 0.5)` is a 2D vector); an output, having no default, says it as an option (`-> (UV: Vector(dimensions: 2))`).
 - **Docstring**: An optional string literal as the first statement of the body.
 - **Deprecated**: the option `deprecated` marks a graph on its way out, with what to use instead in quotes, or `true` to say nothing more. It is no setting of the tree: the graph is built and called as before, and each call of it, from the same text or through a `use` of its module, is a **warning** at the call (`old.bn:9:10  warning: 'plane' is deprecated: use Grid`). A warning is not an error: `base-node check` prints it and its result is unchanged, the add-on lists it under the errors and builds the tree. A graph that is deprecated itself calls deprecated graphs without a warning, and a text is not told of the calls inside the modules it uses. Tree → Text writes the mark back. Any other value (`deprecated: SOON`) is an error; `deprecated: false` is a graph that stays.
+- **Precision**: a number written with a point or an exponent lands in a 32-bit float (a Float socket or setting, a component of a vector, a color or a rotation, a default or a bound of a Float input), which Blender keeps as its nearest IEEE 754 single precision number. When the shortest decimal that reads back as that number is another number than the one written, the checker warns where it is written, and the tree holds Blender's value, the one it reads back to: `t.bn:2:20  warning: precision lost: 16777217.0 is stored as 16777216.0 (IEEE 754 single precision)`. `0.1`, `1e-7` and `3.141593` read back as written: no warning. `base-node check` and the add-on show it as any warning.
 
   ```bn
   geometry(deprecated: "use Grid") graph plane(size: Float) -> Geometry {
@@ -121,11 +122,11 @@ compositor graph look(image: Color) -> Color {
   use math (gain, luminance)
 
   compositor graph contrast(image: Color, amount: Float = 0.3) -> Color {
-    return Mix(factor: gain(luminance(image), amount), a: image, b: (1.0, 1.0, 1.0, 1.0), data_type: RGBA)
+    return Mix[RGBA](factor: gain(luminance(image), amount), a: image, b: (1.0, 1.0, 1.0, 1.0))
   }
   ```
 - **Pipes**: the image a filter works on is written first and passed on with `|>`, through the output it picks when the filter has several (`Glare(…).image`), as a geometry is in a geometry tree.
-- **Datablocks**: a datablock is written by its name, in the input or the setting that holds it: `ObjectInfo(object: "Thing")`, `ImageTexture(vector: uv, image: "Bricks")`; a datablock's input node is a call like any other, `o = Object(object: "Thing")`, linked or not, and a named string is a String node, which a datablock input refuses with what to write. The datablock must be in the file. Blender's own font is `"Bfont Regular"`, whatever the file names it (a library appended beside it brings its copy as `Bfont Regular.001`): Tree → Text writes it by that name, and Text → Tree finds it under any name, loading it when the file has none; a font of the file that is named so is read as Blender's own, with a warning. `_` is no datablock at all, where a new node holds one: `StringToCurves(string: s, font: _)`, `Font(font: _)`. A Sound has no input node: a graph input (`sound: Sound`) or its name in place gives it.
+- **Datablocks**: a datablock is written by its name, in the input or the setting that holds it: `ObjectInfo(object: "Thing")` (an input), `ImageTexture[image: "Bricks"](vector: uv)` (a setting); a datablock's input node is a call like any other, `o = Object[object: "Thing"]()`, linked or not, and a named string is a String node, which a datablock input refuses with what to write. A datablock the file does not have leaves its input or its setting empty: the tree is built, with one warning per datablock missing (`t.bn:4:7  warning: missing datablock: Font "Title"`). Blender's own font is `"Bfont Regular"`, whatever the file names it (a library appended beside it brings its copy as `Bfont Regular.001`): Tree → Text writes it by that name, and Text → Tree finds it under any name, loading it when the file has none. `_` is no datablock at all, where a new node holds one: `StringToCurves(string: s, font: _)`, `Font[font: _]()`. A Sound has no input node: a graph input (`sound: Sound`) or its name in place gives it.
 - **Materials by name**: a material is written by its bare name, as a graph is called: `SetMaterial(material: Clay)`, `m: Material = Clay`. It is the material a graph of the text defines, else the file's. A name bound in the graph is that value, not a material: a material named like a binding of the graph, or whose name makes no identifier (`"Old Brick"`), is written in quotes, as is any other datablock (object, collection, image).
 
 ### 3.1 Types
@@ -190,13 +191,13 @@ geometry graph attribute_or<T: Float | Int | Bool | Vector | Color | Rotation | 
     name: String,
     fallback: T
 ) -> (value: T) {
-  a = NamedAttribute(name: name, data_type: T)
-  return (value: Switch(switch: a.exists, false_: fallback, true_: a.attribute, input_type: T))
+  a = NamedAttribute[T](name: name)
+  return (value: Switch[T](switch: a.exists, false_: fallback, true_: a.attribute))
 }
 
 geometry graph tint(geometry: Geometry, color: Color) -> Geometry {
   c = attribute_or("Col", color)
-  return geometry |> StoreNamedAttribute(name: "tint", value: c, data_type: FLOAT_COLOR)
+  return geometry |> StoreNamedAttribute[FLOAT_COLOR](name: "tint", value: c)
 }
 ```
 
@@ -208,8 +209,10 @@ geometry graph tint(geometry: Geometry, color: Color) -> Geometry {
 - **In the body**, `T` stands for the type wherever a type or a node's type setting goes:
   - an input's or an output's type: `fallback: T`, `-> (value: T)`;
   - an item's type in a zone or an item node: `repeat(n, v: T = fallback)`, `CaptureAttribute(g, v: T)`;
-  - a node's setting that picks a type (`data_type`, `input_type`, `domain` aside): `data_type: T`
-    is the value of that setting for the type. A setting names a type in its own words, so `T` takes
+  - a node's setting that picks a type (`data_type`, `input_type`, `domain` aside), in its brackets:
+    `NamedAttribute[T](name: n)` by position, `Mix[data_type: T](…)` by name, is the value of that
+    setting for the type. By position, `T` goes to the first setting of the node, in Blender's order,
+    that has a value for its type. A setting names a type in its own words, so `T` takes
     the first of the setting's values that is that type: `Vector` is `VECTOR` for a Switch and a Mix,
     `FLOAT_VECTOR` for a Named Attribute and an Evaluate at Index; `Color` is `RGBA` or `FLOAT_COLOR`;
     `Rotation` is `ROTATION` or `QUATERNION`; `Matrix` is `MATRIX` or `FLOAT4X4`; `Float`, `Int`,
@@ -291,7 +294,7 @@ type of its templates' constraints in it: a template that is a `compositor graph
 | Groups | One template? |
 |---|---|
 | Molecular Nodes' `Fallback Float`, `… Integer`, `… Boolean`, `… Vector`, `… Color`, `… Rotation`, `… Matrix` (7) | Yes: `attribute_or` above. Their outputs are named after the type (`Value`, `Output`, `Boolean`, `Color`, `Matrix`): the template has one name. `Fallback Geometry` is another graph (a test of an empty geometry) |
-| `Index Mix Float`, `… Vector`, `… Color`, `… Rotation` (4) | Yes, `<T: Float \| Vector \| Color \| Rotation>`, the types Mix takes: `data_type: T` on Mix and on both Evaluate at Index. The Color one alone clamps (`clamp_result: true`) and has a default (1, 1, 1): a template has one of each |
+| `Index Mix Float`, `… Vector`, `… Color`, `… Rotation` (4) | Yes, `<T: Float \| Vector \| Color \| Rotation>`, the types Mix takes: `Mix[T]` and both `EvaluateAtIndex[T]`. The Color one alone clamps (`clamp_result: true`) and has a default (1, 1, 1): a template has one of each |
 | `Sample Mixed Vector`, `… Color`, `… Rotation` | Yes, calling `index_mix(value, index)`, which infers its type from the template's own `T` |
 | `Sample Mix Float`, `… Vector`, `… Angle` | In part: Float and Vector are one template, but the Vector one takes `Position()` by default, a field of one type, so its callers give it. Angle differs from Float by its subtype, not its type, and stays a graph of its own |
 | T3D's `easeQuad`, `easeCubic`, `easeQuart`, `easeQuint` | No, and no need: one graph with a `power` input (above) |
@@ -308,17 +311,21 @@ toolchain before 0.12.0: it is refused there at the `<`.
 | Syntax | Meaning |
 |---|---|
 | `x = expr` | Bind expression output |
-| `size = 10` | Named constant: an input node of its own (`Value`, `Integer`, `Boolean`, `Vector`, `Color`, `String`) named `size`; a tuple, a node setting or a menu takes its value. A datablock is no literal: its input node is a call, `title = Font(font: "Bfont Regular")` ([Datablocks](#30-shader-and-compositor-graphs)) |
+| `size = 10` | Named constant: an input node of its own (`Value`, `Integer`, `Boolean`, `Vector`, `Color`, `String`) named `size`; a tuple or a menu takes its value. A setting takes no name: no wire feeds it, so its value is written in its brackets. A datablock is no literal: its input node is a call, `title = Font[font: "Bfont Regular"]()` ([Datablocks](#30-shader-and-compositor-graphs)) |
 | `return expr` | Single output return |
 | `return (A: e1, B: e2)` | Multi-output return |
 | `"Title" #color { ... }` | Visual frame (`#e73` or named color `#teal`) |
 | `"Title" .. { ... }` | Continuation of a previously opened frame |
 | `"Note" #color {}` | Standalone frame note |
 
-An input node whose value no literal makes is a call that gives it, a tuple of as many numbers as it holds:
-`Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))` (its `vector_dimensions`
-follow the tuple unless written), `IntegerVector(vector: (1, 2, 3))` (whole numbers). Tree → Text writes them
-so, and a Menu node by the item it picks (`Menu(value: B)`), set once it is linked to the menu it feeds.
+An input node whose value no literal makes is a call that gives it in its settings, a tuple of as many
+numbers as it holds: `Rotation[rotation_euler: (0.1, 0.0, 0.0)]()`, `Vector[vector: (1.0, 2.0, 3.0, 4.0)]()`
+(its `vector_dimensions` follow the tuple unless written), `IntegerVector[vector: (1, 2, 3)]()` (whole
+numbers). The Normal node of a shader or a compositor tree holds its vector on its output, a setting too:
+`Normal[normal: (0.0, 0.7071, 0.7071)]()`, three numbers, the vector of a new node (0, 0, 1) when not written.
+The Value and RGB nodes, which also hold their value on their output, are named constants (`size = 0.5`).
+Tree → Text writes them so, and a Menu node by the item it picks (`Menu[value: B]()`), set once it is linked
+to the menu it feeds.
 
 ### 4.1 Node Presentation (`@`)
 
@@ -370,11 +377,13 @@ a = NamedAttribute[T](name: name)        // T, a template's type, as a setting's
 - The language does not know which names are settings: the brackets keep them apart in the syntax
   tree (the call's `settings`, in source order, each with its key or none), and the host says what
   each node has.
-- **Node call**: `NodeName[SETTING, setting: value](geometry, socket: value)`, the node by its UI name in one word ([5.1](#51-node-names)). Inputs are named by their socket's key: the canonical form, the one a tree reads back to, names every input but those a name cannot tell — the geometry the node works on (its first input, linked: the pipe's), the items of a switch (`IndexSwitch(0, a, b)`) and the values of a multi-input (joined in the order written, the first one at the top of the socket in Blender), with the inputs before them. A value may still be written by position, in socket order and before the named ones
-- **Inputs of one name**: a socket's key is its UI name in snake case (`Base Color` is `base_color`). When two inputs of a node share a name, text tells them apart by Blender's identifier: `Math(Value: a, Value_001: b, operation: PINGPONG)`. The two `Shader` inputs of Mix Shader and Add Shader have keys of their own instead, `a` and `b`, as the Mix node names its inputs A and B: `MixShader(factor: f, a: metal, b: paint)`, `AddShader(a: glow, b: coat)`. Their identifiers (`Shader`, `Shader_001`) are still read; a tree reads back to `a` and `b`
+- **Node call**: `NodeName[SETTING, setting: value](geometry, socket: value)`, the node by its UI name in one word ([5.1](#51-node-names)).
+- **Settings**: what no wire can feed, in the brackets: an enum, a boolean, a number, a string, a datablock, a ramp or curves, the value an input node holds. A setting by position is an enum value: it goes to the first enum setting of the node, in Blender's order, that holds that value (`Compare[INT, EQUAL]`, either order; `AlignEulerToVector[X, pivot_axis: Z]`, as both `axis` and `pivot_axis` hold `X`), and a template's type parameter to the first that has a value for its type (`NamedAttribute[T]`). Every other setting is named. Tree → Text writes an enum value by position when no other enum setting of the node holds it, else by name, the settings by position first, each in Blender's order, and only those that differ from a new node's (a Math's `operation` always). An argument in parentheses is always an input: `Math(a, b, operation: ADD)` is refused as any unknown input is (`Math has no input 'operation'; inputs: …`). The errors: `Math has no setting 'clamp'; did you mean use_clamp?; settings: operation, use_clamp`, `no setting of Math takes ADDD; did you mean ADD?`, `setting 'operation' given twice`, `Math: a setting by position is an enum value; name the others, Math[operation: …]`, `use_clamp expects a boolean value`; a graph, a group or a function has none (`double has no settings`).
+- **Inputs**: inputs are named by their socket's key: the canonical form, the one a tree reads back to, names every input but those a name cannot tell — the geometry the node works on (its first input, linked: the pipe's), the items of a switch (`IndexSwitch(0, a, b)`) and the values of a multi-input (joined in the order written, the first one at the top of the socket in Blender), with the inputs before them. A value may still be written by position, in socket order and before the named ones
+- **Inputs of one name**: a socket's key is its UI name in snake case (`Base Color` is `base_color`). When two inputs of a node share a name, text tells them apart by Blender's identifier: `Math[PINGPONG](Value: a, Value_001: b)`. The two `Shader` inputs of Mix Shader and Add Shader have keys of their own instead, `a` and `b`, as the Mix node names its inputs A and B: `MixShader(factor: f, a: metal, b: paint)`, `AddShader(a: glow, b: coat)`. Their identifiers (`Shader`, `Shader_001`) are still read; a tree reads back to `a` and `b`
 - **A tuple chooses the type**: a tuple only fits a `Vector` (`Rotation`) or a `Color` socket, of as many numbers as it holds (a `Color` also takes `(r, g, b)`, its alpha 1). A node whose socket types follow a setting the call does not write (`input_type` of `Switch`, `data_type` of `Mix`, `Compare`, `StoreNamedAttribute`…) takes the type of its tuples when one would reach a number input: `Switch(b, (1.0, 0.0, 0.0), Position())` is a Vector switch, a `Color` one when a tuple has 4 numbers. The items of `IndexSwitch` and `MenuSwitch` take the type of their first item, or of their tuples when it cannot hold them. A linked value, a named constant among them, chooses nothing: `Switch(b, Position(), Position())` stays a Float switch. A tuple no socket of the node can hold is an error. Example: [`examples/tuple_tiles.bn`](../examples/tuple_tiles.bn), its [render](../site/images/showcase-tuple-tiles.png) and the [nodes it builds](../site/images/tuple-tiles-nodes.png)
 - **Group with no tree**: `Group()` is a Group node that calls no node group (its group is missing from the file). It has no sockets: it takes no input and gives no output
-- **Ramps and curves**: the stops of a Color Ramp and the points of a curve (RGB Curves, Float Curve, Vector Curves, Hue Correct, Time Curve) are the value of their property, written only when they differ from a new node's:
+- **Ramps and curves**: the stops of a Color Ramp and the points of a curve (RGB Curves, Float Curve, Vector Curves, Hue Correct, Time Curve) are the value of their property, a setting, written only when they differ from a new node's: `ColorRamp[color_ramp: Ramp(…)](factor: f)`, `FloatCurve[mapping: Curve(…)](value: v)`.
   - `color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (0.5, (1.0, 0.5, 0.0)), interpolation: EASE)`: a stop is `(position, color)`, its position from 0 to 1, its color RGB or RGBA; the settings `interpolation`, `color_mode` and `hue_interpolation` take Blender's values. The stops read back in the order of their positions.
   - `mapping: Curve((0.0, 0.0), (0.4, 0.9, VECTOR), (1.0, 1.0))` for a node of one curve: a point is `(x, y)`, or `(x, y, handle)` with a handle `AUTO_CLAMPED` or `VECTOR` (`AUTO` by default); two points at least.
   - `mapping: Curves(c: Curve(…), r: Curve(…))` for a node of several: each curve by its channel, the others as a new node's: `r`, `g`, `b`, `c` (RGB Curves, `c` for all three), `x`, `y`, `z` (Vector Curves), `h`, `s`, `v` (Hue Correct).
@@ -383,7 +392,7 @@ a = NamedAttribute[T](name: name)        // T, a template's type, as a setting's
 - **Vector swizzle**: `v.x`, `v.y`, `v.z`, of a vector, a color or an integer vector (one Separate XYZ, which leaves the alpha out)
 - **Pipe**: `a |> f(b)` is `f(a, b)`. The value passed on may be one output of a node of several, in every kind of tree: `mesh |> SeparateGeometry(selection: s).selection |> SetPosition(…)` is `SetPosition(SeparateGeometry(mesh, selection: s).selection)`; a tree reads back to the pipe. Its canonical layout is in [5.2](#52-canonical-layout)
 - **Math operators**: `+`, `-`, `*`, `/`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `and`, `or`, `xor`, `not`
-- **Comparisons**: `<`, `<=`, `>`, `>=`, `==`, `!=` are a Compare node where the tree has one (a geometry tree, and a compositor tree of Blender 5.3), which gives a `Bool` and compares numbers, vectors, colors and strings. A shader tree has no Compare node, nor has the compositor of Blender 5.2 LTS ([targets](targets.md#what-blender-53-has-that-blender-52-lts-has-not)): there they compare numbers only, with Math nodes that give a `Float`, 0.0 or 1.0, so `height > 0.5` is written the same in every tree and a module's graph that compares builds in a shader tree too. `a > b` and `a < b` are Math's Greater Than and Less Than; `a >= b` is `1.0 - (a < b)` and `a <= b` is `1.0 - (a > b)`, two nodes; `a == b` is Math's Compare, its Epsilon 0.001 as that of a new Compare node (Math's own default, 0.5, is not written by `==`), and `a != b` is `1.0 - (a == b)`. Such a tree reads these nodes back as the operator, those written by hand too: `Math(a, b, operation: GREATER_THAN)` reads `a > b` and `1.0 - (a < b)` reads `a >= b`; a Math Compare of another Epsilon stays a call. In a tree that has Compare, Math's comparisons stay calls (`Math(Value: a, Value_001: b, operation: GREATER_THAN)`). Example, in a shader graph: `mask = (height > 0.5) * (slope <= 0.2)` is three Math nodes for the comparisons and one for the product
+- **Comparisons**: `<`, `<=`, `>`, `>=`, `==`, `!=` are a Compare node where the tree has one (a geometry tree, and a compositor tree of Blender 5.3), which gives a `Bool` and compares numbers, vectors, colors and strings. A shader tree has no Compare node, nor has the compositor of Blender 5.2 LTS ([targets](targets.md#what-blender-53-has-that-blender-52-lts-has-not)): there they compare numbers only, with Math nodes that give a `Float`, 0.0 or 1.0, so `height > 0.5` is written the same in every tree and a module's graph that compares builds in a shader tree too. `a > b` and `a < b` are Math's Greater Than and Less Than; `a >= b` is `1.0 - (a < b)` and `a <= b` is `1.0 - (a > b)`, two nodes; `a == b` is Math's Compare, its Epsilon 0.001 as that of a new Compare node (Math's own default, 0.5, is not written by `==`), and `a != b` is `1.0 - (a == b)`. Such a tree reads these nodes back as the operator, those written by hand too: `Math[GREATER_THAN](a, b)` reads `a > b` and `1.0 - (a < b)` reads `a >= b`; a Math Compare of another Epsilon stays a call. In a tree that has Compare, Math's comparisons stay calls (`Math[GREATER_THAN](Value: a, Value_001: b)`). Example, in a shader graph: `mask = (height > 0.5) * (slope <= 0.2)` is three Math nodes for the comparisons and one for the product
 - **Ternary**: `cond ? a : b` is `a` where the condition holds, `b` elsewhere. It binds loosest, looser than `|>`: its branches are whole expressions (`big ? mesh |> SubdivideMesh() : mesh`), the last one may be a ternary again (`a > b ? 1.0 : a < 0.0 ? 2.0 : 3.0` reads `a > b ? 1.0 : (a < 0.0 ? 2.0 : 3.0)`), and it takes parentheses as a condition, as the first branch, as an operand (`(on ? a : b) * 2.0`) and before a pipe (`(on ? fine : coarse) |> SetShadeSmooth()`). The node it writes depends on the kind of tree:
   - in a **geometry** tree, a Switch (`Switch(switch: cond, false_: b, true_: a)`) of the type of its branches, every type Switch takes: `shape = dense ? SubdivideMesh(mesh) : mesh` is a Geometry switch, `radius = index > 4 ? 0.1 : 0.2` a Float one, chosen for each element when the condition is a field;
   - in a **shader** tree, where a Switch takes one value for the whole surface, a Mix by the condition (`Mix(factor: cond, a: b, b: a)`, the value when false being its A) for `Float`, `Vector`, `Color` and `Rotation` branches, and a Mix Shader for `Shader` branches: `color = height > 0.5 ? snow : rock`, `surface = facing > 0.5 ? DiffuseBSDF() : GlossyBSDF()`;
@@ -391,7 +400,7 @@ a = NamedAttribute[T](name: name)        // T, a template's type, as a setting's
 
   The type is the one its branches give, by the rule of `Switch`: with a tuple, a Color when one has 4 numbers, else a Vector; else the type of the first linked value, the one when false first, else of the first literal. The other branch must be of that type or one Blender converts to it. A Mix carries no `Int` and no `Bool`: such branches go in as `Float`. A type no node of the tree carries is refused with those it takes: `'? :' chooses between Float, Vector, Color, Rotation and Shader in a shader tree, not String`. Where it is a Mix or a Mix Shader the condition must be one, a `Bool` or a comparison (by its name too: `hot = t > 0.5`, then `hot ? a : b`), as a Mix by any number blends and does not choose: `f ? a : b` on a `Float` is refused, to be written `f > 0.5 ? a : b`, or `Mix(factor: f, …)` to blend. **Outside a geometry tree's Switch both branches are always computed**: a Mix evaluates its two inputs for every pixel; a geometry Switch whose condition is a single value evaluates only the branch it gives.
 
-  A tree reads back to a ternary the nodes one writes, and only those. In a geometry tree, a Switch whose condition is linked, whose two branches the text can write (a link or a literal, written even at the socket's default: `on ? x : 0.0`) and whose type is the one they give; any other stays a call (`Switch(switch: on, true_: mesh, input_type: GEOMETRY)` has no geometry to write when false). In a shader or a compositor tree, a Mix whose settings but `data_type` are a new node's and whose factor comes from a `Bool` or a comparison, and a Mix Shader of such a factor; a Mix by any other number stays `Mix(factor: f, …)`, and a Switch there stays `Switch(…)`. In a geometry tree a Mix is never a ternary
+  A tree reads back to a ternary the nodes one writes, and only those. In a geometry tree, a Switch whose condition is linked, whose two branches the text can write (a link or a literal, written even at the socket's default: `on ? x : 0.0`) and whose type is the one they give; any other stays a call (`Switch[GEOMETRY](switch: on, true_: mesh)` has no geometry to write when false). In a shader or a compositor tree, a Mix whose settings but `data_type` are a new node's and whose factor comes from a `Bool` or a comparison, and a Mix Shader of such a factor; a Mix by any other number stays `Mix(factor: f, …)`, and a Switch there stays `Switch(…)`. In a geometry tree a Mix is never a ternary
 - **Vector products**: `u ⋅ v` (`u dot v`), `u × v` (`u cross v`)
 - **Math functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `sqrt`, `pow`, `exp`, `log`, `abs`, `min`, `max`, `smooth_min`, `smooth_max`, `clamp`, `floor`, `ceil`, `fract`, `mod`, `length`, `normalize`, `distance`. `smooth_min(a, b, k)` and `smooth_max(a, b, k)` are Math's Smooth Minimum and Smooth Maximum, of numbers only, `k` the distance over which the two blend: `smooth_min(d1, d2, 0.1)` joins two distance fields without a crease
 - **Operands of a formula**: a number, a vector, a color, or an integer vector (Image Info's `dimensions`, Image Coordinates' `pixel`), which Vector Math takes as floats as Blender converts it: `length(ImageInfo(image).dimensions * 0.5)`. A tuple operand of Vector Math is converted the same way: `(x, y)` is `(x, y, 0.0)` and `(r, g, b, a)` leaves its alpha out, so `center + (0.1, 0.0)` and `(1.0, 0.4, 0.1, 1.0) * m` are written as an author of 2D images writes them; they read back with three numbers (`center + (0.1, 0.0, 0.0)`). Into a node's input a tuple has the socket's size, and one of another size is refused with the tuple to write: `Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)`
@@ -412,7 +421,7 @@ Two exceptions keep the name a node had before (its `bl_idname` without the pref
 - a label that starts with a digit makes no identifier: *3D Cursor* is `Tool3DCursor`;
 - when two nodes of one tree kind have the same UI name, the one that tree's *Add* menu offers takes it and the other keeps its former name. In Blender 5.3 this happens twice, both in a compositor tree: *RGB Curves* is `RGBCurves` for the compositor's own node (`CompositorNodeCurveRGB`) and `RGBCurve` for the shader one (`ShaderNodeRGBCurve`); *Switch* is `Switch` for the one of every tree (`GeometryNodeSwitch`) and `CompositorNodeSwitch` for the compositor's older one.
 
-A name written as before this rule (`BsdfPrincipled`, `TexNoise`, or a full `bl_idname`) is refused with the name it is written by now: `unknown node 'BsdfPrincipled' in a shader tree; it is now written PrincipledBSDF`. One former name is another node's name now and reads as that node: in a compositor tree `Cryptomatte` was the legacy node, which is now `CryptomatteLegacy`, and is now the current one (*Cryptomatte*, formerly `CryptomatteV2`). Any other unknown name is compared with the node names case, spaces and underscores aside, so `noise_texture` suggests `NoiseTexture`.
+An unknown name is compared with the node names case, spaces and underscores aside, so `noise_texture` suggests `NoiseTexture`.
 
 ### 5.2 Canonical Layout
 
@@ -437,16 +446,14 @@ The formatter and a tree read back print one layout, set by a width of 100 chara
 ```bn
   transform = Cube(size: CombineXYZ(x: 2.0))
     |> TransformGeometry(translation: CombineXYZ(), scale: CombineXYZ(x: 1.0, y: 1.0, z: 1.0))
-  hair = Switch(
+  hair = Switch[GEOMETRY](
       switch: Hairs > 0.0,
-      true_: (points |> SetMaterial(material: Hair)) + (lint |> SetMaterial(material: Lint)),
-      input_type: GEOMETRY)
-    + Switch(
+      true_: (points |> SetMaterial(material: Hair)) + (lint |> SetMaterial(material: Lint)))
+    + Switch[GEOMETRY](
       switch: Cobwebs > 0.0,
       true_: cobweb
         |> InstanceOnPoints(instance: strand, rotation: align, scale: CombineXYZ(x: s, y: s, z: s))
-        |> RealizeInstances(),
-      input_type: GEOMETRY)
+        |> RealizeInstances())
   return hair
     |> TransformGeometry(
       translation: CombineXYZ(x: 1.0, y: 1.0, z: 1.0),
@@ -487,7 +494,7 @@ r = repeat(iterations, val: initial) -> {
 }
 
 // For Each Element zone
-out = foreach(geometry, domain: FACE, p: Position()) -> {
+out = foreach[FACE](geometry, p: Position()) -> {
   return (geometry: Points(position: p))
 }
 
@@ -508,9 +515,9 @@ b = CombineBundle(factor: 0.5, shape: shape)
 |---|---|---|---|
 | `repeat(count, state: start, …)` | The iteration count first, then one state at least, each named | `iteration`, the states | The next value of each state by name, or the value alone for a single state; a state left out goes on unchanged |
 | `simulate(state: start, …)` | Named states | `delta_time`, the states | The same, and `skip` |
-| `foreach(geometry, domain: FACE, selection: s, item: field, …)` | The geometry first, then `domain`, `selection` and the input items, each named | `index`, `element`, the input items | Its items by name: the main items, then from the first geometry on, the generated geometry and its attributes |
+| `foreach[FACE](geometry, selection: s, item: field, …)` | Its domain in brackets; the geometry first, then `selection` and the input items, each named | `index`, `element`, the input items | Its items by name: the main items, then from the first geometry on, the generated geometry and its attributes |
 
-A call of another shape is an error at the call, which says the shape (`repeat expects iteration count first: repeat(10, state: start, …) -> { … }`, `foreach expects geometry first, then named items: foreach(geometry, domain: FACE, item: field, …) -> { … }`). So is a call of `repeat`, `simulate` or `foreach` with no body, when the text has nothing else of that name (`repeat takes a body after '->': r = repeat(10, state: start) -> { … }`): it is how a zone written without its arrow reads, the brace after it opening a frame. `closure(…) -> … { … }`, as a nameless graph was written, is refused the same way (`closure(…) is now written as a graph with no name: f = graph(x: Float) -> Float { … }`).
+A call of another shape is an error at the call, which says the shape (`repeat expects iteration count first: repeat(10, state: start, …) -> { … }`, `foreach expects geometry first, then named items: foreach[FACE](geometry, item: field, …) -> { … }`). `repeat` and `simulate` have no settings (`repeat has no settings`); the one setting of `foreach` is its domain, by position or named (`foreach[domain: FACE]`), `POINT` when not written. A call of `repeat`, `simulate` or `foreach` with no body is a call of a node of that name, which no tree has: the brace after it opens a frame.
 
 The inputs and outputs of a Closure zone are items: they take no default value and no range (`a closure item has no default value or range`).
 
