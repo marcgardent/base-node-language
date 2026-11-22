@@ -33,6 +33,7 @@ that writes the library's texts in the repository too, corpus/v1/<name>/ (see `l
 
 from __future__ import annotations
 
+import collections
 import hashlib
 import io
 import json
@@ -51,6 +52,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import library_corpus  # noqa: E402
 import test_extension as T  # noqa: E402  (loads base_node)
+import tree_compare  # noqa: E402
 
 import bpy  # noqa: E402
 
@@ -63,7 +65,8 @@ VERSION = tomllib.loads((T.EXT_DIR / "blender_manifest.toml").read_text(encoding
 MATERIAL = "material:"  # the key of a material's record, beside those of the groups
 RENDERS = ("render", "render fed")  # a material is rendered as it is, a shader group also fed
 COMPOSITES = ("composite",)  # a compositor group, applied to the stage's render
-
+ORIGINAL = "original "  # the originals keep their trees under this prefix, beside those built back
+NOT_CARRIED_SEEN = collections.Counter()  # class -> the differences of it the text does not carry, in this run
 
 class RangeFile(io.RawIOBase):
     """A remote file read by HTTP ranges: zipfile reads only the directory and the member it needs."""
@@ -352,8 +355,10 @@ class Stage:
         shutil.rmtree(self.dir, ignore_errors=True)
 
 
-def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
-    """{key: record} and {key: text} for the trees of `blend` that `trees` names.
+def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None, serious=None):
+    """{key: record} and {key: text} for the trees of `blend` that `trees` names; `serious`, when given, is
+    filled with the (key, difference) of the data of each tree built back from its original that the text
+    should carry (`tree_compare.NOT_CARRIED`).
 
     `trees` is the manifest's: "geometry" (its Geometry Nodes groups, the default), "shader" (its shader
     node groups), "material" (its materials' own trees, keyed `material:<name>`), "compositor" (its
@@ -366,6 +371,7 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
     a difference there is kept as `blender_quirk` rather than failing the record."""
     nondeterministic = nondeterministic or {}
     quirks = quirks or {}
+    serious = [] if serious is None else serious
     unknown = set(trees) - set(TREES)
     assert not unknown, f"unknown trees {sorted(unknown)}; trees: {TREES}"
     from base_node.host import build_source, export_tree
@@ -409,11 +415,11 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
     originals = {}
     for g in loaded:
         name = g.name
-        g.name = f"original {name}"
+        g.name = f"{ORIGINAL}{name}"
         originals[name] = g
     for m in mats:
         name = m.name
-        m.name = f"original {name}"
+        m.name = f"{ORIGINAL}{name}"
         originals[f"{MATERIAL}{name}"] = m
 
     def rebuilt(name):
@@ -470,6 +476,23 @@ def round_trip(blend, nondeterministic=None, trees=("geometry",), quirks=None):
         stage.remove()
     for o in [o for o in bpy.data.objects if o.users_scene]:
         bpy.data.objects.remove(o)
+    # On Blender's data: each original beside the tree built back, the groups they call once each
+    comparator = tree_compare.Comparator(lambda id: id.name.removeprefix(ORIGINAL))
+    try:
+        for name in sorted(texts):
+            if records[name]["status"] == "build_error":
+                continue
+            a = originals[name].node_tree if what[name] == "material" else originals[name]
+            b = rebuilt(name).node_tree if what[name] == "material" else rebuilt(name)
+            if (a.as_pointer(), b.as_pointer()) in comparator.seen:
+                continue
+            for d in comparator.compare(a, b):
+                if tree_compare.not_carried(d):
+                    NOT_CARRIED_SEEN[d.cls.split(":")[0]] += 1
+                else:
+                    serious.append((name, d))
+    finally:
+        comparator.close()
     return records, texts
 
 
@@ -551,10 +574,13 @@ def test_library(manifest):
     oldest = lib.get("blender_min")
     if oldest and bpy.app.version[:2] < tuple(int(x) for x in oldest.split(".")):
         raise Skipped(f"{lib['name']} needs Blender {oldest}, this is {bpy.app.version_string}")
+    serious = []
     records, texts = round_trip(fetch(lib), lib.get("nondeterministic"), lib.get("trees", ("geometry",)),
-                                lib.get("blender_quirks"))
+                                lib.get("blender_quirks"), serious)
     kept = keep_texts(name, texts)
     print(f"   {len(records)} groups: {summary(records)}; texts in {kept}")
+    assert not serious, (f"{lib['name']}: {len(serious)} differences of the data the text should carry\n"
+                         + "\n".join(f"{key}: {d}" for key, d in serious[:80]))
     baseline_path, written = baseline_file(manifest)
     if os.environ.get("BASE_NODE_UPDATE_FIXTURES") or not baseline_path.exists():
         main = manifest.with_suffix(".baseline.json")
@@ -601,6 +627,8 @@ def main():
         except Exception:
             failed += 1
             traceback.print_exc()
+    print("   not carried by the text, by decision: "
+          + ", ".join(f"{c} {n}" for c, n in sorted(NOT_CARRIED_SEEN.items())))
     if os.environ.get("BASE_NODE_UPDATE_FIXTURES"):
         import regression_badges
         print(f"   badges written: {regression_badges.write()}")

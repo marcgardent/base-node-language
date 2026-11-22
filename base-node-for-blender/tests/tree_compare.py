@@ -191,6 +191,55 @@ def severity(cls):
     return CLASSES.index("presentation" if cls.startswith("presentation") else cls)
 
 
+# What the text does not carry, by decision: the differences of these classes between a tree and the
+# tree built back from its text are no loss. Each is one sentence of spec/reference.md, "What the
+# text does not carry"; a class limited to some properties or node types names them. Any other
+# difference fails the library.
+NOT_CARRIED = (
+    # "How the editor draws the tree: the names of the nodes, their labels and colours, …"
+    ("presentation", None, None),
+    # "A muted link carries nothing: it is dropped."
+    ("link-muted", None, None),
+    # "Several Group Input nodes are read as one."
+    ("node-merged", "node_type", {"NodeGroupInput"}),
+    # "The value and the link of an input its node does not show: …"
+    ("default-unavailable", None, None),
+    ("link-unavailable", None, None),
+    ("default-implicit", None, None),
+    # "Whether a socket is hidden, or its value: …"
+    ("socket-hide", None, None),
+    ("socket-hide-value", None, None),
+    # "The default, minimum and maximum of an interface output: …"
+    ("interface-output", None, None),
+    # "What a node's warnings reach (`warning_propagation`), the iteration the editor inspects
+    # (`inspection_index`), a gizmo pinned on a group's socket (`pin_gizmo`)."
+    ("setting-lost", "prop", {"warning_propagation", "inspection_index"}),
+    ("socket", "prop_end", {".pin_gizmo"}),
+    # "The tree's asset mark and its data, its fake user, the id-name of its node tool, and where the
+    # compositor offers it (…)."
+    ("tree-asset", None, None),
+    ("tree-setting", "prop", {"use_fake_user", "node_tool_idname", "allow_usage_in_scene_compositor_effect",
+                              "is_strip_modifier"}),
+    # "The custom properties of add-ons."
+    ("idprop", None, None),
+    # "The identifiers Blender gives sockets, items and interface items, which it renumbers."
+    ("socket-identifier", None, None),
+    ("item-identifier", None, None),
+    ("interface-identifier", None, None),
+)
+
+
+def not_carried(d):
+    """Whether a difference of the data is one the text does not carry, by NOT_CARRIED."""
+    for cls, field, values in NOT_CARRIED:
+        if d.cls != cls and not (cls == "presentation" and d.cls.startswith("presentation:")):
+            continue
+        if field is None or field == "node_type" and d.node_type in values or field == "prop" and d.prop in values \
+                or field == "prop_end" and any(d.prop.endswith(v) for v in values):
+            return True
+    return False
+
+
 # --- Values -----------------------------------------------------------------------------------
 
 class Ref:
@@ -375,8 +424,9 @@ class Comparator:
             # Blender's own font, under whatever name the file gives its copy (Bfont Regular.001
             # once a library brought one): the same font
             return ("ID", "VectorFont", "<builtin>", None)
-        return ("ID", type(value).__name__, self.name(value),
-                value.library.filepath if value.library is not None else None)
+        # By its type and name, not by the file it is linked from, which a tree's own `library` is not
+        # compared for either (TREE_FILTERED): a group a node calls is compared on its own
+        return ("ID", type(value).__name__, self.name(value))
 
     def value(self, v, side):
         """A pointer as a comparable value: an ID by its type and name, a node, socket or
