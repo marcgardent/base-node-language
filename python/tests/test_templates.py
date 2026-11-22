@@ -308,11 +308,8 @@ def test_what_the_parser_reads_as_types_for_want_of_a_value():
     # A name nothing binds: refused as unknown, as the comparisons would be
     assert errors(graph("return CombineXYZ(x: max(nope < v, z > (v)))", params="v: Float")) == [
         "unknown name 'nope'"]
-    # A name only the zone knows: the parser could not tell, the checker says how to write it
+    # A name its zone gives the body holds a value there: the parser reads comparisons
     body = "r = repeat(3, s: 0.0) -> {\n    return max(iteration < v, v > (s))\n  }\n  return CombineXYZ(x: r)"
-    assert errors(graph(body, params="v: Float")) == [
-        "'iteration' is a value, not a template: a comparison goes in parentheses, (iteration < v)"]
-    body = body.replace("max(iteration < v, v > (s))", "max((iteration < v), v > (s))")
     assert compile_(graph(body, params="v: Float"))
 
 

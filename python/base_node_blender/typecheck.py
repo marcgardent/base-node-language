@@ -1952,7 +1952,7 @@ class GraphChecker:
             return None
         if c.type_args is not None and c.name not in self.graphs:
             if c.name in self.env:
-                # A name the parser cannot know holds a value, `iteration` in a repeat: `<` compared
+                # A name that holds a value where the parser did not know it: `<` compared
                 self.error(c, f"'{c.name}' is a value, not a template: "
                               f"a comparison goes in parentheses, ({c.name} < {c.type_args[0]})")
             elif spec is None and not self.unsure and not self.is_function(c.name) \

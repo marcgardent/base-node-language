@@ -21,7 +21,7 @@ WORDS = {"dot": "⋅", "cross": "×", "·": "⋅"}
 LOOK_FLAGS = ("hide", "mute")
 
 # The names each zone gives its body, beside its items: they hold a value there, so `iteration < n`
-# compares (spec/reference.md, 6.1). The same whatever the version of Blender and the settings
+# compares (spec/reference.md, 6.1). The same whatever the version of the host and the settings
 ZONE_NAMES = {"repeat": ("iteration",), "simulate": ("delta_time",), "foreach": ("index", "element")}
 
 
