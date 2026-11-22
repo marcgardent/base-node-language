@@ -173,6 +173,7 @@ read the file of the Blender that runs (`targets/backends/blender-<x.y>.json`). 
 | [`rust-blender/`](rust-blender/) | What is Blender's in Rust (`base-node-blender`: target checker and translators, the targets and the stdlib built in, what a file offers the add-on), `wasm32`-compatible | MIT OR Apache-2.0 |
 | [`web/`](web/) | `<bn-view>` Web Component: a `.bn` text read-only, its code and node graph (Rust → wasm), copy, enlarge, backend tags | MIT OR Apache-2.0 |
 | [`base-node-for-blender/`](base-node-for-blender/) | Blender 5.2+ extension *Base Node* (node tree ⇄ `.bn` text, stdlib bundled) | GPL-3.0-or-later |
+| [`corpus/`](corpus/) | The node groups of third-party libraries as `.bn` text, read by Blender 5.3: version 1 of the language, which a later version must read | Each library's, in its folder's `LICENSE` |
 
 ## Targets
 
@@ -403,6 +404,7 @@ blender --background --factory-startup --python-exit-code 1 \
 
 - `spec/`, `targets/`, `stdlib/`, `conformance/`, `python/`, `rust/`, `rust-blender/`: [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
 - `base-node-for-blender/`: GPL-3.0-or-later.
+- `corpus/`: not MIT nor Apache-2.0: each `corpus/v1/<library>/` is a derived work of its library, under that library's license, in its `LICENSE` (GPL-3.0-or-later, GPL-2.0-or-later or CC0-1.0; see [`corpus/README.md`](corpus/README.md)).
 - `base-node-for-blender/tests/fixtures/everyday_geometry_nodes.blend`: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), node groups by Cartesian Caramel, from [blender-remote-asset-library-test-v1](https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1) and its `.bn` text in `everyday_geometry_nodes/` (see [their README](base-node-for-blender/tests/fixtures/README.md)).
 
 Hosted and sponsored by [Ludopant Creative Studio](https://ludopant.com/). The licences above stay as they are.

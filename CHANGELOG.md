@@ -26,6 +26,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   The tree holds Blender's value. `base-node check` and the add-on show it. Tree → Text writes each
   number as that shortest decimal, so a text read back is never warned of (rc.3 wrote 7 digits at
   least: `0.0009908871` for `0.000990887`).
+- Added: `corpus/v1/`, the node groups of the 17 third-party libraries of the tests read as `.bn` text
+  by Blender 5.3, each folder under its library's license: a later version of the language must read them.
 
 ### Blender add-on
 

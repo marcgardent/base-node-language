@@ -186,4 +186,10 @@ BASE_NODE_UPDATE_FIXTURES=1 blender --background --factory-startup --python-exit
 The texts of the last run are in the cache under `texts/<name>`, those of the run before under
 `texts/<name>.previous`; `diff -r` them to read what a change of the reader changed.
 
+The texts themselves are kept in the repository, in [`corpus/v1/<name>/`](../../../corpus/), one
+`<group>.bn` per group (the key of its name in code, `material_<name>` for a material) with a
+`README.md` made from the manifest and the library's `LICENSE`. The run that writes the baselines
+writes them, with the Blender of `<name>.baseline.json` only (`library_corpus.py`);
+`python/tests/test_corpus.py` checks them against the baselines without Blender.
+
 Thanks to the authors of these libraries for publishing them.
