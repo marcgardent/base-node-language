@@ -1,4 +1,5 @@
-"""Constant input nodes the checker makes: a named datablock, and no datablock at all (`_`)."""
+"""Constant input nodes the checker makes: a named datablock, no datablock at all (`_`), and the
+values no literal holds (a Rotation, a 4D Vector, an Integer Vector)."""
 
 import pytest
 
@@ -27,6 +28,12 @@ NODES = {
                    [S("Object", "Object")], [S("Geometry", "Geometry")]),
     "JoinStrings": (NodeSpec("JoinStrings", "GeometryNodeStringJoin"),
                     [S("Delimiter", "String")], [S("String", "String")]),
+    "Rotation": (NodeSpec("Rotation", "FunctionNodeInputRotation"), [], [S("Rotation", "Rotation")]),
+    "Vector": (NodeSpec("Vector", "FunctionNodeInputVector",
+                        {"vector_dimensions": Prop("vector_dimensions", "INT")}), [], [S("Vector", "Vector")]),
+    "IntegerVector": (NodeSpec("IntegerVector", "FunctionNodeInputIntVector",
+                               {"vector_dimensions": Prop("vector_dimensions", "INT")}),
+                      [], [S("Vector", "Int_Vector")]),
 }
 
 
@@ -96,3 +103,27 @@ def test_no_datablock_is_an_underscore():
     assert next(n for n in g.nodes if n.bl_idname == "GeometryNodeInputFont").props == {"font": None}
     # Elsewhere `_` is still no name
     assert errors("  return StringToCurves(string: _)") == ["t.bn:2:25  unknown name '_'"]
+
+
+def test_values_no_literal_makes():
+    g = compile_one("  return Rotation(rotation_euler: (0.1, 0.2, 0.3))", out="Rotation")
+    assert g.nodes[-1].props == {"rotation_euler": (0.1, 0.2, 0.3)}
+    # The dimensions first, from the tuple unless written
+    g = compile_one("  return Vector(vector: (1.0, 2.0, 3.0, 4.0))", out="Vector")
+    assert list(g.nodes[-1].props.items()) == [("vector_dimensions", 4), ("vector", (1.0, 2.0, 3.0, 4.0))]
+    g = compile_one("  return Vector(vector: (1.0, 2.0, 3.0, 4.0), vector_dimensions: 4)", out="Vector")
+    assert list(g.nodes[-1].props.items()) == [("vector_dimensions", 4), ("vector", (1.0, 2.0, 3.0, 4.0))]
+    g = compile_one("  return IntegerVector(vector: (1, 2, 3))", out="Vector")
+    assert g.nodes[-1].props == {"vector_dimensions": 3, "vector": (1, 2, 3)}
+    assert type(g.nodes[-1].props["vector"][0]) is int
+
+
+def test_values_no_literal_makes_are_checked():
+    assert errors("  r = Rotation(rotation_euler: (0.1, 0.2))\n  return geometry") == \
+        ["t.bn:2:16  rotation_euler expects 3 numbers, receives 2"]
+    assert errors("  v = Vector(vector: (1.0, 2.0), vector_dimensions: 3)\n  return geometry") == \
+        ["t.bn:2:14  vector expects 3 numbers (vector_dimensions), receives 2"]
+    assert errors("  v = IntegerVector(vector: (1.5, 2.0, 3.0))\n  return geometry") == \
+        ["t.bn:2:21  vector expects whole numbers"]
+    assert errors("  r = Rotation(rotation_euler: 1.0)\n  return geometry") == \
+        ["t.bn:2:16  rotation_euler expects a tuple of numbers"]

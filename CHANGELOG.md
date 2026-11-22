@@ -19,6 +19,10 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   `StringToCurves(font: title)`, is a Font node named `title` (Object, Collection, Material and
   Image alike); it was a String node linked to nothing, and the name was lost. A Font, Object,
   Collection, Material or Image node made in Blender reads to such a constant.
+- Fixed: a Rotation node, a 4D Vector node and an Integer Vector node keep their value:
+  `Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))`,
+  `IntegerVector(vector: (1, 2, 3))`. They were written without it (`Rotation()`) and built at zero.
+- Fixed: a Menu node builds with the item it picks (`Menu(value: B)`), set once it is linked.
 
 ## [1.0.0-rc.1] - 2026-11-22
 

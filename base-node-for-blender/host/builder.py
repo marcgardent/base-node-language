@@ -27,6 +27,9 @@ DATABLOCKS = {"OBJECT": "objects", "COLLECTION": "collections", "MATERIAL": "mat
               "IMAGE": "images", "TEXTURE": "textures", "FONT": "fonts",
               "SOUND": "sounds", "SCENE": "scenes", "MASK": "masks", "TEXT": "texts"}
 
+# The item a Menu node picks: it has items only once linked to the menu it feeds, and the tree updated
+MENU_VALUE = ("FunctionNodeInputMenu", "value")
+
 # Item options set after the links: a Viewer's auto_remove drops an item nothing feeds yet
 LATE_OPTIONS = {"auto_remove"}
 
@@ -365,6 +368,7 @@ class Builder:
 
         nodes = {}
         self.made[g.name] = (nodes, frames)
+        menu_values = []  # (n, node, item) of the Menu nodes, set once linked
         for n in g.nodes:
             idname = n.bl_idname
             if material and n.id == ir.GROUP_INPUT:
@@ -390,6 +394,9 @@ class Builder:
                 # A group of the file the text does not define is used as it is
                 node.node_tree = built[n.group] if n.group in self.graphs else bpy.data.node_groups[n.group]
             for prop, value in n.props.items():
+                if (n.bl_idname, prop) == MENU_VALUE:
+                    menu_values.append((n, node, value))  # its items come from the menu it feeds
+                    continue
                 datablock = id_type(node.bl_rna.properties[prop]) if prop in node.bl_rna.properties else None
                 if datablock and isinstance(value, str):
                     found = self.datablock(datablock, datablocks(datablock), value)
@@ -485,6 +492,15 @@ class Builder:
                 sock.default_value = self.coerce(n, sock, value)
             except (TypeError, ValueError) as e:
                 self.fail(n, f"{ident}: {e}")
+        for n, node, value in menu_values:
+            if not updated and value not in {i.identifier for i in node.bl_rna.properties["value"].enum_items}:
+                tree.update_tag()
+                bpy.context.view_layer.update()
+                updated = True
+            try:
+                node.value = value
+            except (TypeError, ValueError) as e:
+                self.fail(n, f"value: {e}")
         # Once linked: an item set to remove itself goes at once while nothing feeds it
         for item, option, value in self.late:
             setattr(item, option, value)

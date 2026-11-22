@@ -19,7 +19,8 @@ from ..blender import sugar
 from ..lang import ast
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..blender.typecheck import (DATABLOCK_NODES, MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type, switch_value_type, type_setting)
+from ..blender.typecheck import (DATABLOCK_NODES, MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, VALUE_PROPS,
+                                branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
 from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
@@ -1193,6 +1194,13 @@ class GraphReader:
                 self.warn(f"'{node.name}.{pname}': quotes and newlines replaced")
                 value = value.replace('"', "'").replace("\n", " ")
             args.append(ast.Arg(pname, prop_literal(spec.props[pname], value), 0, 0))
+        if node.bl_idname in VALUE_PROPS:
+            # The value of a Rotation, a 4D Vector, an Integer Vector: no literal makes those nodes
+            pname, integers = VALUE_PROPS[node.bl_idname]
+            value = tuple(getattr(node, pname))
+            if any(value):
+                args.append(ast.Arg(pname, ast.Tuple([ast.Number(int(v), True, 0, 0) if integers else number(v)
+                                                      for v in value], 0, 0), 0, 0))
         for pname, value in data.items():
             args.append(ast.Arg(pname, value, 0, 0))
 

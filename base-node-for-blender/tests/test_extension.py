@@ -381,6 +381,78 @@ geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
     print("   ✓ Fonts read back to the same tree")
 
 
+def test_constant_nodes_by_hand():
+    """Every input node that holds one value, made in Blender with a value of its own, reads to a
+    text that builds the same node with that value: Rotation, a 4D Vector and an Integer Vector by
+    their value, the datablock nodes (Object, Collection, Material, Image, Font) as named constants."""
+    print("-> Test: constant nodes made by hand...")
+    from base_node.host import build_source, export_tree
+
+    stuff = {"material": bpy.data.materials.new("Clay"), "image": bpy.data.images.new("Tex", 4, 4),
+             "object": bpy.data.objects.new("Thing", None), "collection": bpy.data.collections.new("Stuff"),
+             "font": bundled_font()}
+    for value in stuff.values():
+        value.use_fake_user = True  # a node does not count as a user of an object: Blender would warn
+    cases = [  # (tree kind, bl_idname, its value's property, value, output socket type, a line of the text)
+        ("GeometryNodeTree", "FunctionNodeInputRotation", "rotation_euler", (0.5, 0.25, 0.125), "NodeSocketRotation",
+         "Rotation(rotation_euler: (0.5, 0.25, 0.125))"),
+        ("GeometryNodeTree", "FunctionNodeInputVector", "vector", (1.0, 2.0, 3.0, 4.0), "NodeSocketVector",
+         "Vector(vector_dimensions: 4, vector: (1.0, 2.0, 3.0, 4.0))"),
+        ("CompositorNodeTree", "FunctionNodeInputRotation", "rotation_euler", (0.5, 0.0, 0.0), "NodeSocketRotation",
+         "Rotation(rotation_euler: (0.5, 0.0, 0.0))"),
+        ("CompositorNodeTree", "FunctionNodeInputIntVector", "vector", (1, 2, 3), "NodeSocketVector",
+         "IntegerVector(vector: (1, 2, 3))"),
+    ] + [("GeometryNodeTree", f"GeometryNodeInput{prop.title()}", prop, value, f"NodeSocket{prop.title()}",
+          f'{prop} = "{value.name}"') for prop, value in stuff.items()] \
+      + [("CompositorNodeTree", f"GeometryNodeInput{prop.title()}", prop, stuff[prop], f"NodeSocket{prop.title()}",
+          f'{prop} = "{stuff[prop].name}"') for prop in ("object", "font")]
+
+    def held(node, prop):
+        value = getattr(node, prop)
+        return value if isinstance(value, bpy.types.ID) else tuple(round(v, 5) for v in value)
+
+    for i, (kind, idname, prop, value, socket, line) in enumerate(cases):
+        tree = hand_tree(f"constant_{i}", kind)
+        tree.interface.new_socket("out", in_out="OUTPUT", socket_type=socket)
+        node = tree.nodes.new(idname)
+        if prop == "vector" and len(value) != 3:
+            node.vector_dimensions = len(value)
+        setattr(node, prop, value)
+        tree.links.new(node.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
+        exported, warnings = export_tree(tree)
+        assert line in exported and not warnings, f"{idname}: '{line}' not in\n{exported}{warnings}"
+        tree.name = f"constant_{i}.original"
+        rebuilt = build_source(exported, filename=f"constant_{i}.bn")[0]
+        made = rebuilt.nodes["Group Output"].inputs[0].links[0].from_node
+        assert made.bl_idname == idname and held(made, prop) == held(node, prop), (idname, held(made, prop))
+        assert export_tree(rebuilt)[0] == exported, f"{idname}: not stable"
+        for t in (tree, rebuilt):
+            bpy.data.node_groups.remove(t)
+    bpy.data.batch_remove([v for k, v in stuff.items() if k != "font"])
+
+    # A Menu node has its items once linked to the menu it feeds: the builder picks its item then
+    tree = hand_tree("menu_by_hand")
+    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    switch = tree.nodes.new("GeometryNodeMenuSwitch")
+    switch.data_type = "GEOMETRY"
+    menu = tree.nodes.new("FunctionNodeInputMenu")
+    tree.links.new(menu.outputs[0], switch.inputs[0])
+    tree.links.new(tree.nodes.new("GeometryNodeMeshCube").outputs[0], switch.inputs[2])
+    tree.links.new(switch.outputs[0], tree.nodes.new("NodeGroupOutput").inputs[0])
+    tree.update_tag()
+    bpy.context.view_layer.update()
+    menu.value = "B"
+    exported, _ = export_tree(tree)
+    assert "Menu(value: B)" in exported, exported
+    tree.name = "menu_by_hand.original"
+    rebuilt = build_source(exported, filename="menu_by_hand.bn")[0]
+    assert next(n for n in rebuilt.nodes if n.bl_idname == "FunctionNodeInputMenu").value == "B"
+    assert export_tree(rebuilt)[0] == exported
+    for t in (tree, rebuilt):
+        bpy.data.node_groups.remove(t)
+    print(f"   ✓ {len(cases) + 1} constant nodes read back with their value")
+
+
 def test_comments():
     """Comments are kept in the tree, on the nodes they go with, and written back in their places."""
     print("-> Test: comments survive Text -> Tree -> Text...")
@@ -3761,6 +3833,7 @@ def main():
         test_named_constants,
         test_builtin_font_by_any_name,
         test_font_everywhere,
+        test_constant_nodes_by_hand,
         test_comments,
         test_targets_and_linter,
         test_pipe_symbol,

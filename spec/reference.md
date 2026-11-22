@@ -312,6 +312,11 @@ toolchain before 0.12.0: it is refused there at the `<`.
 | `"Title" .. { ... }` | Continuation of a previously opened frame |
 | `"Note" #color {}` | Standalone frame note |
 
+An input node whose value no literal makes is a call that gives it, a tuple of as many numbers as it holds:
+`Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))` (its `vector_dimensions`
+follow the tuple unless written), `IntegerVector(vector: (1, 2, 3))` (whole numbers). Tree → Text writes them
+so, and a Menu node by the item it picks (`Menu(value: B)`), set once it is linked to the menu it feeds.
+
 ### 4.1 Node Presentation (`@`)
 
 ```bn

@@ -71,6 +71,11 @@ DATABLOCK_NODES = {"Font": ("Font", "font", "GeometryNodeInputFont"),
                    "Collection": ("Collection", "collection", "GeometryNodeInputCollection"),
                    "Material": ("Material", "material", "GeometryNodeInputMaterial"),
                    "Image": ("Image", "image", "GeometryNodeInputImage")}
+# Input nodes whose value is an array the schema does not list among their settings, by bl_idname:
+# (the property, whether it holds integers). Written as an argument: Rotation(rotation_euler: (0.1, 0.0, 0.0))
+VALUE_PROPS = {"FunctionNodeInputRotation": ("rotation_euler", False),
+               "FunctionNodeInputVector": ("vector", False),
+               "FunctionNodeInputIntVector": ("vector", True)}
 
 
 @dataclass
@@ -1051,6 +1056,32 @@ class GraphChecker:
         node.n_inputs, node.n_outputs = 0, 1
         const.outputs = outputs
 
+    def value_prop(self, spec, node, v, a):
+        """`Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))`: the value
+        of an input node that no literal makes, a tuple of as many numbers as the node holds. A Vector's
+        vector_dimensions follow the tuple, unless written."""
+        prop, integers = VALUE_PROPS[spec.bl_idname]
+        if isinstance(v, Const):
+            v = v.lit
+        if not (isinstance(v, Lit) and isinstance(v.value, tuple)):
+            self.error(a, f"{prop} expects a tuple of numbers")
+            return
+        value = v.value
+        if "vector_dimensions" in spec.props:
+            size = node.props.setdefault("vector_dimensions", len(value))
+            if not isinstance(size, int) or size != len(value):
+                self.error(a, f"{prop} expects {size} numbers (vector_dimensions), receives {len(value)}")
+                return
+        elif len(value) != 3:
+            self.error(a, f"{prop} expects 3 numbers, receives {len(value)}")
+            return
+        if integers:
+            if any(x != int(x) for x in value):
+                self.error(a, f"{prop} expects whole numbers")
+                return
+            value = tuple(int(x) for x in value)
+        node.props[prop] = value
+
     def look(self, node, look):
         """`@ "Label" #color hide mute`: the Blender properties of how a node is shown."""
         if look is None:
@@ -1963,12 +1994,18 @@ class GraphChecker:
             for a in data:
                 self.data_prop(node, spec.data[a.name], a)
             rest = []
+            value = None
             for name, v, a in named:
                 if name in spec.props and isinstance(v, (Lit, Sym)) and not a.alias:
                     self.prop(node, spec.props[name], v, a, c.name)
+                elif VALUE_PROPS.get(spec.bl_idname, (None,))[0] == name and not a.alias:
+                    value = (v, a)
                 else:
                     rest.append((name, v, a))
             named = rest
+            if value is not None:
+                # Once its dimensions are set: they make the array that holds it
+                self.value_prop(spec, node, *value)
             if spec.bl_idname in ITEM_NODES:
                 inputs, outputs = self.item_sockets(c, spec, node, positional, named)
                 if inputs is None:
