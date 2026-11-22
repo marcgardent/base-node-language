@@ -14,7 +14,7 @@ LOOKS = """geometry graph g(geometry: Geometry, t: Float) -> Geometry {
   }
   h = geometry
     |> SetPosition(offset: p)
-    |> SubdivideMesh(2) @ mute
+    |> SubdivideMesh(level: 2) @ mute
   return h @ mute
 }
 """

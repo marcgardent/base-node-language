@@ -70,7 +70,7 @@ def test_a_datablock_node_is_a_call_that_names_it():
     stc = next(n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves")
     assert [(ident, link.node) for ident, link in stc.links] == [("Font", f.id)]
     assert "Font" not in stc.values
-    g = compile_one('  o = Object[object: "Cube"]()\n  a = ObjectInfo(o)\n  return ObjectInfo(o)')
+    g = compile_one('  o = Object[object: "Cube"]()\n  a = ObjectInfo(object: o)\n  return ObjectInfo(object: o)')
     o = next(n for n in g.nodes if n.name == "o")
     assert (o.bl_idname, o.props) == ("GeometryNodeInputObject", {"object": "Cube"})
     infos = [n for n in g.nodes if n.bl_idname == "GeometryNodeObjectInfo"]

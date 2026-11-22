@@ -23,15 +23,15 @@ def store(value):
 
 
 @pytest.mark.parametrize("value, props", [
-    ("Switch(b, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
-    ("Switch(b, Position(), (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
-    ("Switch(b, true_: (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
-    ("Switch(b, (1.0, 0.0, 0.0, 1.0), (0.5, 0.5, 0.0))", {"input_type": "RGBA"}),
-    ("Switch(b, 1.0, 2.0)", {}),
-    ("Mix(0.5, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))", {"data_type": "VECTOR"}),
-    ("Mix(0.5, (1.0, 0.0, 0.0, 1.0), Position())", {"data_type": "RGBA"}),
-    ("Mix(t, 1.0, 2.0)", {}),
-    ("Compare((1.0, 0.0, 0.0), Position())", {"data_type": "VECTOR"}),
+    ("Switch(switch: b, false_: (1.0, 0.0, 0.0), true_: (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
+    ("Switch(switch: b, false_: Position(), true_: (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
+    ("Switch(switch: b, true_: (0.5, 0.5, 0.0))", {"input_type": "VECTOR"}),
+    ("Switch(switch: b, false_: (1.0, 0.0, 0.0, 1.0), true_: (0.5, 0.5, 0.0))", {"input_type": "RGBA"}),
+    ("Switch(switch: b, false_: 1.0, true_: 2.0)", {}),
+    ("Mix(factor: 0.5, a: (1.0, 0.0, 0.0), b: (0.5, 0.5, 0.0))", {"data_type": "VECTOR"}),
+    ("Mix(factor: 0.5, a: (1.0, 0.0, 0.0, 1.0), b: Position())", {"data_type": "RGBA"}),
+    ("Mix(factor: t, a: 1.0, b: 2.0)", {}),
+    ("Compare(a: (1.0, 0.0, 0.0), b: Position())", {"data_type": "VECTOR"}),
     ("Compare[EQUAL](a: (1.0, 0.0, 0.0, 1.0), b: (0.0, 0.0, 0.0, 1.0))",
      {"data_type": "RGBA", "operation": "EQUAL"}),
 ])
@@ -43,7 +43,7 @@ def test_tuples_choose_the_type(schema, value, props):
 
 
 def test_a_written_type_stays(schema):
-    n = node(store("Switch[RGBA](b, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))"), schema, "GeometryNodeSwitch")
+    n = node(store("Switch[RGBA](switch: b, false_: (1.0, 0.0, 0.0), true_: (0.5, 0.5, 0.0))"), schema, "GeometryNodeSwitch")
     assert n.props == {"input_type": "RGBA"}
     assert n.values == {"False": (1.0, 0.0, 0.0), "True": (0.5, 0.5, 0.0)}
 
@@ -76,12 +76,12 @@ def test_menu_switch_items_take_the_type_of_their_tuples(schema):
 
 @pytest.mark.parametrize("value, message", [
     # A tuple into a number: Blender would refuse it at build
-    ("Switch[FLOAT](b, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))",
+    ("Switch[FLOAT](switch: b, false_: (1.0, 0.0, 0.0), true_: (0.5, 0.5, 0.0))",
      "Switch.false_ expects Float, receives a Vector tuple"),
     ("Math((1.0, 2.0, 3.0), 2.0)", "Math.value expects Float, receives a Vector tuple"),
     # A tuple of the wrong length, into a node's input: the message says how to write it
-    ("Switch(b, (1.0, 0.0), (0.5, 0.5))", "Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)"),
-    ("Switch[VECTOR](b, (1.0, 0.0, 0.0, 1.0), (0.5, 0.5, 0.0, 1.0))",
+    ("Switch(switch: b, false_: (1.0, 0.0), true_: (0.5, 0.5))", "Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)"),
+    ("Switch[VECTOR](switch: b, false_: (1.0, 0.0, 0.0, 1.0), true_: (0.5, 0.5, 0.0, 1.0))",
      "Switch.false_ expects a Vector of 3 numbers, receives 4; write (1.0, 0.0, 0.0)"),
     ("IndexSwitch(i, (1.0, 0.0), (0.5, 0.5))", "IndexSwitch._0 expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)"),
 ])
@@ -90,5 +90,5 @@ def test_a_tuple_that_cannot_be_built_is_refused(schema, value, message):
 
 
 def test_a_color_takes_three_numbers(schema):
-    n = node(store("Switch[RGBA](b, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))"), schema, "GeometryNodeSwitch")
+    n = node(store("Switch[RGBA](switch: b, false_: (1.0, 0.0, 0.0), true_: (0.5, 0.5, 0.0))"), schema, "GeometryNodeSwitch")
     assert n.values == {"False": (1.0, 0.0, 0.0), "True": (0.5, 0.5, 0.0)}

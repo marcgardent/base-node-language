@@ -88,7 +88,7 @@ def test_wrong_zones_are_reported(schema, body, message):
      "t.bn:2:7  repeat expects iteration count first: repeat(10, state: start, …) -> { … }"),
     ("  r = repeat(3) -> {\n    return 1.0\n  }\n  return r",
      "t.bn:2:7  repeat expects at least one state: repeat(10, state: start) -> { … }"),
-    ("  r = Grid(1.0, 1.0) -> {\n    return 1.0\n  }\n  return r",
+    ("  r = Grid(size_x: 1.0, size_y: 1.0) -> {\n    return 1.0\n  }\n  return r",
      "t.bn:2:7  'Grid' takes no body: repeat, simulate and foreach do"),
     ("  r = m::repeat(3, s: 0.0) -> {\n    return s\n  }\n  return r",
      "t.bn:2:7  'm::repeat' takes no body: repeat, simulate and foreach do"),

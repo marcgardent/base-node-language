@@ -48,10 +48,10 @@ def node(src, schema, bl_idname):
 
 
 def test_an_enum_value_by_position_goes_to_the_setting_that_holds_it(schema):
-    n = node(graph("  c = Compare[INT, EQUAL](1, 2)\n  return geometry"), schema, "FunctionNodeCompare")
+    n = node(graph("  c = Compare[INT, EQUAL](a: 1, b: 2)\n  return geometry"), schema, "FunctionNodeCompare")
     assert n.props == {"data_type": "INT", "operation": "EQUAL"}
     # In any order: each value finds its own setting
-    n = node(graph("  c = Compare[EQUAL, INT](1, 2)\n  return geometry"), schema, "FunctionNodeCompare")
+    n = node(graph("  c = Compare[EQUAL, INT](a: 1, b: 2)\n  return geometry"), schema, "FunctionNodeCompare")
     assert n.props == {"data_type": "INT", "operation": "EQUAL"}
 
 
@@ -67,19 +67,19 @@ def test_a_value_two_settings_hold_goes_to_the_first():
 
 
 def test_named_settings_of_every_kind(schema):
-    n = node(graph("  x = Math[ADD, use_clamp: true](t, 1.0)\n  return geometry"), schema, "ShaderNodeMath")
+    n = node(graph("  x = Math[ADD, use_clamp: true](Value: t, Value_001: 1.0)\n  return geometry"), schema, "ShaderNodeMath")
     assert n.props == {"operation": "ADD", "use_clamp": True}
 
 
 @pytest.mark.parametrize("call, message", [
-    ("Math[ADDD](t, 1.0)", "2:12  no setting of Math takes ADDD; did you mean ADD?; settings: operation"),
-    ("Math[clamp: true](t, 1.0)", "2:12  Math has no setting 'clamp'; did you mean use_clamp?; "
+    ("Math[ADDD](Value: t, Value_001: 1.0)", "2:12  no setting of Math takes ADDD; did you mean ADD?; settings: operation"),
+    ("Math[clamp: true](Value: t, Value_001: 1.0)", "2:12  Math has no setting 'clamp'; did you mean use_clamp?; "
                                   "settings: operation, use_clamp"),
-    ("Math[ADD, operation: SUBTRACT](t, 1.0)", "2:17  setting 'operation' given twice"),
-    ("Math[true](t, 1.0)", "2:12  Math: a setting by position is an enum value; name the others, "
+    ("Math[ADD, operation: SUBTRACT](Value: t, Value_001: 1.0)", "2:17  setting 'operation' given twice"),
+    ("Math[true](Value: t, Value_001: 1.0)", "2:12  Math: a setting by position is an enum value; name the others, "
                            "Math[operation: …]"),
-    ("Math[use_clamp: 1.0](t, 1.0)", "2:12  use_clamp expects a boolean value"),
-    ("Math[operation: 2](t, 1.0)", "2:12  operation expects a value like ADD"),
+    ("Math[use_clamp: 1.0](Value: t, Value_001: 1.0)", "2:12  use_clamp expects a boolean value"),
+    ("Math[operation: 2](Value: t, Value_001: 1.0)", "2:12  operation expects a value like ADD"),
     ("Position[POINT]()", "2:16  no setting of Position takes POINT"),
     ("Position[name: 1]()", "2:16  Position has no setting 'name': it has none"),
 ])
@@ -88,8 +88,8 @@ def test_a_setting_says_what_is_wrong(schema, call, message):
 
 
 def test_a_setting_in_parentheses_is_an_input_like_any_other(schema):
-    assert errors(graph("  x = Math(t, 1.0, operation: ADD)\n  return geometry"), schema) == [
-        "t.bn:2:20  Math has no input 'operation'; inputs: Value, Value_001"]
+    assert errors(graph("  x = Math(Value: t, Value_001: 1.0, operation: ADD)\n  return geometry"), schema) == [
+        "t.bn:2:38  Math has no input 'operation'; inputs: Value, Value_001"]
 
 
 def test_only_a_node_has_settings(schema):
@@ -100,7 +100,7 @@ def test_only_a_node_has_settings(schema):
 
 
 def test_a_name_the_zone_gives_holds_a_value(schema):
-    src = graph("  r = repeat(3, s: 0.0) -> {\n    m = Math[iteration](s, 1.0)\n    return (s: m)\n  }\n"
+    src = graph("  r = repeat(3, s: 0.0) -> {\n    m = Math[iteration](Value: s, Value_001: 1.0)\n    return (s: m)\n  }\n"
                 "  return geometry")
     assert errors(src, schema) == ["t.bn:3:14  'iteration' holds a value, and no wire feeds a setting: "
                                    "give it in the parentheses, Name[SETTING](input: value)"]
@@ -133,23 +133,23 @@ def warned(body, schema):
 
 @pytest.mark.parametrize("written", ["0.1", "1e-7", "3.141593", "0.5", "16777216.0", "-2.75"])
 def test_a_number_a_float_keeps_is_not_warned_of(schema, written):
-    assert warned(f"  x = Math[ADD](t, {written})\n  return geometry", schema) == []
+    assert warned(f"  x = Math[ADD](Value: t, Value_001: {written})\n  return geometry", schema) == []
 
 
 @pytest.mark.parametrize("written, kept", [("16777217.0", "16777216.0"), ("0.123456789123", "0.12345679")])
 def test_a_number_a_float_cannot_keep_is_warned_of_where_it_is_written(schema, written, kept):
-    assert warned(f"  x = Math[ADD](t, {written})\n  return geometry", schema) == [
-        f"t.bn:2:20  warning: precision lost: {written} is stored as {kept} (IEEE 754 single precision)"]
+    assert warned(f"  x = Math[ADD](Value: t, Value_001: {written})\n  return geometry", schema) == [
+        f"t.bn:2:38  warning: precision lost: {written} is stored as {kept} (IEEE 754 single precision)"]
 
 
 def test_every_place_a_float_lands_is_looked_at(schema):
     src = ("geometry graph g(geometry: Geometry, t: Float = 0.123456789123 in 0.0..16777217.0) -> Geometry {\n"
-           "  v = CombineXYZ(0.1, 16777217.0, 0.0)\n"
+           "  v = CombineXYZ(x: 0.1, y: 16777217.0, z: 0.0)\n"
            "  return geometry |> SetPosition(offset: (1.0, 2.0, 0.123456789123))\n}\n")
     warnings = []
     compile_source(src, schema, "t.bn", warnings=warnings)
     assert [(w.line, w.col, w.severity) for w in warnings] == [
-        (1, 49, "warning"), (1, 72, "warning"), (2, 23, "warning"), (3, 53, "warning")]
+        (1, 49, "warning"), (1, 72, "warning"), (2, 29, "warning"), (3, 53, "warning")]
 
 
 def test_the_command_line_warns_of_a_number_too(tmp_path, capsys):

@@ -31,8 +31,8 @@ def test_wave_is_nine_nodes_and_nine_links(schema, fixture_text):
 
 
 def test_unary_math_has_one_input(schema):
-    msgs = errors(graph("  x = Math[SINE](t, t)\n  return geometry"), schema)
-    assert msgs == ["t.bn:2:21  Math takes 1 input(s): value"]
+    msgs = errors(graph("  x = Math[SINE](value: t, Value_001: t)\n  return geometry"), schema)
+    assert msgs == ["t.bn:2:28  Math has no input 'Value_001'; inputs: value"]
 
 
 def test_unknown_input_lists_inputs(schema):
@@ -41,7 +41,7 @@ def test_unknown_input_lists_inputs(schema):
 
 
 def test_unknown_enum_value_suggests(schema):
-    msgs = errors(graph("  x = Math[operation: SINUS](t)\n  return geometry"), schema)
+    msgs = errors(graph("  x = Math[operation: SINUS](Value: t)\n  return geometry"), schema)
     assert msgs[0].startswith("t.bn:2:12  operation: unknown SINUS; did you mean SINE?; values: ADD,")
 
 
@@ -84,13 +84,13 @@ def test_multi_input_takes_all_positionals(schema):
 
 
 def test_shared_name_is_one_node(schema):
-    g = compile_one(graph("  p = Position()\n  v = CombineXYZ(SeparateXYZ(p).x, SeparateXYZ(p).y)\n"
+    g = compile_one(graph("  p = Position()\n  v = CombineXYZ(x: SeparateXYZ(vector: p).x, y: SeparateXYZ(vector: p).y)\n"
                           "  return SetPosition(geometry, offset: v, position: p)"), schema)
     assert sum(n.bl_idname == "GeometryNodeInputPosition" for n in g.nodes) == 1
 
 
 def test_menu_socket_takes_enum_value(schema):
-    g = compile_one(graph('  i = FindInString("abc", "b", mode: LAST)\n  return geometry'), schema)
+    g = compile_one(graph('  i = FindInString(string: "abc", search: "b", mode: LAST)\n  return geometry'), schema)
     assert g.nodes[2].values == {"String": "abc", "Search": "b", "Mode": "LAST"}
 
 
@@ -220,11 +220,11 @@ def test_datablock_by_name(schema):
 
 def test_a_float_literal_does_not_go_into_an_int(schema):
     with pytest.raises(BnError, match="expects an integer: 3 rather than 3.0"):
-        compile_source("geometry graph g() -> Geometry {\n  return Grid(1.0, 1.0, 3.0, 3)\n}\n", schema)
+        compile_source("geometry graph g() -> Geometry {\n  return Grid(size_x: 1.0, size_y: 1.0, vertices_x: 3.0, vertices_y: 3)\n}\n", schema)
 
 
 def test_a_gizmo_links_the_value_it_moves(schema):
-    g = compile_one(graph("  m = CombineTransform(Position())\n"
+    g = compile_one(graph("  m = CombineTransform(translation: Position())\n"
                           "  return geometry + LinearGizmo[BOX](t, position: Position())\n"
                           "    + TransformGizmo(m, position: Position())"), schema)
     linear = next(n for n in g.nodes if n.bl_idname == "GeometryNodeGizmoLinear")
@@ -242,10 +242,10 @@ def test_a_gizmo_value_takes_a_number_a_join_does_not(schema):
     assert "only accepts links" in errors(graph("  return TransformGizmo((1.0, 0.0, 0.0))"), schema)[0]
 
 
-def test_a_failed_argument_keeps_its_place(schema):
-    # The second value still goes to the second input: one error, not a cascade
+def test_a_failed_argument_is_one_error(schema):
+    # The value that fails is the one error: the call it goes to is not refused too
     src = graph("  x = Position() * nope.y\n"
-                "  return SetPosition(geometry, offset: TransformDirection(x, CombineTransform()))")
+                "  return SetPosition(geometry, offset: TransformDirection(direction: x, transform: CombineTransform()))")
     assert errors(src, schema) == ["t.bn:2:20  unknown name 'nope'"]
 
 

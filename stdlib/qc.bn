@@ -73,7 +73,11 @@ compositor graph "color bars"(image: Color, level: Float = 0.75 in 0.0..1.0) -> 
   red = mod(floor(k * 0.5), 2.0) < 0.5
   green = k < 3.5
   blue = mod(k, 2.0) < 0.5
-  return CombineColor(red * level, green * level, blue * level, frame(image))
+  return CombineColor(
+    red: red * level,
+    green: green * level,
+    blue: blue * level,
+    alpha: frame(image))
 }
 
 compositor graph "color wheel"(image: Color, value: Float = 1.0 in 0.0..) -> Color {
@@ -83,7 +87,7 @@ compositor graph "color wheel"(image: Color, value: Float = 1.0 in 0.0..) -> Col
   r = min(e.x, e.y)
   d = length(p)
   hue = fract(atan2(p.y, p.x) / 6.2831855)
-  wheel = CombineColor[HSV](hue, min(d / r, 1.0), value, 1.0)
+  wheel = CombineColor[HSV](red: hue, green: min(d / r, 1.0), blue: value, alpha: 1.0)
   return color_times(wheel, sdf_mask(image, d - r, 0.0))
 }
 
@@ -225,7 +229,11 @@ compositor graph "alpha check"(
 
 compositor graph heat(x: Float) -> Color {
   "x from 0 to 1 as heat, opaque: black, red at ⅓, yellow at ⅔, white at 1"
-  return CombineColor(clamp01(x * 3.0), clamp01(x * 3.0 - 1.0), clamp01(x * 3.0 - 2.0), 1.0)
+  return CombineColor(
+    red: clamp01(x * 3.0),
+    green: clamp01(x * 3.0 - 1.0),
+    blue: clamp01(x * 3.0 - 2.0),
+    alpha: 1.0)
 }
 
 compositor graph "diff view"(a: Color, b: Color, gain: Float = 10.0 in 0.0..) -> Color {

@@ -33,7 +33,10 @@ geometry graph repulsion(fill: Geometry, radius: Float) -> Vector {
   weight = EvaluateOnDomain[EDGE](value: w)
   ends = EvaluateOnDomain[EDGE, FLOAT_VECTOR](value: (e.position_1 + e.position_2) * w)
   push = (Position() * (2.0 * weight) - ends) * VertexNeighbors().vertex_count
-  return SampleIndex[FLOAT_VECTOR](fill, push, SampleNearest(fill, Position()))
+  return SampleIndex[FLOAT_VECTOR](
+    fill,
+    value: push,
+    index: SampleNearest(fill, sample_position: Position()))
 }
 
 // One step of growth: the three forces, a move no longer than `step` times `max length`,
@@ -64,7 +67,7 @@ geometry graph "growth step"(
   "Repulsion" #3a7bd5 {
     // A frame twice `radius` away from the curve, so that its outside is triangulated too
     box = BoundingBox(curve)
-    size = box.max - box.min + CombineXYZ(4.0 * radius, 4.0 * radius)
+    size = box.max - box.min + CombineXYZ(x: 4.0 * radius, y: 4.0 * radius)
     frame = Quadrilateral(width: size.x, height: size.y)
       |> TransformGeometry(translation: (box.min + box.max) * 0.5)
     push = repulsion(FillCurve(curve), radius) + repulsion(FillCurve(curve + frame), radius)

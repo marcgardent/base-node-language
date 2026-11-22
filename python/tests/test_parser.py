@@ -6,15 +6,15 @@ from base_node.lexer import tokenize
 # Snippets from the spec: they must all parse, formulas included
 SPEC_SNIPPETS = [
     "geometry graph g(v: Vector, geometry: Geometry) -> Geometry {\n"
-    "  a = SetPosition(geometry, offset: v)\n  return Math[POWER](a, b)\n}",
-    "geometry graph g(v: Vector) -> Float {\n  return SeparateXYZ(v).z\n}",
+    "  a = SetPosition(geometry, offset: v)\n  return Math[POWER](Value: a, Value_001: b)\n}",
+    "geometry graph g(v: Vector) -> Float {\n  return SeparateXYZ(vector: v).z\n}",
     "geometry graph g() -> Float {\n  p = Position()\n  return sin(p.x) + cos(p.y) * p.z\n}",
     "geometry graph g(geometry: Geometry) -> Geometry {\n"
     "  return geometry\n    |> SubdivideMesh(level: 2)\n    |> SetShadeSmooth()\n}",
     "geometry graph wave(\n    geometry: Geometry, t: Float\n) -> Geometry {\n  return geometry\n}",
     "geometry graph grid() -> Geometry {\n  return Grid(size_x: 2, size_y: 2)\n    |> SetShadeSmooth()\n}",
-    "shader graph rust(uv: Vector) -> Shader {\n  n = NoiseTexture(uv, scale: 8)\n"
-    "  return PrincipledBSDF(\n    base_color: ColorRamp(n.fac),\n    roughness: n.fac * 0.5 + 0.4)\n}",
+    "shader graph rust(uv: Vector) -> Shader {\n  n = NoiseTexture(vector: uv, scale: 8)\n"
+    "  return PrincipledBSDF(\n    base_color: ColorRamp(factor: n.fac),\n    roughness: n.fac * 0.5 + 0.4)\n}",
     "compositor graph look(image: Color) -> Color {\n  return image\n"
     "    |> Glare(glare_type: FOG_GLOW)\n    |> ColorBalance(lift: 0.95)\n}",
 ]

@@ -25,14 +25,14 @@ def test_brackets_are_tokens():
 
 
 def test_settings_in_source_order_with_optional_keys():
-    c = value_of('x = Math[ADD, use_clamp: true](a, 2.0)')
+    c = value_of('x = Math[ADD, use_clamp: true](Value: a, Value_001: 2.0)')
     assert [s.name for s in c.settings] == [None, "use_clamp"]
     assert isinstance(c.settings[0].value, ast.Ref) and c.settings[0].value.name == "ADD"
     assert isinstance(c.settings[1].value, ast.Bool) and c.settings[1].value.value is True
     # Positions are those of the setting, the key's when it has one
     assert [(s.line, s.col) for s in c.settings] == [(2, 12), (2, 17)]
     # The inputs stay arguments, apart from the settings
-    assert [a.name for a in c.args] == [None, None]
+    assert [a.name for a in c.args] == ["Value", "Value_001"]
 
 
 def test_values_a_setting_takes():
@@ -59,12 +59,12 @@ def test_body_call_and_pipe_and_template_take_settings():
 
 
 def test_a_call_without_brackets_has_no_settings():
-    c = value_of("x = Math(a, 2.0)")
+    c = value_of("x = Math(Value: a, Value_001: 2.0)")
     assert c.settings == [] and len(c.args) == 2
 
 
 def test_the_tree_holds_settings_as_their_own_field():
-    c = value_of("x = Math[ADD, use_clamp: true](a)")
+    c = value_of("x = Math[ADD, use_clamp: true](Value: a)")
     d = asdict(c)
     assert d["settings"] == [
         {"name": None, "value": {"name": "ADD", "line": 2, "col": 12}, "line": 2, "col": 12},
@@ -73,16 +73,16 @@ def test_the_tree_holds_settings_as_their_own_field():
 
 
 def test_printed_back():
-    src = HEAD + "  x = Math[ADD, use_clamp: true](a, 2.0)\n  return x\n}\n"
+    src = HEAD + "  x = Math[ADD, use_clamp: true](Value: a, Value_001: 2.0)\n  return x\n}\n"
     assert to_source(parse(src)) == src
 
 
 @pytest.mark.parametrize("line, at, says", [
-    ("x = Math[a](2.0)", (2, 12), "'a' holds a value"),
-    ("x = Math[mode: (1, a)](2.0)", (2, 22), "'a' holds a value"),
-    ("x = Math[](a)", (2, 11), "empty settings"),
+    ("x = Math[a](Value: 2.0)", (2, 12), "'a' holds a value"),
+    ("x = Math[mode: (1, a)](Value: 2.0)", (2, 22), "'a' holds a value"),
+    ("x = Math[](Value: a)", (2, 11), "empty settings"),
     ("x = Math[ADD]", (3, 3), "'(' and the inputs"),
-    ("x = Math[use_clamp: true, ADD](a)", (2, 29), "positional setting after named"),
+    ("x = Math[use_clamp: true, ADD](Value: a)", (2, 29), "positional setting after named"),
 ])
 def test_refused(line, at, says):
     with pytest.raises(BnError) as err:

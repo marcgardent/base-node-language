@@ -11,7 +11,7 @@
 geometry graph wrapped(grid: Geometry, c: Vector, di: Int, dj: Int, n: Int) -> Vector {
   i = mod(floor(Index() / n) + di + n, n)
   j = mod(Index() + dj + n, n)
-  return SampleIndex[FLOAT_VECTOR](grid, c, i * n + j)
+  return SampleIndex[FLOAT_VECTOR](grid, value: c, index: i * n + j)
 }
 
 // The 9-point Laplacian: 0.2 for each side, 0.05 for each corner, -1 for the cell
@@ -41,15 +41,15 @@ geometry graph "gray scott step"(
   react = c.x * c.y * c.y
   u = c.x + dt * (du * lap.x - react + rates.x * (1.0 - c.x))
   v = c.y + dt * (dv * lap.y + react - (rates.x + rates.y) * c.y)
-  return StoreNamedAttribute[FLOAT_VECTOR](grid, name: "gray scott", value: CombineXYZ(u, v))
+  return StoreNamedAttribute[FLOAT_VECTOR](grid, name: "gray scott", value: CombineXYZ(x: u, y: v))
 }
 
 // U = 1 and V = 0 everywhere but in a few blobs placed by the seed, where U = 0.5, V = 0.5,
 // with Pearson's 1% of noise
 geometry graph "gray scott seed"(grid: Geometry, seed: Int) -> Geometry {
   blob = NoiseTexture["4D"](vector: Position(), w: seed, scale: 2.5).factor > 0.68
-  noise = RandomValue(0.0, 0.01, seed: seed)
-  start = (blob ? (0.5, 0.5, 0.0) : (1.0, 0.0, 0.0)) + CombineXYZ(-noise, noise)
+  noise = RandomValue(min: 0.0, max: 0.01, seed: seed)
+  start = (blob ? (0.5, 0.5, 0.0) : (1.0, 0.0, 0.0)) + CombineXYZ(x: -noise, y: noise)
   return StoreNamedAttribute[FLOAT_VECTOR](grid, name: "gray scott", value: start)
 }
 
@@ -63,12 +63,12 @@ geometry graph "gray scott rates"(
     dt: Float
 ) -> (rates: Vector, dt: Float) {
   rates = MenuSwitch(
-    preset,
+    menu: preset,
     Spots: (0.03, 0.062, 0.0),
     Stripes: (0.029, 0.057, 0.0),
     Coral: (0.0545, 0.062, 0.0),
     Mitosis: (0.0367, 0.0649, 0.0),
-    Custom: CombineXYZ(feed, kill))
+    Custom: CombineXYZ(x: feed, y: kill))
   // The Laplacian of a checkerboard is -1.6 times it: an Euler step stays stable while
   // dt * D * 1.6 < 2, kept at dt * D <= 1 for the margin the reaction needs
   return (rates: rates, dt: min(dt, 1.0 / max(du, dv)))
@@ -137,7 +137,7 @@ geometry graph "reaction diffusion tile"(
     iterations: Int = 3000 in 0..
 ) -> Geometry {
   "A 4 x 4 Grid grown with a Gray-Scott pattern"
-  return Grid(4.0, 4.0, resolution, resolution)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: resolution, vertices_y: resolution)
     |> reaction_diffusion(preset: preset, iterations: iterations)
     |> SetShadeSmooth()
 }

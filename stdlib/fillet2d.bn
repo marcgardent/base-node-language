@@ -18,9 +18,9 @@ geometry graph "fillet corner"(
   "Analytically computes circular arc fillet tangent points (p1, p2) and circle center for a 2D corner"
   v1 = normalize(p_prev - p)
   v2 = normalize(p_next - p)
-  cos_theta = Clamp(v1 ⋅ v2, -1.0, 1.0)
+  cos_theta = Clamp(value: v1 ⋅ v2, min: -1.0, max: 1.0)
   angle = acos(cos_theta)
-  half_angle = Clamp(angle * 0.5, 0.001, 1.570796)
+  half_angle = Clamp(value: angle * 0.5, min: 0.001, max: 1.570796)
   tan_half = tan(half_angle)
   sin_half = sin(half_angle)
   d = radius / tan_half

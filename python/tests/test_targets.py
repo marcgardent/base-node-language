@@ -119,7 +119,7 @@ def test_adding_a_catalog_and_one_line_adds_a_promised_lts(tmp_path):
     both = b.target(None, None)
     assert [m.name for m in both.members] == ["blender@5.2-lts", "blender@5.3"]
     # A node the LTS has not is an issue of that version; one no version has is the target's
-    f = parse("compositor graph g(image: Color) -> Color {\n  return Kuwahara(Cube(image))\n}\n")
+    f = parse("compositor graph g(image: Color) -> Color {\n  return Kuwahara(Cube(size: image))\n}\n")
     assert [(i.name, i.target) for i in graph_issues(f.graphs[0], both, f)] == [
         ("Kuwahara", "blender@5.2-lts"), ("Cube", "blender")]
     assert [(i.name, i.target) for i in graph_issues(f.graphs[0], b.target("5.3", None), f)] == [
@@ -184,7 +184,7 @@ def test_an_engine_variant_takes_shader_graphs_and_the_graphs_they_call():
     assert check_target(toon, "blender") == [] == check_target(toon, "blender cycles")
     assert [str(i) for i in check_target(toon, "blender eevee")] == [
         "Graph 'g': node 'ToonBSDF' outside target 'blender eevee' (line 2)"]
-    rgb = parse("shader graph g(s: Shader) -> Color {\n  return ShaderToRGB(s).color\n}\n")
+    rgb = parse("shader graph g(s: Shader) -> Color {\n  return ShaderToRGB(shader: s).color\n}\n")
     assert check_target(rgb, "blender eevee") == []
     assert [i.name for i in check_target(rgb, "blender@5.3 cycles")] == ["ShaderToRGB"]
     # A graph of another kind is no engine's; one a shader graph calls is built in its tree
@@ -333,9 +333,9 @@ def roughness(value):
 
 def test_a_formula_between_textures_and_constants():
     assert roughness("t.alpha * 0.5") == []
-    assert roughness("0.5 * SeparateColor(t.color).green") == []
-    assert roughness("Math[MULTIPLY](t.alpha, rough)") == []
-    assert roughness("Math[MULTIPLY](t.alpha)") == []  # the other value is its default
+    assert roughness("0.5 * SeparateColor(color: t.color).green") == []
+    assert roughness("Math[MULTIPLY](Value: t.alpha, Value_001: rough)") == []
+    assert roughness("Math[MULTIPLY](Value: t.alpha)") == []  # the other value is its default
     assert roughness("t.alpha * t.alpha") == [("PrincipledBSDF.roughness ← Math(ImageTexture, ImageTexture)", 3)]
     assert roughness("t.alpha + 0.5") == [("PrincipledBSDF.roughness ← Math(ImageTexture)", 3)]
     # Both sides constant: Blender computes the Math before the exporter reads it
@@ -485,7 +485,7 @@ def test_a_formula_counts_as_its_node():
     # A comparison is Compare where the tree has one, else Math: a shader tree has no Compare
     assert check_target(parse(text), "blender") == []
     assert check_target(parse(text.replace("shader", "geometry", 1)), "blender") == []
-    g = parse("shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a, b)\n}\n")
+    g = parse("shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a: a, b: b)\n}\n")
     assert [i.name for i in check_target(g, "blender")] == ["Compare"]
 
 
@@ -574,7 +574,7 @@ def test_an_unknown_target_in_the_head():
 
 COMPOSITE = """compositor graph soften(image: Color, size: Float = 4.0) -> Color {
   blurred = Blur(image, size: size)
-  return Mix(image, blurred, factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: blurred)
 }
 """
 
@@ -602,7 +602,7 @@ def test_a_node_the_translator_does_not_list_stays_out():
 
 PAINT = """compositor graph paint(image: Color) -> Color {
   soft = Kuwahara(image, size: 8.0)
-  return Mix(image, Kuwahara(soft), factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: Kuwahara(soft))
 }
 """
 
@@ -610,7 +610,7 @@ PAINTED = """use blender_interop
 
 pixel graph paint(image: Color) -> Color {
   soft = blender_interop::kuwahara(image, size: 8.0)
-  return Mix(image, blender_interop::kuwahara(soft), factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: blender_interop::kuwahara(soft))
 }
 """
 
@@ -685,14 +685,14 @@ def test_a_translator_renames_inputs_and_settings():
     f = parse(
         "compositor graph g(image: Color) -> Color {\n"
         "  blurred = Blur(image, size: 4.0)\n"
-        "  mixed = MixLegacy[MULTIPLY](image, color2: blurred)\n"
+        "  mixed = MixLegacy[MULTIPLY](color1: image, color2: blurred)\n"
         "  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n"
         "}\n"
     )
     text = to_source(translate(f, "blender", "blade"))
     assert "Blur(image, radius: 4.0)" in text
     # A setting by position stays as it is written, one by name takes its new name
-    assert "Mix[MULTIPLY](image, b: blurred)" in text
+    assert "Mix[MULTIPLY](a: image, b: blurred)" in text
     assert "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](" in text
     assert "image: mixed)" in text
 

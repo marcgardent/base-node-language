@@ -76,8 +76,8 @@ def test_a_ternary_wants_both_branches(text, message):
     "  x = not (on ? on : a > b)",
     "  x = on ? SubdivideMesh(geometry) |> SetShadeSmooth() : geometry",
     "  x = (on ? geometry : SubdivideMesh(geometry))\n    |> SetShadeSmooth()",
-    "  x = Switch(on ? a : b, true_: on ? (1.0, 0.0, 0.0) : v)",
-    "  x = SeparateXYZ(on ? v : (0.0, 0.0, 1.0)).z",
+    "  x = Switch(switch: on ? a : b, true_: on ? (1.0, 0.0, 0.0) : v)",
+    "  x = SeparateXYZ(vector: on ? v : (0.0, 0.0, 1.0)).z",
 ])
 def test_a_ternary_prints_back_with_the_parentheses_it_needs(body):
     assert to_source(parse(graph(body))) == graph(body)

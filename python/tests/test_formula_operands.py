@@ -45,14 +45,14 @@ def test_a_colour_tuple_scaled_by_a_number(schema):
 
 
 def test_a_node_input_keeps_its_size_and_says_how_to_write_it(schema):
-    assert errors(returns("  return Switch(true, (1.0, 0.0), (0.5, 0.5, 0.0))", params="m: Float"), schema) == [
+    assert errors(returns("  return Switch(switch: true, false_: (1.0, 0.0), true_: (0.5, 0.5, 0.0))", params="m: Float"), schema) == [
         "Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)"]
 
 
 @pytest.mark.parametrize("formula, op", [
-    ("ImageInfo(c).dimensions * 0.5", "SCALE"),
-    ("ImageInfo(c).dimensions / ImageInfo(c).resolution", "DIVIDE"),
-    ("length(ImageInfo(c).dimensions)", "LENGTH"),
+    ("ImageInfo(image: c).dimensions * 0.5", "SCALE"),
+    ("ImageInfo(image: c).dimensions / ImageInfo(image: c).resolution", "DIVIDE"),
+    ("length(ImageInfo(image: c).dimensions)", "LENGTH"),
 ])
 def test_an_integer_vector_is_a_vector_in_a_formula(schema, formula, op):
     g = compile_one(returns(f"  return {formula}", out="Float" if op == "LENGTH" else "Vector",
@@ -64,7 +64,7 @@ def test_an_integer_vector_is_a_vector_in_a_formula(schema, formula, op):
 
 
 def test_an_integer_vector_has_components(schema):
-    g = compile_one(returns("  return ImageInfo(c).dimensions.x * 0.5", out="Float", params="c: Color"), schema)
+    g = compile_one(returns("  return ImageInfo(image: c).dimensions.x * 0.5", out="Float", params="c: Color"), schema)
     assert any(n.bl_idname == "ShaderNodeSeparateXYZ" for n in g.nodes)
 
 

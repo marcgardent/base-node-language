@@ -4,8 +4,8 @@
     {
       "name": "comparisons_in_arguments",
       "about": "Two comparisons side by side, of the graph's inputs: no call of a",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(a < b, c > (d))\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(a < b, c > d)\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(a < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(a < b, c > d)\n}\n"
     },
     {
       "name": "comparisons_chained",
@@ -16,44 +16,44 @@
     {
       "name": "bound_name",
       "about": "A name an earlier statement bound",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return Math(k < b, c > (d))\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return Math(k < b, c > d)\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return max(k < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return max(k < b, c > d)\n}\n"
     },
     {
       "name": "bound_in_a_frame",
       "about": "A frame is no scope: its names hold after it",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return Math(k < b, c > (d))\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return Math(k < b, c > d)\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return max(k < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return max(k < b, c > d)\n}\n"
     },
     {
       "name": "not_yet_bound",
       "about": "A name bound later is no value before its statement: the types of a call",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = Math(k < b, c > (d))\n  k = a\n  return x\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = Math(k<b, c>(d))\n  k = a\n  return x\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = max(k < b, c > (d))\n  k = a\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = max(k<b, c>(d))\n  k = a\n  return x\n}\n"
     },
     {
       "name": "body_item",
       "about": "An item of a call with a body, inside that body",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return Math(v < b, c > (v))\n  }\n  return r\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return Math(v < b, c > v)\n  }\n  return r\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return max(v < b, c > (v))\n  }\n  return r\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return max(v < b, c > v)\n  }\n  return r\n}\n"
     },
     {
       "name": "body_item_alias",
       "about": "An item keyed with as, inside its body",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: Math(dt < b, c > (dt)))\n  }\n  return r.dt\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: Math(dt < b, c > dt))\n  }\n  return r.dt\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: max(dt < b, c > (dt)))\n  }\n  return r.dt\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: max(dt < b, c > dt))\n  }\n  return r.dt\n}\n"
     },
     {
       "name": "body_item_stays_inside",
       "about": "After the body, its item is no value",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return Math(v < b, c > (d))\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return Math(v<b, c>(d))\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return max(v < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return max(v<b, c>(d))\n}\n"
     },
     {
       "name": "nameless_graph_input",
       "about": "An input of a graph with no name, which sees the names around too",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return Math(x < b, a > (x))\n  }\n  return f(x: a)\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return Math(x < b, a > x)\n  }\n  return f(x: a)\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return max(x < b, a > (x))\n  }\n  return f(x: a)\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return max(x < b, a > x)\n  }\n  return f(x: a)\n}\n"
     },
     {
       "name": "template_call",
@@ -70,8 +70,8 @@
     {
       "name": "unknown_name",
       "about": "A name that is no value: read as a call with types, the reader's checker refuses it",
-      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(x < b, c > (d))\n}\n",
-      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(x<b, c>(d))\n}\n"
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(x < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return max(x<b, c>(d))\n}\n"
     }
   ]
 }

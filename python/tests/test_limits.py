@@ -21,8 +21,8 @@ SHAPES = {
     "parentheses": lambda n: HEAD + "(" * n + "a" + ")" * n + TAIL,
     "minus": lambda n: HEAD + "-" * n + "a" + TAIL,
     "not": lambda n: HEAD + "not " * n + "a" + TAIL,
-    "calls": lambda n: HEAD + "Math(" * n + "a" + ")" * n + TAIL,
-    "options": lambda n: HEAD + "Math(" + "x(" * (n - 1) + ")" * n + TAIL,
+    "calls": lambda n: HEAD + "abs(" * n + "a" + ")" * n + TAIL,
+    "options": lambda n: HEAD + "abs(" + "x(" * (n - 1) + ")" * n + TAIL,
     "frames": lambda n: "geometry graph g(a: Float) -> Float {\n" + "{\n" * n + "}\n" * n + "  return a\n}\n",
     "zones": lambda n: ("geometry graph g(a: Float) -> Float {\n" + "x = repeat(2, a: a) -> {\n" * n
                         + "return a\n}\n" * n + "return a\n}\n"),
@@ -34,7 +34,7 @@ CHAINS = {
     "times": lambda n: HEAD + "a" + " * a" * n + TAIL,
     "and": lambda n: HEAD + "a" + " and a" * n + TAIL,
     "or": lambda n: HEAD + "a" + " or a" * n + TAIL,
-    "pipe": lambda n: HEAD + "a" + " |> Math()" * n + TAIL,
+    "pipe": lambda n: HEAD + "a" + " |> abs()" * n + TAIL,
     "member": lambda n: HEAD + "v" + ".x" * n + TAIL,
 }
 
@@ -74,8 +74,8 @@ def test_chain_past_the_limit_is_an_error(chain, n):
 def test_chains_inside_brackets_add_up():
     # Neither the brackets nor one chain passes its limit; the tree they make does
     step = MAX_HEIGHT // 8
-    source = HEAD + "Math(" * 9 + "a" + (" + a" * step + ")") * 9 + TAIL
-    parse(HEAD + "Math(" * 7 + "a" + (" + a" * step + ")") * 7 + TAIL)
+    source = HEAD + "abs(" * 9 + "a" + (" + a" * step + ")") * 9 + TAIL
+    parse(HEAD + "abs(" * 7 + "a" + (" + a" * step + ")") * 7 + TAIL)
     with pytest.raises(BnError, match="nested too deeply"):
         parse(source)
 

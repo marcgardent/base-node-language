@@ -209,7 +209,7 @@ def test_check_warns_of_deprecated_calls_and_passes(tmp_path, capsys):
     from base_node_cli.cli import main
 
     old = ('geometry(deprecated: "use Grid") graph plane(size: Float) -> Geometry {\n'
-           "  return Grid(size, size, 2, 2)\n}\n\n")
+           "  return Grid(size_x: size, size_y: size, vertices_x: 2, vertices_y: 2)\n}\n\n")
     path = tmp_path / "old.bn"
     path.write_text("// @target blender\n\n" + old
                     + "geometry graph field() -> Geometry {\n  return plane(1.0)\n}\n", encoding="utf-8")

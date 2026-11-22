@@ -62,7 +62,7 @@ def test_a_long_head_spreads_further_in_than_the_steps():
 
 @pytest.mark.parametrize("body", [
     "  return SetPosition(geometry |> SubdivideMesh(level: 2), offset: o)",
-    "  x = (o |> VectorMath(o)) - (o |> VectorRotate(o))\n  return geometry",
+    "  x = (geometry |> SubdivideMesh(level: 1)) + (geometry |> SetShadeSmooth())\n  return geometry",
     "  x = (geometry |> SeparateGeometry(selection: true).selection).x\n  return geometry",
     "  return (a: geometry |> SetShadeSmooth(), b: geometry |> SubdivideMesh(level: 2))",
     "  x = CombineXYZ(x: 1.0, y: 1.0, z: 1.0) + (1.0, 2.0, 3.0) * 2.0\n  return geometry",

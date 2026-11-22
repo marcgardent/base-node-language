@@ -86,13 +86,13 @@ compositor graph grade(
 ) -> Color {
   "Nuke's Grade: blackpoint to 0 and whitepoint to 1, then lift, gain, multiply, offset and gamma, per channel; reverse undoes it"
   c = SeparateColor(unpremult(image))
-  k = SeparateXYZ(blackpoint)
-  w = SeparateXYZ(whitepoint)
-  l = SeparateXYZ(lift)
-  g = SeparateXYZ(gain)
-  m = SeparateXYZ(multiply)
-  o = SeparateXYZ(offset)
-  e = SeparateXYZ(gamma)
+  k = SeparateXYZ(vector: blackpoint)
+  w = SeparateXYZ(vector: whitepoint)
+  l = SeparateXYZ(vector: lift)
+  g = SeparateXYZ(vector: gain)
+  m = SeparateXYZ(vector: multiply)
+  o = SeparateXYZ(vector: offset)
+  e = SeparateXYZ(vector: gamma)
   graded = CombineColor(
     red: grade_channel(c.red, k.x, w.x, l.x, g.x, m.x, o.x, e.x, reverse, clamp_black, clamp_white),
     green: grade_channel(
@@ -239,7 +239,7 @@ compositor graph saturation(
   "The colours pushed away from their luma by s, 0 for a gray; the luma by the weights of Rec. 709, Rec. 2020 or ACEScg"
   c = unpremult(image)
   weights = MenuSwitch(
-    luma,
+    menu: luma,
     Rec709: (0.2126, 0.7152, 0.0722),
     Rec2020: (0.2627, 0.678, 0.0593),
     ACEScg: (0.2722287, 0.6740818, 0.0536895))

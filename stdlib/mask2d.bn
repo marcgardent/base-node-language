@@ -123,7 +123,7 @@ compositor graph letterbox(
   size = ImageInfo(image).dimensions
   larger = max(size.x, size.y)
   half_x = min(size.x / larger, size.y / larger * aspect)
-  d = sdf_rectangle(ImageCoordinates(image).uniform, CombineXYZ(half_x, half_x / aspect))
+  d = sdf_rectangle(ImageCoordinates(image).uniform, CombineXYZ(x: half_x, y: half_x / aspect))
   mask = sdf_mask(image, d, feather)
   return (Image: Mix[RGBA](factor: mask, a: color, b: image), Mask: mask)
 }

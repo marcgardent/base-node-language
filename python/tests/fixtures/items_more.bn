@@ -1,5 +1,5 @@
 geometry graph étiquette(n: Int, nom: String) -> String {
-  return FormatString("{nom} n°{n} : {x}", n: n, nom: nom, x: 0.5)
+  return FormatString(format: "{nom} n°{n} : {x}", n: n, nom: nom, x: 0.5)
 }
 
 geometry graph cuisson(geometry: Geometry, h: Float) -> (Geometry: Geometry, h: Float) {
@@ -8,14 +8,14 @@ geometry graph cuisson(geometry: Geometry, h: Float) -> (Geometry: Geometry, h: 
 }
 
 geometry graph listes(n: Int) -> Float {
-  l = FieldToList(n, Valeur: Index(), Nom: "*")
-  return GetListItem(l.valeur, 1)
+  l = FieldToList(count: n, Valeur: Index(), Nom: "*")
+  return GetListItem(list: l.valeur, index: 1)
 }
 
 geometry graph modes(mode: Menu = Lisse, geometry: Geometry) -> Geometry {
   m = MenuSwitch(
-    mode,
+    menu: mode,
     Lisse(description: "Garde la géométrie telle quelle"): geometry,
-    Rugueux: SubdivideMesh(geometry, 2))
+    Rugueux: SubdivideMesh(geometry, level: 2))
   return m.output
 }

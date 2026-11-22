@@ -18,15 +18,15 @@ geometry graph "morph curves 2d"(
   "Interpolates positions between two curves resampled to matching point counts"
   c_start = ResampleCurve(start, count: points)
   c_end = ResampleCurve(end, count: points)
-  pos_end = SampleIndex[FLOAT_VECTOR](c_end, Position(), Index())
-  pos = Mix[VECTOR](factor, Position(), pos_end)
+  pos_end = SampleIndex[FLOAT_VECTOR](c_end, value: Position(), index: Index())
+  pos = Mix[VECTOR](factor: factor, a: Position(), b: pos_end)
   return SetPosition(c_start, position: pos)
 }
 
 geometry graph "parallel contour 2d"(curve: Geometry, offset: Float = 0.1) -> Geometry {
   "Offsets each point along the 2D normal in the XY plane"
   t = CurveTangent()
-  normal = CombineXYZ(-t.y, t.x)
+  normal = CombineXYZ(x: -t.y, y: t.x)
   return SetPosition(curve, offset: normal * offset)
 }
 
@@ -40,7 +40,7 @@ geometry graph "contour noise 2d"(
   "Deforms a 2D contour along its normal using fractal noise"
   c = ResampleCurve(curve, count: resolution)
   t = CurveTangent()
-  normal = CombineXYZ(-t.y, t.x)
+  normal = CombineXYZ(x: -t.y, y: t.x)
   noise = fbm(Position() * frequency, octaves) * amplitude
   return SetPosition(c, offset: normal * noise)
 }
@@ -55,7 +55,7 @@ geometry graph "wave curve 2d"(
   "Displaces a 2D curve sinusoidally along its normal"
   c = ResampleCurve(curve, count: resolution)
   t = CurveTangent()
-  normal = CombineXYZ(-t.y, t.x)
+  normal = CombineXYZ(x: -t.y, y: t.x)
   wave = sin((SplineParameter().factor * periods + phase) * 6.283185) * amplitude
   return SetPosition(c, offset: normal * wave)
 }
@@ -67,10 +67,10 @@ geometry graph "ribbon 2d"(
 ) -> Geometry {
   "Generates a flat 2D ribbon along the curve with optional end tapering"
   half = width * 0.5
-  profile = CurveLine(CombineXYZ(-half), CombineXYZ(half))
-  radius = Mix(taper, 1.0, bump(SplineParameter().factor, half_width: 0.5))
+  profile = CurveLine(start: CombineXYZ(x: -half), end: CombineXYZ(x: half))
+  radius = Mix(factor: taper, a: 1.0, b: bump(SplineParameter().factor, half_width: 0.5))
   c = SetCurveRadius(curve, radius: radius)
-  return CurveToMesh(c, profile, Radius())
+  return CurveToMesh(c, profile_curve: profile, scale: Radius())
 }
 
 geometry graph "arrow 2d"(
@@ -85,8 +85,8 @@ geometry graph "arrow 2d"(
   head = (1.0 - f.factor) / head_length * head_width
   radius = f.factor < threshold ? body_width : head
   c = SetCurveRadius(curve, radius: radius)
-  profile = CurveLine((-0.5, 0.0, 0.0), (0.5, 0.0, 0.0))
-  return CurveToMesh(c, profile, Radius())
+  profile = CurveLine(start: (-0.5, 0.0, 0.0), end: (0.5, 0.0, 0.0))
+  return CurveToMesh(c, profile_curve: profile, scale: Radius())
 }
 
 geometry graph "ring 2d"(
@@ -95,7 +95,7 @@ geometry graph "ring 2d"(
     resolution: Int = 64 in 3..512
 ) -> Geometry {
   "Generates a flat 2D ring bounded by two radii"
-  c_ext = CurveCircle(resolution, outer_radius)
-  c_int = CurveCircle(resolution, inner_radius)
+  c_ext = CurveCircle(resolution: resolution, radius: outer_radius)
+  c_int = CurveCircle(resolution: resolution, radius: inner_radius)
   return FillCurve(c_ext + c_int)
 }

@@ -29,7 +29,7 @@ def test_panels_nest_and_hold_their_settings(schema, fixture_text):
     # The fixture, with nodes the fake schema has
     src = fixture_text("panels.bn").replace(
         "DistributePointsOnFaces(geometry, density: densité, seed: graine)",
-        "SetPosition(geometry, offset: CombineXYZ(densité, graine))").replace(
+        "SetPosition(geometry, offset: CombineXYZ(x: densité, y: graine))").replace(
         "RandomValue(max: aléa_échelle, seed: rotation_graine)", "aléa_échelle * rotation_graine").replace(
         "points.points", "points")
     semis, appel = compile_source(src, schema)
@@ -114,7 +114,7 @@ def test_two_sockets_of_one_name_need_a_key_of_their_own(schema):
     assert errors(graph('geometry: Geometry, "A" { t: Float }, "B" { t: Float }'), schema) == [
         'parameter \'t\' defined twice; to keep both, alias the other with as: "t" as t_2: Float']
     src = graph('geometry: Geometry, "A" { t: Float }, "B" { t as b_t: Int }',
-                body="  return SetPosition(geometry, offset: CombineXYZ(t, b_t))\n")
+                body="  return SetPosition(geometry, offset: CombineXYZ(x: t, y: b_t))\n")
     (g,) = compile_source(src, schema)
     assert g.inputs[-2:] == [("t", "Float"), ("t", "Int")] and g.input_keys[-2:] == ["t", "b_t"]
     assert to_source(parse(src)) == format_source(src)

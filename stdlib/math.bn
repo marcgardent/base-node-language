@@ -63,7 +63,7 @@ geometry graph parabola(x: Float, sharpness: Float = 1.0 in 0.0..) -> Float {
 
 geometry graph steps(x: Float, rise: Float = 0.25 in 0.0001..1.0) -> Float {
   "Stair steps: each step rises smoothly over its final fraction 'rise'"
-  return floor(x) + MapRange[SMOOTHSTEP](fract(x), 1.0 - rise)
+  return floor(x) + MapRange[SMOOTHSTEP](value: fract(x), from_min: 1.0 - rise)
 }
 
 geometry graph bounce(t: Float) -> Float {
@@ -115,7 +115,7 @@ geometry graph "project on plane"(v: Vector, normal: Vector = (0.0, 0.0, 1.0)) -
 
 geometry graph perpendicular(v: Vector) -> Vector {
   "Unit vector perpendicular to v"
-  return normalize(abs(v.x) > abs(v.z) ? CombineXYZ(-v.y, v.x) : CombineXYZ(y: -v.z, z: v.y))
+  return normalize(abs(v.x) > abs(v.z) ? CombineXYZ(x: -v.y, y: v.x) : CombineXYZ(y: -v.z, z: v.y))
 }
 
 geometry graph "max component"(v: Vector) -> Float {
@@ -135,7 +135,7 @@ geometry graph "closest on segment"(
 ) -> (Distance: Float, Factor: Float, Point: Vector) {
   "Closest point on segment [a, b] to p, its distance to p and factor (0 at a, 1 at b)"
   ab = b - a
-  t = Clamp(((p - a) ⋅ ab) / (ab ⋅ ab))
+  t = Clamp(value: ((p - a) ⋅ ab) / (ab ⋅ ab))
   point = a + ab * t
   return (Distance: distance(p, point), Factor: t, Point: point)
 }
@@ -144,7 +144,7 @@ geometry graph "closest on segment"(
 
 geometry graph "wrap angle"(angle: Float) -> Float {
   "Wraps an angle into [-π, π]"
-  return Math[WRAP](angle, 3.141593, -3.141593)
+  return Math[WRAP](Value: angle, Value_001: 3.141593, Value_002: -3.141593)
 }
 
 geometry graph "angle between"(u: Vector, v: Vector) -> Float {
@@ -196,7 +196,7 @@ geometry graph "sdf torus"(
     "minor radius": Float = 0.25
 ) -> Float {
   "Flat torus centered around the Z axis"
-  return length(CombineXYZ(length(p * (1.0, 1.0, 0.0)) - major_radius, p.z)) - minor_radius
+  return length(CombineXYZ(x: length(p * (1.0, 1.0, 0.0)) - major_radius, y: p.z)) - minor_radius
 }
 
 geometry graph "sdf cylinder"(
@@ -205,7 +205,7 @@ geometry graph "sdf cylinder"(
     "half height": Float = 1.0
 ) -> Float {
   "Capped cylinder along Z of height 2 × half height"
-  d = CombineXYZ(length(p * (1.0, 1.0, 0.0)) - radius, abs(p.z) - half_height)
+  d = CombineXYZ(x: length(p * (1.0, 1.0, 0.0)) - radius, y: abs(p.z) - half_height)
   return min(max(d.x, d.y), 0.0) + length(max(d, 0.0))
 }
 
@@ -226,12 +226,14 @@ geometry graph "sdf cone"(
     "top radius": Float in 0.0..
 ) -> Float {
   "Cone frustum along Z of height 2 × half height; top radius 0 gives a sharp cone"
-  q = CombineXYZ(length(p * (1.0, 1.0, 0.0)), p.z)
+  q = CombineXYZ(x: length(p * (1.0, 1.0, 0.0)), y: p.z)
   // Closest cap disc, top or bottom, then lateral flank
-  disc = CombineXYZ(q.x - min(q.x, q.y < 0.0 ? bottom_radius : top_radius), abs(q.y) - half_height)
-  k1 = CombineXYZ(top_radius, half_height)
-  k2 = CombineXYZ(top_radius - bottom_radius, half_height * 2.0)
-  flank = q - k1 + k2 * Clamp(((k1 - q) ⋅ k2) / (k2 ⋅ k2))
+  disc = CombineXYZ(
+    x: q.x - min(q.x, q.y < 0.0 ? bottom_radius : top_radius),
+    y: abs(q.y) - half_height)
+  k1 = CombineXYZ(x: top_radius, y: half_height)
+  k2 = CombineXYZ(x: top_radius - bottom_radius, y: half_height * 2.0)
+  flank = q - k1 + k2 * Clamp(value: ((k1 - q) ⋅ k2) / (k2 ⋅ k2))
   sgn = flank.x < 0.0 and disc.y < 0.0 ? -1.0 : 1.0
   return sgn * sqrt(min(disc ⋅ disc, flank ⋅ flank))
 }
@@ -254,7 +256,7 @@ geometry graph "sdf circle"(p: Vector = Position(), radius: Float = 1.0) -> Floa
 
 geometry graph "sdf rectangle"(p: Vector = Position(), "half size": Vector = (1.0, 0.5)) -> Float {
   "Rectangle in the XY plane of given half-extents (2D: z ignored)"
-  d = CombineXYZ(abs(p.x) - half_size.x, abs(p.y) - half_size.y)
+  d = CombineXYZ(x: abs(p.x) - half_size.x, y: abs(p.y) - half_size.y)
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0)
 }
 
@@ -276,18 +278,18 @@ geometry graph repetition(p: Vector = Position(), cell: Vector = (1.0, 1.0, 1.0)
 geometry graph twist(p: Vector = Position(), strength: Float = 1.0) -> Vector {
   "Twists space around Z: strength radians per unit height"
   a = p.z * strength
-  return CombineXYZ(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a), p.z)
+  return CombineXYZ(x: p.x * cos(a) - p.y * sin(a), y: p.x * sin(a) + p.y * cos(a), z: p.z)
 }
 
 geometry graph bend(p: Vector = Position(), strength: Float = 0.5) -> Vector {
   "Bends space upward along X: strength radians per unit length"
   a = p.x * strength
-  return CombineXYZ(p.x * cos(a) - p.z * sin(a), p.y, p.x * sin(a) + p.z * cos(a))
+  return CombineXYZ(x: p.x * cos(a) - p.z * sin(a), y: p.y, z: p.x * sin(a) + p.z * cos(a))
 }
 
 geometry graph "sdf normal"(d: Float, dx: Float, dy: Float, dz: Float) -> Vector {
   "SDF normal via finite differences: value at p, then at slightly offset x, y, and z"
-  return normalize(CombineXYZ(dx - d, dy - d, dz - d))
+  return normalize(CombineXYZ(x: dx - d, y: dy - d, z: dz - d))
 }
 
 // ---- Noise ----
@@ -301,7 +303,12 @@ geometry graph fbm(
   "Fractal noise: octave layers of increasing frequency and decreasing amplitude, roughly -1 to 1"
   r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
     // Each octave offset: prevents identical noise near origin
-    noise = NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0
+    noise = NoiseTexture(
+          vector: p * frequency + (1.7, 9.2, 3.1) * iteration,
+          scale: 1.0,
+          detail: 0.0).factor
+        * 2.0
+      - 1.0
     return (
       sum: sum + noise * amplitude,
       amplitude: amplitude * persistence,
@@ -319,7 +326,13 @@ geometry graph "ridge fbm"(
   "Ridged fractal noise: sharp mountain ridges, roughly 0 to 1"
   r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
     ridge = 1.0
-      - abs(NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0)
+      - abs(
+        NoiseTexture(
+              vector: p * frequency + (1.7, 9.2, 3.1) * iteration,
+              scale: 1.0,
+              detail: 0.0).factor
+            * 2.0
+          - 1.0)
     return (
       sum: sum + ridge * ridge * amplitude,
       amplitude: amplitude * persistence,
@@ -336,14 +349,14 @@ geometry graph "random direction"(id: Int = ID(), seed: Int) -> Vector {
   z = r.x * 2.0 - 1.0
   s = sqrt(1.0 - z * z)
   a = r.y * 6.283185
-  return CombineXYZ(s * cos(a), s * sin(a), z)
+  return CombineXYZ(x: s * cos(a), y: s * sin(a), z: z)
 }
 
 geometry graph "point in disk"(id: Int = ID(), seed: Int) -> Vector {
   "Uniform random point inside the XY unit disk"
   r = RandomValue[FLOAT_VECTOR](max: (1.0, 1.0, 0.0), id: id, seed: seed)
   a = r.y * 6.283185
-  return CombineXYZ(cos(a), sin(a)) * sqrt(r.x)
+  return CombineXYZ(x: cos(a), y: sin(a)) * sqrt(r.x)
 }
 
 // ---- Sampling ----
@@ -353,10 +366,10 @@ geometry graph "fibonacci point"(index: Int = Index(), count: Int = 100 in 1..) 
   z = 1.0 - (index * 2.0 + 1.0) / count
   r = sqrt(1.0 - z * z)
   a = index * 2.399963
-  return CombineXYZ(r * cos(a), r * sin(a), z)
+  return CombineXYZ(x: r * cos(a), y: r * sin(a), z: z)
 }
 
 geometry graph "r2 sequence"(index: Int = Index()) -> Vector {
   "Point at index in the 2D R2 low-discrepancy sequence in [0, 1]²"
-  return CombineXYZ(fract(index * 0.7548777 + 0.5), fract(index * 0.5698403 + 0.5))
+  return CombineXYZ(x: fract(index * 0.7548777 + 0.5), y: fract(index * 0.5698403 + 0.5))
 }

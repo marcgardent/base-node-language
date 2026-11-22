@@ -277,22 +277,22 @@ def test_a_name_that_holds_a_value_is_no_template():
     compared = [("BinOp", "<"), ("BinOp", ">")]
     head = 'geometry graph g(a: Float, b: Float, c: Float, d: Float, "Seed" as s: Float) -> Float {\n'
     # An input, by its key
-    assert args(head + "  return Math(a < b, c > (d))\n}\n") == compared
-    assert args(head + "  return Math(s < b, c > (d))\n}\n") == compared
+    assert args(head + "  return max(a < b, c > (d))\n}\n") == compared
+    assert args(head + "  return max(s < b, c > (d))\n}\n") == compared
     # A name bound before, in the block or in a frame of it
-    assert args(head + "  k = a\n  return Math(k < b, c > (d))\n}\n") == compared
-    assert args(head + "  {\n    k = a\n  }\n  return Math(k < b, c > (d))\n}\n") == compared
+    assert args(head + "  k = a\n  return max(k < b, c > (d))\n}\n") == compared
+    assert args(head + "  {\n    k = a\n  }\n  return max(k < b, c > (d))\n}\n") == compared
     # Inside a body: its items, and the names around
-    body = parse(head + "  r = f(1, v: a) -> {\n    return Math(v < b, k > (v))\n  }\n  return r\n}\n")
+    body = parse(head + "  r = f(1, v: a) -> {\n    return max(v < b, k > (v))\n  }\n  return r\n}\n")
     assert [type(x.value).__name__ for x in body.graphs[0].body[0].value.body[0].value.args] == ["BinOp", "BinOp"]
-    inner = parse(head + "  h = graph(x: Float) -> Float {\n    return Math(x < a, b > (x))\n  }\n  return h(x: a)\n}\n")
+    inner = parse(head + "  h = graph(x: Float) -> Float {\n    return max(x < a, b > (x))\n  }\n  return h(x: a)\n}\n")
     assert [type(x.value).__name__ for x in inner.graphs[0].body[0].value.body[0].value.args] == ["BinOp", "BinOp"]
     # A name holds no value before its statement, after the body it is an item of, nor in another graph
     call = [("Call", None)]
-    assert args(head + "  return Math(k < b, c > (d))\n}\n") == call
-    assert args(head + "  r = f(1, v: a) -> {\n    return v\n  }\n  return Math(v < b, c > (d))\n}\n") == call
+    assert args(head + "  return max(k < b, c > (d))\n}\n") == call
+    assert args(head + "  r = f(1, v: a) -> {\n    return v\n  }\n  return max(v < b, c > (d))\n}\n") == call
     other = "geometry graph h(k: Float) -> Float {\n  return k\n}\n\n"
-    assert args(other + "geometry graph g(b: Float) -> Float {\n  return Math(k < b, b > (b))\n}\n") == call
+    assert args(other + "geometry graph g(b: Float) -> Float {\n  return max(k < b, b > (b))\n}\n") == call
     # Two comparisons in a row are refused, not read as a call
     with pytest.raises(BnError) as err:
         parse(head + "  x = a < b > (c)\n  return x\n}\n")
@@ -306,13 +306,13 @@ def test_a_name_that_holds_a_value_is_no_template():
 
 def test_what_the_parser_reads_as_types_for_want_of_a_value():
     # A name nothing binds: refused as unknown, as the comparisons would be
-    assert errors(graph("return CombineXYZ(x: Math(nope < v, z > (v)))", params="v: Float")) == [
+    assert errors(graph("return CombineXYZ(x: max(nope < v, z > (v)))", params="v: Float")) == [
         "unknown name 'nope'"]
     # A name only the zone knows: the parser could not tell, the checker says how to write it
-    body = "r = repeat(3, s: 0.0) -> {\n    return Math(iteration < v, v > (s))\n  }\n  return CombineXYZ(x: r)"
+    body = "r = repeat(3, s: 0.0) -> {\n    return max(iteration < v, v > (s))\n  }\n  return CombineXYZ(x: r)"
     assert errors(graph(body, params="v: Float")) == [
         "'iteration' is a value, not a template: a comparison goes in parentheses, (iteration < v)"]
-    body = body.replace("Math(iteration < v, v > (s))", "Math((iteration < v), v > (s))")
+    body = body.replace("max(iteration < v, v > (s))", "max((iteration < v), v > (s))")
     assert compile_(graph(body, params="v: Float"))
 
 

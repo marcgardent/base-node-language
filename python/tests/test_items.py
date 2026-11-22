@@ -68,7 +68,7 @@ def test_an_empty_item_keeps_its_place(schema):
 
 
 def test_menu_items_are_named_and_flag_their_choice(schema):
-    src = graph("  m = MenuSwitch(mode, Lisse: geometry, \"Très rugueux\": _)\n  return m.très_rugueux", "Bool")
+    src = graph("  m = MenuSwitch(menu: mode, Lisse: geometry, \"Très rugueux\": _)\n  return m.très_rugueux", "Bool")
     _g, m = node(src, schema, "GeometryNodeMenuSwitch")
     assert m.items == [("Lisse", "Geometry"), ("Très rugueux", "Geometry")]
     assert "data_type" in m.props and m.props["data_type"] == "GEOMETRY"
@@ -76,12 +76,12 @@ def test_menu_items_are_named_and_flag_their_choice(schema):
 
 
 def test_a_menu_value_picks_an_item(schema):
-    _g, m = node(graph("  return MenuSwitch(Lisse, Lisse: 1.0, Rugueux: 2.0).output"), schema, "GeometryNodeMenuSwitch")
+    _g, m = node(graph("  return MenuSwitch(menu: Lisse, Lisse: 1.0, Rugueux: 2.0).output"), schema, "GeometryNodeMenuSwitch")
     assert m.values == {"Menu": "Lisse", "Lisse": 1.0, "Rugueux": 2.0} and m.props == {"data_type": "FLOAT"}
 
 
 def test_an_item_given_twice_fails(schema):
-    src = graph("  return MenuSwitch(mode, a: 1.0, a: 2.0).output")
+    src = graph("  return MenuSwitch(menu: mode, a: 1.0, a: 2.0).output")
     assert errors(src, schema) == ["MenuSwitch: 'a' given twice"]
 
 
@@ -92,7 +92,7 @@ def test_more_items_fixture_prints_back_unchanged(fixture_text):
 
 
 def test_format_string_items_are_named_inputs(schema):
-    src = graph('  return FormatString("{n} : {x}", n: i, x: t)', "String")
+    src = graph('  return FormatString(format: "{n} : {x}", n: i, x: t)', "String")
     _g, f = node(src, schema, "FunctionNodeFormatString")
     assert f.items == [("n", "Int"), ("x", "Float")]
     assert f.values == {"Format": "{n} : {x}"} and [i for i, _l in f.links] == ["n", "x"]
@@ -100,7 +100,7 @@ def test_format_string_items_are_named_inputs(schema):
 
 
 def test_format_string_takes_numbers_and_strings_only(schema):
-    src = graph('  return FormatString("{b}", b: true)', "String")
+    src = graph('  return FormatString(format: "{b}", b: true)', "String")
     assert errors(src, schema) == ["FormatString: no Bool item; types: Float, Int, String"]
 
 
@@ -112,14 +112,14 @@ def test_bake_items_give_their_outputs(schema):
 
 
 def test_field_to_list_keeps_its_count_input(schema):
-    _g, f = node(graph('  return FieldToList(i, a: t, Nom: "*").a'), schema, "GeometryNodeFieldToList")
+    _g, f = node(graph('  return FieldToList(count: i, a: t, Nom: "*").a'), schema, "GeometryNodeFieldToList")
     assert f.items == [("a", "Float"), ("Nom", "String")]
     assert f.values == {"Nom": "*"} and [i for i, _l in f.links] == ["Count", "a"]
 
 
 def test_an_item_takes_options(schema):
     src = graph('  b = Bake(Geometry: geometry, h(attribute_domain: FACE, is_attribute: true): t)\n'
-                '  m = MenuSwitch(mode, Lisse(description: "Sans relief"): 1.0, Rugueux: 2.0)\n'
+                '  m = MenuSwitch(menu: mode, Lisse(description: "Sans relief"): 1.0, Rugueux: 2.0)\n'
                 "  return b.h + m.output")
     g = compile_source(src, schema, "t.bn")[-1]
     b, m = (next(n for n in g.nodes if n.bl_idname == k) for k in ("GeometryNodeBake", "GeometryNodeMenuSwitch"))
@@ -129,7 +129,7 @@ def test_an_item_takes_options(schema):
 
 
 def test_item_options_print_back():
-    src = 'geometry graph g(mode: Menu) -> Float {\n  return MenuSwitch(mode, "Très lisse"(description: "d"): 1.0).output\n}\n'
+    src = 'geometry graph g(mode: Menu) -> Float {\n  return MenuSwitch(menu: mode, "Très lisse"(description: "d"): 1.0).output\n}\n'
     f = parse(src)
     arg = f.graphs[0].body[0].value.target.args[1]
     assert (arg.name, [(o.name, o.value.value) for o in arg.options]) == ("Très lisse", [("description", "d")])
@@ -137,7 +137,7 @@ def test_item_options_print_back():
 
 
 def test_a_call_given_as_a_value_is_not_an_item():
-    f = parse("geometry graph g(x: Float) -> Float {\n  return Math(Math(x, 1.0), b: 2.0)\n}\n")
+    f = parse("geometry graph g(x: Float) -> Float {\n  return f(Math(Value: x, Value_001: 1.0), b: 2.0)\n}\n")
     inner = f.graphs[0].body[0].value.args[0]
     assert inner.name is None and inner.value.name == "Math"
 
@@ -157,8 +157,9 @@ def test_a_repeat_state_takes_no_options(schema):
 
 
 def test_an_item_named_like_an_input_goes_by_a_key_of_its_own(schema):
-    src = graph("  c = CaptureAttribute(geometry, t > 0.0, Selection as capturé: t < 1.0, domain as domaine: t)\n"
-                "  return SetPosition(c.geometry, c.capturé, offset: CombineXYZ(z: c.domaine)).geometry", "Geometry")
+    src = graph("  c = CaptureAttribute(\n    geometry,\n    selection: t > 0.0,\n    Selection as capturé: t < 1.0,\n"
+                "    domain as domaine: t)\n"
+                "  return SetPosition(c.geometry, selection: c.capturé, offset: CombineXYZ(z: c.domaine)).geometry", "Geometry")
     assert to_source(parse(src)) == src
     g, c = node(src, schema, "GeometryNodeCaptureAttribute")
     assert c.items == [("Selection", "Bool"), ("domain", "Float")] and c.props == {}
@@ -168,7 +169,7 @@ def test_an_item_named_like_an_input_goes_by_a_key_of_its_own(schema):
 
 
 def test_an_item_key_with_options_prints_back():
-    src = graph('  return MenuSwitch(mode, Menu as menu_2(description: "Le premier"): 1.0, B: 2.0).output')
+    src = graph('  return MenuSwitch(menu: mode, Menu as menu_2(description: "Le premier"): 1.0, B: 2.0).output')
     assert to_source(parse(src)) == src
 
 

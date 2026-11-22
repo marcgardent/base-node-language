@@ -411,11 +411,11 @@
             "name": "MenuSwitch",
             "args": [
               {
-                "name": null,
+                "name": "menu",
                 "value": {
                   "name": "mode",
                   "line": 21,
-                  "col": 18
+                  "col": 24
                 },
                 "line": 21,
                 "col": 18,
@@ -428,10 +428,10 @@
                 "value": {
                   "name": "geometry",
                   "line": 21,
-                  "col": 32
+                  "col": 38
                 },
                 "line": 21,
-                "col": 24,
+                "col": 30,
                 "options": [],
                 "type": null,
                 "alias": null
@@ -446,10 +446,10 @@
                       "value": {
                         "name": "geometry",
                         "line": 21,
-                        "col": 61
+                        "col": 67
                       },
                       "line": 21,
-                      "col": 61,
+                      "col": 67,
                       "options": [],
                       "type": null,
                       "alias": null
@@ -459,24 +459,24 @@
                       "value": {
                         "name": "size",
                         "line": 21,
-                        "col": 71
+                        "col": 77
                       },
                       "line": 21,
-                      "col": 71,
+                      "col": 77,
                       "options": [],
                       "type": null,
                       "alias": null
                     }
                   ],
                   "line": 21,
-                  "col": 49,
+                  "col": 55,
                   "outputs": null,
                   "single_output": false,
                   "type_args": null,
                   "settings": []
                 },
                 "line": 21,
-                "col": 42,
+                "col": 48,
                 "options": [],
                 "type": null,
                 "alias": null
@@ -1917,12 +1917,12 @@
                         "name": "IcoSphere",
                         "args": [
                           {
-                            "name": null,
+                            "name": "radius",
                             "value": {
                               "value": 0.1,
                               "is_int": false,
                               "line": 54,
-                              "col": 40
+                              "col": 48
                             },
                             "line": 54,
                             "col": 40,
@@ -1931,15 +1931,15 @@
                             "alias": null
                           },
                           {
-                            "name": null,
+                            "name": "subdivisions",
                             "value": {
                               "value": 2,
                               "is_int": true,
                               "line": 54,
-                              "col": 45
+                              "col": 67
                             },
                             "line": 54,
-                            "col": 45,
+                            "col": 53,
                             "options": [],
                             "type": null,
                             "alias": null
@@ -1954,7 +1954,7 @@
                       },
                       "socket": "mesh",
                       "line": 54,
-                      "col": 47
+                      "col": 69
                     },
                     "line": 54,
                     "col": 30,
@@ -2014,7 +2014,7 @@
                       "name": "CurveToMesh",
                       "args": [
                         {
-                          "name": null,
+                          "name": "profile_curve",
                           "value": {
                             "name": "CurveCircle",
                             "args": [
@@ -2024,17 +2024,17 @@
                                   "value": 0.02,
                                   "is_int": false,
                                   "line": 60,
-                                  "col": 44
+                                  "col": 59
                                 },
                                 "line": 60,
-                                "col": 36,
+                                "col": 51,
                                 "options": [],
                                 "type": null,
                                 "alias": null
                               }
                             ],
                             "line": 60,
-                            "col": 24,
+                            "col": 39,
                             "outputs": null,
                             "single_output": false,
                             "type_args": null,
@@ -2355,11 +2355,11 @@
                       "alias": null
                     },
                     {
-                      "name": null,
+                      "name": "selection",
                       "value": {
                         "name": "top",
                         "line": 74,
-                        "col": 34
+                        "col": 45
                       },
                       "line": 74,
                       "col": 34,
@@ -2373,10 +2373,10 @@
                         "value": 0.1,
                         "is_int": false,
                         "line": 74,
-                        "col": 53
+                        "col": 64
                       },
                       "line": 74,
-                      "col": 39,
+                      "col": 50,
                       "options": [],
                       "type": null,
                       "alias": null
@@ -2919,11 +2919,11 @@
             "name": "Math",
             "args": [
               {
-                "name": null,
+                "name": "Value",
                 "value": {
                   "name": "f",
                   "line": 90,
-                  "col": 40
+                  "col": 47
                 },
                 "line": 90,
                 "col": 40,
@@ -2932,29 +2932,29 @@
                 "alias": null
               },
               {
-                "name": null,
+                "name": "Value_001",
                 "value": {
                   "value": 3.141593,
                   "is_int": false,
                   "line": 90,
-                  "col": 43
+                  "col": 61
                 },
                 "line": 90,
-                "col": 43,
+                "col": 50,
                 "options": [],
                 "type": null,
                 "alias": null
               },
               {
-                "name": null,
+                "name": "Value_002",
                 "value": {
                   "value": -3.141593,
                   "is_int": false,
                   "line": 90,
-                  "col": 53
+                  "col": 82
                 },
                 "line": 90,
-                "col": 53,
+                "col": 71,
                 "options": [],
                 "type": null,
                 "alias": null

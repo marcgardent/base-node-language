@@ -64,7 +64,7 @@ def test_props_change_the_inputs(schema):
 
 
 def test_outputs_of_a_bound_node(schema):
-    src = HEAD + "  grid = Grid(2.0, 2.0, 3, 3)\n  return grid."
+    src = HEAD + "  grid = Grid(size_x: 2.0, size_y: 2.0, vertices_x: 3, vertices_y: 3)\n  return grid."
     assert labels(src, schema) == ["mesh", "uv_map"]
 
 
@@ -75,7 +75,7 @@ def test_vector_output_also_has_components(schema):
 
 
 def test_outputs_after_a_call(schema):
-    assert labels(HEAD + "  return Grid(1.0, 1.0, 2, 2).m", schema)[0] == "mesh"
+    assert labels(HEAD + "  return Grid(size_x: 1.0, size_y: 1.0, vertices_x: 2, vertices_y: 2).m", schema)[0] == "mesh"
 
 
 def test_names_in_the_body(schema):

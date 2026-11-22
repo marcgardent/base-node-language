@@ -80,7 +80,7 @@ def test_vector_math(schema):
 
 
 def test_length_gives_a_float(schema):
-    g = compile_one(graph("  c = CombineXYZ(length(v))"), schema)
+    g = compile_one(graph("  c = CombineXYZ(x: length(v))"), schema)
     length = next(n for n in g.nodes if n.props.get("operation") == "LENGTH")
     assert node(g, "c").links == [("X", ir.Link(length.id, "Value"))]
 
@@ -171,7 +171,7 @@ def test_logic_errors(schema):
 
 
 def test_plus_joins_geometries_in_one_node(schema):
-    g = compile_one(graph("  grid = Grid(1.0, 1.0, 2, 2)\n"
+    g = compile_one(graph("  grid = Grid(size_x: 1.0, size_y: 1.0, vertices_x: 2, vertices_y: 2)\n"
                           "  a = geometry + grid.mesh + SetShadeSmooth(grid.mesh)\n"
                           "  b = (geometry + grid.mesh) + geometry\n"
                           "  c = geometry + (grid.mesh + geometry)\n"
@@ -271,7 +271,7 @@ def test_a_math_comparison_is_a_float_of_numbers_only():
 
 
 def test_a_condition_is_a_comparison_written_with_math():
-    g = compile_one(graph("  gt = a > b\n  ne = a != b\n  hand = Math[LESS_THAN](a, b)\n"
+    g = compile_one(graph("  gt = a > b\n  ne = a != b\n  hand = Math[LESS_THAN](Value: a, Value_001: b)\n"
                           "  flipped = 1.0 - hand\n  sum = a + b\n  not_from_one = 2.0 - hand\n"
                           "  swapped = hand - 1.0\n  twice = 1.0 - sum", FLOATS), NoCompare())
     found = {n.name: math_condition(n, g.nodes) for n in g.nodes if n.name}
@@ -291,7 +291,7 @@ def test_is_condition_follows_names(monkeypatch):
         checkers.append(self)
 
     monkeypatch.setattr(typecheck.GraphChecker, "__init__", keep)
-    compile_one(graph("  gt = a >= b\n  hand = 1.0 - Math[COMPARE](a, b)\n  sum = a + b\n"
+    compile_one(graph("  gt = a >= b\n  hand = 1.0 - Math[COMPARE](Value: a, Value_001: b)\n  sum = a + b\n"
                       "  yes = true", FLOATS), NoCompare())
     c = checkers[-1]
     assert {k: c.is_condition(c.env[k]) for k in ("gt", "hand", "sum", "yes", "a")} == {

@@ -18,7 +18,7 @@ geometry graph inputs(
 ) -> (Geometry: Geometry, Height: Float(description: "The height of each point"), Selected: Bool) {
   "All kinds of inputs"
   height = p.z * strength + turn_count + id * 0.01 + uv.x
-  m = MenuSwitch(mode, Smooth: geometry, Rough: offset_mesh(geometry, size))
+  m = MenuSwitch(menu: mode, Smooth: geometry, Rough: offset_mesh(geometry, size))
   return (
     Geometry: m.output
       |> SetMaterial(material: material)
@@ -51,13 +51,13 @@ geometry graph formulas(
 geometry graph nodes(geometry: Geometry, density: Float) -> Geometry {
   "Scatter" #yellowgreen {
     points = DistributePointsOnFaces(geometry, density: density)
-    pebbles = SetShadeSmooth(IcoSphere(0.1, 2).mesh)
+    pebbles = SetShadeSmooth(IcoSphere(radius: 0.1, subdivisions: 2).mesh)
   }
   "Border" #ee7733 {
     "Nested" {
       border = geometry
         |> MeshToCurve()
-        |> CurveToMesh(CurveCircle(radius: 0.02))
+        |> CurveToMesh(profile_curve: CurveCircle(radius: 0.02))
     }
   }
   {
@@ -71,7 +71,7 @@ geometry graph nodes(geometry: Geometry, density: Float) -> Geometry {
 geometry graph zones(geometry: Geometry, n: Int, i: Int) -> (Geometry: Geometry, Sum: Float) {
   r = repeat(n, mesh: geometry, sum: 0.0) -> {
     top = Position().z >= sum
-    extruded = ExtrudeMesh(mesh, top, offset_scale: 0.1)
+    extruded = ExtrudeMesh(mesh, selection: top, offset_scale: 0.1)
     return (mesh: extruded.mesh, sum: sum + 0.1)
   }
   table = repeat(n, total: 0.0) -> {
@@ -87,7 +87,7 @@ geometry graph zones(geometry: Geometry, n: Int, i: Int) -> (Geometry: Geometry,
 
 // Settings in brackets: by position then by name, a tuple, a ramp, a template's types, a pipe, a body
 geometry graph settings(geometry: Geometry, f: Float) -> Geometry {
-  angle = Math[WRAP, use_clamp: false](f, 3.141593, -3.141593)
+  angle = Math[WRAP, use_clamp: false](Value: f, Value_001: 3.141593, Value_002: -3.141593)
   ramp = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0)), (1.0, (1.0, 0.5, 0.0)))](factor: angle)
   turned = Rotation[rotation_euler: (0.1, 0.0, -0.1)]()
   rest = attribute_or<Vector>[POINT]("rest", Position())

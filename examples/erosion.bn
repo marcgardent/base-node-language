@@ -10,7 +10,7 @@ geometry graph neighbour(grid: Geometry, v: Float, di: Int, dj: Int, n: Int, edg
   i = floor(Index() / n) + di
   j = mod(Index(), n) + dj
   inside = i >= 0 and i < n and j >= 0 and j < n
-  return inside ? SampleIndex(grid, v, i * n + j) : edge
+  return inside ? SampleIndex(grid, value: v, index: i * n + j) : edge
 }
 
 // What the eight pipes of each cell bring in and take out, each times `scale` where it starts,
@@ -20,8 +20,8 @@ geometry graph pipes(
     n: Int,
     scale: Float
 ) -> (in_: Float, out: Float, x: Float, y: Float) {
-  a = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
-  d = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
+  a = SeparateColor(color: NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
+  d = SeparateColor(color: NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
   w = neighbour(grid, a.green * scale, -1, 0, n, 0.0)
   e = neighbour(grid, a.red * scale, 1, 0, n, 0.0)
   s = neighbour(grid, a.alpha * scale, 0, -1, n, 0.0)
@@ -44,7 +44,7 @@ geometry graph pipes(
 geometry graph slide(grid: Geometry, di: Int, dj: Int, n: Int, talus: Float) -> Float {
   z = Position().z
   other = neighbour(grid, z, di, dj, n, z)
-  drop = talus * length(CombineXYZ(di, dj))
+  drop = talus * length(CombineXYZ(x: di, y: dj))
   return max(other - z - drop, 0.0) - max(z - other - drop, 0.0)
 }
 
@@ -72,8 +72,8 @@ geometry graph erode(
   out = repeat(iterations, ground: terrain) -> {
     water = NamedAttribute(name: "water").attribute
     sediment = NamedAttribute(name: "sediment").attribute
-    a = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
-    d = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
+    a = SeparateColor(color: NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
+    d = SeparateColor(color: NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
 
     wet = StoreNamedAttribute(ground, name: "water", value: water + rain * dt)
 
@@ -95,8 +95,8 @@ geometry graph erode(
       k = min(water * l * l / ((fl + fr + fd + fu + fdl + fur + fdr + ful) * dt + 1e-06), 1.0)
       c = CaptureAttribute(
         wet,
-        sides: CombineColor(fl * k, fr * k, fd * k, fu * k),
-        diagonals: CombineColor(fdl * k, fur * k, fdr * k, ful * k))
+        sides: CombineColor(red: fl * k, green: fr * k, blue: fd * k, alpha: fu * k),
+        diagonals: CombineColor(red: fdl * k, green: fur * k, blue: fdr * k, alpha: ful * k))
       flowing = c.geometry
         |> StoreNamedAttribute[FLOAT_COLOR](name: "flux", value: c.sides)
         |> StoreNamedAttribute[FLOAT_COLOR](name: "diagonal flux", value: c.diagonals)
@@ -113,7 +113,7 @@ geometry graph erode(
         |> StoreNamedAttribute(name: "sediment", value: sediment + carried.in_ - carried.out)
         |> StoreNamedAttribute(
           name: "speed",
-          value: length(CombineXYZ(flow.x, flow.y)) * 0.5 / (l * mean))
+          value: length(CombineXYZ(x: flow.x, y: flow.y)) * 0.5 / (l * mean))
         |> StoreNamedAttribute(name: "water", value: depth)
     }
 
@@ -155,7 +155,7 @@ geometry graph "eroded hills"(
 ) -> Geometry {
   "A noise terrain on a Grid, eroded"
   hills = NoiseTexture(vector: Position(), scale: 0.6, detail: 6.0, roughness: 0.55).factor
-  return Grid(size, size, resolution, resolution)
+  return Grid(size_x: size, size_y: size, vertices_x: resolution, vertices_y: resolution)
     |> SetPosition(offset: CombineXYZ(z: (hills - 0.5) * height * 2.0))
     |> erode(iterations: iterations)
     |> SetShadeSmooth()

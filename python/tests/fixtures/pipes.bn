@@ -19,8 +19,8 @@ geometry graph pipes(geometry: Geometry, o: Vector) -> (a: Geometry, b: Geometry
       MeshToPoints(CurveToMesh(CurveCircle(resolution: 32, radius: 1.0).curve), radius: 0.05))
     |> MergeByDistance(distance: 0.001)
   argument = SetPosition(geometry |> SubdivideMesh(level: 2), offset: o)
-  operands = (o |> VectorMath(o)) - (o |> VectorRotate(o))
+  operands = (geometry |> SubdivideMesh(level: 1)) + (geometry |> SetShadeSmooth())
   picked = (geometry |> SeparateGeometry(selection: true)).selection
-    |> SetPosition(offset: operands)
+    |> SetPosition(offset: o)
   return (a: head |> SetShadeSmooth(), b: argument |> SubdivideMesh(level: 1))
 }

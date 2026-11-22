@@ -8,13 +8,13 @@ MESSY = """// Two graphs
 geometry graph "Smooth Mesh"(Mesh: Geometry, Level: Int) -> Geometry {
   // smooth the mesh
   return Mesh
-    |> SubdivideMesh(Level)   // finer
+    |> SubdivideMesh(level: Level)   // finer
     // then shade
     |> SetShadeSmooth()
 }
 // next one
 geometry graph scatter(geometry: Geometry) -> Geometry {
-  grid = Grid(2.0,2.0, 3, 3) // a grid
+  grid = Grid(size_x: 2.0,size_y: 2.0, vertices_x: 3, vertices_y: 3) // a grid
 
 
   smooth = smooth_mesh(grid.mesh, 2)
@@ -28,14 +28,14 @@ FORMATTED = """// Two graphs
 geometry graph "Smooth Mesh"(Mesh: Geometry, Level: Int) -> Geometry {
   // smooth the mesh
   return Mesh
-    |> SubdivideMesh(Level)  // finer
+    |> SubdivideMesh(level: Level)  // finer
     // then shade
     |> SetShadeSmooth()
 }
 
 // next one
 geometry graph scatter(geometry: Geometry) -> Geometry {
-  grid = Grid(2.0, 2.0, 3, 3)  // a grid
+  grid = Grid(size_x: 2.0, size_y: 2.0, vertices_x: 3, vertices_y: 3)  // a grid
 
   smooth = smooth_mesh(grid.mesh, 2)
   return geometry + smooth

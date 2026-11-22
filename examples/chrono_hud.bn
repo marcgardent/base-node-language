@@ -19,7 +19,7 @@ geometry graph "hud rotor"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   ang = steps(phase * 6.0, 0.35) * 1.047198
   ca = cos(ang)
   sa = sin(ang)
-  pr = CombineXYZ(p.x * ca - p.y * sa, p.x * sa + p.y * ca)
+  pr = CombineXYZ(x: p.x * ca - p.y * sa, y: p.x * sa + p.y * ca)
 
   star = sdf_star_2d(pr, radius: 1.05, points: 6, indent: 0.52)
   sector = sdf_polar_repeat_2d(pr, sectors: 6)
@@ -32,8 +32,8 @@ geometry graph "hud rotor"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   dz = abs(p.z) - 0.14
   d3d = max(d2d, dz) + min(max(d2d, dz), 0.0) - 0.03
   vol = VolumeCube(
-    -d3d,
-    -1.0,
+    density: -d3d,
+    background: -1.0,
     min: (-1.45, -1.45, -0.3),
     max: (1.45, 1.45, 0.3),
     resolution_x: 110,

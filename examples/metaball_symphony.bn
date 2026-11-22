@@ -21,7 +21,7 @@ geometry graph "metaball core"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   // Shape A: twisted 3D torus + polar sphere satellites
   pt = twist(p, strength: 1.6 * sin(tau))
   sec = sdf_polar_repeat_2d(p, sectors: 6)
-  orbs = sdf_sphere(CombineXYZ(sec.x - 0.82, sec.y, p.z), radius: 0.24)
+  orbs = sdf_sphere(CombineXYZ(x: sec.x - 0.82, y: sec.y, z: p.z), radius: 0.24)
   shape_a = sdf_chamfer_union(
     sdf_torus(pt, major_radius: 0.72, minor_radius: 0.21),
     orbs,
@@ -34,13 +34,13 @@ geometry graph "metaball core"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   dz = abs(p.z) - 0.16
   shape_b = max(d2, dz) + min(max(d2, dz), 0.0) - 0.03
 
-  blended = Mix(t, shape_a, shape_b)
-  carver = CombineXYZ(cos(tau) * 0.65, sin(tau) * 0.65, 0.25)
+  blended = Mix(factor: t, a: shape_a, b: shape_b)
+  carver = CombineXYZ(x: cos(tau) * 0.65, y: sin(tau) * 0.65, z: 0.25)
   carved = smooth_subtraction(blended, sdf_sphere(p - carver, radius: 0.32), smoothness: 0.14)
 
   vol = VolumeCube(
-    -carved,
-    -1.0,
+    density: -carved,
+    background: -1.0,
     min: (-1.35, -1.35, -0.65),
     max: (1.35, 1.35, 0.65),
     resolution_x: 110,
@@ -65,10 +65,14 @@ geometry graph "metaball symphony"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   "Iso-Field Pedestal" #slategray {
     tri = triangular_grid_2d(columns: 32, rows: 32, side: 0.12)
     p = Position()
-    d_ped = Mix(t, length(p) - 0.85, sdf_star_2d(p, radius: 0.95, points: 6, indent: 0.5))
+    d_ped = Mix(
+      factor: t,
+      a: length(p) - 0.85,
+      b: sdf_star_2d(p, radius: 0.95, points: 6, indent: 0.5))
     iso_z = sdf_isolines(d_ped - phase * 0.4, step: 0.22, width: 0.045)
     pedestal = tri
-      |> SetPosition(offset: CombineXYZ(z: Clamp(-iso_z * 1.8, -0.04, 0.06) - 0.28))
+      |> SetPosition(
+        offset: CombineXYZ(z: Clamp(value: -iso_z * 1.8, min: -0.04, max: 0.06) - 0.28))
       |> ExtrudeMesh(offset_scale: 0.03)
       |> SetMaterial(material: DarkSlate)
   }
@@ -83,13 +87,13 @@ geometry graph "metaball symphony"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
     rib_main = ribbon_2d(morphed, width: 0.055, taper: 0.0)
       |> TransformGeometry(
         translation: (0.0, 0.0, 0.16),
-        rotation: CombineXYZ(0.14 * sin(tau), 0.14 * cos(tau), tau / 6.0))
+        rotation: CombineXYZ(x: 0.14 * sin(tau), y: 0.14 * cos(tau), z: tau / 6.0))
       |> SetMaterial(material: NeonAmber)
 
     rib_outer = ribbon_2d(outer, width: 0.032, taper: 0.0)
       |> TransformGeometry(
         translation: (0.0, 0.0, 0.1),
-        rotation: CombineXYZ(-0.1 * cos(tau), 0.1 * sin(tau), -tau / 6.0))
+        rotation: CombineXYZ(x: -0.1 * cos(tau), y: 0.1 * sin(tau), z: -tau / 6.0))
       |> SetMaterial(material: NeonCyan)
   }
 

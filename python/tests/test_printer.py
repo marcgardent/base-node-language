@@ -7,8 +7,8 @@ from base_node.printer import to_source
 CANONICAL = [
     "geometry graph wave(geometry: Geometry, t: Float) -> Geometry {\n"
     "  p = Position()\n"
-    "  s = Math[ADD](SeparateXYZ(p).x, t)\n"
-    "  h = Math[MULTIPLY](Math[SINE](s), 0.2)\n"
+    "  s = Math[ADD](Value: SeparateXYZ(vector: p).x, Value_001: t)\n"
+    "  h = Math[MULTIPLY](Value: Math[SINE](value: s), Value_001: 0.2)\n"
     "  return SetPosition(geometry, offset: CombineXYZ(z: h))\n"
     "}\n",
     "geometry graph g(geometry: Geometry) -> Geometry {\n"
@@ -42,9 +42,9 @@ CANONICAL = [
     "  return (n ⋅ side) * 2.0 + (n × u) ⋅ (u + n) - n ⋅ u\n"
     "}\n",
     "shader graph rust(uv: Vector) -> Shader {\n"
-    "  n = NoiseTexture(uv, scale: 8)\n"
+    "  n = NoiseTexture(vector: uv, scale: 8)\n"
     "  return PrincipledBSDF(\n"
-    "    base_color: ColorRamp(n.fac),\n"
+    "    base_color: ColorRamp(factor: n.fac),\n"
     "    roughness: n.fac * 0.5 + 0.4,\n"
     "    metallic: (n.fac - 0.1) * 2.0,\n"
     "    subsurface_weight: 0.25)\n"

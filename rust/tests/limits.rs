@@ -17,8 +17,8 @@ fn shape(name: &str, n: usize) -> String {
         "parentheses" => format!("{HEAD}{}a{}{TAIL}", "(".repeat(n), ")".repeat(n)),
         "minus" => format!("{HEAD}{}a{TAIL}", "-".repeat(n)),
         "not" => format!("{HEAD}{}a{TAIL}", "not ".repeat(n)),
-        "calls" => format!("{HEAD}{}a{}{TAIL}", "Math(".repeat(n), ")".repeat(n)),
-        "options" => format!("{HEAD}Math({}{}{TAIL}", "x(".repeat(n - 1), ")".repeat(n)),
+        "calls" => format!("{HEAD}{}a{}{TAIL}", "abs(".repeat(n), ")".repeat(n)),
+        "options" => format!("{HEAD}abs({}{}{TAIL}", "x(".repeat(n - 1), ")".repeat(n)),
         "frames" => format!(
             "geometry graph g(a: Float) -> Float {{\n{}{}  return a\n}}\n",
             "{\n".repeat(n),
@@ -56,7 +56,7 @@ fn chain(name: &str, n: usize) -> String {
         "times" => ("a", " * a"),
         "and" => ("a", " and a"),
         "or" => ("a", " or a"),
-        "pipe" => ("a", " |> Math()"),
+        "pipe" => ("a", " |> abs()"),
         "member" => ("v", ".x"),
         _ => unreachable!(),
     };
@@ -117,7 +117,7 @@ fn chains_inside_brackets_add_up() {
         let step = format!("{})", " + a".repeat(MAX_HEIGHT / 8));
         format!(
             "{HEAD}{}a{}{TAIL}",
-            "Math(".repeat(levels),
+            "abs(".repeat(levels),
             step.repeat(levels)
         )
     };

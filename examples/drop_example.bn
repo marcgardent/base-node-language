@@ -14,16 +14,16 @@
 
 geometry graph wave(p: Vector, waves: Float, height: Float) -> Float {
   "The height of a ripple from the centre at a point"
-  return sin(length(CombineXYZ(p.x, p.y)) * waves) * height
+  return sin(length(CombineXYZ(x: p.x, y: p.y)) * waves) * height
 }
 
 geometry graph ripple_field(count: Int = 40 in 2.., waves: Float = 5.0, height: Float = 0.3) -> Geometry {
   "Columns on a grid that rise with a ripple from the centre"
   column = Cube(size: (0.08, 0.08, 1.0)) |> TransformGeometry(translation: (0.0, 0.0, 0.5))
   rise = wave(Position(), waves, height) + height + 0.05
-  return Grid(4.0, 4.0, count, count)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: count, vertices_y: count)
     |> MeshToPoints()
-    |> InstanceOnPoints(instance: column, scale: CombineXYZ(1.0, 1.0, rise))
+    |> InstanceOnPoints(instance: column, scale: CombineXYZ(x: 1.0, y: 1.0, z: rise))
     |> RealizeInstances()
 }
 

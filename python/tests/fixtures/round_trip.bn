@@ -1,11 +1,11 @@
 geometry graph "Smooth Mesh"(Mesh: Geometry, Level: Int) -> Geometry {
   return Mesh
-    |> SubdivideMesh(Level)
+    |> SubdivideMesh(level: Level)
     |> SetShadeSmooth()
 }
 
 geometry graph scatter(geometry: Geometry, "Point Count": Int) -> (Geometry: Geometry, Count: Int) {
-  grid = Grid(2.0, 2.0, point_count, point_count)
+  grid = Grid(size_x: 2.0, size_y: 2.0, vertices_x: point_count, vertices_y: point_count)
   smooth = smooth_mesh(grid.mesh, 2)
   return (
     Geometry: geometry

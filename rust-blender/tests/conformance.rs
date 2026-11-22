@@ -239,9 +239,9 @@ fn a_texture_times_a_constant_fits_gltf() {
         assert!(check_target(&material(&base, FLAT), "blender gltf").is_empty(), "{base}");
     }
     assert!(roughness("t.alpha * 0.5").is_empty());
-    assert!(roughness("0.5 * SeparateColor(t.color).green").is_empty());
-    assert!(roughness("Math[MULTIPLY](t.alpha, rough)").is_empty());
-    assert!(roughness("Math[MULTIPLY](t.alpha)").is_empty());
+    assert!(roughness("0.5 * SeparateColor(color: t.color).green").is_empty());
+    assert!(roughness("Math[MULTIPLY](Value: t.alpha, Value_001: rough)").is_empty());
+    assert!(roughness("Math[MULTIPLY](Value: t.alpha)").is_empty());
 }
 
 #[test]
@@ -345,7 +345,7 @@ fn a_formula_an_implicit_input_and_a_zone_count() {
     assert!(cmp("shader").is_empty());
     assert!(cmp("geometry").is_empty());
     let node = parse(
-        "shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a, b)\n}\n",
+        "shader graph g(a: Bool, b: Bool) -> Float {\n  return Compare(a: a, b: b)\n}\n",
         "c.bn",
     )
     .unwrap();
@@ -444,7 +444,7 @@ fn a_stdlib_module_used_whole_brings_its_graphs_only() {
 
 const PAINT: &str = "compositor graph paint(image: Color) -> Color {
   soft = Kuwahara(image, size: 8.0)
-  return Mix(image, Kuwahara(soft), factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: Kuwahara(soft))
 }
 ";
 
@@ -452,7 +452,7 @@ const PAINTED: &str = "use blender_interop
 
 pixel graph paint(image: Color) -> Color {
   soft = blender_interop::kuwahara(image, size: 8.0)
-  return Mix(image, blender_interop::kuwahara(soft), factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: blender_interop::kuwahara(soft))
 }
 ";
 
@@ -571,7 +571,7 @@ fn the_targets_are_the_files_of_targets() {
 
 const COMPOSITE: &str = "compositor graph soften(image: Color, size: Float = 4.0) -> Color {
   blurred = Blur(image, size: size)
-  return Mix(image, blurred, factor: 0.5)
+  return Mix(factor: 0.5, a: image, b: blurred)
 }
 ";
 
@@ -625,7 +625,7 @@ fn a_compositor_text_reaches_blade_through_its_translator() {
 #[test]
 fn a_translator_renames_inputs_and_settings() {
     let f = parse(
-        "compositor graph g(image: Color) -> Color {\n  blurred = Blur(image, size: 4.0)\n  mixed = MixLegacy[MULTIPLY](image, color2: blurred)\n  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n}\n",
+        "compositor graph g(image: Color) -> Color {\n  blurred = Blur(image, size: 4.0)\n  mixed = MixLegacy[MULTIPLY](color1: image, color2: blurred)\n  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n}\n",
         "m.bn",
     )
     .unwrap();
@@ -633,7 +633,7 @@ fn a_translator_renames_inputs_and_settings() {
     let text = base_node::format_file(&out);
     assert!(text.contains("Blur(image, radius: 4.0)"), "{text}");
     // A setting by position stays as it is written, one by name takes its new name
-    assert!(text.contains("Mix[MULTIPLY](image, b: blurred)"), "{text}");
+    assert!(text.contains("Mix[MULTIPLY](a: image, b: blurred)"), "{text}");
     assert!(
         text.contains(
             "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))]("
@@ -970,7 +970,7 @@ fn an_engine_variant_takes_shader_graphs_and_the_graphs_they_call() {
         ["Graph 'g': node 'ToonBSDF' outside target 'blender eevee' (line 2)"]
     );
     let rgb = parse(
-        "shader graph g(s: Shader) -> Color {\n  return ShaderToRGB(s).color\n}\n",
+        "shader graph g(s: Shader) -> Color {\n  return ShaderToRGB(shader: s).color\n}\n",
         "r.bn",
     )
     .unwrap();

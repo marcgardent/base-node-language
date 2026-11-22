@@ -7,7 +7,7 @@ geometry graph relief(
   "Choix" #steelblue {
     s = IndexSwitch(i, 0.5, c.hauteur, 2.0)
     m = MenuSwitch(
-      mode,
+      menu: mode,
       Lisse: c.geometry,
       Rugueux: SetPosition(c.geometry, offset: c.rest_position))
   }

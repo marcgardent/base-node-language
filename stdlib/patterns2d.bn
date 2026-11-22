@@ -23,9 +23,9 @@ geometry graph "hexagonal grid 2d"(
   shift = mod(row, 2.0) * 0.5
   x = (col + shift - (columns - 0.5) * 0.5) * dx
   y = (row - (rows - 1.0) * 0.5) * dy
-  centers = Points(count, CombineXYZ(x, y))
+  centers = Points(count: count, position: CombineXYZ(x: x, y: y))
   r_eff = radius * (1.0 - margin)
-  c = MeshCircle[NGON](6, r_eff)
+  c = MeshCircle[NGON](vertices: 6, radius: r_eff)
   hex = TransformGeometry(c, rotation: (0.0, 0.0, 0.5235988))
   inst = InstanceOnPoints(centers, instance: hex)
   mesh = inst
@@ -50,7 +50,7 @@ geometry graph "triangular grid 2d"(
   shift = mod(row, 2.0) * 0.5
   x = (col + shift - columns * 0.5) * side
   y = (row - rows * 0.5) * h
-  p = CombineXYZ(x, y)
+  p = CombineXYZ(x: x, y: y)
   pos = SetPosition(grid.mesh, position: p)
   return Triangulate(pos)
 }
@@ -66,7 +66,7 @@ geometry graph "phyllotaxis spiral 2d"(
   r = f * radius
   x = r * cos(a)
   y = r * sin(a)
-  pts = Points(count, CombineXYZ(x, y))
+  pts = Points(count: count, position: CombineXYZ(x: x, y: y))
   return (Points: pts, Factor: f)
 }
 
@@ -88,8 +88,8 @@ geometry graph "jitter points 2d"(
   r2 = r2_sequence(i)
   jit_x = (r2.x - 0.5) * dx * jitter
   jit_y = (r2.y - 0.5) * dy * jitter
-  p = CombineXYZ(base_x + jit_x, base_y + jit_y)
-  return Points(count, p)
+  p = CombineXYZ(x: base_x + jit_x, y: base_y + jit_y)
+  return Points(count: count, position: p)
 }
 
 geometry graph "hatching 2d"(
@@ -100,9 +100,9 @@ geometry graph "hatching 2d"(
     crossed: Bool = false
 ) -> Geometry {
   "Regular array of parallel or crossed lines oriented by angle"
-  line = CurveLine(CombineXYZ(-width * 0.5), CombineXYZ(width * 0.5))
+  line = CurveLine(start: CombineXYZ(x: -width * 0.5), end: CombineXYZ(x: width * 0.5))
   step = height / (lines - 1.0)
-  pts = Points(lines, CombineXYZ(y: (Index() - (lines - 1.0) * 0.5) * step))
+  pts = Points(count: lines, position: CombineXYZ(y: (Index() - (lines - 1.0) * 0.5) * step))
   inst = InstanceOnPoints(pts, instance: line)
   l1 = inst
     |> RealizeInstances()

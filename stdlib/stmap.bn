@@ -20,12 +20,12 @@
 compositor graph "uv ramp"(image: Color) -> Color {
   "The identity STMap of the image's size: red is u, green is v, at the centre of each pixel; remapped by it, an image stays as it is"
   p = ImageCoordinates(image).normalized
-  return CombineColor(p.x, p.y, 0.0, 1.0)
+  return CombineColor(red: p.x, green: p.y, blue: 0.0, alpha: 1.0)
 }
 
 compositor graph "stmap of"(u: Float, v: Float, coverage: Float = 1.0) -> Color {
   "An STMap's pixel: u in red, v in green, the coverage in alpha"
-  return CombineColor(u, v, 0.0, coverage)
+  return CombineColor(red: u, green: v, blue: 0.0, alpha: coverage)
 }
 
 compositor graph "stmap apply"(
@@ -35,7 +35,10 @@ compositor graph "stmap apply"(
 ) -> Color {
   "The image remapped by the STMap: each pixel the image's colour where the STMap's red and green say, times its alpha; transparent off the image"
   s = SeparateColor(stmap)
-  return MapUV(image, CombineXYZ(s.red, s.green, s.alpha), interpolation: interpolation)
+  return MapUV(
+    image,
+    uv: CombineXYZ(x: s.red, y: s.green, z: s.alpha),
+    interpolation: interpolation)
 }
 
 compositor graph canvas(image: Color, width: Int = 1920, height: Int = 1080) -> Color {
@@ -108,11 +111,11 @@ compositor graph "reformat stmap"(
   p = ImageCoordinates(canvas(image, width, height)).normalized
   k = aspect_of(image) / (width / height)
   scale = MenuSwitch(
-    mode,
-    Fit: CombineXYZ(max(1.0, 1.0 / k), max(1.0, k), 1.0),
-    Fill: CombineXYZ(min(1.0, 1.0 / k), min(1.0, k), 1.0),
+    menu: mode,
+    Fit: CombineXYZ(x: max(1.0, 1.0 / k), y: max(1.0, k), z: 1.0),
+    Fill: CombineXYZ(x: min(1.0, 1.0 / k), y: min(1.0, k), z: 1.0),
     Distort: (1.0, 1.0, 1.0))
-  s = SeparateXYZ(scale.output)
+  s = SeparateXYZ(vector: scale.output)
   return stmap_of((p.x - 0.5) * s.x + 0.5, (p.y - 0.5) * s.y + 0.5)
 }
 

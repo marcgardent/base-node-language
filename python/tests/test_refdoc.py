@@ -93,7 +93,7 @@ def test_headings_have_the_anchors_github_gives_them():
 
 
 def test_bn_code_is_highlighted():
-    out = highlight('geometry graph f(x: Float = 1.0) -> Float {\n  return Mix(x, "a") // why\n}')
+    out = highlight('geometry graph f(x: Float = 1.0) -> Float {\n  return Mix(factor: x, a: "a") // why\n}')
     assert '<span class="kw">graph</span>' in out
     assert '<span class="fn">Mix</span>' in out
     assert '<span class="ty">Float</span>' in out

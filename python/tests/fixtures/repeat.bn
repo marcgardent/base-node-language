@@ -2,7 +2,7 @@ geometry graph pousses(geometry: Geometry, tours: Int) -> (Geometry: Geometry, H
   r = repeat(tours, mesh: geometry, hauteur: 0.0, pas: 0.5) -> {
     "Pousse" #yellowgreen {
       haut = Position().z >= hauteur
-      monté = ExtrudeMesh(mesh, haut, offset_scale: pas)
+      monté = ExtrudeMesh(mesh, selection: haut, offset_scale: pas)
     }
     return (mesh: monté.mesh, hauteur: hauteur + pas)
   }
