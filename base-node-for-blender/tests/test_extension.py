@@ -2917,6 +2917,47 @@ def test_inputs_of_one_name_rebuilt():
     print("   ✓ Inputs of one name rebuilt")
 
 
+def test_values_that_are_no_bare_names():
+    """An enum value named like an input, a menu's item that is a reserved word: written as strings,
+    which the text reads back as those values; bare, the parser would refuse them or read a number."""
+    print("-> Test: Values that are no bare names...")
+    from base_node.host import build_source, export_tree
+
+    tree = hand_tree("no_bare_names")
+    tree.interface.new_socket("X", in_out="INPUT", socket_type="NodeSocketFloat")
+    tree.interface.new_socket("Rotation", in_out="OUTPUT", socket_type="NodeSocketRotation")
+    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    gin, gout = tree.nodes.new("NodeGroupInput"), tree.nodes.new("NodeGroupOutput")
+    align = tree.nodes.new("FunctionNodeAlignEulerToVector")
+    align.axis = "Y"
+    align.pivot_axis = "X"
+    tree.links.new(gin.outputs["X"], align.inputs["Factor"])
+    tree.links.new(align.outputs[0], gout.inputs["Rotation"])
+    switch = tree.nodes.new("GeometryNodeMenuSwitch")
+    switch.data_type = "GEOMETRY"
+    switch.enum_items[0].name = "true"
+    switch.enum_items[1].name = "inf"
+    menu = tree.nodes.new("FunctionNodeInputMenu")
+    tree.links.new(menu.outputs[0], switch.inputs[0])
+    tree.links.new(tree.nodes.new("GeometryNodeMeshCube").outputs[0], switch.inputs[2])
+    tree.links.new(switch.outputs[0], gout.inputs["Geometry"])
+    tree.update_tag()
+    bpy.context.view_layer.update()
+    menu.value = "inf"
+    text, _ = export_tree(tree)
+    assert 'pivot_axis: "X"' in text and 'Menu[value: "inf"]()' in text, text
+    tree.name = "no_bare_names.original"
+    rebuilt = build_source(text, filename="no_bare_names.bn")[-1]
+    align = next(n for n in rebuilt.nodes if n.bl_idname == "FunctionNodeAlignEulerToVector")
+    assert (align.axis, align.pivot_axis) == ("Y", "X")
+    assert next(n for n in rebuilt.nodes if n.bl_idname == "FunctionNodeInputMenu").value == "inf"
+    again, _ = export_tree(rebuilt)
+    assert again == text, f"not stable:\n{text}\n---\n{again}"
+    for t in (tree, rebuilt):
+        bpy.data.node_groups.remove(t)
+    print("   ✓ Values that are no bare names read back")
+
+
 def test_smooth_functions_and_shader_keys():
     """`smooth_min(a, b, k)` and `smooth_max(a, b, k)` are Math nodes of three operands, and the two
     Shader inputs of Mix Shader and Add Shader are `a` and `b`: both read back as written, and
@@ -4151,6 +4192,7 @@ def main():
         test_zones_read_back,
         test_color_components,
         test_inputs_of_one_name_rebuilt,
+        test_values_that_are_no_bare_names,
         test_smooth_functions_and_shader_keys,
         test_comparisons_in_a_shader_tree,
         test_ternary,
