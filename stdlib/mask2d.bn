@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module mask2d
 // @module mask2d
-// @version 1.0.0-rc.6
+// @version 1.0.0-rc.7
 // @target blender
 // @edition 2026
 // @description Compositor masks drawn by signed distance fields: disk, box, polygon, star, outline, letterbox

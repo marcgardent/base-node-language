@@ -21,15 +21,15 @@ The `.bn` ecosystem separates concerns across four distinct tiers:
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Tier 3: Standard Library Modules (stdlib/)             │
-│         e.g., math@1.0.0-rc.6, curves2d@1.0.0-rc.6          │
+│         e.g., math@1.0.0-rc.7, curves2d@1.0.0-rc.7          │
 │         Manifest: stdlib/manifest.json                 │
 └──────────────────────────┬─────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Tier 4: Toolchain & Reference Packages                 │
-│         Python: base-node 1.0.0rc6                      │
-│         Rust:   base-node, base-node-blender 1.0.0-rc.6 │
-│         Blender Extension: 1.0.0-rc.6                   │
+│         Python: base-node 1.0.0rc7                      │
+│         Rust:   base-node, base-node-blender 1.0.0-rc.7 │
+│         Blender Extension: 1.0.0-rc.7                   │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -124,7 +124,7 @@ The standard library modules provide reusable computational geometry, math, and 
 
 ```json
 {
-  "stdlib_version": "1.0.0-rc.6",
+  "stdlib_version": "1.0.0-rc.7",
   "edition": "2026",
   "description": "Standard Library for the Base Node (.bn) language"
 }
@@ -137,7 +137,7 @@ modules by name:
 ```json
 "curves2d": {
   "name": "curves2d",
-  "version": "1.0.0-rc.6",
+  "version": "1.0.0-rc.7",
   "edition": "2026",
   "tier": "free",
   "targets": ["blender"],
@@ -159,7 +159,7 @@ Every official `.bn` standard library file must include standardized metadata co
 ```bn
 // Base Node Standard Library — Module curves2d
 // @module curves2d
-// @version 1.0.0-rc.6
+// @version 1.0.0-rc.7
 // @target blender
 // @edition 2026
 // @description 2D curves, resampling, curvature analysis, and path operations
@@ -180,7 +180,7 @@ use math (bump, fbm)
 ## 5. Lifecycle & Stability Policy (Pre-LTS vs LTS)
 
 ### Phase 1: Pre-LTS (`0.x.y`) — Active Rapid Iteration
-- **Current status**: Version `1.0.0-rc.6`.
+- **Current status**: Version `1.0.0-rc.7`.
 - **Policy**: **No backwards compatibility guarantee prior to LTS 1.0**.
   - Breaking changes to node names, signatures, or module structure may occur between minor versions (`0.7` $\to$ `0.8`).
   - No deprecated alias shims or legacy wrappers are retained in the repository (`stdlib/gp_tools2d.bn` was purged).
@@ -245,11 +245,11 @@ All tools and packages maintained within the repository share a synchronized ver
 
 | Component | Path | Version Scheme |
 |---|---|---|
-| Python reference package | [`python/pyproject.toml`](../python/pyproject.toml) | PEP 440 (`1.0.0rc6`) |
-| Rust WASM crate, the core | [`rust/Cargo.toml`](../rust/Cargo.toml) | SemVer (`1.0.0-rc.6`) |
-| Rust WASM crate, the Blender library | [`rust-blender/Cargo.toml`](../rust-blender/Cargo.toml) | SemVer (`1.0.0-rc.6`) |
-| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](../base-node-for-blender/blender_manifest.toml) | SemVer (`1.0.0-rc.6`) |
-| Extension Repository Index | [`site/extensions/index.json`](../site/extensions/index.json) | SemVer (`1.0.0-rc.6`) |
+| Python reference package | [`python/pyproject.toml`](../python/pyproject.toml) | PEP 440 (`1.0.0rc7`) |
+| Rust WASM crate, the core | [`rust/Cargo.toml`](../rust/Cargo.toml) | SemVer (`1.0.0-rc.7`) |
+| Rust WASM crate, the Blender library | [`rust-blender/Cargo.toml`](../rust-blender/Cargo.toml) | SemVer (`1.0.0-rc.7`) |
+| Blender Extension | [`base-node-for-blender/blender_manifest.toml`](../base-node-for-blender/blender_manifest.toml) | SemVer (`1.0.0-rc.7`) |
+| Extension Repository Index | [`site/extensions/index.json`](../site/extensions/index.json) | SemVer (`1.0.0-rc.7`) |
 
 A pre-release is written in SemVer (`1.0.0-rc.1`) everywhere but in the Python package, whose `version` and
 `__version__` take the PEP 440 form of the same version (`1.0.0rc1`): Cargo and Blender's manifest refuse that form.
@@ -258,7 +258,7 @@ A pre-release is written in SemVer (`1.0.0-rc.1`) everywhere but in the Python p
 
 Running `base-node --version` reports:
 ```text
-base-node 1.0.0rc6 (Language Edition 2026, Stdlib 1.0.0-rc.6)
+base-node 1.0.0rc7 (Language Edition 2026, Stdlib 1.0.0-rc.7)
 ```
 
 ---

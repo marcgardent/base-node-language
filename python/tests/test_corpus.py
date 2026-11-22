@@ -12,6 +12,8 @@ import pytest
 
 from base_node_blender import check_target, parse
 
+pytest.importorskip("tomllib")  # The manifests are TOML, which Python reads from 3.11 as Blender's does
+
 ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location(
     "library_corpus", ROOT / "base-node-for-blender" / "tests" / "library_corpus.py")

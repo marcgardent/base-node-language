@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "base_node"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.7"
 name = "Base Node"
 tagline = "Nodes as text (.bn): read and write node trees as functions"
 maintainer = "Marc Gardent"

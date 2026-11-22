@@ -273,8 +273,9 @@ def test_the_rust_core_holds_the_same_tables():
 
 def test_the_tables_are_unicodes_identifiers():
     """The tables say what Python's identifiers do, `·` aside. A Python of another Unicode differs
-    only by the characters one of the two versions has not assigned: Unicode never takes a
-    character out of its identifiers."""
+    only by the characters one of the two versions has not assigned, and by the four Unicode 15.1
+    let into its identifiers (the joiners U+200C and U+200D, the middle dots U+30FB and U+FF65):
+    Unicode never takes a character out."""
     version = lambda v: tuple(int(x) for x in v.split("."))  # noqa: E731
     older, newer = (version(unicodedata.unidata_version) < version(UNICODE_VERSION),
                     version(unicodedata.unidata_version) > version(UNICODE_VERSION))
@@ -284,5 +285,6 @@ def test_the_tables_are_unicodes_identifiers():
             python = python and c != "·"
             if ours != python:
                 # A character the older of the two versions has not assigned
-                assert (older and ours and unicodedata.category(c) == "Cn") or (newer and python), hex(code)
+                late = unicodedata.category(c) == "Cn" or c in "\u200c\u200d\u30fb\uff65"
+                assert (older and ours and late) or (newer and python), hex(code)
     assert is_identifier("a\u0387b") and not goes_on_name("·")

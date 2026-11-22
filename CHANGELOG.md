@@ -7,6 +7,14 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+## [1.0.0-rc.7] - 2026-11-22
+
+### Tests
+
+- Fixed: the test of the identifier tables passes on a Python of an older Unicode (3.10 to 3.12), which
+  does not have the four characters Unicode 15.1 let into its identifiers; the corpus test is skipped
+  on Python 3.10, which reads no TOML.
+
 ## [1.0.0-rc.6] - 2026-11-22
 
 ### Language

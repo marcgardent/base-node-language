@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module math
 // @module math
-// @version 1.0.0-rc.6
+// @version 1.0.0-rc.7
 // @target blender
 // @edition 2026
 // @description Mathematical toolkit for Geometry Nodes: shaping curves, waves, vectors, SDFs, and noise distributions
