@@ -37,10 +37,15 @@ sys.modules["base_node"] = base_node
 _spec.loader.exec_module(base_node)
 
 import bpy
+import itertools
+
 from base_node.host.schema import TREE_TYPES, BlenderSchema
 from base_node.blender import BnError, compile_source, parse
 from base_node.lang import ast as A
-from base_node.blender.schema import key
+from base_node.blender.schema import SIGNATURE_NODES, key
+
+# The most settings combined to list the inputs they make: past it, each setting alone
+COMBINED = 4096
 
 
 def plain(value):
@@ -55,11 +60,14 @@ def plain(value):
 
 
 def socket_list(sockets, values=None):
-    """[{name, key, type, …}] of a node's sockets, keyed as the text names them."""
+    """[{name, key, type, …}] of a node's sockets, keyed as the text names them, with Blender's
+    identifier when it is not that key."""
     keys = [s.key for s in sockets]
     out = []
     for s, k in zip(sockets, keys):
         item = {"name": s.name, "key": k if keys.count(k) == 1 else s.identifier, "type": s.type}
+        if s.identifier != item["key"]:
+            item["identifier"] = s.identifier
         if s.multi_input:
             item["multi_input"] = True
         if values is not None and s.identifier in values and values[s.identifier] is not None:
@@ -98,7 +106,60 @@ def node_entry(schema, kind, spec):
     if spec.data:
         entry["data"] = [{"name": n, "kind": p.kind, **({"channels": list(p.items)} if p.items else {})}
                          for n, p in spec.data.items()]
+    shown, each = variants(schema, kind, spec, entry, prop_values)
+    if shown:
+        entry["variants"] = shown
+    if each:
+        entry["variants_each"] = True
     return entry
+
+
+def variants(schema, kind, spec, entry, defaults):
+    """[{when: {setting: value}, inputs: […], outputs: […]}] of the settings that change the sockets of a
+    new node, each with the inputs and the outputs it makes, those that differ from a new node's: what a
+    tool without Blender needs to find the input of a value by position and the type of what a node
+    gives. The settings that change them are combined, all of their values together, but past COMBINED
+    combinations each one alone (then `each` is true). The nodes whose sockets are the items a call
+    declares with their types (a closure's, a bundle's) have none."""
+    if spec.bl_idname in SIGNATURE_NODES:
+        return [], False
+    choices = {n: (p.items if p.kind == "ENUM" else (False, True)) for n, p in spec.props.items()
+               if p.kind == "BOOLEAN" or p.kind == "ENUM" and p.items}
+
+    def made(props):
+        ins, outs, values, _props = schema.fresh(kind, spec, props)
+        return {"inputs": socket_list(ins, values), "outputs": socket_list(outs)}
+
+    fresh = {"inputs": entry["inputs"], "outputs": entry["outputs"]}
+    changing = {n: values for n, values in choices.items()
+                if any(made({n: v}) != fresh for v in values if v != defaults.get(n))}
+    # A setting may change them only with another: Compare's mode, once its data_type is VECTOR
+    grew = True
+    while grew:
+        grew = False
+        for n, values in choices.items():
+            if n in changing:
+                continue
+            if any(made({c: x, n: v}) != made({c: x}) for c, xs in changing.items() for x in xs
+                   for v in values if v != defaults.get(n)):
+                changing[n] = values
+                grew = True
+    if not changing:
+        return [], False
+    names = list(changing)
+    each = math.prod(len(v) for v in changing.values()) > COMBINED
+    if not each:
+        tried = [dict(zip(names, values)) for values in itertools.product(*changing.values())]
+    else:
+        tried = [{n: v} for n in names for v in changing[n] if v != defaults.get(n)]
+    out = []
+    for props in tried:
+        props = {n: v for n, v in props.items() if v != defaults.get(n)}
+        sockets = made(props)
+        differ = {side: sockets[side] for side in ("inputs", "outputs") if sockets[side] != fresh[side]}
+        if props and differ:
+            out.append({"when": {n: plain(v) for n, v in props.items()}, **differ})
+    return out, each
 
 
 LIT = {"Float": "0.5", "Int": "1", "Bool": "true", "Vector": "(0.1, 0.2, 0.3)",

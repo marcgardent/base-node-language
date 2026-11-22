@@ -6,7 +6,7 @@
  },
  "stmap of": {
   "geometry": "ok",
-  "shader": "CombineColor takes 3 input(s): red, green, blue",
+  "shader": "CombineColor has no input 'alpha'; inputs: red, green, blue",
   "compositor": "ok"
  },
  "stmap apply": {
