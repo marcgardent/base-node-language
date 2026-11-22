@@ -213,9 +213,11 @@ impl Rng {
     }
 }
 
-const FRAGMENTS: [&str; 32] = [
+const FRAGMENTS: [&str; 34] = [
     "(",
     ")",
+    "[",
+    "]",
     "{",
     "}",
     ",",

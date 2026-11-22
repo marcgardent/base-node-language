@@ -147,7 +147,8 @@
                       "col": 19,
                       "outputs": null,
                       "single_output": false,
-                      "type_args": null
+                      "type_args": null,
+                      "settings": []
                     },
                     "line": 8,
                     "col": 17
@@ -204,7 +205,8 @@
                   "col": 47,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 8,
                 "col": 45
@@ -255,7 +257,8 @@
             "col": 7,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "line": 10,
           "col": 3,
@@ -279,7 +282,8 @@
                     "col": 33,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "line": 11,
                   "col": 30

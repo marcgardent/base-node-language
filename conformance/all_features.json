@@ -104,7 +104,8 @@
             "col": 17,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "range": null,
           "options": [],
@@ -122,7 +123,8 @@
             "col": 15,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "range": null,
           "options": [],
@@ -470,7 +472,8 @@
                   "col": 49,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 21,
                 "col": 42,
@@ -483,7 +486,8 @@
             "col": 7,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "line": 21,
           "col": 3,
@@ -527,7 +531,8 @@
                       "col": 10,
                       "outputs": null,
                       "single_output": false,
-                      "type_args": null
+                      "type_args": null,
+                      "settings": []
                     },
                     "line": 24,
                     "col": 7
@@ -566,7 +571,8 @@
                     "col": 10,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "line": 25,
                   "col": 7
@@ -819,7 +825,8 @@
                       "col": 30,
                       "outputs": null,
                       "single_output": false,
-                      "type_args": null
+                      "type_args": null,
+                      "settings": []
                     },
                     "line": 39,
                     "col": 28
@@ -858,7 +865,8 @@
                     "col": 39,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "line": 39,
                   "col": 37
@@ -898,7 +906,8 @@
                   "col": 53,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 39,
                 "col": 51
@@ -938,7 +947,8 @@
                 "col": 67,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "line": 39,
               "col": 65
@@ -977,7 +987,8 @@
               "col": 81,
               "outputs": null,
               "single_output": false,
-              "type_args": null
+              "type_args": null,
+              "settings": []
             },
             "line": 39,
             "col": 79
@@ -1027,7 +1038,8 @@
                     "col": 7,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "right": {
                     "value": 2.0,
@@ -1090,7 +1102,8 @@
               "col": 46,
               "outputs": null,
               "single_output": false,
-              "type_args": null
+              "type_args": null,
+              "settings": []
             },
             "line": 40,
             "col": 44
@@ -1141,7 +1154,8 @@
                 "col": 15,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "line": 41,
               "col": 13
@@ -1180,7 +1194,8 @@
               "col": 27,
               "outputs": null,
               "single_output": false,
-              "type_args": null
+              "type_args": null,
+              "settings": []
             },
             "line": 41,
             "col": 25
@@ -1310,7 +1325,8 @@
                 "col": 48,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "right": {
                 "op": "==",
@@ -1466,7 +1482,8 @@
                   "col": 23,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "right": {
                   "value": 0.001,
@@ -1515,7 +1532,8 @@
                   "col": 7,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "right": {
                   "name": "smooth_min",
@@ -1565,7 +1583,8 @@
                   "col": 26,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 45,
                 "col": 24
@@ -1679,7 +1698,8 @@
                   "col": 27,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 46,
                 "col": 25
@@ -1878,7 +1898,8 @@
                 "col": 14,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "line": 53,
               "col": 5,
@@ -1928,7 +1949,8 @@
                         "col": 30,
                         "outputs": null,
                         "single_output": false,
-                        "type_args": null
+                        "type_args": null,
+                        "settings": []
                       },
                       "socket": "mesh",
                       "line": 54,
@@ -1945,7 +1967,8 @@
                 "col": 15,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "line": 54,
               "col": 5,
@@ -1981,7 +2004,8 @@
                         "col": 12,
                         "outputs": null,
                         "single_output": false,
-                        "type_args": null
+                        "type_args": null,
+                        "settings": []
                       },
                       "line": 59,
                       "col": 9
@@ -2013,7 +2037,8 @@
                             "col": 24,
                             "outputs": null,
                             "single_output": false,
-                            "type_args": null
+                            "type_args": null,
+                            "settings": []
                           },
                           "line": 60,
                           "col": 24,
@@ -2026,7 +2051,8 @@
                       "col": 12,
                       "outputs": null,
                       "single_output": false,
-                      "type_args": null
+                      "type_args": null,
+                      "settings": []
                     },
                     "line": 60,
                     "col": 9
@@ -2110,7 +2136,8 @@
                 "col": 17,
                 "outputs": null,
                 "single_output": false,
-                "type_args": null
+                "type_args": null,
+                "settings": []
               },
               "line": 64,
               "col": 5,
@@ -2290,7 +2317,8 @@
                       "col": 11,
                       "outputs": null,
                       "single_output": false,
-                      "type_args": null
+                      "type_args": null,
+                      "settings": []
                     },
                     "socket": "z",
                     "line": 73,
@@ -2358,7 +2386,8 @@
                   "col": 16,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 74,
                 "col": 5,
@@ -2420,7 +2449,8 @@
             ],
             "line": 72,
             "col": 7,
-            "end": 76
+            "end": 76,
+            "settings": []
           },
           "line": 72,
           "col": 3,
@@ -2516,7 +2546,8 @@
                   ],
                   "line": 78,
                   "col": 15,
-                  "end": 80
+                  "end": 80,
+                  "settings": []
                 },
                 "line": 78,
                 "col": 5,
@@ -2535,7 +2566,8 @@
             ],
             "line": 77,
             "col": 11,
-            "end": 82
+            "end": 82,
+            "settings": []
           },
           "line": 77,
           "col": 3,
@@ -2574,7 +2606,8 @@
                     "col": 40,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "socket": "z",
                   "line": 83,
@@ -2595,7 +2628,8 @@
                   "col": 71,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 83,
                 "col": 54,
@@ -2621,7 +2655,8 @@
             "col": 7,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "line": 83,
           "col": 3,
@@ -2686,7 +2721,8 @@
                     "col": 42,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "socket": "mesh",
                   "line": 84,
@@ -2703,7 +2739,8 @@
             "col": 12,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "line": 84,
           "col": 3,
@@ -2810,7 +2847,8 @@
                     "col": 53,
                     "outputs": null,
                     "single_output": false,
-                    "type_args": null
+                    "type_args": null,
+                    "settings": []
                   },
                   "line": 85,
                   "col": 51
@@ -2833,6 +2871,583 @@
       "line": 71,
       "col": 1,
       "end": 86,
+      "description": null,
+      "description_line": 0,
+      "settings": [],
+      "param_tree": null,
+      "output_tree": null,
+      "type_params": []
+    },
+    {
+      "kind": "geometry",
+      "name": "settings",
+      "params": [
+        {
+          "name": "geometry",
+          "type": "Geometry",
+          "line": 89,
+          "col": 25,
+          "default": null,
+          "range": null,
+          "options": [],
+          "alias": null
+        },
+        {
+          "name": "f",
+          "type": "Float",
+          "line": 89,
+          "col": 45,
+          "default": null,
+          "range": null,
+          "options": [],
+          "alias": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Geometry",
+          "type": "Geometry",
+          "line": 89,
+          "col": 58,
+          "default": null,
+          "range": null,
+          "options": [],
+          "alias": null
+        }
+      ],
+      "single_output": true,
+      "body": [
+        {
+          "name": "angle",
+          "value": {
+            "name": "Math",
+            "args": [
+              {
+                "name": null,
+                "value": {
+                  "name": "f",
+                  "line": 90,
+                  "col": 40
+                },
+                "line": 90,
+                "col": 40,
+                "options": [],
+                "type": null,
+                "alias": null
+              },
+              {
+                "name": null,
+                "value": {
+                  "value": 3.141593,
+                  "is_int": false,
+                  "line": 90,
+                  "col": 43
+                },
+                "line": 90,
+                "col": 43,
+                "options": [],
+                "type": null,
+                "alias": null
+              },
+              {
+                "name": null,
+                "value": {
+                  "value": -3.141593,
+                  "is_int": false,
+                  "line": 90,
+                  "col": 53
+                },
+                "line": 90,
+                "col": 53,
+                "options": [],
+                "type": null,
+                "alias": null
+              }
+            ],
+            "line": 90,
+            "col": 11,
+            "outputs": null,
+            "single_output": false,
+            "type_args": null,
+            "settings": [
+              {
+                "name": null,
+                "value": {
+                  "name": "WRAP",
+                  "line": 90,
+                  "col": 16
+                },
+                "line": 90,
+                "col": 16
+              },
+              {
+                "name": "use_clamp",
+                "value": {
+                  "value": false,
+                  "line": 90,
+                  "col": 33
+                },
+                "line": 90,
+                "col": 22
+              }
+            ]
+          },
+          "line": 90,
+          "col": 3,
+          "look": null
+        },
+        {
+          "name": "ramp",
+          "value": {
+            "name": "ColorRamp",
+            "args": [
+              {
+                "name": "factor",
+                "value": {
+                  "name": "angle",
+                  "line": 91,
+                  "col": 94
+                },
+                "line": 91,
+                "col": 86,
+                "options": [],
+                "type": null,
+                "alias": null
+              }
+            ],
+            "line": 91,
+            "col": 10,
+            "outputs": null,
+            "single_output": false,
+            "type_args": null,
+            "settings": [
+              {
+                "name": "color_ramp",
+                "value": {
+                  "name": "Ramp",
+                  "args": [
+                    {
+                      "name": null,
+                      "value": {
+                        "items": [
+                          {
+                            "value": 0.0,
+                            "is_int": false,
+                            "line": 91,
+                            "col": 38
+                          },
+                          {
+                            "items": [
+                              {
+                                "value": 0.0,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 44
+                              },
+                              {
+                                "value": 0.0,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 49
+                              },
+                              {
+                                "value": 0.0,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 54
+                              }
+                            ],
+                            "line": 91,
+                            "col": 43
+                          }
+                        ],
+                        "line": 91,
+                        "col": 37
+                      },
+                      "line": 91,
+                      "col": 37,
+                      "options": [],
+                      "type": null,
+                      "alias": null
+                    },
+                    {
+                      "name": null,
+                      "value": {
+                        "items": [
+                          {
+                            "value": 1.0,
+                            "is_int": false,
+                            "line": 91,
+                            "col": 62
+                          },
+                          {
+                            "items": [
+                              {
+                                "value": 1.0,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 68
+                              },
+                              {
+                                "value": 0.5,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 73
+                              },
+                              {
+                                "value": 0.0,
+                                "is_int": false,
+                                "line": 91,
+                                "col": 78
+                              }
+                            ],
+                            "line": 91,
+                            "col": 67
+                          }
+                        ],
+                        "line": 91,
+                        "col": 61
+                      },
+                      "line": 91,
+                      "col": 61,
+                      "options": [],
+                      "type": null,
+                      "alias": null
+                    }
+                  ],
+                  "line": 91,
+                  "col": 32,
+                  "outputs": null,
+                  "single_output": false,
+                  "type_args": null,
+                  "settings": []
+                },
+                "line": 91,
+                "col": 20
+              }
+            ]
+          },
+          "line": 91,
+          "col": 3,
+          "look": null
+        },
+        {
+          "name": "turned",
+          "value": {
+            "name": "Rotation",
+            "args": [],
+            "line": 92,
+            "col": 12,
+            "outputs": null,
+            "single_output": false,
+            "type_args": null,
+            "settings": [
+              {
+                "name": "rotation_euler",
+                "value": {
+                  "items": [
+                    {
+                      "value": 0.1,
+                      "is_int": false,
+                      "line": 92,
+                      "col": 38
+                    },
+                    {
+                      "value": 0.0,
+                      "is_int": false,
+                      "line": 92,
+                      "col": 43
+                    },
+                    {
+                      "value": -0.1,
+                      "is_int": false,
+                      "line": 92,
+                      "col": 48
+                    }
+                  ],
+                  "line": 92,
+                  "col": 37
+                },
+                "line": 92,
+                "col": 21
+              }
+            ]
+          },
+          "line": 92,
+          "col": 3,
+          "look": null
+        },
+        {
+          "name": "rest",
+          "value": {
+            "name": "attribute_or",
+            "args": [
+              {
+                "name": null,
+                "value": {
+                  "value": "rest",
+                  "line": 93,
+                  "col": 38
+                },
+                "line": 93,
+                "col": 38,
+                "options": [],
+                "type": null,
+                "alias": null
+              },
+              {
+                "name": null,
+                "value": {
+                  "name": "Position",
+                  "args": [],
+                  "line": 93,
+                  "col": 46,
+                  "outputs": null,
+                  "single_output": false,
+                  "type_args": null,
+                  "settings": []
+                },
+                "line": 93,
+                "col": 46,
+                "options": [],
+                "type": null,
+                "alias": null
+              }
+            ],
+            "line": 93,
+            "col": 10,
+            "outputs": null,
+            "single_output": false,
+            "type_args": [
+              "Vector"
+            ],
+            "settings": [
+              {
+                "name": null,
+                "value": {
+                  "name": "POINT",
+                  "line": 93,
+                  "col": 31
+                },
+                "line": 93,
+                "col": 31
+              }
+            ]
+          },
+          "line": 93,
+          "col": 3,
+          "look": null
+        },
+        {
+          "name": "r",
+          "value": {
+            "name": "foreach",
+            "args": [
+              {
+                "name": null,
+                "value": {
+                  "name": "geometry",
+                  "line": 94,
+                  "col": 21
+                },
+                "line": 94,
+                "col": 21,
+                "options": [],
+                "type": null,
+                "alias": null
+              },
+              {
+                "name": "item",
+                "value": {
+                  "name": "f",
+                  "line": 94,
+                  "col": 37
+                },
+                "line": 94,
+                "col": 31,
+                "options": [],
+                "type": null,
+                "alias": null
+              }
+            ],
+            "body": [
+              {
+                "value": {
+                  "op": "*",
+                  "left": {
+                    "name": "item",
+                    "line": 95,
+                    "col": 12
+                  },
+                  "right": {
+                    "value": 2.0,
+                    "is_int": false,
+                    "line": 95,
+                    "col": 19
+                  },
+                  "line": 95,
+                  "col": 17
+                },
+                "line": 95,
+                "col": 5,
+                "look": null
+              }
+            ],
+            "line": 94,
+            "col": 7,
+            "end": 96,
+            "settings": [
+              {
+                "name": null,
+                "value": {
+                  "name": "FACE",
+                  "line": 94,
+                  "col": 15
+                },
+                "line": 94,
+                "col": 15
+              }
+            ]
+          },
+          "line": 94,
+          "col": 3,
+          "look": null
+        },
+        {
+          "value": {
+            "left": {
+              "left": {
+                "name": "geometry",
+                "line": 97,
+                "col": 10
+              },
+              "call": {
+                "name": "StoreNamedAttribute",
+                "args": [
+                  {
+                    "name": "name",
+                    "value": {
+                      "value": "ramp",
+                      "line": 98,
+                      "col": 53
+                    },
+                    "line": 98,
+                    "col": 47,
+                    "options": [],
+                    "type": null,
+                    "alias": null
+                  },
+                  {
+                    "name": "value",
+                    "value": {
+                      "target": {
+                        "name": "ramp",
+                        "line": 98,
+                        "col": 68
+                      },
+                      "socket": "color",
+                      "line": 98,
+                      "col": 72
+                    },
+                    "line": 98,
+                    "col": 61,
+                    "options": [],
+                    "type": null,
+                    "alias": null
+                  }
+                ],
+                "line": 98,
+                "col": 8,
+                "outputs": null,
+                "single_output": false,
+                "type_args": null,
+                "settings": [
+                  {
+                    "name": null,
+                    "value": {
+                      "name": "FLOAT_COLOR",
+                      "line": 98,
+                      "col": 28
+                    },
+                    "line": 98,
+                    "col": 28
+                  },
+                  {
+                    "name": null,
+                    "value": {
+                      "name": "FACE",
+                      "line": 98,
+                      "col": 41
+                    },
+                    "line": 98,
+                    "col": 41
+                  }
+                ]
+              },
+              "line": 98,
+              "col": 5
+            },
+            "call": {
+              "name": "TransformGeometry",
+              "args": [
+                {
+                  "name": "translation",
+                  "value": {
+                    "name": "rest",
+                    "line": 99,
+                    "col": 39
+                  },
+                  "line": 99,
+                  "col": 26,
+                  "options": [],
+                  "type": null,
+                  "alias": null
+                },
+                {
+                  "name": "rotation",
+                  "value": {
+                    "name": "turned",
+                    "line": 99,
+                    "col": 55
+                  },
+                  "line": 99,
+                  "col": 45,
+                  "options": [],
+                  "type": null,
+                  "alias": null
+                },
+                {
+                  "name": "scale",
+                  "value": {
+                    "name": "r",
+                    "line": 99,
+                    "col": 70
+                  },
+                  "line": 99,
+                  "col": 63,
+                  "options": [],
+                  "type": null,
+                  "alias": null
+                }
+              ],
+              "line": 99,
+              "col": 8,
+              "outputs": null,
+              "single_output": false,
+              "type_args": null,
+              "settings": []
+            },
+            "line": 99,
+            "col": 5
+          },
+          "line": 97,
+          "col": 3,
+          "look": null
+        }
+      ],
+      "line": 89,
+      "col": 1,
+      "end": 100,
       "description": null,
       "description_line": 0,
       "settings": [],

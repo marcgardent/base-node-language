@@ -79,9 +79,23 @@ def test_cli_on_conformance_corpus():
 CHEVRON_CASES = json.loads((CONFORMANCE_DIR / "chevron-cases.json").read_text(encoding="utf-8"))["cases"]
 
 
+BRACKET_CASES = json.loads((CONFORMANCE_DIR / "bracket-cases.json").read_text(encoding="utf-8"))["cases"]
+
+
 @pytest.mark.parametrize("case", CHEVRON_CASES, ids=lambda c: c["name"])
 def test_chevrons_read_as_rust_reads_them(case):
     """`name < … > (`: a call with types, or comparisons where name holds a value (rust/tests/conformance.rs)."""
+    read_as_written(case)
+
+
+@pytest.mark.parametrize("case", BRACKET_CASES, ids=lambda c: c["name"])
+def test_settings_in_brackets_read_as_rust_reads_them(case):
+    """`Name[SETTING, key: value](inputs)`: a call's settings, read and laid out as rust/tests/conformance.rs does."""
+    read_as_written(case)
+
+
+def read_as_written(case):
+    """A case of conformance/: it prints back as `formatted`, or is refused at `error`."""
     if "error" in case:
         with pytest.raises(BnError) as err:
             parse(case["text"], "case.bn")

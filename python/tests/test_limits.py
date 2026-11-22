@@ -118,7 +118,7 @@ def corpus():
     return [p.read_text(encoding="utf-8") for p in paths]
 
 
-FRAGMENTS = ["(", ")", "{", "}", ",", ":", "::", "=", "->", "|>", ".", "..", "@", "#", '"', "\n", "-", "not ",
+FRAGMENTS = ["(", ")", "[", "]", "{", "}", ",", ":", "::", "=", "->", "|>", ".", "..", "@", "#", '"', "\n", "-", "not ",
              "closure(", "repeat(", "simulate(", "foreach(", "use ", " as ", " in ", "return ", "graph ", "é", "\x00",
              "9" * 30, "1e999", "//"]
 

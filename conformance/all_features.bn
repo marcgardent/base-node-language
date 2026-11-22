@@ -84,3 +84,17 @@ geometry graph zones(geometry: Geometry, n: Int, i: Int) -> (Geometry: Geometry,
   choice = IndexSwitch(i, c.geometry, _, Cube().mesh)
   return (Geometry: choice, Sum: c.height + table + IndexSwitch(i, i, 2.0, data_type: FLOAT))
 }
+
+// Settings in brackets: by position then by name, a tuple, a ramp, a template's types, a pipe, a body
+geometry graph settings(geometry: Geometry, f: Float) -> Geometry {
+  angle = Math[WRAP, use_clamp: false](f, 3.141593, -3.141593)
+  ramp = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0)), (1.0, (1.0, 0.5, 0.0)))](factor: angle)
+  turned = Rotation[rotation_euler: (0.1, 0.0, -0.1)]()
+  rest = attribute_or<Vector>[POINT]("rest", Position())
+  r = foreach[FACE](geometry, item: f) -> {
+    return item * 2.0
+  }
+  return geometry
+    |> StoreNamedAttribute[FLOAT_COLOR, FACE](name: "ramp", value: ramp.color)
+    |> TransformGeometry(translation: rest, rotation: turned, scale: r)
+}

@@ -150,7 +150,8 @@
                         "col": 54,
                         "outputs": null,
                         "single_output": false,
-                        "type_args": null
+                        "type_args": null,
+                        "settings": []
                       },
                       "line": 9,
                       "col": 51,
@@ -163,7 +164,8 @@
                   "col": 40,
                   "outputs": null,
                   "single_output": false,
-                  "type_args": null
+                  "type_args": null,
+                  "settings": []
                 },
                 "line": 9,
                 "col": 32,
@@ -176,7 +178,8 @@
             "col": 10,
             "outputs": null,
             "single_output": false,
-            "type_args": null
+            "type_args": null,
+            "settings": []
           },
           "line": 9,
           "col": 3,

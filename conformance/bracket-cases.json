@@ -1,0 +1,287 @@
+{
+  "about": "Settings in brackets: `Name[SETTING, key: value](inputs)`, between a call's name (and its template types) and its parentheses (spec/reference.md, 5). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "cases": [
+    {
+      "name": "positional",
+      "about": "A setting by position, before the inputs",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[WRAP](a, 3.141593, -3.141593)\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[WRAP](a, 3.141593, -3.141593)\n  return x\n}\n"
+    },
+    {
+      "name": "positional_vector",
+      "about": "An enum value as the first setting",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Mix[VECTOR](f, a, b)\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Mix[VECTOR](f, a, b)\n  return x\n}\n"
+    },
+    {
+      "name": "positional_then_named",
+      "about": "Positional settings first, then named ones",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD, use_clamp: true](a, b)\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD, use_clamp: true](a, b)\n  return x\n}\n"
+    },
+    {
+      "name": "string_setting_no_input",
+      "about": "A datablock's name in a setting, and no input: empty parentheses",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  o = Object[object: \"Thing\"]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  o = Object[object: \"Thing\"]()\n  return a\n}\n"
+    },
+    {
+      "name": "underscore",
+      "about": "`_` is a setting's value, a name like an enum value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = StringToCurves[font: _](string: s)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = StringToCurves[font: _](string: s)\n  return a\n}\n"
+    },
+    {
+      "name": "string_enum",
+      "about": "A string as a setting's value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  n = NoiseTexture[noise_dimensions: \"4D\"](vector: p)\n  return n\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  n = NoiseTexture[noise_dimensions: \"4D\"](vector: p)\n  return n\n}\n"
+    },
+    {
+      "name": "tuple",
+      "about": "A tuple of numbers as a setting's value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = Rotation[rotation_euler: (0.1, 0.0, 0.0)]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = Rotation[rotation_euler: (0.1, 0.0, 0.0)]()\n  return a\n}\n"
+    },
+    {
+      "name": "ramp",
+      "about": "A call of values as a setting's value, its arguments positional then named",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 0.5, 0.0)), interpolation: EASE)](factor: f)\n  return c\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = ColorRamp[\n    color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 0.5, 0.0)), interpolation: EASE)](\n    factor: f)\n  return c\n}\n"
+    },
+    {
+      "name": "curves",
+      "about": "Calls nested in a setting's call",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = RGBCurves[mapping: Curves(c: Curve((0.0, 0.0), (0.4, 0.9, VECTOR), (1.0, 1.0)))](color: p)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = RGBCurves[mapping: Curves(c: Curve((0.0, 0.0), (0.4, 0.9, VECTOR), (1.0, 1.0)))](color: p)\n  return a\n}\n"
+    },
+    {
+      "name": "literals",
+      "about": "Numbers, signed numbers, booleans and strings",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  t = Thing[-1, 2.5, -0.5, true, count: 3, label: \"x\", on: false]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  t = Thing[-1, 2.5, -0.5, true, count: 3, label: \"x\", on: false]()\n  return a\n}\n"
+    },
+    {
+      "name": "body_call",
+      "about": "A call with a body takes settings between its name and its inputs",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE](p, selection: a, item: f) -> {\n    return item * 2.0\n  }\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE](p, selection: a, item: f) -> {\n    return item * 2.0\n  }\n  return a\n}\n"
+    },
+    {
+      "name": "pipe",
+      "about": "A step of a pipe takes settings",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = p\n    |> StoreNamedAttribute[INT, CURVE](name: \"i\", value: Index())\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = p\n    |> StoreNamedAttribute[INT, CURVE](name: \"i\", value: Index())\n  return a\n}\n"
+    },
+    {
+      "name": "template_types_then_settings",
+      "about": "A template's types first, then the settings",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = attribute_or<Vector>[POINT](\"Col\", p)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = attribute_or<Vector>[POINT](\"Col\", p)\n  return a\n}\n"
+    },
+    {
+      "name": "template_types_unchanged",
+      "about": "A template's types alone, as before",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = attribute_or<Vector>(\"Col\", p)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = attribute_or<Vector>(\"Col\", p)\n  return a\n}\n"
+    },
+    {
+      "name": "type_parameter_as_setting",
+      "about": "A template's type parameter as a setting's value, a name nothing binds",
+      "text": "geometry graph named<T: Float | Vector>(name: String) -> T {\n  return NamedAttribute[T](name: name)\n}\n",
+      "formatted": "geometry graph named<T: Float | Vector>(name: String) -> T {\n  return NamedAttribute[T](name: name)\n}\n"
+    },
+    {
+      "name": "qualified_name",
+      "about": "A qualified name takes settings after its last part",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = m::blend[ADD](a, b)\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = m::blend[ADD](a, b)\n  return x\n}\n"
+    },
+    {
+      "name": "spaces_and_trailing_comma",
+      "about": "Spaces and a trailing comma print away",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math [ ADD , use_clamp : true , ] ( a , b )\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD, use_clamp: true](a, b)\n  return x\n}\n"
+    },
+    {
+      "name": "parenthesized_value",
+      "about": "A value in parentheses is that value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[(1.0)]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[1.0]()\n  return a\n}\n"
+    },
+    {
+      "name": "value_name_as_key",
+      "about": "A key that is also a value's name is a key, not the value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[a: 1]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[a: 1]()\n  return a\n}\n"
+    },
+    {
+      "name": "not_yet_bound",
+      "about": "A name bound only after the call holds no value there yet",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[later]()\n  later = a\n  return later\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Thing[later]()\n  later = a\n  return later\n}\n"
+    },
+    {
+      "name": "layout_settings_stay_with_name",
+      "about": "Too long: the inputs spread, the settings stay on the first line while it fits",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[FLOAT, POINT](p, name: \"a_rather_long_name_of_an_attribute_that_never_ends\", value: a + b)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[FLOAT, POINT](\n    p,\n    name: \"a_rather_long_name_of_an_attribute_that_never_ends\",\n    value: a + b)\n  return a\n}\n"
+    },
+    {
+      "name": "layout_settings_spread",
+      "about": "The first line too long with its settings: they spread, the inputs follow `](` while they fit",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[data_type: FLOAT, domain: POINT, label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, value: a)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[\n    data_type: FLOAT,\n    domain: POINT,\n    label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, value: a)\n  return a\n}\n"
+    },
+    {
+      "name": "layout_settings_and_inputs_spread",
+      "about": "Settings spread, and inputs too long for the line `](` ends: they spread too",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[data_type: FLOAT, domain: POINT, label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, name: \"a_rather_long_name_of_an_attribute_that_never_ends\", value: a)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = StoreNamedAttribute[\n    data_type: FLOAT,\n    domain: POINT,\n    label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](\n    p,\n    name: \"a_rather_long_name_of_an_attribute_that_never_ends\",\n    value: a)\n  return a\n}\n"
+    },
+    {
+      "name": "layout_settings_no_inputs",
+      "about": "No inputs: the settings spread, `]()` on the last line",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  o = Object[object: \"a_rather_long_name_of_an_attribute_that_never_ends\", other: \"a_rather_long_name_of_an_attribute_that_never_ends\"]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  o = Object[\n    object: \"a_rather_long_name_of_an_attribute_that_never_ends\",\n    other: \"a_rather_long_name_of_an_attribute_that_never_ends\"]()\n  return a\n}\n"
+    },
+    {
+      "name": "layout_setting_value_spreads",
+      "about": "A setting's value too long for its line spreads as any value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (0.25, (0.1, 0.2, 0.3, 1.0)), (0.5, (1.0, 0.5, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)), interpolation: EASE)](factor: f)\n  return c\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  c = ColorRamp[\n    color_ramp: Ramp(\n      (0.0, (0.0, 0.0, 0.0, 1.0)),\n      (0.25, (0.1, 0.2, 0.3, 1.0)),\n      (0.5, (1.0, 0.5, 0.0, 1.0)),\n      (1.0, (1.0, 1.0, 1.0, 1.0)),\n      interpolation: EASE)](factor: f)\n  return c\n}\n"
+    },
+    {
+      "name": "layout_body_call",
+      "about": "A call with a body spreads as a call",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE, label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, selection: a > 0.5, item: f, other: \"a_rather_long_name_of_an_attribute_that_never_ends\") -> {\n    return item\n  }\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE, label: \"a_rather_long_name_of_an_attribute_that_never_ends\"](\n    p,\n    selection: a > 0.5,\n    item: f,\n    other: \"a_rather_long_name_of_an_attribute_that_never_ends\") -> {\n    return item\n  }\n  return a\n}\n"
+    },
+    {
+      "name": "layout_body_call_settings_spread",
+      "about": "A call with a body whose settings are too long for the first line",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE, label: \"a_rather_long_name_of_an_attribute_that_never_ends\", other: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, item: f) -> {\n    return item\n  }\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[\n    FACE,\n    label: \"a_rather_long_name_of_an_attribute_that_never_ends\",\n    other: \"a_rather_long_name_of_an_attribute_that_never_ends\"](p, item: f) -> {\n    return item\n  }\n  return a\n}\n"
+    },
+    {
+      "name": "layout_pipe_step",
+      "about": "A step of a pipe too long for its line",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = p |> StoreNamedAttribute[FLOAT, POINT](name: \"a_rather_long_name_of_an_attribute_that_never_ends\", value: a + b + f, selection: a > b)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = p\n    |> StoreNamedAttribute[FLOAT, POINT](\n      name: \"a_rather_long_name_of_an_attribute_that_never_ends\",\n      value: a + b + f,\n      selection: a > b)\n  return a\n}\n"
+    },
+    {
+      "name": "layout_declared_outputs",
+      "about": "Declared outputs after the inputs, the settings in front",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = SeparateBundle[KIND](p, label: \"a_rather_long_name_of_an_attribute_that_never_ends\") -> (height: Float, width: Float, depth: Float)\n  return x.height\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = SeparateBundle[KIND](\n    p,\n    label: \"a_rather_long_name_of_an_attribute_that_never_ends\") -> (\n    height: Float,\n    width: Float,\n    depth: Float)\n  return x.height\n}\n"
+    },
+    {
+      "name": "error_value_name_positional",
+      "about": "A name that holds a value, by position",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[a](b)\n  return x\n}\n",
+      "error": "2:12"
+    },
+    {
+      "name": "error_value_name_named",
+      "about": "A name that holds a value, as a named setting's value",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[mode: b](a)\n  return x\n}\n",
+      "error": "2:18"
+    },
+    {
+      "name": "error_value_name_in_tuple",
+      "about": "A name that holds a value, in a tuple",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Rotation[rotation_euler: (0.1, a, 0.0)]()\n  return a\n}\n",
+      "error": "2:38"
+    },
+    {
+      "name": "error_value_name_in_call",
+      "about": "A name that holds a value, in a setting's call",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = ColorRamp[color_ramp: Ramp((0.0, p))](factor: f)\n  return a\n}\n",
+      "error": "2:40"
+    },
+    {
+      "name": "error_bound_name",
+      "about": "A name an earlier statement bound",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  k = a * 2.0\n  x = Math[k](a)\n  return x\n}\n",
+      "error": "3:12"
+    },
+    {
+      "name": "error_body_item",
+      "about": "An item of the body around",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  r = foreach[FACE](p, item: f) -> {\n    y = Math[item](f)\n    return y\n  }\n  return a\n}\n",
+      "error": "3:14"
+    },
+    {
+      "name": "error_empty",
+      "about": "Empty brackets",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[](a, b)\n  return x\n}\n",
+      "error": "2:11"
+    },
+    {
+      "name": "error_bracket_not_after_name",
+      "about": "Brackets that follow no call's name",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = [ADD]\n  return a\n}\n",
+      "error": "2:7"
+    },
+    {
+      "name": "error_bracket_after_call",
+      "about": "Brackets after a call's inputs",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math(a, b)[ADD]\n  return x\n}\n",
+      "error": "2:17"
+    },
+    {
+      "name": "error_bracket_in_arguments",
+      "about": "Brackets as an input",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math(a, [ADD])\n  return x\n}\n",
+      "error": "2:15"
+    },
+    {
+      "name": "error_bracket_after_graph_kind",
+      "about": "Brackets after a tree's kind",
+      "text": "geometry[X] graph g() -> Float {\n  return 1.0\n}\n",
+      "error": "1:9"
+    },
+    {
+      "name": "error_unclosed",
+      "about": "An unclosed bracket",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD\n  return x\n}\n",
+      "error": "3:3"
+    },
+    {
+      "name": "error_unclosed_before_inputs",
+      "about": "An unclosed bracket before the inputs",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD, use_clamp: true(a, b)\n  return x\n}\n",
+      "error": "2:32"
+    },
+    {
+      "name": "error_no_inputs",
+      "about": "Settings and no parentheses",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[ADD]\n  return x\n}\n",
+      "error": "3:3"
+    },
+    {
+      "name": "error_positional_after_named",
+      "about": "A positional setting after a named one",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[use_clamp: true, ADD](a, b)\n  return x\n}\n",
+      "error": "2:29"
+    },
+    {
+      "name": "error_expression",
+      "about": "An expression in a setting",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[1.0 + 2.0](a)\n  return x\n}\n",
+      "error": "2:16"
+    },
+    {
+      "name": "error_too_deep",
+      "about": "Brackets count toward the nesting limit, as parentheses do",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = T[((((((((((((((((((((((((((((((((((((((((1.0))))))))))))))))))))))))))))))))))))))))]()\n  return a\n}\n",
+      "error": "2:41"
+    },
+    {
+      "name": "error_negative_name",
+      "about": "A minus before a name",
+      "text": "geometry graph g(a: Float, b: Float, s: String, p: Vector, f: Float) -> Float {\n  x = Math[-ADD](a)\n  return x\n}\n",
+      "error": "2:12"
+    }
+  ]
+}

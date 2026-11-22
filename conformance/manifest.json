@@ -94,7 +94,7 @@
     },
     {
       "file": "all_features.bn",
-      "graphs_count": 4,
+      "graphs_count": 5,
       "canonically_formatted": true,
       "graphs": [
         {
@@ -254,6 +254,26 @@
             {
               "name": "Sum",
               "type": "Float"
+            }
+          ]
+        },
+        {
+          "name": "settings",
+          "kind": "geometry",
+          "inputs": [
+            {
+              "name": "geometry",
+              "type": "Geometry"
+            },
+            {
+              "name": "f",
+              "type": "Float"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Geometry",
+              "type": "Geometry"
             }
           ]
         }

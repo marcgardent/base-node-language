@@ -74,9 +74,20 @@ fn test_examples_and_fixtures() {
 /// (python/tests/test_conformance.py reads the same cases).
 #[test]
 fn chevrons_read_as_python_reads_them() {
+    read_as_written("../conformance/chevron-cases.json");
+}
+
+/// `Name[SETTING, key: value](inputs)`: a call's settings, read and laid out as
+/// python/tests/test_conformance.py does.
+#[test]
+fn settings_in_brackets_read_as_python_reads_them() {
+    read_as_written("../conformance/bracket-cases.json");
+}
+
+/// The cases of a file of conformance/: each prints back as `formatted`, or is refused at `error`.
+fn read_as_written(path: &str) {
     let corpus: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string("../conformance/chevron-cases.json").unwrap())
-            .unwrap();
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
     for case in corpus["cases"].as_array().unwrap() {
         let name = case["name"].as_str().unwrap();
         let text = case["text"].as_str().unwrap();
