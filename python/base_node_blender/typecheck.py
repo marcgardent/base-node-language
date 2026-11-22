@@ -12,12 +12,15 @@ import struct
 from dataclasses import dataclass, field
 
 from . import ir, sugar, zones
-from ._core import BnError, Diagnostic, ast, colors, parse
+from ._core import BnError, Diagnostic, ast, colors, parse, printer
 from .schema import (CLOSURE_INPUT, CLOSURE_OUTPUT, CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, DEPRECATED, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT,
                      ITEM_NODES, ITEM_TYPES, NO_DEFAULT, NO_VALUE, RANGED, SEPARATE_BUNDLE, SIGNATURE_NODES, STRICT,
                      TREE_KINDS, TYPES, CURVE, CURVES, EMPTY_GROUP, HANDLES, MAPPING_OPTIONS, MATERIAL, MATERIAL_OUTPUTS, RAMP,
                      RAMP_OPTIONS, Socket, can_link, is_material, key, loose, snake)
 
+
+# The type of what a node of each kind of tree works on, given first and unnamed when linked: the pipe's
+SUBJECTS = {"geometry": "Geometry", "compositor": "Color"}
 
 GROUP_NODES = {
     "geometry": "GeometryNodeGroup",
@@ -349,6 +352,9 @@ class Modules:
         self.variant_graphs = {}  # name of a variant's group -> its ir.Graph
         self.collecting = []  # for each file being checked, the variants its graphs call
         self.warnings = []  # of the text checked, not of its modules: what a valid text should change
+        # (filename, "arg" or "pipe", line, col) -> the name of the input a value by position goes to,
+        # where a name is written (GraphChecker.by_name): what names.name_inputs writes. None: not kept
+        self.fixes = None
 
     def check(self, file, filename, ident=None, stack=()):
         diags = []
@@ -2018,11 +2024,17 @@ class GraphChecker:
 
         given = set()
         i = 0
-        for v, a in positional:
+        # A node's inputs go by name, but those the canonical form leaves unnamed: see unnamed
+        node_call = spec is not None and group is None and c.name not in self.graphs
+        free = self.unnamed(spec, inputs) if node_call else None
+        args_of = {id(a.value): a for a in c.args if a.name is None}
+        for k, (v, a) in enumerate(positional):
             if i >= len(inputs):
                 self.error(a, f"{c.name} takes {len(inputs)} input(s): {socket_keys(inputs)}")
                 break
             sock = inputs[i]
+            if node_call and not free(k, i, v):
+                self.by_name(c, inputs, i, a, args_of.get(id(a)), k, len(positional))
             # A value that failed still takes its place: the next ones go to their own inputs
             if v is not None:
                 self.connect(node, sock, v, a, c.name)
@@ -2049,6 +2061,48 @@ class GraphChecker:
                 self.error(c, f"{c.name}: give '{k}', which is {field_}() in a geometry tree only")
         self.implicit = []
         return Out(node.id, outputs, None, c.name)
+
+    def unnamed(self, spec, inputs):
+        """Whether the k-th value by position, going to the i-th input, may stay unnamed: the canonical
+        form (the one a tree reads back to) names every input of a node but those a name cannot tell.
+        These are the geometry the node works on, its first input when linked (the pipe's; the image
+        of a compositor node), the items of a switch (`IndexSwitch(0, a, b)`), and the values of a
+        multi-input with the inputs before it (`MeshBoolean(a, b, c)`). A position depends on
+        Blender's order of the sockets; a name does not."""
+        shape = ITEM_NODES.get(spec.bl_idname)
+        if shape is not None and not shape.named:
+            return lambda k, i, v: True
+        multi = next((j for j, s in enumerate(inputs) if s.multi_input), None)
+        subject = SUBJECTS.get(self.g.kind)
+
+        def free(k, i, v):
+            if multi is not None and i <= multi:
+                return True
+            return k == 0 and i == 0 and inputs[0].type == subject and not isinstance(v, Lit)
+        return free
+
+    def by_name(self, c, inputs, i, value, arg, k, count):
+        """The error of a value by position that goes by name, with the name to write. The naming pass
+        (names.name_inputs) takes the name from `fixes`: an argument by its place, a piped value by
+        the call's."""
+        name = socket_key(inputs, i)
+        fixes = self.modules.fixes if self.modules is not None else None
+        if fixes is not None:
+            fixes[(self.filename, "arg", arg.line, arg.col) if arg is not None
+                  else (self.filename, "pipe", c.line, c.col)] = (name, c.line, c.col)
+        try:
+            shown = printer.expr(value) if value is not c else "…"
+        except TypeError:
+            shown = "…"
+        if len(shown) > 24:
+            shown = "…"
+        head = printer.callee(ast.Call(c.name, [], 0, 0, type_args=c.type_args, settings=c.settings))
+        if len(head) > len(c.name) + 24:
+            head = f"{c.name}[…]"
+        before = "…, " if k else ""
+        after = ", …" if k + 1 < count or any(a.name is not None for a in c.args) else ""
+        self.error(arg or value, f"{c.name}: input {i + 1} is '{name}'; write it by name, "
+                          f"{head}({before}{printer.label(name)}: {shown}{after})")
 
     def tuple_type(self, spec, node, positional, named):
         """A tuple only fits a Vector or a Color: when one would reach a number input of a node
@@ -2754,6 +2808,13 @@ def find_socket(sockets, name):
         if found:
             return found
     return None
+
+
+def socket_key(sockets, i):
+    """How text names the i-th socket: its key, or its identifier when the key repeats."""
+    keys = [s.key for s in sockets]
+    s = sockets[i]
+    return s.key if keys.count(s.key) == 1 else s.identifier
 
 
 def socket_keys(sockets):
