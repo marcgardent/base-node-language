@@ -269,3 +269,16 @@ def test_every_text_of_the_corpus_checks_without_blender():
         except BnError as e:
             wrong += [f"{path.parent.name}/{d}" for d in e.diagnostics]
     assert not wrong, "\n".join(wrong[:20])
+
+
+def test_the_pass_in_place_writes_the_names_and_leaves_the_layout(schema):
+    src = graph("  x = Math[ADD](CombineXYZ(a, b).x,   b)  // kept\n  return geometry")
+    # At the place of an error, the call of that value: the outer one, though a call starts there
+    assert name_inputs(src, schema, at=(2, 17), in_place=True) == \
+        graph("  x = Math[ADD](Value: CombineXYZ(a, b).x,   Value_001: b)  // kept\n  return geometry")
+    assert name_inputs(src, schema, at=(2, 28), in_place=True) == \
+        graph("  x = Math[ADD](CombineXYZ(x: a, y: b).x,   b)  // kept\n  return geometry")
+    # A piped value becomes the first argument: the text is formatted
+    piped = graph("  x = v |> SeparateXYZ()\n  return    geometry")
+    assert name_inputs(piped, schema, at=(2, 12), in_place=True) == \
+        graph("  x = SeparateXYZ(vector: v)\n  return geometry")

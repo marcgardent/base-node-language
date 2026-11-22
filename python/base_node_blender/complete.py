@@ -9,8 +9,9 @@ from dataclasses import dataclass
 
 from ._core import colors, tokenize
 from .targets import load_target, promise_names
-from .schema import TREE_KINDS, TYPES, key, snake
+from .schema import ITEM_NODES, TREE_KINDS, TYPES, key, snake
 from .sugar import COMPONENTS, FUNCS, VECTOR, WORDS
+from .typecheck import SUBJECTS
 
 # Typing one of these opens the suggestions by itself
 OPENERS = ("(", "[", ",", ".", ":", "#")
@@ -397,6 +398,9 @@ class Context:
                 and t[-3].kind in ("(", ","):
             return self.values(body)
         if last.kind in ("(", ","):
+            if call is not None and not self.by_position(call):
+                # The next value of this node goes by name: its inputs, each with its colon
+                return self.args(call)
             return (self.args(call) if call is not None else []) + self.values(body)
         if last.kind in OPERATORS or last.kind == ":" or (last.kind == "KEYWORD" and last.text in KEYWORDS):
             return self.values(body)
@@ -447,6 +451,47 @@ class Context:
         by_position = [k for k, _ty in inputs if k not in named][:positional]
         state = lambda k: "current" if k == current else "given" if k in named or k in by_position else ""
         return Signature(name, tuple((k, ty, state(k)) for k, ty in inputs), tuple(outputs), t[call].col)
+
+    def by_position(self, call):
+        """Whether the next value of the call open at `call` may go by position: always in a graph's or
+        a function's, in a node's where the canonical form leaves the input unnamed (see
+        typecheck.GraphChecker.unnamed), never after a value given by name."""
+        name = self.t[call].text
+        spec = None if key(name) in self.graphs or name in FUNCS else self.schema.node(self.kind, name)
+        if spec is None:
+            return True
+        positional, named = self.given(call)
+        if named:
+            return False
+        shape = ITEM_NODES.get(spec.bl_idname)
+        if shape is not None and not shape.named:
+            return True
+        inputs, _ = self.schema.sockets(self.kind, spec, self.call_props(call)[1])
+        if any(s.multi_input for s in inputs):
+            return True
+        return positional == 0 and bool(inputs) and inputs[0].type == SUBJECTS.get(self.kind)
+
+    def given(self, call):
+        """(how many values the call open at `call` has by position, a piped one too; whether it has
+        one by name)."""
+        t = self.t
+        positional, named = 1 if call and t[call - 1].kind == "|>" else 0, False
+        depth, starts = 0, True
+        for i in range(self.inputs_at(call) or call + 1, len(t)):
+            k = t[i].kind
+            if k in ("(", "{", "["):
+                depth += 1
+            elif k in (")", "}", "]"):
+                depth -= 1
+            if depth != 1 or k == "(":
+                continue
+            if k == ",":
+                starts = True
+            elif starts and k == "IDENT" and i + 1 < len(t) and t[i + 1].kind == ":":
+                named, starts = True, False
+            elif starts:
+                positional, starts = positional + 1, False
+        return positional, named
 
     def depth(self, body):
         d = 0
@@ -618,7 +663,9 @@ class Context:
         if spec is None:
             return []
         inputs, _ = self.schema.sockets(self.kind, spec, props)
-        return [Item(k, k + ": ", s.type, "input") for k, s in keyed(inputs) if k not in given]
+        # Those the values by position took, but a multi-input, which takes them all
+        taken = 0 if any(s.multi_input for s in inputs) else self.given(call)[0]
+        return [Item(k, k + ": ", s.type, "input") for k, s in keyed(inputs)[taken:] if k not in given]
 
     def settings(self, call):
         """In a call's brackets: the values of its enum settings not written yet, by position, then the

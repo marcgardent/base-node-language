@@ -57,7 +57,8 @@ class BASE_NODE_OT_apply_view(bpy.types.Operator):
 
 
 class BASE_NODE_OT_format(bpy.types.Operator):
-    """Rewrite this text in the canonical layout, keeping its comments"""
+    """Rewrite this text in the canonical form, keeping its comments: its layout, and the inputs of
+    the nodes by name"""
     bl_idname = "base_node.format"
     bl_label = "Format"
     bl_options = {"REGISTER", "UNDO"}
@@ -74,6 +75,33 @@ class BASE_NODE_OT_format(bpy.types.Operator):
             self.report({"ERROR"}, f"nothing formatted: {e.diagnostics[0]}")
             return {"CANCELLED"}
         self.report({"INFO"}, "text formatted" if changed else "text already formatted")
+        return {"FINISHED"}
+
+
+class BASE_NODE_OT_name_inputs(bpy.types.Operator):
+    """Write by name the inputs of the node call under the cursor, as Blender's sockets go"""
+    bl_idname = "base_node.name_inputs"
+    bl_label = "Name Inputs"
+    bl_options = {"REGISTER", "UNDO"}
+
+    # The place of the call, 1-based: the cursor's when 0
+    line: bpy.props.IntProperty(options={"SKIP_SAVE"})
+    col: bpy.props.IntProperty(options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data and context.space_data.type == "TEXT_EDITOR" \
+            and actions.is_bn(context.space_data.text)
+
+    def execute(self, context):
+        text = context.space_data.text
+        at = (self.line, self.col) if self.line else (text.current_line_index + 1, text.current_character + 1)
+        try:
+            changed = actions.format_text(text, at=at)
+        except BnError as e:
+            self.report({"ERROR"}, f"nothing named: {e.diagnostics[0]}")
+            return {"CANCELLED"}
+        self.report({"INFO"}, "inputs named" if changed else "no input to name here")
         return {"FINISHED"}
 
 
@@ -408,10 +436,18 @@ def menu_comment(self, context):
     self.layout.operator(BASE_NODE_OT_edit_comment.bl_idname, icon="TEXT")
 
 
+def menu_text(self, context):
+    if actions.is_bn(context.space_data.text):
+        self.layout.separator()
+        self.layout.operator(BASE_NODE_OT_name_inputs.bl_idname, icon="SORTALPHA")
+        self.layout.operator(BASE_NODE_OT_format.bl_idname, icon="ALIGN_LEFT")
+
+
 def menu_import(self, context):
     self.layout.operator(BASE_NODE_OT_import.bl_idname, text="Base Node (.bn)")
 
 
-classes = (BASE_NODE_OT_import, BASE_NODE_OT_apply_view, BASE_NODE_OT_format, BASE_NODE_OT_toggle_view, BASE_NODE_OT_goto,
+classes = (BASE_NODE_OT_import, BASE_NODE_OT_apply_view, BASE_NODE_OT_format, BASE_NODE_OT_name_inputs,
+           BASE_NODE_OT_toggle_view, BASE_NODE_OT_goto,
            BASE_NODE_OT_add_modifier, BASE_NODE_OT_arrange, BaseNodeCommentLine, BASE_NODE_OT_edit_comment,
            BASE_NODE_OT_copy_bn, BASE_NODE_OT_paste_bn)

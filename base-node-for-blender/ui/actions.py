@@ -9,7 +9,7 @@ from ..host import build_source, export_tree, modules
 from ..host.outputs import find_tree, owner, tree_ref
 from ..host.schema import BlenderSchema
 from ..blender import BnError, compile_source
-from ..lang.format import format_source
+from ..blender.naming import name_inputs
 from ..blender.ir import ZONE_INPUTS
 from ..lang.lexer import span_at
 
@@ -172,12 +172,17 @@ def close_view(text):
     return tree
 
 
-def format_text(text):
-    """Rewrite the text in the canonical layout. True when it changed; raises BnError."""
+def format_text(text, at=None):
+    """Rewrite the text in the canonical form: its layout, and the inputs of Blender's nodes by name, as
+    Blender's sockets go. True when it changed; raises BnError when it does not parse.
+
+    `at`, a 1-based (line, column), names the inputs of the call there only and leaves the rest of the
+    text as it is (naming.name_inputs)."""
     source = text.as_string()
     # Its type errors stay listed: the text that has them is checked anew once it changes
     try:
-        formatted = format_source(source, text.name)
+        with BlenderSchema() as schema:
+            formatted = name_inputs(source, schema, text.name, modules.load, at=at, in_place=at is not None)
     except BnError as e:
         found(text, source, e.diagnostics)
         first = e.diagnostics[0]

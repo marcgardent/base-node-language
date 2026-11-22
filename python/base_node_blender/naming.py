@@ -25,19 +25,45 @@ def input_names(file, schema, filename="<text>", load=None):
     return {k[1:]: v for k, v in modules.fixes.items() if k[0] == filename}
 
 
-def name_inputs(source, schema, filename="<text>", load=None, at=None):
+def name_inputs(source, schema, filename="<text>", load=None, at=None, in_place=False):
     """`source` with the inputs of its node calls named, formatted. Raises BnError when it does not parse.
 
-    `at`, a 1-based (line, column), names only the inputs of the call under it: the innermost call
-    whose parentheses hold it, or whose name it is on."""
-    def edit(file):
+    `at`, a 1-based (line, column), names only the inputs of one call: the call of the value there
+    (where its error points), else the innermost call whose parentheses hold it, or whose name it is on. `in_place` writes each name before its value
+    and leaves the rest of the text as it is, unless a piped value takes a name: the call then gets
+    it as its first argument, and the text is formatted."""
+    def found_in(file):
         found = input_names(file, schema, filename, load)
         if at is not None:
-            call = call_at(source, *at)
+            # The call of the value there, as an error points to it; else the call around the place
+            exact = [v[1:] for (_kind, line, col), v in found.items() if (line, col) == tuple(at)]
+            call = exact[0] if exact else call_at(source, *at)
             found = {k: v for k, v in found.items() if v[1:] == call}
+        return found
+
+    if in_place:
+        from ._core import parse
+
+        found = found_in(parse(source, filename))
+        if not any(kind == "pipe" for kind, _l, _c in found):
+            return _insert(source, found)
+
+    def edit(file):
+        found = found_in(file)
         if found:
             _rewrite(file, found)
     return format_source(source, filename, edit)
+
+
+def _insert(source, found):
+    """`source` with `name: ` written before each value of `found`, the last first."""
+    from ._core import printer
+
+    rows = source.split("\n")
+    for (_kind, line, col), (name, _cl, _cc) in sorted(found.items(), key=lambda kv: kv[0][1:], reverse=True):
+        row = rows[line - 1]
+        rows[line - 1] = row[:col - 1] + f"{printer.label(name)}: " + row[col - 1:]
+    return "\n".join(rows)
 
 
 def call_at(source, line, col):

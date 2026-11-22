@@ -23,6 +23,19 @@ def test_inputs_of_the_call_come_first(schema):
     assert "t" in got and "Position" in got  # positional values follow
 
 
+def test_where_a_value_goes_by_name_only_the_inputs_come(schema):
+    assert labels(HEAD + "  x = Math[ADD](", schema) == ["Value", "Value_001"]
+    assert labels(HEAD + "  x = CombineXYZ(x: t, ", schema) == ["y", "z"]
+    # After the geometry a node works on, and after a piped one
+    got = labels(HEAD + "  return SetPosition(geometry, ", schema)
+    assert got == ["selection", "position", "offset"], got
+    assert labels(HEAD + "  return geometry |> SetPosition(", schema) == ["selection", "position", "offset"]
+    # The items of a switch, the values of a multi-input, a function's operands go by position
+    assert "t" in labels(HEAD + "  x = IndexSwitch(1, ", schema)
+    assert "geometry" in labels(HEAD + "  return JoinGeometry(geometry, ", schema)
+    assert "t" in labels(HEAD + "  x = max(t, ", schema)
+
+
 def test_input_inserts_a_named_argument(schema):
     start, items = at_end(HEAD + "  return SetPosition(geometry, off", schema)
     assert (items[0].label, items[0].insert) == ("offset", "offset: ")
@@ -54,7 +67,7 @@ def test_brackets_offer_the_settings_and_parentheses_the_inputs(schema):
 
 
 def test_repeated_inputs_are_named_by_identifier(schema):
-    got = labels(HEAD + "  x = Math(1.0, ", schema)
+    got = labels(HEAD + "  x = Math(", schema)
     assert got[:2] == ["Value", "Value_001"], got
 
 
@@ -174,7 +187,8 @@ def test_asked_after_a_value_gives_the_next_inputs(schema):
     lines = src.split("\n")
     assert complete(src, len(lines), len(lines[-1]) + 1, schema)[1] == []  # not by itself
     start, items = complete(src, len(lines), len(lines[-1]) + 1, schema, asked=True)
-    assert [i.insert for i in items][:2] == [", geometry: ", ", selection: "], items
+    # The geometry was given by position: the inputs after it
+    assert [i.insert for i in items][:2] == [", selection: ", ", position: "], items
     assert "offset" not in [i.label for i in items]
     assert start == len(lines[-1]) + 1  # nothing replaced
     # After a number too, which is not a word being typed

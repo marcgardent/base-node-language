@@ -21,6 +21,8 @@ from .schema import (CLOSURE_INPUT, CLOSURE_OUTPUT, CLOSURE_TO_LIST, COMBINE_BUN
 
 # The type of what a node of each kind of tree works on, given first and unnamed when linked: the pipe's
 SUBJECTS = {"geometry": "Geometry", "compositor": "Color"}
+# In the error of a value by position that goes by name: an editor offers to write the name
+BY_NAME = "write it by name"
 
 GROUP_NODES = {
     "geometry": "GeometryNodeGroup",
@@ -2103,7 +2105,7 @@ class GraphChecker:
             head = f"{c.name}[…]"
         before = "…, " if k else ""
         after = ", …" if k + 1 < count or any(a.name is not None for a in c.args) else ""
-        self.error(arg or value, f"{c.name}: input {i + 1} is '{name}'; write it by name, "
+        self.error(arg or value, f"{c.name}: input {i + 1} is '{name}'; {BY_NAME}, "
                           f"{head}({before}{printer.label(name)}: {shown}{after})")
 
     def tuple_type(self, spec, node, positional, named):

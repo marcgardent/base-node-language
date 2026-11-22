@@ -1,6 +1,7 @@
 import blf
 import bpy
 
+from ..blender.typecheck import BY_NAME
 from . import actions, keys, prefs, targets
 from .operators import edit_tree
 
@@ -116,8 +117,13 @@ class TEXT_PT_base_node(bpy.types.Panel):
                     # In a module the text uses: no place to go in this one
                     box.label(text=str(d))
                     continue
-                op = box.operator("base_node.goto", text=f"{d.line}:{d.col}  {d.message}", emboss=False)
+                row = box.row(align=True)
+                op = row.operator("base_node.goto", text=f"{d.line}:{d.col}  {d.message}", emboss=False)
                 op.line, op.col, op.message = d.line, d.col, str(d)
+                if BY_NAME in d.message:
+                    # The quick fix: the names of the inputs of that call
+                    fix = row.operator("base_node.name_inputs", text="", icon="SORTALPHA")
+                    fix.line, fix.col = d.line, d.col
 
         lint = actions.LINT.get(text.name)
         if lint:

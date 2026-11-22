@@ -226,8 +226,8 @@ geometry graph box() -> Geometry {
   on = true
   tint = (1.0, 0.5, 0.0, 1.0)
   flat = (0.5, 0.25)
-  g = Cube(CombineXYZ(size, scale, -size), size)
-  return SetPosition(g.mesh, on, offset: offset + flat)
+  g = Cube(size: CombineXYZ(x: size, y: scale, z: -size), vertices_x: size)
+  return SetPosition(g.mesh, selection: on, offset: offset + flat)
 }
 """
     tree = build_source(src, filename="box.bn")[0]
@@ -888,7 +888,7 @@ def test_edition_and_deprecated():
     assert "Later" not in bpy.data.node_groups and text.as_string() == later
 
     old = ('geometry(deprecated: "use DepGrid") graph DepPlane(size: Float) -> Geometry {\n'
-           "  return Grid(size, size, 2, 2)\n}\n\n"
+           "  return Grid(size_x: size, size_y: size, vertices_x: 2, vertices_y: 2)\n}\n\n"
            "geometry(deprecated: true) graph DepHalf(x: Float) -> Float {\n  return x / 2.0\n}\n\n"
            "geometry graph DepField() -> Geometry {\n  return DepPlane(DepHalf(2.0))\n}\n")
     text = bpy.data.texts.new("deprecated.bn")
@@ -912,7 +912,7 @@ def test_edition_and_deprecated():
     assert export_tree(trees[0])[0].startswith("geometry graph DepPlane(")
     assert [str(w) for w in actions.LINT[text.name]] == said[1:]
     # Fixed: no warning stays
-    text.from_string(old.replace("DepPlane(DepHalf(2.0))", "Grid(1.0, 1.0, 2, 2)"))
+    text.from_string(old.replace("DepPlane(DepHalf(2.0))", "Grid(size_x: 1.0, size_y: 1.0, vertices_x: 2, vertices_y: 2)"))
     assert actions.check_text(text) and text.name not in actions.LINT
 
 
@@ -1703,10 +1703,10 @@ def test_stmap_canvas_render():
     build_source("use stmap\n\n"
                  "compositor graph canvas_size(image: Color, width: Int = 1, height: Int = 1) -> Color {\n"
                  "  d = ImageInfo(canvas(image, width, height)).dimensions\n"
-                 "  return CombineColor(d.x, d.y, 0.0, 1.0)\n}\n\n"
+                 "  return CombineColor(red: d.x, green: d.y, blue: 0.0, alpha: 1.0)\n}\n\n"
                  "compositor graph canvas_uv(image: Color, width: Int = 1, height: Int = 1) -> Color {\n"
                  "  p = ImageCoordinates(canvas(image, width, height)).normalized\n"
-                 "  return CombineColor(p.x, p.y, 0.0, 1.0)\n}\n", "canvas_probe.bn")
+                 "  return CombineColor(red: p.x, green: p.y, blue: 0.0, alpha: 1.0)\n}\n", "canvas_probe.bn")
     rng = np.random.default_rng(13)
     bench = CompositorBench("canvas", 8, 8)
     bench.image("source", np.concatenate([rng.uniform(0.0, 1.0, (48, 96, 3)), np.ones((48, 96, 1))], axis=2))
@@ -1753,7 +1753,7 @@ def test_qc_render():
     build_source("use qc\n\n"
                  "compositor graph qc_inf_probe(image: Color) -> Color {\n"
                  "  c = SeparateColor(image)\n"
-                 "  return nan_inf_check(CombineColor(c.red * 1e30, c.green, c.blue, c.alpha))\n}\n", "q.bn")
+                 "  return nan_inf_check(CombineColor(red: c.red * 1e30, green: c.green, blue: c.blue, alpha: c.alpha))\n}\n", "q.bn")
     bench = CompositorBench("qc", W, H)
     rng = np.random.default_rng(5)
     bench.image("blank", np.zeros((H, W, 4)))
@@ -2649,7 +2649,7 @@ geometry graph timed(geometry: Geometry) -> (Geometry: Geometry, Time: Float) {
     each, = build_source("""
 geometry graph each(geometry: Geometry) -> (Geometry: Geometry, Points: Geometry) {
   e = foreach[FACE](geometry) -> {
-    return (points: Points(1))
+    return (points: Points(count: 1))
   }
   return (Geometry: e, Points: e.points)
 }
@@ -2840,15 +2840,15 @@ def test_comparisons_in_a_shader_tree():
         return text.split("{\n", 1)[1].rsplit("\n}", 1)[0]
 
     # Written by hand, the same nodes: they read back as the operator, which then stays
-    assert read("  return Math[GREATER_THAN](a, b)") == "  return a > b"
+    assert read("  return Math[GREATER_THAN](Value: a, Value_001: b)") == "  return a > b"
     assert read("  return 1.0 - (a < b)") == "  return a >= b"
-    assert read("  return 1.0 - Math[GREATER_THAN](a, b)") == "  return a <= b"
-    assert read("  return Math[COMPARE](a, b, 0.001)") == "  return a == b"
+    assert read("  return 1.0 - Math[GREATER_THAN](Value: a, Value_001: b)") == "  return a <= b"
+    assert read("  return Math[COMPARE](Value: a, Value_001: b, Value_002: 0.001)") == "  return a == b"
     assert read("  return a >= b") == "  return a >= b"
     # Another epsilon is not `==`: Math's own default is 0.5
-    assert read("  return Math[COMPARE](a, b)") == \
+    assert read("  return Math[COMPARE](Value: a, Value_001: b)") == \
         "  return Math[COMPARE](Value: a, Value_001: b)"
-    assert read("  return Math[COMPARE](a, b, 0.1)") == \
+    assert read("  return Math[COMPARE](Value: a, Value_001: b, Value_002: 0.1)") == \
         "  return Math[COMPARE](Value: a, Value_001: b, Value_002: 0.1)"
     # A comparison bound to a name is a node of its own: 1 minus it stays a subtraction
     assert read("  low = a < b\n  return low * (1.0 - low)") == "  low = a < b\n  return low * (1.0 - low)"
@@ -3064,12 +3064,12 @@ def test_outputs_of_one_name_rebuilt():
 
 
 TUPLE_TYPES = """geometry graph tuple_types(geometry: Geometry, b: Bool, i: Int) -> Geometry {
-  sw = Switch(b, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))
-  sw_link = Switch(b, Position(), (0.5, 0.5, 0.0))
-  sw_color = Switch(b, (1.0, 0.0, 0.0, 1.0), (0.5, 0.5, 0.0))
-  mix = Mix(0.5, (1.0, 0.0, 0.0), (0.5, 0.5, 0.0))
-  mix_color = Mix(0.5, (1.0, 0.0, 0.0, 1.0), (0.0, 0.0, 1.0, 1.0))
-  above = Compare(Position(), (0.5, 0.5, 0.0))
+  sw = Switch(switch: b, false_: (1.0, 0.0, 0.0), true_: (0.5, 0.5, 0.0))
+  sw_link = Switch(switch: b, false_: Position(), true_: (0.5, 0.5, 0.0))
+  sw_color = Switch(switch: b, false_: (1.0, 0.0, 0.0, 1.0), true_: (0.5, 0.5, 0.0))
+  mix = Mix(factor: 0.5, a: (1.0, 0.0, 0.0), b: (0.5, 0.5, 0.0))
+  mix_color = Mix(factor: 0.5, a: (1.0, 0.0, 0.0, 1.0), b: (0.0, 0.0, 1.0, 1.0))
+  above = Compare(a: Position(), b: (0.5, 0.5, 0.0))
   index = IndexSwitch(i, 1.0, (0.5, 0.5, 0.0))
   menu = MenuSwitch(A: (1.0, 0.0, 0.0), B: (0.5, 0.5, 0.0, 1.0))
   return geometry
@@ -3166,10 +3166,10 @@ def test_tuples_choose_the_type():
 
     # What Blender cannot build, the checker refuses
     refused = {
-        "Switch(b, (1.0, 0.0), (0.5, 0.5))":
+        "Switch(switch: b, false_: (1.0, 0.0), true_: (0.5, 0.5))":
             "Switch.false_ expects a Vector of 3 numbers, receives 2; write (1.0, 0.0, 0.0)",
-        "Switch[FLOAT](b, (1.0, 0.0, 0.0), 2.0)": "Switch.false_ expects Float, receives a Vector tuple",
-        "Mix[VECTOR](0.5, (1.0, 0.0, 0.0, 1.0), Position())":
+        "Switch[FLOAT](switch: b, false_: (1.0, 0.0, 0.0), true_: 2.0)": "Switch.false_ expects Float, receives a Vector tuple",
+        "Mix[VECTOR](factor: 0.5, a: (1.0, 0.0, 0.0, 1.0), b: Position())":
             "Mix.a expects a Vector of 3 numbers, receives 4; write (1.0, 0.0, 0.0)",
     }
     with BlenderSchema() as schema:
@@ -3204,7 +3204,7 @@ compositor graph written_type(on: Bool, x: Float) -> Color {
 }
 
 geometry graph count_or_size(on: Bool, x: Float, i: Int) -> Float {
-  return Switch(on, 1, 2) + Switch(on, 1, x) + Switch[INT](on, 1, x) + Switch[FLOAT](on, i, 2)
+  return Switch(switch: on, false_: 1, true_: 2) + Switch(switch: on, false_: 1, true_: x) + Switch[INT](switch: on, false_: 1, true_: x) + Switch[FLOAT](switch: on, false_: i, true_: 2)
 }
 """
 
@@ -3605,6 +3605,42 @@ def test_idioms_build():
     print(f"   ✓ {len(blocks)} examples built")
 
 
+def test_the_editor_names_the_inputs():
+    """A value by position of a node is an error the sidebar offers to fix; Format names every input as
+    Blender's sockets go, Name Inputs those of one call, and the suggestions after `(` are its inputs."""
+    print("-> Test: The editor names the inputs...")
+    from base_node.blender.complete import complete
+    from base_node.blender.typecheck import BY_NAME
+    from base_node.host.schema import BlenderSchema
+    from base_node.ui import actions
+
+    src = ("geometry graph Named(geometry: Geometry, a: Float, v: Vector) -> Geometry {\n"
+           "  h = Math[MULTIPLY_ADD](a, 2.0,   0.5)  // kept\n"
+           "  s = VectorMath[SCALE](v, h)\n"
+           "  return geometry |> SetPosition(offset: s)\n}\n")
+    text = bpy.data.texts.new("named.bn")
+    text.from_string(src)
+    try:
+        assert not actions.check_text(text)
+        said = [(d.line, d.col) for d in actions.DIAGNOSTICS[text.name] if BY_NAME in d.message]
+        assert said == [(2, 26), (2, 29), (2, 36), (3, 25), (3, 28)], said
+        # The quick fix of one error: its call alone, the layout kept
+        assert actions.format_text(text, at=(3, 25))
+        assert text.as_string() == src.replace("VectorMath[SCALE](v, h)", "VectorMath[SCALE](vector: v, scale: h)")
+        assert actions.format_text(text)
+        assert "  h = Math[MULTIPLY_ADD](Value: a, Value_001: 2.0, Value_002: 0.5)  // kept\n" in text.as_string()
+        assert actions.check_text(text), [str(d) for d in actions.DIAGNOSTICS.get(text.name, ())]
+        assert not actions.format_text(text), "a named text is formatted already"
+    finally:
+        bpy.data.texts.remove(text)
+    with BlenderSchema() as schema:
+        head = "geometry graph g(geometry: Geometry, a: Float) -> Geometry {\n"
+        assert [i.label for i in complete(head + "  x = Math[ADD](", 2, 18, schema)[1]] == ["Value", "Value_001"]
+        got = [i.label for i in complete(head + "  return SetPosition(", 2, 22, schema)[1]]
+        assert got[0] == "geometry" and "a" in got, "the geometry may come first, unnamed"
+    print("   ✓ Errors, quick fix, Format and suggestions verified")
+
+
 def test_real_world_assets():
     """8. Third-party assets (tests/fixtures, CC0) read as text, built back, evaluate the same."""
     print("-> Test 8: Real-world assets...")
@@ -3968,6 +4004,7 @@ def main():
         test_group_without_tree,
         test_arrange,
         test_idioms_build,
+        test_the_editor_names_the_inputs,
         test_real_world_assets,
         test_gltf_export,
         test_engine_variants,
