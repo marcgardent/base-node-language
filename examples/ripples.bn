@@ -9,5 +9,5 @@ geometry graph ripples(count: Int = 40 in 2.., waves: Float = 2.5, height: Float
     |> MeshToPoints()
     |> InstanceOnPoints(instance: column, scale: CombineXYZ(1.0, 1.0, rise))
     |> RealizeInstances()
-    |> StoreNamedAttribute(name: "color", value: palette(Position().z / height), data_type: FLOAT_COLOR)
+    |> StoreNamedAttribute[FLOAT_COLOR](name: "color", value: palette(Position().z / height))
 }

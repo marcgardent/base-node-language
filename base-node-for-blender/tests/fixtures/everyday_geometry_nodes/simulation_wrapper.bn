@@ -10,14 +10,11 @@ geometry graph ".Evaluate Nested Bundle Closures"(Geometry: Geometry, Bundle: Bu
     bundle: Bundle,
     mode: "Data Type",
     data_type: Closure)
-  repeat_output = repeat(
-    ListLength(list: get_nested_bundle_paths, data_type: STRING),
-    Geometry: Geometry) -> {
+  repeat_output = repeat(ListLength[STRING](list: get_nested_bundle_paths), Geometry: Geometry) -> {
     return EvaluateClosure(
-      GetBundleItem(
+      GetBundleItem[CLOSURE](
         bundle: Bundle,
-        path: GetListItem(list: get_nested_bundle_paths, index: iteration, socket_type: STRING),
-        socket_type: CLOSURE).item,
+        path: GetListItem[STRING](list: get_nested_bundle_paths, index: iteration)).item,
       Geometry: Geometry) -> Geometry
   }
   return repeat_output

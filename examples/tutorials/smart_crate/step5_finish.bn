@@ -25,25 +25,24 @@ shader graph crate_steel(
         e.chip,
         metal_edge_wear(wear_level: wear, grunge_amount: 0.7, grunge_scale: 0.05, seed: 1))
       * (1.0 - e.drip)
-    chipped = Mix(factor: worn, a: paint, b: steel, data_type: RGBA)
+    chipped = Mix[RGBA](factor: worn, a: paint, b: steel)
   }
   "Rust" #red {
     // A little rust in the cavities, and the streaks the mesh stores
     spread = dripping_rust(rust_spreading: 0.2, drips_intensity: 0.0, seed: 6)
-    rusty = Mix(
+    rusty = Mix[RGBA](
       factor: max(spread.mask * 0.8, Clamp(value: e.streak * 1.6)),
       a: chipped,
-      b: rust,
-      data_type: RGBA)
+      b: rust)
   }
   "Grime" #violet {
     dirty = dirt(dirt_level: 0.45, grime: 0.2, seed: 2)
-    soiled = Mix(factor: dirty * 0.85, a: rusty, b: grime, data_type: RGBA)
+    soiled = Mix[RGBA](factor: dirty * 0.85, a: rusty, b: grime)
   }
   "Dust" #yellow {
     // Settled on what faces up, and the specks the mesh scatters
     dusty = max(dust(dust_level: 0.35, grunge_scale: 0.2, seed: 4) * 0.5, e.dust)
-    color = Mix(factor: dusty, a: soiled, b: dust_color, data_type: RGBA)
+    color = Mix[RGBA](factor: dusty, a: soiled, b: dust_color)
   }
   return PrincipledBSDF(
     base_color: color,

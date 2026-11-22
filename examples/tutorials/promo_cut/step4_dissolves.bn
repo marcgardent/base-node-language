@@ -11,15 +11,15 @@ use transitions
 
 compositor graph title_card() -> Color {
   "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
-  title = Image(image: "promo-cut-plate-c.png").image
+  title = Image[image: "promo-cut-plate-c.png"]().image
   heart = circle_mask(title, radius: 0.1, feather: 1.1).mask
   return over(title, b: keymix(a: (0.35, 0.02, 0.25, 1.0), b: (0.01, 0.01, 0.06, 1.0), mask: heart))
 }
 
 compositor graph promo_cut() -> Color {
   "The podium to the hills by a dissolve in cells of noise, to the title through orange, back to the podium by a cross dissolve"
-  a = Image(image: "promo-cut-plate-a.png").image
-  b = Image(image: "promo-cut-plate-b.png").image
+  a = Image[image: "promo-cut-plate-a.png"]().image
+  b = Image[image: "promo-cut-plate-b.png"]().image
   c = title_card()
   ab = noise_dissolve(
     a,

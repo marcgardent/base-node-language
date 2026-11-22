@@ -24,14 +24,13 @@ geometry graph widths(
       (2.0, 2.5, 2.25),
       (3.0, 3.5, 3.25),
       (4.0, 4.5, 4.25)))
-  chain = Switch(switch: o.x > 0.0, true_: SetPosition(geometry, offset: o), input_type: GEOMETRY)
-    + Switch(switch: o.y > 0.0, true_: nested, input_type: GEOMETRY)  // an operand
+  chain = Switch[GEOMETRY](switch: o.x > 0.0, true_: SetPosition(geometry, offset: o))
+    + Switch[GEOMETRY](switch: o.y > 0.0, true_: nested)  // an operand
     - tuple
-  picked = SeparateGeometry(
+  picked = SeparateGeometry[FACE](
     geometry,
     selection: Position().z > 0.0 and Position().x < o.x,
-    mode: EDGE,
-    domain: FACE).selection
+    mode: EDGE).selection
   operand = (geometry |> SetPosition(offset: CombineXYZ(x: 1.0, y: 2.0, z: 3.0))).geometry
     + (geometry |> SetPosition(offset: CombineXYZ(x: 1.0, y: 2.0, z: 3.0)) |> SetShadeSmooth())
   deep = SetPosition(

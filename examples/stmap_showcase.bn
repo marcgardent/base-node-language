@@ -25,8 +25,8 @@ compositor graph picture(image: Color) -> Color {
   grid = max(fract(p.x * 8.0) < 0.06, fract(p.y * 6.0) < 0.06)
   base = CombineColor(0.15 + 0.7 * p.x, 0.25 + 0.35 * p.y, 0.85 - 0.6 * p.x, 1.0)
   star = star_mask(image, 0.3, 5, 0.45, 0.01, center: (-0.45, 0.3), angle: 0.3).mask
-  lined = Mix(factor: grid * 0.7, a: base, b: (0.05, 0.05, 0.08, 1.0), data_type: RGBA)
-  return Mix(factor: star, a: lined, b: (1.0, 0.85, 0.2, 1.0), data_type: RGBA)
+  lined = Mix[RGBA](factor: grid * 0.7, a: base, b: (0.05, 0.05, 0.08, 1.0))
+  return Mix[RGBA](factor: star, a: lined, b: (1.0, 0.85, 0.2, 1.0))
 }
 
 compositor graph "stmap showcase"(image: Color) -> Color {

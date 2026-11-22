@@ -10,12 +10,12 @@ shader graph curve_attributes() -> (
     angle: Float
 ) {
   "Reads the attributes curve_to_shader stores; angle goes 0 → 1 around the tube"
-  around = Attribute(attribute_name: "curve_around")
+  around = Attribute[attribute_name: "curve_around"]()
   return (
-    factor: Attribute(attribute_name: "curve_factor").factor,
-    distance: Attribute(attribute_name: "curve_distance").factor,
-    length: Attribute(attribute_name: "curve_length").factor,
-    index: Attribute(attribute_name: "curve_index").factor,
+    factor: Attribute[attribute_name: "curve_factor"]().factor,
+    distance: Attribute[attribute_name: "curve_distance"]().factor,
+    length: Attribute[attribute_name: "curve_length"]().factor,
+    index: Attribute[attribute_name: "curve_index"]().factor,
     angle: atan2(around.vector.y, around.vector.x) / 6.2831855 + 0.5)
 }
 
@@ -30,16 +30,16 @@ shader graph curve_material(
   "A smart material: a gradient from start to end of each curve, spiral stripes per metre, a hue per curve"
   c = curve_attributes()
   "Gradient" #teal {
-    base = Mix(factor: c.factor, a: start, b: end, data_type: RGBA)
+    base = Mix[RGBA](factor: c.factor, a: start, b: end)
   }
   "Stripes" #orange {
     // Stripes per metre, not per curve: a long curve has more of them; twist turns them into a spiral
     // In a shader tree a comparison is Math's Less Than: 1 inside a stripe, 0 outside
     band = fract(c.distance * stripes + c.angle * twist) < stripe_width
-    striped = Mix(factor: band * 0.6, a: base, b: (0.02, 0.02, 0.02, 1.0), data_type: RGBA)
+    striped = Mix[RGBA](factor: band * 0.6, a: base, b: (0.02, 0.02, 0.02, 1.0))
   }
   "One hue per curve" #violet {
-    hue = WhiteNoiseTexture(w: c.index, noise_dimensions: "1D")
+    hue = WhiteNoiseTexture["1D"](w: c.index)
     color = HueSaturationValue(hue: 0.5 + (hue.value - 0.5) * variation, color: striped)
   }
   return PrincipledBSDF(base_color: color, roughness: 0.35 + band * 0.3)
@@ -59,12 +59,12 @@ geometry graph curve_to_shader(
       |> StoreNamedAttribute(name: "curve_factor", value: along.factor)
       |> StoreNamedAttribute(name: "curve_distance", value: along.length)
       |> StoreNamedAttribute(name: "curve_length", value: SplineLength().length)
-      |> StoreNamedAttribute(name: "curve_index", value: Index(), data_type: INT, domain: CURVE)
+      |> StoreNamedAttribute[INT, CURVE](name: "curve_index", value: Index())
   }
   "Around the tube" #orange {
     // The direction from the axis, not an angle: it has no seam to interpolate across
     profile = CurveCircle(resolution: resolution)
-      |> StoreNamedAttribute(name: "curve_around", value: Position(), data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "curve_around", value: Position())
       |> TransformGeometry(scale: CombineXYZ(x: radius, y: radius, z: radius))
   }
   return tagged

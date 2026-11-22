@@ -20,8 +20,8 @@ geometry graph pipes(
     n: Int,
     scale: Float
 ) -> (in_: Float, out: Float, x: Float, y: Float) {
-  a = SeparateColor(NamedAttribute(name: "flux", data_type: FLOAT_COLOR).attribute)
-  d = SeparateColor(NamedAttribute(name: "diagonal flux", data_type: FLOAT_COLOR).attribute)
+  a = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
+  d = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
   w = neighbour(grid, a.green * scale, -1, 0, n, 0.0)
   e = neighbour(grid, a.red * scale, 1, 0, n, 0.0)
   s = neighbour(grid, a.alpha * scale, 0, -1, n, 0.0)
@@ -72,8 +72,8 @@ geometry graph erode(
   out = repeat(iterations, ground: terrain) -> {
     water = NamedAttribute(name: "water").attribute
     sediment = NamedAttribute(name: "sediment").attribute
-    a = SeparateColor(NamedAttribute(name: "flux", data_type: FLOAT_COLOR).attribute)
-    d = SeparateColor(NamedAttribute(name: "diagonal flux", data_type: FLOAT_COLOR).attribute)
+    a = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "flux").attribute)
+    d = SeparateColor(NamedAttribute[FLOAT_COLOR](name: "diagonal flux").attribute)
 
     wet = StoreNamedAttribute(ground, name: "water", value: water + rain * dt)
 
@@ -98,8 +98,8 @@ geometry graph erode(
         sides: CombineColor(fl * k, fr * k, fd * k, fu * k),
         diagonals: CombineColor(fdl * k, fur * k, fdr * k, ful * k))
       flowing = c.geometry
-        |> StoreNamedAttribute(name: "flux", value: c.sides, data_type: FLOAT_COLOR)
-        |> StoreNamedAttribute(name: "diagonal flux", value: c.diagonals, data_type: FLOAT_COLOR)
+        |> StoreNamedAttribute[FLOAT_COLOR](name: "flux", value: c.sides)
+        |> StoreNamedAttribute[FLOAT_COLOR](name: "diagonal flux", value: c.diagonals)
     }
 
     "Water, sediment and velocity" #3a7bd5 {

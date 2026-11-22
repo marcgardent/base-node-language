@@ -59,7 +59,7 @@ geometry graph contours(
     p = Position()
     inside = abs(p.x) < width * 0.5 - 0.001 and abs(p.y) < height * 0.5 - 0.001
     above = ground
-      |> DeleteGeometry(selection: valley_height() < level, domain: FACE)
+      |> DeleteGeometry[FACE](selection: valley_height() < level)
       |> MeshToCurve(selection: EdgeNeighbors().face_count == 1 and inside)
     // Each point moves onto the level, along the slope: one step of Newton's method
     g = valley_slope()
@@ -259,8 +259,8 @@ geometry graph clear(strokes: Geometry, under: Bool) -> Geometry {
     |> CurveToMesh()
     |> DeleteGeometry(selection: under)
     |> MeshToCurve()
-    |> SetCurveRadius(radius: NamedAttribute(name: "width", data_type: FLOAT))
-  return curves + DeleteGeometry(parts.mesh, selection: under, domain: FACE)
+    |> SetCurveRadius(radius: NamedAttribute[FLOAT](name: "width"))
+  return curves + DeleteGeometry[FACE](parts.mesh, selection: under)
 }
 
 geometry graph engraved_map() -> Geometry {

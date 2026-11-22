@@ -12,24 +12,22 @@ geometry graph "SDF Mesh Field"(
     "Sample Position": Vector(hide_value: true) = Position()
 ) -> ("Signed Distance": Float, Normal: Vector, Position: Vector, Offset: Vector) {
   position = Position() @ hide
-  normal = Normal(legacy_corner_normals: true) @ hide
+  normal = Normal[legacy_corner_normals: true]() @ hide
   menu_switch = MenuSwitch(menu: Mode, Points: 0, Edges: 1, Faces: 2)
   index_switch = IndexSwitch(
     menu_switch.output,
-    GeometryProximity(Mesh, sample_position: sample_position, target_element: POINTS).position,
-    GeometryProximity(Mesh, sample_position: sample_position, target_element: EDGES).position,
-    SampleNearestSurface(
+    GeometryProximity[POINTS](Mesh, sample_position: sample_position).position,
+    GeometryProximity[EDGES](Mesh, sample_position: sample_position).position,
+    SampleNearestSurface[FLOAT_VECTOR](
       Mesh,
       value: position,
-      sample_position: sample_position,
-      data_type: FLOAT_VECTOR).value)
+      sample_position: sample_position).value)
   vector_math = sample_position - index_switch @ hide
   vector_math_2 = vector_math
-    ⋅ SampleNearestSurface(
+    ⋅ SampleNearestSurface[FLOAT_VECTOR](
       Mesh,
-      value: EvaluateOnDomain(value: normal.normal, data_type: FLOAT_VECTOR),
-      sample_position: sample_position,
-      data_type: FLOAT_VECTOR).value @ hide
+      value: EvaluateOnDomain[FLOAT_VECTOR](value: normal.normal),
+      sample_position: sample_position).value @ hide
   vector_math_3 = normalize(vector_math) @ hide
   vector_math_5 = length(vector_math) @ hide
   math_2 = sign(vector_math_2) @ hide

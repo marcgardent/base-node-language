@@ -90,13 +90,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -115,10 +114,10 @@ geometry graph mini_moon(
 ) -> Geometry {
   "A sphere and the sites of one layer of craters, each drawn as the disc its crater will cover"
   sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
-  normal = NamedAttribute(name: "normal", data_type: FLOAT_VECTOR)
+  normal = NamedAttribute[FLOAT_VECTOR](name: "normal")
   discs = crater_sites(sphere, size: largest, seed: 0)
     |> InstanceOnPoints(
-      instance: MeshCircle(vertices: 48, fill_type: NGON).mesh,
+      instance: MeshCircle[NGON](vertices: 48).mesh,
       rotation: AlignRotationToVector(vector: normal),
       scale: NamedAttribute(name: "radius") * 1.5)
     |> SetMaterial(material: Marker)
@@ -189,13 +188,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -209,12 +207,11 @@ geometry graph crater_layer(
 ) -> (height: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -268,13 +265,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -288,12 +284,11 @@ geometry graph crater_layer(
 ) -> (height: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -364,13 +359,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -384,12 +378,11 @@ geometry graph crater_layer(
 ) -> (height: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -468,13 +461,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -488,12 +480,11 @@ geometry graph crater_layer(
 ) -> (height: Float, young: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -516,7 +507,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -588,13 +579,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -608,12 +598,11 @@ geometry graph crater_layer(
 ) -> (height: Float, young: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -636,7 +625,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -675,7 +664,7 @@ geometry graph mini_moon(
 </script></bn-view>
     <ul>
       <li><code>shader(material: true) graph Regolith</code> is the node tree of a material named <em>Regolith</em>; <code>SetMaterial(material: Regolith)</code> gives it to the moon.</li>
-      <li><code>Attribute(attribute_name: "young")</code> reads, at each point of the surface, the value stored on the vertices around it.</li>
+      <li><code>Attribute[attribute_name: "young"]()</code> reads, at each point of the surface, the value stored on the vertices around it.</li>
       <li><code>TextureCoordinate().object</code>: the noises are pinned to the object, in 3D. They need no UV map, so they work on the sphere, or on any mesh, as they are.</li>
       <li><code>patches</code>, a large noise, makes darker and lighter areas. The grey is 0.07 to 0.15, up to 0.2 more around young craters: the Moon reflects about an eighth of the light it receives.</li>
       <li><code>relief</code> sums a grain of noise and two layers of <code>pits</code>, all as heights in metres. <code>Bump</code>, at <code>distance</code> 1.0 and <code>strength</code> 1.0, reads them in those units and turns them into a normal: the sun lights each pit and grain as relief, and no vertex moves.</li>
@@ -709,13 +698,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -729,12 +717,11 @@ geometry graph crater_layer(
 ) -> (height: Float, young: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -757,7 +744,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -856,13 +843,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -876,12 +862,11 @@ geometry graph crater_layer(
 ) -> (height: Float, young: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -904,7 +889,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -969,13 +954,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -994,10 +978,10 @@ geometry graph mini_moon(
 ) -> Geometry {
   "A sphere and the sites of one layer of craters, each drawn as the disc its crater will cover"
   sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
-  normal = NamedAttribute(name: "normal", data_type: FLOAT_VECTOR)
+  normal = NamedAttribute[FLOAT_VECTOR](name: "normal")
   discs = crater_sites(sphere, size: largest, seed: 0)
     |> InstanceOnPoints(
-      instance: MeshCircle(vertices: 48, fill_type: NGON).mesh,
+      instance: MeshCircle[NGON](vertices: 48).mesh,
       rotation: AlignRotationToVector(vector: normal),
       scale: NamedAttribute(name: "radius") * 1.5)
     |> SetMaterial(material: Marker)
@@ -1031,13 +1015,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -1051,12 +1034,11 @@ geometry graph crater_layer(
 ) -> (height: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -1107,13 +1089,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -1127,12 +1108,11 @@ geometry graph crater_layer(
 ) -> (height: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre

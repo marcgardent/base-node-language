@@ -9,8 +9,8 @@ use transitions (frame_progress, linear_wipe)
 
 compositor graph promo_cut() -> Color {
   "The podium wiped away by the hills from frame 13 to frame 37, eased in and out"
-  a = Image(image: "promo-cut-plate-a.png").image
-  b = Image(image: "promo-cut-plate-b.png").image
+  a = Image[image: "promo-cut-plate-a.png"]().image
+  b = Image[image: "promo-cut-plate-b.png"]().image
   t = frame_progress(start: 13.0, length: 24.0, ease: true)
   return linear_wipe(a, b: b, progress: t, angle: 0.5235988, softness: 0.04).image
 }

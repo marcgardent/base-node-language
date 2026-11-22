@@ -16,8 +16,8 @@ shader graph clone_paint(
 ) -> Shader {
   "Satin plastic of the colour paint at rest, hot and glowing where the effect weighs"
   // weight, which the geometry stored on each clone: 0 at rest, 1 under the falloff
-  w = Attribute(attribute_name: "weight").factor
-  color = Mix(factor: w, a: paint, b: hot, data_type: RGBA)
+  w = Attribute[attribute_name: "weight"]().factor
+  color = Mix[RGBA](factor: w, a: paint, b: hot)
   return PrincipledBSDF(
     base_color: color,
     roughness: 0.32,
@@ -76,7 +76,7 @@ geometry graph clone_wall(
   return shapes
     |> grid_cloner(count_x: 18, count_y: 10, spacing: (0.22, 0.22, 0.22), pick: Random, seed: 4)
     // The weight where each clone stands, kept on it for the material
-    |> StoreNamedAttribute(name: "weight", value: w, domain: INSTANCE)
+    |> StoreNamedAttribute[INSTANCE](name: "weight", value: w)
     |> random_effector(
       offset: (0.02, 0.02, 0.1),
       rotation: (0.5, 0.5, 0.8),

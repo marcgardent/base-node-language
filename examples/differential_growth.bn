@@ -14,10 +14,9 @@
 
 // A field at the point `offset` places further along the curve, the curve closed
 geometry graph along(v: Vector, offset: Int) -> Vector {
-  return EvaluateAtIndex(
+  return EvaluateAtIndex[FLOAT_VECTOR](
     value: v,
-    index: OffsetPointInCurve(offset: offset).point_index,
-    data_type: FLOAT_VECTOR)
+    index: OffsetPointInCurve(offset: offset).point_index)
 }
 
 // The repulsion each point of a curve gets from its neighbours in `fill`, a triangulation
@@ -31,13 +30,10 @@ geometry graph repulsion(fill: Geometry, radius: Float) -> Vector {
   w = across ? max(radius - d, 0.0) / (radius * max(d, 1e-09)) : 0.0
   // On the points, a field of the edges is the mean of their edges: the mean of w, and of
   // w * (p + q), from which the sum of w * (p - q) is drawn at each end
-  weight = EvaluateOnDomain(value: w, domain: EDGE)
-  ends = EvaluateOnDomain(
-    value: (e.position_1 + e.position_2) * w,
-    domain: EDGE,
-    data_type: FLOAT_VECTOR)
+  weight = EvaluateOnDomain[EDGE](value: w)
+  ends = EvaluateOnDomain[EDGE, FLOAT_VECTOR](value: (e.position_1 + e.position_2) * w)
   push = (Position() * (2.0 * weight) - ends) * VertexNeighbors().vertex_count
-  return SampleIndex(fill, push, SampleNearest(fill, Position()), data_type: FLOAT_VECTOR)
+  return SampleIndex[FLOAT_VECTOR](fill, push, SampleNearest(fill, Position()))
 }
 
 // One step of growth: the three forces, a move no longer than `step` times `max length`,
@@ -81,7 +77,7 @@ geometry graph "growth step"(
   "Growth" #peru {
     // The cuts of a point are those of the edge to the next one: one at most in a step, so
     // that a curve never has more than twice `max points`
-    room = DomainSize(moved, component: CURVE).point_count < max_points
+    room = DomainSize[CURVE](moved).point_count < max_points
     cuts = room and distance(p, after) > max_length ? 1 : 0
   }
   return SubdivideCurve(moved, cuts: cuts)
@@ -91,9 +87,9 @@ geometry graph "growth step"(
 // keeps in "origin" its direction from the centre, which the points cut between two blend
 geometry graph "growth seed"(size: Float, max_length: Float, noise: Float, seed: Int) -> Geometry {
   n = max(ceil(6.283185 * size / max_length), 8.0)
-  stir = NoiseTexture(vector: Position(), w: seed, scale: 1.5, noise_dimensions: "4D").factor - 0.5
+  stir = NoiseTexture["4D"](vector: Position(), w: seed, scale: 1.5).factor - 0.5
   return CurveCircle(resolution: n, radius: size)
-    |> StoreNamedAttribute(name: "origin", value: Position() / size, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "origin", value: Position() / size)
     |> SetPosition(position: Position() * (1.0 + stir * noise))
 }
 
@@ -112,7 +108,7 @@ geometry graph "differential growth"(
 ) -> Geometry {
   "Grows a closed curve in the XY plane, `iterations` steps at once"
   // The points of a Bézier or NURBS curve are its control points: it grows as a poly curve
-  grown = repeat(iterations, c: SetSplineType(curve, spline_type: POLY)) -> {
+  grown = repeat(iterations, c: SetSplineType[POLY](curve)) -> {
     return (
       c: growth_step(c, max_length, radius, attraction, repulsion, alignment, step, max_points))
   }
@@ -133,7 +129,7 @@ geometry graph "growing differential growth"(
     }
 ) -> Geometry {
   "The same curve growing frame after frame: `steps per frame` steps in each"
-  grown = simulate(c: SetSplineType(curve, spline_type: POLY)) -> {
+  grown = simulate(c: SetSplineType[POLY](curve)) -> {
     stepped = repeat(steps_per_frame, h: c) -> {
       return (
         h: growth_step(h, max_length, radius, attraction, repulsion, alignment, step, max_points))

@@ -12,11 +12,10 @@ geometry graph ressort(force: Float) -> (f: Closure, b: Bundle) {
 
 geometry graph appliquer(geometry: Geometry, f: Closure, b: Bundle) -> Geometry {
   s = SeparateBundle(b) -> (hauteur: Float, nid: Bundle)
-  h = EvaluateClosure(
+  h = EvaluateClosure[define_signature: true](
     f,
     x: Position().z,
-    "Point Count"(structure_type: SINGLE): SeparateBundle(s.nid) -> (n: Int),
-    define_signature: true) -> (r: Float)
+    "Point Count"(structure_type: SINGLE): SeparateBundle(s.nid) -> (n: Int)) -> (r: Float)
   return SetPosition(geometry, offset: CombineXYZ(z: h + s.hauteur))
 }
 

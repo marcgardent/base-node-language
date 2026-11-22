@@ -19,45 +19,43 @@ shader graph haze(surface: Shader) -> Shader {
 shader(material: true) graph Ground() -> (surface: Shader) {
   "Grass in tufts of two greens, in meadows lighter and darker, worn to dirt on the verges"
   o = TextureCoordinate().object
-  worn = Attribute(attribute_name: "road_mask").factor
+  worn = Attribute[attribute_name: "road_mask"]().factor
   grain = NoiseTexture(vector: o, scale: 0.6, detail: 5.0).factor
   meadows = NoiseTexture(vector: o, scale: 0.03, detail: 3.0).factor
   fine = NoiseTexture(vector: o, scale: 6.0, detail: 3.0).factor
-  tufts = Mix(
+  tufts = Mix[RGBA](
     factor: Clamp(value: (grain - 0.5) * 2.5 + 0.5),
     a: (0.05, 0.14, 0.025),
-    b: (0.2, 0.3, 0.05),
-    data_type: RGBA)
+    b: (0.2, 0.3, 0.05))
   grass = tufts * (0.6 + Clamp(value: (meadows - 0.35) * 2.0) * 0.6)
-  dirt = Mix(factor: fine, a: (0.24, 0.18, 0.12), b: (0.36, 0.29, 0.2), data_type: RGBA)
+  dirt = Mix[RGBA](factor: fine, a: (0.24, 0.18, 0.12), b: (0.36, 0.29, 0.2))
   // The mask fades from the road's edge: the dirt gives way to grass in a ragged line
   verge = Clamp(value: worn * 1.6 + (fine - 0.5) * 0.8)
-  color = Mix(factor: verge, a: grass, b: dirt, data_type: RGBA)
+  color = Mix[RGBA](factor: verge, a: grass, b: dirt)
   return (surface: haze(surface: PrincipledBSDF(base_color: color, roughness: 0.92)))
 }
 
 shader(material: true) graph Asphalt() -> (surface: Shader) {
   "Asphalt, a dashed centre line and two edge lines, from the road's UV map; gravel shoulders"
-  uv = UVMap(uv_map: "UVMap").uv
-  mask = Attribute(attribute_name: "road_mask").factor
+  uv = UVMap[uv_map: "UVMap"]().uv
+  mask = Attribute[attribute_name: "road_mask"]().factor
   o = TextureCoordinate().object
   grain = NoiseTexture(vector: o, scale: 14.0, detail: 4.0).factor
   patches = NoiseTexture(vector: o, scale: 0.4, detail: 2.0).factor
-  tar = Mix(
+  tar = Mix[RGBA](
     factor: grain * 0.6 + patches * 0.4,
     a: (0.045, 0.045, 0.05),
-    b: (0.11, 0.105, 0.105),
-    data_type: RGBA)
-  gravel = Mix(factor: grain, a: (0.24, 0.21, 0.17), b: (0.4, 0.36, 0.3), data_type: RGBA)
+    b: (0.11, 0.105, 0.105))
+  gravel = Mix[RGBA](factor: grain, a: (0.24, 0.21, 0.17), b: (0.4, 0.36, 0.3))
   // u runs 0 to 1 across 9.4 m (7 m of carriageway, two shoulders of 1.2 m), v a tile every 6 m:
   // the centre line at u 0.5, dashes 3 m long; the edge lines 3.3 m either side of it
   dash = Clamp(value: (0.007 - abs(uv.x - 0.5)) * 2000.0)
     * Clamp(value: (fract(uv.y) - 0.5) * 2000.0)
   edges = Clamp(value: (0.007 - abs(abs(uv.x - 0.5) - 0.351)) * 2000.0)
   paint = max(dash, edges) * Clamp(value: 0.7 + grain * 0.6)
-  road = Mix(factor: paint, a: tar, b: (0.86, 0.84, 0.76), data_type: RGBA)
+  road = Mix[RGBA](factor: paint, a: tar, b: (0.86, 0.84, 0.76))
   // road_mask is 1 on the carriageway, 0 at the outer edge of the shoulders
-  color = Mix(factor: Clamp(value: mask * 3.0 - 1.9), a: gravel, b: road, data_type: RGBA)
+  color = Mix[RGBA](factor: Clamp(value: mask * 3.0 - 1.9), a: gravel, b: road)
   return (surface: PrincipledBSDF(base_color: color, roughness: 0.8 - paint * 0.25))
 }
 
@@ -67,17 +65,13 @@ geometry graph game_level() -> Geometry {
   hills = (NoiseTexture(vector: p * 0.025, scale: 1.0, detail: 2.0).factor - 0.5) * 7.0
   // The level, a point every 60 cm; over its last 10 m it sinks by 1 m to meet the land beyond
   inside = min(min(p.x + 80.0, 160.0 - p.x), 70.0 - abs(p.y))
-  rim = MapRange(value: inside, from_max: 10.0, interpolation_type: SMOOTHERSTEP)
+  rim = MapRange[SMOOTHERSTEP](value: inside, from_max: 10.0)
   rough = Grid(size_x: 240.0, size_y: 140.0, vertices_x: 401, vertices_y: 234)
     |> TransformGeometry(translation: (40.0, 0.0, 0.0))
     |> SetPosition(offset: CombineXYZ(z: hills - (1.0 - rim)))
   // The land beyond: the same hills a point every 5 m, 1 m lower to stay under the level, eased
   // down to a plain 4 m below from 300 m to 600 m out, where the haze hides it
-  out = MapRange(
-    value: length(p),
-    from_min: 300.0,
-    from_max: 600.0,
-    interpolation_type: SMOOTHERSTEP)
+  out = MapRange[SMOOTHERSTEP](value: length(p), from_min: 300.0, from_max: 600.0)
   beyond = Grid(size_x: 1200.0, size_y: 1200.0, vertices_x: 241, vertices_y: 241)
     |> SetPosition(offset: CombineXYZ(z: Mix(factor: out, a: hills - 1.0, b: -4.0)))
   // A road across the level in a long, gentle S from west to east: 7 m of carriageway in two

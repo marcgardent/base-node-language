@@ -200,17 +200,8 @@ compositor graph "color correct"(
   "Nuke's ColorCorrect: saturation, contrast, gamma, gain and offset of the master times those of the shadows, midtones and highlights, mixed by the luma"
   c = unpremult(image)
   luma = rec709_luma(c)
-  low = 1.0
-    - MapRange(
-      value: luma,
-      from_min: shadows_start,
-      from_max: shadows_end,
-      interpolation_type: SMOOTHSTEP)
-  high = MapRange(
-    value: luma,
-    from_min: highlights_start,
-    from_max: highlights_end,
-    interpolation_type: SMOOTHSTEP)
+  low = 1.0 - MapRange[SMOOTHSTEP](value: luma, from_min: shadows_start, from_max: shadows_end)
+  high = MapRange[SMOOTHSTEP](value: luma, from_min: highlights_start, from_max: highlights_end)
   shadows = correct_range(
     c,
     saturation * shadows_saturation,
@@ -264,7 +255,7 @@ compositor graph "hue shift"(
 ) -> Color {
   "The colours turned by angle around the gray axis: red to green to blue for a positive angle"
   c = unpremult(image)
-  turned = VectorRotate(vector: c, axis: (1.0, 1.0, 1.0), angle: angle, rotation_type: AXIS_ANGLE)
+  turned = VectorRotate[AXIS_ANGLE](vector: c, axis: (1.0, 1.0, 1.0), angle: angle)
   return graded_image(image, with_alpha(turned, alpha_of(image)), mix, mask)
 }
 

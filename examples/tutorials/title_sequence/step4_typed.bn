@@ -9,7 +9,7 @@ use text_animate (animate_characters, text_characters, text_mesh, text_reveal, t
 
 shader(material: true) graph Title() -> (surface: Shader) {
   "Warm white letters that give their own light, as opaque as their opacity"
-  shown = Attribute(attribute_name: "opacity").factor
+  shown = Attribute[attribute_name: "opacity"]().factor
   return (
     surface: MixShader(
       factor: shown,
@@ -57,12 +57,12 @@ geometry graph tagline(progress: Float(subtype: FACTOR), blink: Bool) -> Geometr
   typed = typewriter(chars, progress: progress)
   line = BoundingBox(RealizeInstances(chars), use_radius: false)
   end = BoundingBox(RealizeInstances(typed), use_radius: false).max.x
-  some = DomainSize(typed, component: INSTANCES).instance_count > 0
+  some = DomainSize[INSTANCES](typed).instance_count > 0
   x = some ? end + 0.08 : line.min.x
   shown = progress > 0.0 and (progress < 1.0 or blink)
   cursor = Grid(size_x: 0.035, size_y: 0.34, vertices_x: 2, vertices_y: 2)
     |> TransformGeometry(translation: CombineXYZ(x: x, y: (line.min.y + line.max.y) * 0.5))
-  return text_mesh(typed) + Switch(switch: shown, true_: cursor, input_type: GEOMETRY)
+  return text_mesh(typed) + Switch[GEOMETRY](switch: shown, true_: cursor)
     |> SetMaterial(material: Tagline)
     |> TransformGeometry(translation: (0.0, -1.05, 0.0))
 }

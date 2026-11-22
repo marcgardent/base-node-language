@@ -47,13 +47,12 @@ compositor graph "pixel of"(image: Color) -> Vector {
 
 compositor graph "soft edge"(d: Float, edge: Float, softness: Float in 0.0..) -> Float {
   "1 where d is below edge - softness, 0 past edge, a smoothstep between them"
-  return MapRange(
+  return MapRange[SMOOTHSTEP](
     value: d,
     from_min: edge,
     from_max: edge - max(softness, 1e-06),
     to_min: 0.0,
-    to_max: 1.0,
-    interpolation_type: SMOOTHSTEP)
+    to_max: 1.0)
 }
 
 compositor graph clamp01(x: Float) -> Float {
@@ -83,8 +82,8 @@ compositor graph "color wheel"(image: Color, value: Float = 1.0 in 0.0..) -> Col
   e = half_extent(image)
   r = min(e.x, e.y)
   d = length(p)
-  hue = fract(atan2(p.y, p.x) / 6.2831853)
-  wheel = CombineColor(hue, min(d / r, 1.0), value, 1.0, mode: HSV)
+  hue = fract(atan2(p.y, p.x) / 6.2831855)
+  wheel = CombineColor[HSV](hue, min(d / r, 1.0), value, 1.0)
   return color_times(wheel, sdf_mask(image, d - r, 0.0))
 }
 

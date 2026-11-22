@@ -24,7 +24,7 @@ shader graph hull_paint(
   "Painted metal panels, worn to bare metal on their edges"
   // Bevel rounds the normal within 3 cm of an edge; in object space, as every normal here
   rounded = Bevel(radius: 0.03).normal
-  surface = normalize(VectorTransform(vector: rounded, vector_type: NORMAL))
+  surface = normalize(VectorTransform[NORMAL](vector: rounded))
   "Paint" #orange {
     // A 2D texture, as an image would be: it reads x and y of the coordinates it is given
     smears = graph(vector: Vector) -> (color: Color) {

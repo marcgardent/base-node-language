@@ -16,7 +16,7 @@ geometry graph chute(
 geometry graph semis(
     mesh: Geometry
 ) -> (Geometry: Geometry, Double: Float, Points: Geometry, Rang: Int) {
-  e = foreach(mesh, domain: FACE, selection: Index() < 3, centre: Position()) -> {
+  e = foreach[FACE](mesh, selection: Index() < 3, centre: Position()) -> {
     return (double: index * 2.0, points: Points(position: centre), rang: index)
   }
   return (Geometry: e, Double: e.double, Points: e.points, Rang: e.rang)

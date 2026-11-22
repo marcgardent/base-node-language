@@ -9,13 +9,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -34,10 +33,10 @@ geometry graph mini_moon(
 ) -> Geometry {
   "A sphere and the sites of one layer of craters, each drawn as the disc its crater will cover"
   sphere = IcoSphere(radius: radius, subdivisions: subdivisions).mesh
-  normal = NamedAttribute(name: "normal", data_type: FLOAT_VECTOR)
+  normal = NamedAttribute[FLOAT_VECTOR](name: "normal")
   discs = crater_sites(sphere, size: largest, seed: 0)
     |> InstanceOnPoints(
-      instance: MeshCircle(vertices: 48, fill_type: NGON).mesh,
+      instance: MeshCircle[NGON](vertices: 48).mesh,
       rotation: AlignRotationToVector(vector: normal),
       scale: NamedAttribute(name: "radius") * 1.5)
     |> SetMaterial(material: Marker)

@@ -28,22 +28,18 @@ compositor graph "shape space"(
     angle: Float(subtype: ANGLE)
 ) -> Vector {
   "Uniform coordinates of the image, moved to center and turned by angle: where a shape is drawn"
-  return VectorRotate(
-    vector: ImageCoordinates(image).uniform - center,
-    angle: -angle,
-    rotation_type: Z_AXIS)
+  return VectorRotate[Z_AXIS](vector: ImageCoordinates(image).uniform - center, angle: -angle)
 }
 
 compositor graph "sdf mask"(image: Color, distance: Float, feather: Float in 0.0..) -> Float {
   "Mask of a signed distance: 1 inside, 0 outside, its edge smoothed over one pixel plus feather"
   edge = (pixel_size(image) + feather) * 0.5
-  return MapRange(
+  return MapRange[SMOOTHSTEP](
     value: distance,
     from_min: -edge,
     from_max: edge,
     to_min: 1.0,
-    to_max: 0.0,
-    interpolation_type: SMOOTHSTEP)
+    to_max: 0.0)
 }
 
 compositor graph "outline mask"(
@@ -129,5 +125,5 @@ compositor graph letterbox(
   half_x = min(size.x / larger, size.y / larger * aspect)
   d = sdf_rectangle(ImageCoordinates(image).uniform, CombineXYZ(half_x, half_x / aspect))
   mask = sdf_mask(image, d, feather)
-  return (Image: Mix(factor: mask, a: color, b: image, data_type: RGBA), Mask: mask)
+  return (Image: Mix[RGBA](factor: mask, a: color, b: image), Mask: mask)
 }

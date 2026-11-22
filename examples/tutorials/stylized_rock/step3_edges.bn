@@ -17,10 +17,10 @@ shader graph rock_stone(
   "Grey stone, paler on its edges, darker in its hollows"
   m = curvature_mask(balance: 0.5, contrast: 0.4)
   "Edges" #orange {
-    lit = Mix(factor: m.mask, a: stone, b: light, data_type: RGBA)
+    lit = Mix[RGBA](factor: m.mask, a: stone, b: light)
   }
   "Hollows" #violet {
-    color = Mix(factor: m.cavities, a: lit, b: dark, data_type: RGBA)
+    color = Mix[RGBA](factor: m.cavities, a: lit, b: dark)
   }
   return PrincipledBSDF(base_color: color, roughness: 0.35)
 }
@@ -49,15 +49,13 @@ geometry graph rock_block(
     // Three planes meet at a corner of the block: the three points of a face of the hull. The
     // corner lies along that face's normal, at 1 over the distance of the face from the centre
     n = Normal().normal
-    corners = StoreNamedAttribute(
+    corners = StoreNamedAttribute[FLOAT_VECTOR, FACE](
       hull,
       name: "corner",
-      value: n / (n ⋅ Position()),
-      data_type: FLOAT_VECTOR,
-      domain: FACE)
+      value: n / (n ⋅ Position()))
     // The dual mesh has a point a face of the hull, and a face a point: the facets
     block = DualMesh(corners)
-      |> SetPosition(position: NamedAttribute(name: "corner", data_type: FLOAT_VECTOR).attribute)
+      |> SetPosition(position: NamedAttribute[FLOAT_VECTOR](name: "corner").attribute)
       |> RemoveNamedAttribute(name: "corner")
   }
   // Seen in perspective from above, the block is an egg and its facets are still flat: dividing
@@ -78,8 +76,7 @@ geometry graph clay(
   "The mesh made again of even faces voxel wide, as a sculptor remeshes clay, its edges softened by soften passes of smoothing"
   dense = GridToMesh(grid: MeshToSDFGrid(mesh, voxel_size: voxel), threshold: 0.0)
   return dense
-    |> SetPosition(
-      position: BlurAttribute(value: Position(), iterations: soften, data_type: FLOAT_VECTOR))
+    |> SetPosition(position: BlurAttribute[FLOAT_VECTOR](value: Position(), iterations: soften))
     |> SetShadeSmooth()
 }
 

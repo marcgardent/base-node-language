@@ -18,8 +18,8 @@ geometry graph "morph curves 2d"(
   "Interpolates positions between two curves resampled to matching point counts"
   c_start = ResampleCurve(start, count: points)
   c_end = ResampleCurve(end, count: points)
-  pos_end = SampleIndex(c_end, Position(), Index(), data_type: FLOAT_VECTOR)
-  pos = Mix(factor, Position(), pos_end, data_type: VECTOR)
+  pos_end = SampleIndex[FLOAT_VECTOR](c_end, Position(), Index())
+  pos = Mix[VECTOR](factor, Position(), pos_end)
   return SetPosition(c_start, position: pos)
 }
 

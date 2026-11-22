@@ -9,7 +9,7 @@ use text_animate (animate_characters, text_characters, text_mesh, text_reveal)
 
 shader(material: true) graph Title() -> (surface: Shader) {
   "Warm white letters that give their own light, as opaque as their opacity"
-  shown = Attribute(attribute_name: "opacity").factor
+  shown = Attribute[attribute_name: "opacity"]().factor
   return (
     surface: MixShader(
       factor: shown,

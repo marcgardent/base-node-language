@@ -14,6 +14,6 @@ geometry graph mask(
     |> SetPosition(label == "top", offset: (0.0, 0.0, 1.0))
     |> SetPosition(p == center)
     |> SetPosition(high and not near or (high xor label == "top"))
-    |> SetPosition(Compare(t, 1.0, 0.1, operation: EQUAL))
-    |> SetPosition(Compare(p, center, operation: LESS_THAN, data_type: VECTOR, mode: LENGTH))
+    |> SetPosition(Compare[EQUAL](t, 1.0, 0.1))
+    |> SetPosition(Compare[LESS_THAN, VECTOR, LENGTH](p, center))
 }

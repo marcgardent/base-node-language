@@ -198,7 +198,7 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
@@ -274,18 +274,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -348,18 +342,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -435,18 +423,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -458,7 +440,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -533,18 +515,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -556,13 +532,13 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -632,18 +608,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -655,13 +625,13 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -697,7 +667,7 @@ geometry graph lunar_ground(
 </script></bn-view>
     <ul>
       <li><code>shader(material: true) graph Regolith</code> is the node tree of a material named <em>Regolith</em>; <code>SetMaterial(material: Regolith)</code> at the end of <code>lunar_ground</code> gives it to the ground.</li>
-      <li><code>Attribute(attribute_name: "young")</code> reads, at each point of the surface, what the geometry stored on the vertices around it.</li>
+      <li><code>Attribute[attribute_name: "young"]()</code> reads, at each point of the surface, what the geometry stored on the vertices around it.</li>
       <li><code>TextureCoordinate().object</code> pins the noises to the object: they do not slide when the object moves.</li>
       <li><code>patches</code>, a large noise, makes darker and lighter areas a metre or two wide. The grey is 0.07 to 0.15, and up to 0.2 more near young craters. The Moon reflects about an eighth of the light it receives.</li>
       <li><code>grain</code>, a noise at scale 80, has bumps of about a centimetre. <code>Bump</code> turns it into a normal: the sun lights each grain on one side, no vertex moved.</li>
@@ -763,20 +733,14 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   // A noise a quarter of a cell wide pulls the rim in and out: no crater is a perfect circle
-  wobble = NoiseTexture(vector: p, w: seed, scale: scale * 4.0, noise_dimensions: "4D").factor
+  wobble = NoiseTexture["4D"](vector: p, w: seed, scale: scale * 4.0).factor
   x = cell.distance / radius * (0.85 + wobble * 0.3)
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -788,7 +752,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -804,7 +768,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -888,20 +852,14 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   // A noise a quarter of a cell wide pulls the rim in and out: no crater is a perfect circle
-  wobble = NoiseTexture(vector: p, w: seed, scale: scale * 4.0, noise_dimensions: "4D").factor
+  wobble = NoiseTexture["4D"](vector: p, w: seed, scale: scale * 4.0).factor
   x = cell.distance / radius * (0.85 + wobble * 0.3)
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -913,7 +871,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -929,7 +887,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -1008,20 +966,14 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   // A noise a quarter of a cell wide pulls the rim in and out: no crater is a perfect circle
-  wobble = NoiseTexture(vector: p, w: seed, scale: scale * 4.0, noise_dimensions: "4D").factor
+  wobble = NoiseTexture["4D"](vector: p, w: seed, scale: scale * 4.0).factor
   x = cell.distance / radius * (0.85 + wobble * 0.3)
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -1033,7 +985,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -1049,7 +1001,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -1125,20 +1077,14 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   // A noise a quarter of a cell wide pulls the rim in and out: no crater is a perfect circle
-  wobble = NoiseTexture(vector: p, w: seed, scale: scale * 4.0, noise_dimensions: "4D").factor
+  wobble = NoiseTexture["4D"](vector: p, w: seed, scale: scale * 4.0).factor
   x = cell.distance / radius * (0.85 + wobble * 0.3)
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -1150,7 +1096,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -1166,7 +1112,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -1278,20 +1224,14 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   // A noise a quarter of a cell wide pulls the rim in and out: no crater is a perfect circle
-  wobble = NoiseTexture(vector: p, w: seed, scale: scale * 4.0, noise_dimensions: "4D").factor
+  wobble = NoiseTexture["4D"](vector: p, w: seed, scale: scale * 4.0).factor
   x = cell.distance / radius * (0.85 + wobble * 0.3)
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -1303,7 +1243,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -1319,7 +1259,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor
@@ -1447,7 +1387,7 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
@@ -1502,18 +1442,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -1565,18 +1499,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -1632,18 +1560,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)
@@ -1655,7 +1577,7 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
@@ -1710,18 +1632,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float, young: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade, young: (1.0 - age) * (1.0 - age) * Clamp(value: 1.5 - x) * fade)
@@ -1733,13 +1649,13 @@ geometry graph slab(ground: Geometry, bottom: Float = -0.3) -> Geometry {
   before = DomainSize(ground).point_count
   p = Position()
   return ground
-    |> ExtrudeMesh(selection: border, offset: CombineXYZ(z: -1.0), mode: EDGES).mesh
+    |> ExtrudeMesh[EDGES](selection: border, offset: CombineXYZ(z: -1.0)).mesh
     |> SetPosition(selection: Index() >= before, position: CombineXYZ(x: p.x, y: p.y, z: bottom))
 }
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor

@@ -448,7 +448,7 @@ geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..
   size = r &lt; 1.15 ? (0.2, 0.2, 0.5) : (0.24, 0.24, 0.08)
   lift = sin(phase * 6.283185 - r * 2.6) * 0.12
   return Grid(3.9, 3.9, count, count)
-    |&gt; StoreNamedAttribute(name: "tint", value: shade, data_type: FLOAT_COLOR)
+    |&gt; StoreNamedAttribute[FLOAT_COLOR](name: "tint", value: shade)
     |&gt; SetPosition(offset: CombineXYZ(z: lift))
     |&gt; InstanceOnPoints(instance: Cube(size: (1.0, 1.0, 1.0)), scale: size)
     |&gt; RealizeInstances()
@@ -481,7 +481,7 @@ use mask2d (box_mask)
 
 compositor graph vignette(image: Color, strength: Float = 0.6 in 0.0..1.0) -> Color {
   edge = 1.0 - box_mask(image, (0.9, 0.5), 0.4, feather: 0.6).mask
-  return Mix(factor: edge * strength, a: image, b: (0.0, 0.0, 0.0, 1.0), data_type: RGBA)
+  return Mix[RGBA](factor: edge * strength, a: image, b: (0.0, 0.0, 0.0, 1.0))
 }
 </script></bn-view>
         <img class="preview-img" src="images/mask2d.png" alt="Compositor masks of stdlib/mask2d.bn, drawn by examples/mask2d_showcase.bn" width="640" height="360">

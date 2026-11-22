@@ -73,16 +73,16 @@ compositor graph tileable_stone(
   occlusion = height_occlusion(height: height, radius: 64.0, strength: 4.0)
   // Colour: two tones of stone mixed by the grey of each, stained by a broad noise and speckled;
   // dirt in the gaps; the edges worn lighter where they stand out
-  tone = Mix(factor: id, a: (0.08, 0.075, 0.07, 1.0), b: (0.3, 0.25, 0.19, 1.0), data_type: RGBA)
+  tone = Mix[RGBA](factor: id, a: (0.08, 0.075, 0.07, 1.0), b: (0.3, 0.25, 0.19, 1.0))
   stain = tileable_noise(t, scale: 5.0, detail: 6.0, roughness: 0.55, seed: 1.0)
   speckle = tileable_noise(t, scale: 32.0, detail: 6.0, roughness: 0.65, seed: 8.0)
   stone = tone
     * (0.5 + levels(height: stain, in_low: 0.3, in_high: 0.7) * 0.7)
     * (0.6 + speckle * 0.8)
   gap = 1.0 - histogram_scan(height: height, position: 0.2, contrast: 0.75)
-  dirty = Mix(factor: gap, a: stone, b: (0.06, 0.05, 0.04, 1.0), data_type: RGBA)
+  dirty = Mix[RGBA](factor: gap, a: stone, b: (0.06, 0.05, 0.04, 1.0))
   worn = max(curvature - 0.5, 0.0) * 2.0
-  albedo = Mix(factor: worn * 0.6, a: dirty, b: dirty * 1.6, data_type: RGBA)
+  albedo = Mix[RGBA](factor: worn * 0.6, a: dirty, b: dirty * 1.6)
   // Roughness: rough stone, rougher dirt, polished a little where feet wear the edges
   roughness = 0.62 + gap * 0.3 - worn * 0.25 + speckle * 0.1
   return (albedo: albedo, roughness: roughness, curvature: curvature, occlusion: occlusion)

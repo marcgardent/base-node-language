@@ -57,7 +57,7 @@ geometry graph contours(
     p = Position()
     inside = abs(p.x) < width * 0.5 - 0.001 and abs(p.y) < height * 0.5 - 0.001
     above = ground
-      |> DeleteGeometry(selection: valley_height() < level, domain: FACE)
+      |> DeleteGeometry[FACE](selection: valley_height() < level)
       |> MeshToCurve(selection: EdgeNeighbors().face_count == 1 and inside)
     // Each point moves onto the level, along the slope: one step of Newton's method
     g = valley_slope()

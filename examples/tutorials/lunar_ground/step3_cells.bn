@@ -28,7 +28,7 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density

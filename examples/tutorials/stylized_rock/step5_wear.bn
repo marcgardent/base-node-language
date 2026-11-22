@@ -19,16 +19,15 @@ shader graph rock_stone(
   m = curvature_mask(balance: 0.5, contrast: 0.4)
   e = mesh_effects_read()
   "Edges" #orange {
-    lit = Mix(factor: max(m.mask, e.chip * 0.5), a: stone, b: light, data_type: RGBA)
+    lit = Mix[RGBA](factor: max(m.mask, e.chip * 0.5), a: stone, b: light)
   }
   "Hollows" #violet {
-    color = Mix(
+    color = Mix[RGBA](
       factor: max(
-        max(m.cavities, Attribute(attribute_name: "rock_crack").factor * 0.6),
+        max(m.cavities, Attribute[attribute_name: "rock_crack"]().factor * 0.6),
         e.dent * 0.3),
       a: lit,
-      b: dark,
-      data_type: RGBA)
+      b: dark)
   }
   return PrincipledBSDF(base_color: color, roughness: 0.35)
 }
@@ -57,15 +56,13 @@ geometry graph rock_block(
     // Three planes meet at a corner of the block: the three points of a face of the hull. The
     // corner lies along that face's normal, at 1 over the distance of the face from the centre
     n = Normal().normal
-    corners = StoreNamedAttribute(
+    corners = StoreNamedAttribute[FLOAT_VECTOR, FACE](
       hull,
       name: "corner",
-      value: n / (n ⋅ Position()),
-      data_type: FLOAT_VECTOR,
-      domain: FACE)
+      value: n / (n ⋅ Position()))
     // The dual mesh has a point a face of the hull, and a face a point: the facets
     block = DualMesh(corners)
-      |> SetPosition(position: NamedAttribute(name: "corner", data_type: FLOAT_VECTOR).attribute)
+      |> SetPosition(position: NamedAttribute[FLOAT_VECTOR](name: "corner").attribute)
       |> RemoveNamedAttribute(name: "corner")
   }
   // Seen in perspective from above, the block is an egg and its facets are still flat: dividing
@@ -86,8 +83,7 @@ geometry graph clay(
   "The mesh made again of even faces voxel wide, as a sculptor remeshes clay, its edges softened by soften passes of smoothing"
   dense = GridToMesh(grid: MeshToSDFGrid(mesh, voxel_size: voxel), threshold: 0.0)
   return dense
-    |> SetPosition(
-      position: BlurAttribute(value: Position(), iterations: soften, data_type: FLOAT_VECTOR))
+    |> SetPosition(position: BlurAttribute[FLOAT_VECTOR](value: Position(), iterations: soften))
     |> SetShadeSmooth()
 }
 
@@ -104,23 +100,14 @@ geometry graph cracks(
   p = Position()
   "Lines" #blue {
     // The walls between Voronoi cells are planes: bending the space they are read in bends them
-    wobble = NoiseTexture(vector: p, w: seed, scale: 1.2, detail: 0.0, noise_dimensions: "4D").color
+    wobble = NoiseTexture["4D"](vector: p, w: seed, scale: 1.2, detail: 0.0).color
     q = (p + (wobble - (0.5, 0.5, 0.5)) * bend) / spacing + (5.3, 1.7, 9.1) * seed
-    wall = VoronoiTexture(vector: q, scale: 1.0, feature: DISTANCE_TO_EDGE).distance * spacing
+    wall = VoronoiTexture[DISTANCE_TO_EDGE](vector: q, scale: 1.0).distance * spacing
   }
   "Open" #green {
     // A crack is open in patches of a slow noise, and closes at their border
-    patches = NoiseTexture(
-      vector: p,
-      w: seed + 7.0,
-      scale: 1.0,
-      detail: 0.0,
-      noise_dimensions: "4D").factor
-    open = MapRange(
-      value: patches,
-      from_min: 0.9 - amount,
-      from_max: 1.1 - amount,
-      interpolation_type: SMOOTHSTEP)
+    patches = NoiseTexture["4D"](vector: p, w: seed + 7.0, scale: 1.0, detail: 0.0).factor
+    open = MapRange[SMOOTHSTEP](value: patches, from_min: 0.9 - amount, from_max: 1.1 - amount)
   }
   "Profile" #orange {
     // x is 0 in the middle of the crack and 1 at its border; the lip rises a little past it

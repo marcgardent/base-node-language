@@ -13,12 +13,10 @@ shader graph meadow(
   "Grass, drier in patches, bare rock where the ground is steep"
   g = Geometry()
   patches = NoiseTexture(vector: g.position, scale: 0.06, detail: 4.0).factor
-  green = Mix(factor: Clamp(value: (patches - 0.45) * 4.0), a: grass, b: dry, data_type: RGBA)
+  green = Mix[RGBA](factor: Clamp(value: (patches - 0.45) * 4.0), a: grass, b: dry)
   // The normal of flat ground is straight up: past 32 degrees the rock shows
   steep = MapRange(value: g.normal.z, from_min: 0.85, from_max: 0.8)
-  return PrincipledBSDF(
-    base_color: Mix(factor: steep, a: green, b: rock, data_type: RGBA),
-    roughness: 0.9)
+  return PrincipledBSDF(base_color: Mix[RGBA](factor: steep, a: green, b: rock), roughness: 0.9)
 }
 
 shader(material: true) graph Meadow() -> (surface: Shader) {
@@ -36,7 +34,7 @@ geometry graph hill_height(p: Vector = Position()) -> Float {
   hill = 24.0 * exp(0.0 - d * d)
   // The bank: 5 m higher over 6 m, steeper on the right of the hill than on the left
   foot = -12.0 + sin(p.x * 0.05 + 1.0) * 6.0
-  bank = MapRange(value: p.y, from_min: foot, from_max: foot + 6.0, interpolation_type: SMOOTHSTEP)
+  bank = MapRange[SMOOTHSTEP](value: p.y, from_min: foot, from_max: foot + 6.0)
     * Clamp(value: 0.6 + p.x / 50.0)
     * 5.0
   hummocks = (NoiseTexture(vector: p * 0.02, scale: 1.0, detail: 4.0).factor - 0.5) * 8.0

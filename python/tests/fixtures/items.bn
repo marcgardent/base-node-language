@@ -3,7 +3,7 @@ geometry graph relief(
     mode: Menu = Rugueux,
     i: Int
 ) -> (Geometry: Geometry, v: Float, lisse: Bool) {
-  c = CaptureAttribute(geometry, hauteur: Position().z, "Rest Position": Position(), domain: FACE)
+  c = CaptureAttribute[FACE](geometry, hauteur: Position().z, "Rest Position": Position())
   "Choix" #steelblue {
     s = IndexSwitch(i, 0.5, c.hauteur, 2.0)
     m = MenuSwitch(

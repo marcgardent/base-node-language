@@ -9,8 +9,8 @@ use transitions (linear_wipe)
 
 compositor graph wipe_at(progress: Float(subtype: FACTOR) = 0.5 in 0.0..1.0) -> Color {
   "The podium wiped away by the hills, along 30°, a soft edge; progress 0 shows the podium, 1 the hills"
-  a = Image(image: "promo-cut-plate-a.png").image
-  b = Image(image: "promo-cut-plate-b.png").image
+  a = Image[image: "promo-cut-plate-a.png"]().image
+  b = Image[image: "promo-cut-plate-b.png"]().image
   return linear_wipe(a, b: b, progress: progress, angle: 0.5235988, softness: 0.04).image
 }
 

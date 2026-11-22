@@ -2584,14 +2584,14 @@
                   "target": {
                     "name": "r",
                     "line": 83,
-                    "col": 24
+                    "col": 30
                   },
                   "socket": "mesh",
                   "line": 83,
-                  "col": 25
+                  "col": 31
                 },
                 "line": 83,
-                "col": 24,
+                "col": 30,
                 "options": [],
                 "type": null,
                 "alias": null
@@ -2603,7 +2603,7 @@
                     "name": "Position",
                     "args": [],
                     "line": 83,
-                    "col": 40,
+                    "col": 46,
                     "outputs": null,
                     "single_output": false,
                     "type_args": null,
@@ -2611,10 +2611,10 @@
                   },
                   "socket": "z",
                   "line": 83,
-                  "col": 50
+                  "col": 56
                 },
                 "line": 83,
-                "col": 32,
+                "col": 38,
                 "options": [],
                 "type": null,
                 "alias": null
@@ -2625,27 +2625,14 @@
                   "name": "Position",
                   "args": [],
                   "line": 83,
-                  "col": 71,
+                  "col": 77,
                   "outputs": null,
                   "single_output": false,
                   "type_args": null,
                   "settings": []
                 },
                 "line": 83,
-                "col": 54,
-                "options": [],
-                "type": null,
-                "alias": null
-              },
-              {
-                "name": "domain",
-                "value": {
-                  "name": "FACE",
-                  "line": 83,
-                  "col": 91
-                },
-                "line": 83,
-                "col": 83,
+                "col": 60,
                 "options": [],
                 "type": null,
                 "alias": null
@@ -2656,7 +2643,18 @@
             "outputs": null,
             "single_output": false,
             "type_args": null,
-            "settings": []
+            "settings": [
+              {
+                "name": null,
+                "value": {
+                  "name": "FACE",
+                  "line": 83,
+                  "col": 24
+                },
+                "line": 83,
+                "col": 24
+              }
+            ]
           },
           "line": 83,
           "col": 3,
@@ -2794,10 +2792,10 @@
                         "value": {
                           "name": "i",
                           "line": 85,
-                          "col": 65
+                          "col": 72
                         },
                         "line": 85,
-                        "col": 65,
+                        "col": 72,
                         "options": [],
                         "type": null,
                         "alias": null
@@ -2807,10 +2805,10 @@
                         "value": {
                           "name": "i",
                           "line": 85,
-                          "col": 68
+                          "col": 75
                         },
                         "line": 85,
-                        "col": 68,
+                        "col": 75,
                         "options": [],
                         "type": null,
                         "alias": null
@@ -2821,23 +2819,10 @@
                           "value": 2.0,
                           "is_int": false,
                           "line": 85,
-                          "col": 71
+                          "col": 78
                         },
                         "line": 85,
-                        "col": 71,
-                        "options": [],
-                        "type": null,
-                        "alias": null
-                      },
-                      {
-                        "name": "data_type",
-                        "value": {
-                          "name": "FLOAT",
-                          "line": 85,
-                          "col": 87
-                        },
-                        "line": 85,
-                        "col": 76,
+                        "col": 78,
                         "options": [],
                         "type": null,
                         "alias": null
@@ -2848,7 +2833,18 @@
                     "outputs": null,
                     "single_output": false,
                     "type_args": null,
-                    "settings": []
+                    "settings": [
+                      {
+                        "name": null,
+                        "value": {
+                          "name": "FLOAT",
+                          "line": 85,
+                          "col": 65
+                        },
+                        "line": 85,
+                        "col": 65
+                      }
+                    ]
                   },
                   "line": 85,
                   "col": 51

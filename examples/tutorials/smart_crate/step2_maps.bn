@@ -17,11 +17,11 @@ shader graph crate_steel(
   "Paint, then two layers: bare steel where the edges wear, grime in the corners"
   "Bare steel" #orange {
     worn = metal_edge_wear(wear_level: wear, grunge_amount: 0.7, grunge_scale: 0.05, seed: 1)
-    chipped = Mix(factor: worn, a: paint, b: steel, data_type: RGBA)
+    chipped = Mix[RGBA](factor: worn, a: paint, b: steel)
   }
   "Grime" #violet {
     dirty = dirt(dirt_level: 0.45, grime: 0.2, seed: 2)
-    color = Mix(factor: dirty * 0.85, a: chipped, b: grime, data_type: RGBA)
+    color = Mix[RGBA](factor: dirty * 0.85, a: chipped, b: grime)
   }
   return PrincipledBSDF(
     base_color: color,

@@ -25,7 +25,7 @@ geometry graph "hexagonal grid 2d"(
   y = (row - (rows - 1.0) * 0.5) * dy
   centers = Points(count, CombineXYZ(x, y))
   r_eff = radius * (1.0 - margin)
-  c = MeshCircle(6, r_eff, fill_type: NGON)
+  c = MeshCircle[NGON](6, r_eff)
   hex = TransformGeometry(c, rotation: (0.0, 0.0, 0.5235988))
   inst = InstanceOnPoints(centers, instance: hex)
   mesh = inst

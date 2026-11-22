@@ -44,8 +44,8 @@
   <bn-view view="split" height="380"><script type="text/bn">
     geometry graph flat(edges: Int, height: Float, scale: Float) -> (flat: Bool, size: Float) {
       return (
-        flat: Compare(a: edges, b: 1, data_type: INT, operation: EQUAL),
-        size: Math(value: height, value_001: scale, operation: MULTIPLY))
+        flat: Compare[EQUAL, INT](a: edges, b: 1),
+        size: Math[MULTIPLY](value: height, value_001: scale))
     }
   </script></bn-view>
 

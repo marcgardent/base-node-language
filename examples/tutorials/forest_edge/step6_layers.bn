@@ -15,12 +15,10 @@ shader graph meadow(
   "Grass, drier in patches, bare rock where the ground is steep"
   g = Geometry()
   patches = NoiseTexture(vector: g.position, scale: 0.06, detail: 4.0).factor
-  green = Mix(factor: Clamp(value: (patches - 0.45) * 4.0), a: grass, b: dry, data_type: RGBA)
+  green = Mix[RGBA](factor: Clamp(value: (patches - 0.45) * 4.0), a: grass, b: dry)
   // The normal of flat ground is straight up: past 32 degrees the rock shows
   steep = MapRange(value: g.normal.z, from_min: 0.85, from_max: 0.8)
-  return PrincipledBSDF(
-    base_color: Mix(factor: steep, a: green, b: rock, data_type: RGBA),
-    roughness: 0.9)
+  return PrincipledBSDF(base_color: Mix[RGBA](factor: steep, a: green, b: rock), roughness: 0.9)
 }
 
 shader(material: true) graph Meadow() -> (surface: Shader) {
@@ -33,48 +31,28 @@ shader(material: true) graph Dirt() -> (surface: Shader) {
 
 shader(material: true) graph Needles() -> (surface: Shader) {
   "Dark green, a little lighter or darker from one tree to the next"
-  tint = Mix(
-    factor: ObjectInfo().random,
-    a: (0.025, 0.07, 0.025),
-    b: (0.06, 0.13, 0.035),
-    data_type: RGBA)
+  tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.025, 0.07, 0.025), b: (0.06, 0.13, 0.035))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.8))
 }
 
 shader(material: true) graph Leaves() -> (surface: Shader) {
   "Fresh green, from one tree to the next"
-  tint = Mix(
-    factor: ObjectInfo().random,
-    a: (0.06, 0.15, 0.03),
-    b: (0.17, 0.24, 0.05),
-    data_type: RGBA)
+  tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.06, 0.15, 0.03), b: (0.17, 0.24, 0.05))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.7))
 }
 
 shader(material: true) graph Shrub() -> (surface: Shader) {
-  tint = Mix(
-    factor: ObjectInfo().random,
-    a: (0.05, 0.11, 0.025),
-    b: (0.12, 0.17, 0.04),
-    data_type: RGBA)
+  tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.05, 0.11, 0.025), b: (0.12, 0.17, 0.04))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.75))
 }
 
 shader(material: true) graph Stone() -> (surface: Shader) {
-  tint = Mix(
-    factor: ObjectInfo().random,
-    a: (0.13, 0.12, 0.11),
-    b: (0.24, 0.22, 0.19),
-    data_type: RGBA)
+  tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.13, 0.12, 0.11), b: (0.24, 0.22, 0.19))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.85))
 }
 
 shader(material: true) graph Blades() -> (surface: Shader) {
-  tint = Mix(
-    factor: ObjectInfo().random,
-    a: (0.08, 0.18, 0.03),
-    b: (0.24, 0.26, 0.08),
-    data_type: RGBA)
+  tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.08, 0.18, 0.03), b: (0.24, 0.26, 0.08))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.6))
 }
 
@@ -89,7 +67,7 @@ geometry graph hill_height(p: Vector = Position()) -> Float {
   hill = 24.0 * exp(0.0 - d * d)
   // The bank: 5 m higher over 6 m, steeper on the right of the hill than on the left
   foot = -12.0 + sin(p.x * 0.05 + 1.0) * 6.0
-  bank = MapRange(value: p.y, from_min: foot, from_max: foot + 6.0, interpolation_type: SMOOTHSTEP)
+  bank = MapRange[SMOOTHSTEP](value: p.y, from_min: foot, from_max: foot + 6.0)
     * Clamp(value: 0.6 + p.x / 50.0)
     * 5.0
   hummocks = (NoiseTexture(vector: p * 0.02, scale: 1.0, detail: 4.0).factor - 0.5) * 8.0
@@ -171,12 +149,7 @@ geometry graph tuft() -> Geometry {
 
 geometry graph tag(instances: Geometry, layer: Int) -> Geometry {
   "Each instance stores the layer it belongs to as biome_layer, to count them"
-  return StoreNamedAttribute(
-    instances,
-    name: "biome_layer",
-    value: layer,
-    data_type: INT,
-    domain: INSTANCE)
+  return StoreNamedAttribute[INT, INSTANCE](instances, name: "biome_layer", value: layer)
 }
 
 geometry graph forest_edge(seed: Int, tree_line: Float(subtype: DISTANCE) = 17.0) -> Geometry {

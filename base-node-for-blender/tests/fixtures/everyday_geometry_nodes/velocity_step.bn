@@ -16,18 +16,12 @@ geometry graph "Velocity Step"(
 ) -> (">": Geometry) {
   math = pow(1.0 - Damp, delta_time) @ hide
   vector_math_3 = Forces * delta_time @ hide
-  vector_math_2 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
-    + vector_math_3 @ hide
+  vector_math_2 = NamedAttribute[FLOAT_VECTOR](name: __string).attribute + vector_math_3 @ hide
   switch = set_velocity ? Forces : vector_math_2 @ hide
   vector_math = switch * math @ hide
-  vector_math_4 = NamedAttribute(name: __string, data_type: FLOAT_VECTOR).attribute
-    * delta_time @ hide
+  vector_math_4 = NamedAttribute[FLOAT_VECTOR](name: __string).attribute * delta_time @ hide
   return (
     ">": _
-      |> StoreNamedAttribute(
-        selection: Selection,
-        name: __string,
-        value: vector_math,
-        data_type: FLOAT_VECTOR)
+      |> StoreNamedAttribute[FLOAT_VECTOR](selection: Selection, name: __string, value: vector_math)
       |> SetPosition(selection: Selection, offset: vector_math_4))
 }

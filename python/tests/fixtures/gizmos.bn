@@ -4,7 +4,7 @@ geometry graph poignées(
     centre: Vector,
     angle: Float
 ) -> Geometry {
-  flèche = LinearGizmo(hauteur, position: centre, draw_style: BOX)
+  flèche = LinearGizmo[BOX](hauteur, position: centre)
   cadran = DialGizmo(angle, radius: 0.8)
   repère = TransformGizmo(CombineTransform(centre), position: centre)
   choix = IndexSwitch(0, LinearGizmo(2.0), _)

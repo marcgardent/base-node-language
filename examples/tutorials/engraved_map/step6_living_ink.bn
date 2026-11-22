@@ -61,7 +61,7 @@ geometry graph contours(
     p = Position()
     inside = abs(p.x) < width * 0.5 - 0.001 and abs(p.y) < height * 0.5 - 0.001
     above = ground
-      |> DeleteGeometry(selection: valley_height() < level, domain: FACE)
+      |> DeleteGeometry[FACE](selection: valley_height() < level)
       |> MeshToCurve(selection: EdgeNeighbors().face_count == 1 and inside)
     // Each point moves onto the level, along the slope: one step of Newton's method
     g = valley_slope()
@@ -261,8 +261,8 @@ geometry graph clear(strokes: Geometry, under: Bool) -> Geometry {
     |> CurveToMesh()
     |> DeleteGeometry(selection: under)
     |> MeshToCurve()
-    |> SetCurveRadius(radius: NamedAttribute(name: "width", data_type: FLOAT))
-  return curves + DeleteGeometry(parts.mesh, selection: under, domain: FACE)
+    |> SetCurveRadius(radius: NamedAttribute[FLOAT](name: "width"))
+  return curves + DeleteGeometry[FACE](parts.mesh, selection: under)
 }
 
 geometry graph river(width: Float = 0.045 in 0.0.., spring: Float = 0.6 in 0.0..1.0) -> Geometry {
@@ -303,7 +303,7 @@ geometry graph engraved_map() -> Geometry {
   p = Position()
   box = abs(p.x - label.x) < 0.63 and abs(p.y - label.y) < 0.29
   banks = abs(p.y - river_course(x: p.x)) < 0.05
-  gap = GeometryProximity(CurveToMesh(way), sample_position: p, target_element: EDGES).distance
+  gap = GeometryProximity[EDGES](CurveToMesh(way), sample_position: p).distance
   near = gap < 0.045
   under = box or banks or near
   // A hand, not a machine: the short lines of the shade taper at both ends, as a burin cuts them;

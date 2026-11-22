@@ -23,7 +23,7 @@ compositor graph comic(image: Color) -> Color {
 
 compositor graph promo_cut() -> Color {
   "The hills printed as a comic, developed by a wipe from the left from frame 13 to frame 37"
-  b = Image(image: "promo-cut-plate-b.png").image
+  b = Image[image: "promo-cut-plate-b.png"]().image
   return linear_wipe(
     comic(b),
     b: b,

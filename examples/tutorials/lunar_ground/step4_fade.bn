@@ -28,18 +28,12 @@ geometry graph crater_field(
     depth: Float = 0.5 in 0.0..
 ) -> (height: Float) {
   "One crater or none in each Voronoi cell, scale cells per metre"
-  cell = VoronoiTexture(vector: p, w: seed, scale: scale, randomness: 0.8, voronoi_dimensions: "4D")
+  cell = VoronoiTexture["4D"](vector: p, w: seed, scale: scale, randomness: 0.8)
   radius = 0.2 + cell.color.x * 0.25
   x = cell.distance / radius
   here = cell.color.y < density
   age = cell.color.z
-  edge = VoronoiTexture(
-    vector: p,
-    w: seed,
-    scale: scale,
-    randomness: 0.8,
-    voronoi_dimensions: "4D",
-    feature: DISTANCE_TO_EDGE)
+  edge = VoronoiTexture["4D", DISTANCE_TO_EDGE](vector: p, w: seed, scale: scale, randomness: 0.8)
   fade = Clamp(value: edge.distance * 6.0) * here
   height = crater_profile(x: x).height * radius / scale * depth * (1.0 - age * 0.7)
   return (height: height * fade)

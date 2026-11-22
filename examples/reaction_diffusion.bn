@@ -11,7 +11,7 @@
 geometry graph wrapped(grid: Geometry, c: Vector, di: Int, dj: Int, n: Int) -> Vector {
   i = mod(floor(Index() / n) + di + n, n)
   j = mod(Index() + dj + n, n)
-  return SampleIndex(grid, c, i * n + j, data_type: FLOAT_VECTOR)
+  return SampleIndex[FLOAT_VECTOR](grid, c, i * n + j)
 }
 
 // The 9-point Laplacian: 0.2 for each side, 0.05 for each corner, -1 for the cell
@@ -36,25 +36,21 @@ geometry graph "gray scott step"(
     dv: Float,
     dt: Float
 ) -> Geometry {
-  c = NamedAttribute(name: "gray scott", data_type: FLOAT_VECTOR).attribute
+  c = NamedAttribute[FLOAT_VECTOR](name: "gray scott").attribute
   lap = laplacian(grid, c, n)
   react = c.x * c.y * c.y
   u = c.x + dt * (du * lap.x - react + rates.x * (1.0 - c.x))
   v = c.y + dt * (dv * lap.y + react - (rates.x + rates.y) * c.y)
-  return StoreNamedAttribute(
-    grid,
-    name: "gray scott",
-    value: CombineXYZ(u, v),
-    data_type: FLOAT_VECTOR)
+  return StoreNamedAttribute[FLOAT_VECTOR](grid, name: "gray scott", value: CombineXYZ(u, v))
 }
 
 // U = 1 and V = 0 everywhere but in a few blobs placed by the seed, where U = 0.5, V = 0.5,
 // with Pearson's 1% of noise
 geometry graph "gray scott seed"(grid: Geometry, seed: Int) -> Geometry {
-  blob = NoiseTexture(vector: Position(), w: seed, scale: 2.5, noise_dimensions: "4D").factor > 0.68
+  blob = NoiseTexture["4D"](vector: Position(), w: seed, scale: 2.5).factor > 0.68
   noise = RandomValue(0.0, 0.01, seed: seed)
   start = (blob ? (0.5, 0.5, 0.0) : (1.0, 0.0, 0.0)) + CombineXYZ(-noise, noise)
-  return StoreNamedAttribute(grid, name: "gray scott", value: start, data_type: FLOAT_VECTOR)
+  return StoreNamedAttribute[FLOAT_VECTOR](grid, name: "gray scott", value: start)
 }
 
 // Feed and kill of a preset, or the ones given; the time step no larger than the scheme holds
@@ -80,7 +76,7 @@ geometry graph "gray scott rates"(
 
 // The grid lifted by V, which is kept in the attribute "v"
 geometry graph "gray scott relief"(grid: Geometry, height: Float) -> Geometry {
-  v = NamedAttribute(name: "gray scott", data_type: FLOAT_VECTOR).attribute.y
+  v = NamedAttribute[FLOAT_VECTOR](name: "gray scott").attribute.y
   return grid
     |> StoreNamedAttribute(name: "v", value: v)
     |> SetPosition(offset: CombineXYZ(z: v * height))

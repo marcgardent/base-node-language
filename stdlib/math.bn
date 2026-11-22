@@ -63,7 +63,7 @@ geometry graph parabola(x: Float, sharpness: Float = 1.0 in 0.0..) -> Float {
 
 geometry graph steps(x: Float, rise: Float = 0.25 in 0.0001..1.0) -> Float {
   "Stair steps: each step rises smoothly over its final fraction 'rise'"
-  return floor(x) + MapRange(fract(x), 1.0 - rise, interpolation_type: SMOOTHSTEP)
+  return floor(x) + MapRange[SMOOTHSTEP](fract(x), 1.0 - rise)
 }
 
 geometry graph bounce(t: Float) -> Float {
@@ -144,7 +144,7 @@ geometry graph "closest on segment"(
 
 geometry graph "wrap angle"(angle: Float) -> Float {
   "Wraps an angle into [-π, π]"
-  return Math(angle, 3.141593, -3.141593, operation: WRAP)
+  return Math[WRAP](angle, 3.141593, -3.141593)
 }
 
 geometry graph "angle between"(u: Vector, v: Vector) -> Float {
@@ -332,7 +332,7 @@ geometry graph "ridge fbm"(
 
 geometry graph "random direction"(id: Int = ID(), seed: Int) -> Vector {
   "Uniform random direction on the unit sphere"
-  r = RandomValue(max: (1.0, 1.0, 0.0), id: id, seed: seed, data_type: FLOAT_VECTOR)
+  r = RandomValue[FLOAT_VECTOR](max: (1.0, 1.0, 0.0), id: id, seed: seed)
   z = r.x * 2.0 - 1.0
   s = sqrt(1.0 - z * z)
   a = r.y * 6.283185
@@ -341,7 +341,7 @@ geometry graph "random direction"(id: Int = ID(), seed: Int) -> Vector {
 
 geometry graph "point in disk"(id: Int = ID(), seed: Int) -> Vector {
   "Uniform random point inside the XY unit disk"
-  r = RandomValue(max: (1.0, 1.0, 0.0), id: id, seed: seed, data_type: FLOAT_VECTOR)
+  r = RandomValue[FLOAT_VECTOR](max: (1.0, 1.0, 0.0), id: id, seed: seed)
   a = r.y * 6.283185
   return CombineXYZ(cos(a), sin(a)) * sqrt(r.x)
 }

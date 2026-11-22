@@ -17,10 +17,7 @@ geometry(is_modifier: false) graph "Relax Points"(
   repeat_output = repeat(Iterations, Geometry: capture_attribute_2.geometry) -> {
     capture_attribute = CaptureAttribute(Geometry, Value: IndexOfNearest().index) @ hide
     vector_math = position_2
-      - EvaluateAtIndex(
-        value: position,
-        index: capture_attribute.value,
-        data_type: FLOAT_VECTOR) @ hide
+      - EvaluateAtIndex[FLOAT_VECTOR](value: position, index: capture_attribute.value) @ hide
     vector_math_2 = normalize(vector_math) @ hide
     vector_math_4 = length(vector_math) @ hide
     math_3 = EvaluateAtIndex(value: capture_attribute_2.value, index: capture_attribute.value)

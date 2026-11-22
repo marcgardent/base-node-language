@@ -15,8 +15,8 @@ compositor graph burst(at: Float, width: Float = 6.0 in 1.0..) -> Float {
 
 compositor graph promo_cut() -> Color {
   "A hard push from the podium to the hills at frame 25, on a video tape, torn by glitch blocks around the cut"
-  a = Image(image: "promo-cut-plate-a.png").image
-  b = Image(image: "promo-cut-plate-b.png").image
+  a = Image[image: "promo-cut-plate-a.png"]().image
+  b = Image[image: "promo-cut-plate-b.png"]().image
   cut = push(
     a,
     b: b,

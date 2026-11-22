@@ -24,13 +24,12 @@ geometry graph crater_sites(surface: Geometry, size: Float = 0.3 in 0.0.., seed:
   "Crater centres on a surface, at least three radii apart: the craters of one layer never touch"
   apart = size * 3.0
   sites = surface
-    |> DistributePointsOnFaces(
+    |> DistributePointsOnFaces[POISSON](
       distance_min: apart,
       density_max: 4.0 / (apart * apart),
-      seed: seed,
-      distribute_method: POISSON)
+      seed: seed)
   return sites.points
-    |> StoreNamedAttribute(name: "normal", value: sites.normal, data_type: FLOAT_VECTOR)
+    |> StoreNamedAttribute[FLOAT_VECTOR](name: "normal", value: sites.normal)
     |> StoreNamedAttribute(
       name: "radius",
       value: RandomValue(min: size * 0.5, max: size, seed: seed))
@@ -44,12 +43,11 @@ geometry graph crater_layer(
 ) -> (height: Float, young: Float) {
   "The height a layer of craters gives a point: from the nearest site, in the plane of its normal"
   i = SampleNearest(sites, sample_position: p).index
-  centre = SampleIndex(sites, value: Position(), index: i, data_type: FLOAT_VECTOR)
-  n = SampleIndex(
+  centre = SampleIndex[FLOAT_VECTOR](sites, value: Position(), index: i)
+  n = SampleIndex[FLOAT_VECTOR](
     sites,
-    value: NamedAttribute(name: "normal", data_type: FLOAT_VECTOR),
-    index: i,
-    data_type: FLOAT_VECTOR)
+    value: NamedAttribute[FLOAT_VECTOR](name: "normal"),
+    index: i)
   radius = SampleIndex(sites, value: NamedAttribute(name: "radius"), index: i)
   age = SampleIndex(sites, value: NamedAttribute(name: "age"), index: i)
   v = p - centre
@@ -72,7 +70,7 @@ shader graph pits(p: Vector, scale: Float = 40.0 in 0.0..) -> (height: Float) {
 
 shader(material: true) graph Regolith() -> (surface: Shader) {
   "Grey dust, lighter around young craters, grainy and pitted"
-  young = Attribute(attribute_name: "young").factor
+  young = Attribute[attribute_name: "young"]().factor
   p = TextureCoordinate().object
   patches = NoiseTexture(vector: p, scale: 0.6, detail: 4.0).factor
   grain = NoiseTexture(vector: p, scale: 80.0, detail: 6.0, roughness: 0.7).factor

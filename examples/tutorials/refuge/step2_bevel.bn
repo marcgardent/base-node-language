@@ -10,9 +10,9 @@ use poly_bevel
 shader graph refuge_paint(paint: Color = (0.62, 0.16, 0.05)) -> Shader {
   "Painted steel; the strips and the corners the bevel made shown pale, to see them"
   strip = max(
-    Attribute(attribute_name: "bevel_edge").factor,
-    Attribute(attribute_name: "bevel_corner").factor)
-  color = Mix(factor: strip, a: paint, b: (0.85, 0.84, 0.8, 1.0), data_type: RGBA)
+    Attribute[attribute_name: "bevel_edge"]().factor,
+    Attribute[attribute_name: "bevel_corner"]().factor)
+  color = Mix[RGBA](factor: strip, a: paint, b: (0.85, 0.84, 0.8, 1.0))
   return PrincipledBSDF(base_color: color, metallic: 0.3, roughness: 0.45)
 }
 

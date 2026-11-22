@@ -39,10 +39,7 @@ geometry(is_modifier: false) graph "Curve to Mesh UV"(
   "End Seam Selection" {
     compare = capture_attribute_3.value <= 0.0 @ hide
     boolean_math = compare
-      and EvaluateOnDomain(
-        value: capture_attribute_4.value,
-        domain: FACE,
-        data_type: BOOLEAN) @ hide
+      and EvaluateOnDomain[FACE, BOOLEAN](value: capture_attribute_4.value) @ hide
     switch = boolean_math ? 1.0 : capture_attribute_3.value
     math_2 = switch * capture_attribute_6.value @ hide
     switch_4 = use_length_y ? math_2 : switch @ hide
@@ -50,10 +47,7 @@ geometry(is_modifier: false) graph "Curve to Mesh UV"(
   "End Seam Selection" {
     compare_2 = capture_attribute.value <= 0.0 @ hide
     boolean_math_2 = compare_2
-      and EvaluateOnDomain(
-        value: capture_attribute_2.value,
-        domain: FACE,
-        data_type: BOOLEAN) @ hide
+      and EvaluateOnDomain[FACE, BOOLEAN](value: capture_attribute_2.value) @ hide
     switch_2 = boolean_math_2 ? 1.0 : capture_attribute.value
     math = switch_2 * capture_attribute_5.value @ hide
     switch_3 = use_length_x ? math : switch_2 @ hide
@@ -67,7 +61,7 @@ geometry(is_modifier: false) graph "Curve to Mesh UV"(
           profile_curve: capture_attribute_6.geometry,
           scale: named_attribute.exists ? named_attribute.attribute : 1.0,
           fill_caps: fill_caps)
-        |> StoreNamedAttribute(name: Name, value: combine_xyz, data_type: FLOAT2, domain: CORNER),
-      UV: NamedAttribute(name: Name, data_type: FLOAT_VECTOR).attribute)
+        |> StoreNamedAttribute[FLOAT2, CORNER](name: Name, value: combine_xyz),
+      UV: NamedAttribute[FLOAT_VECTOR](name: Name).attribute)
   }
 }

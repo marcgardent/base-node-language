@@ -12,37 +12,30 @@ geometry graph ".deform curves"(
   "deformation" {
     position = Position() @ hide
     separate_components = SeparateComponents(Curves)
-    domain_size = DomainSize(separate_components.curve, component: CURVE)
+    domain_size = DomainSize[CURVE](separate_components.curve)
     boolean_math = not domain_size.point_count @ hide
     warning = Warning(show: boolean_math, message: "No Curves in Geometry")
   }
   "curve sample position" {
     position_2 = Position() @ hide
-    evaluate_at_index = EvaluateAtIndex(
+    evaluate_at_index = EvaluateAtIndex[FLOAT_VECTOR](
       value: position_2,
-      index: PointsOfCurve().point_index,
-      data_type: FLOAT_VECTOR) @ hide
-    evaluate_on_domain = EvaluateOnDomain(
-      value: evaluate_at_index,
-      domain: CURVE,
-      data_type: FLOAT_VECTOR)
+      index: PointsOfCurve().point_index) @ hide
+    evaluate_on_domain = EvaluateOnDomain[CURVE, FLOAT_VECTOR](value: evaluate_at_index)
   }
   "rest" {
-    sample_nearest_surface = SampleNearestSurface(
+    sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_2 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rp").attribute,
+      sample_position: evaluate_on_domain) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_3 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rn").attribute,
+      sample_position: evaluate_on_domain) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "rt").attribute,
+      sample_position: evaluate_on_domain) @ hide
     axes_to_rotation = AxesToRotation(
       primary_axis: sample_nearest_surface_2.value,
       secondary_axis: sample_nearest_surface_3.value) @ hide
@@ -51,21 +44,18 @@ geometry graph ".deform curves"(
       rotation: axes_to_rotation) @ hide
   }
   "deform" {
-    sample_nearest_surface_4 = SampleNearestSurface(
+    sample_nearest_surface_4 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_5 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dp").attribute,
+      sample_position: evaluate_on_domain) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_6 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dn").attribute,
+      sample_position: evaluate_on_domain) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
-      sample_position: evaluate_on_domain,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "dt").attribute,
+      sample_position: evaluate_on_domain) @ hide
     axes_to_rotation_2 = AxesToRotation(
       primary_axis: sample_nearest_surface_5.value,
       secondary_axis: sample_nearest_surface_6.value) @ hide
@@ -80,14 +70,10 @@ geometry graph ".deform curves"(
       Matrix_001: invert_matrix.matrix) @ hide
     transform_point = TransformPoint(
       vector: position,
-      transform: EvaluateOnDomain(
-        value: multiply_matrices,
-        domain: CURVE,
-        data_type: FLOAT4X4)) @ hide
-    switch = Switch(
+      transform: EvaluateOnDomain[CURVE, FLOAT4X4](value: multiply_matrices)) @ hide
+    switch = Switch[GEOMETRY](
       switch: domain_size.point_count,
-      true_: SetPosition(separate_components.curve, position: transform_point),
-      input_type: GEOMETRY) @ hide
+      true_: SetPosition(separate_components.curve, position: transform_point)) @ hide
   }
   return (Curves: switch)
 }
@@ -99,22 +85,19 @@ geometry graph ".deform instances"(
   "deformation" {
     instance_transform = InstanceTransform() @ hide
     separate_components = SeparateComponents(Instances)
-    domain_size = DomainSize(separate_components.instances, component: INSTANCES)
+    domain_size = DomainSize[INSTANCES](separate_components.instances)
     boolean_math = not domain_size @ hide
   }
   "rest" {
-    sample_nearest_surface = SampleNearestSurface(
+    sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_2 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rp").attribute) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_3 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rn").attribute) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "rt").attribute) @ hide
     axes_to_rotation = AxesToRotation(
       primary_axis: sample_nearest_surface_2.value,
       secondary_axis: sample_nearest_surface_3.value) @ hide
@@ -123,18 +106,15 @@ geometry graph ".deform instances"(
       rotation: axes_to_rotation) @ hide
   }
   "deform" {
-    sample_nearest_surface_4 = SampleNearestSurface(
+    sample_nearest_surface_4 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_5 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dp").attribute) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_6 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dn").attribute) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "dt").attribute) @ hide
     axes_to_rotation_2 = AxesToRotation(
       primary_axis: sample_nearest_surface_5.value,
       secondary_axis: sample_nearest_surface_6.value) @ hide
@@ -150,10 +130,11 @@ geometry graph ".deform instances"(
     multiply_matrices = MultiplyMatrices(
       Matrix: multiply_matrices_2,
       Matrix_001: instance_transform) @ hide
-    switch = Switch(
+    switch = Switch[GEOMETRY](
       switch: domain_size,
-      true_: SetInstanceTransform(separate_components.instances, transform: multiply_matrices),
-      input_type: GEOMETRY) @ hide
+      true_: SetInstanceTransform(
+        separate_components.instances,
+        transform: multiply_matrices)) @ hide
   }
   warning = Warning(show: boolean_math, message: "No Instances in Geometry")
   return (Instances: switch)
@@ -165,18 +146,15 @@ geometry graph ".deform points"(Geometry: Geometry, "Deform Surface": Geometry) 
     separate_components = SeparateComponents(Geometry)
   }
   "rest" {
-    sample_nearest_surface = SampleNearestSurface(
+    sample_nearest_surface = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rp", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_2 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rp").attribute) @ hide
+    sample_nearest_surface_2 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rn", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_3 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "rn").attribute) @ hide
+    sample_nearest_surface_3 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "rt", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "rt").attribute) @ hide
     axes_to_rotation = AxesToRotation(
       primary_axis: sample_nearest_surface_2.value,
       secondary_axis: sample_nearest_surface_3.value) @ hide
@@ -185,18 +163,15 @@ geometry graph ".deform points"(Geometry: Geometry, "Deform Surface": Geometry) 
       rotation: axes_to_rotation) @ hide
   }
   "deform" {
-    sample_nearest_surface_4 = SampleNearestSurface(
+    sample_nearest_surface_4 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dp", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_5 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dp").attribute) @ hide
+    sample_nearest_surface_5 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dn", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
-    sample_nearest_surface_6 = SampleNearestSurface(
+      value: NamedAttribute[FLOAT_VECTOR](name: "dn").attribute) @ hide
+    sample_nearest_surface_6 = SampleNearestSurface[FLOAT_VECTOR](
       deform_surface,
-      value: NamedAttribute(name: "dt", data_type: FLOAT_VECTOR).attribute,
-      data_type: FLOAT_VECTOR) @ hide
+      value: NamedAttribute[FLOAT_VECTOR](name: "dt").attribute) @ hide
     axes_to_rotation_2 = AxesToRotation(
       primary_axis: sample_nearest_surface_5.value,
       secondary_axis: sample_nearest_surface_6.value) @ hide
@@ -232,43 +207,42 @@ geometry graph "Surface Deform Basic"(
 ) -> Geometry {
   "Deform geometry by mesh surface"
   "rest position" {
-    named_attribute = NamedAttribute(name: surface_rest_position, data_type: FLOAT_VECTOR)
+    named_attribute = NamedAttribute[FLOAT_VECTOR](name: surface_rest_position)
   }
   "deform object" {
-    object_info = ObjectInfo(object: surface_object, transform_space: RELATIVE)
+    object_info = ObjectInfo[RELATIVE](object: surface_object)
   }
   "deform loc,nrm,tan" {
     position = Position() @ hide
-    normal = Normal(legacy_corner_normals: true) @ hide
+    normal = Normal[legacy_corner_normals: true]() @ hide
   }
   "rest loc,nrm,tan" {
     position_2 = Position() @ hide
-    normal_2 = Normal(legacy_corner_normals: true) @ hide
+    normal_2 = Normal[legacy_corner_normals: true]() @ hide
   }
   "smooth tangent" {
-    uvtangent = UVTangent(uv: NamedAttribute(name: UVMap, data_type: FLOAT_VECTOR).attribute)
+    uvtangent = UVTangent(uv: NamedAttribute[FLOAT_VECTOR](name: UVMap).attribute)
   }
   "deform loc,nrm,tan" .. {
     store_named_attribute = object_info.geometry
-      |> StoreNamedAttribute(name: "dp", value: position, data_type: FLOAT_VECTOR)
-      |> StoreNamedAttribute(name: "dn", value: normal.normal, data_type: FLOAT_VECTOR)
-      |> StoreNamedAttribute(name: "dt", value: uvtangent, data_type: FLOAT_VECTOR, domain: CORNER)
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "dp", value: position)
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "dn", value: normal.normal)
+      |> StoreNamedAttribute[FLOAT_VECTOR, CORNER](name: "dt", value: uvtangent)
   }
   "rest position" .. {
     set_position = SetPosition(store_named_attribute, position: named_attribute.attribute) @ hide
     vector_math = length(
-      AttributeStatistic(
+      AttributeStatistic[FLOAT_VECTOR](
         store_named_attribute,
-        attribute: named_attribute.attribute,
-        data_type: FLOAT_VECTOR).range) @ hide
+        attribute: named_attribute.attribute).range) @ hide
     compare = vector_math == 0.0 @ hide
-    switch = Switch(switch: compare, false_: set_position, input_type: GEOMETRY) @ hide
+    switch = Switch[GEOMETRY](switch: compare, false_: set_position) @ hide
   }
   "rest loc,nrm,tan" .. {
     store_named_attribute_2 = switch
-      |> StoreNamedAttribute(name: "rp", value: position_2, data_type: FLOAT_VECTOR)
-      |> StoreNamedAttribute(name: "rn", value: normal_2.normal, data_type: FLOAT_VECTOR)
-      |> StoreNamedAttribute(name: "rt", value: uvtangent, data_type: FLOAT_VECTOR, domain: CORNER)
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "rp", value: position_2)
+      |> StoreNamedAttribute[FLOAT_VECTOR](name: "rn", value: normal_2.normal)
+      |> StoreNamedAttribute[FLOAT_VECTOR, CORNER](name: "rt", value: uvtangent)
   }
   warning = Warning(show: compare, message: "Invalid rest_position on surface object")
   "debug" {

@@ -80,9 +80,9 @@ geometry graph zones(geometry: Geometry, n: Int, i: Int) -> (Geometry: Geometry,
     }
     return columns
   }
-  c = CaptureAttribute(r.mesh, height: Position().z, "Rest Position": Position(), domain: FACE)
+  c = CaptureAttribute[FACE](r.mesh, height: Position().z, "Rest Position": Position())
   choice = IndexSwitch(i, c.geometry, _, Cube().mesh)
-  return (Geometry: choice, Sum: c.height + table + IndexSwitch(i, i, 2.0, data_type: FLOAT))
+  return (Geometry: choice, Sum: c.height + table + IndexSwitch[FLOAT](i, i, 2.0))
 }
 
 // Settings in brackets: by position then by name, a tuple, a ramp, a template's types, a pipe, a body

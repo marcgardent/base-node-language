@@ -17,19 +17,19 @@ shader graph refuge_paint(
     glow: Float = 0.0 in 0.0..10.0
 ) -> Shader {
   "Painted steel, from what the tools stored: the door darker, the vents and the roof bare steel, the fascia and the hatch pale, the window dark glass that glows with glow, the grooves dark"
-  door = Attribute(attribute_name: "door").factor
-  glass = Attribute(attribute_name: "glass").factor
-  louvre = Attribute(attribute_name: "louvre").factor
-  roof = Attribute(attribute_name: "roof").factor
-  fascia = Attribute(attribute_name: "fascia").factor
-  hatch = Attribute(attribute_name: "bool_cut").factor
-  groove = Attribute(attribute_name: "panel_groove").factor
-  walls = Mix(factor: door, a: paint, b: door_color, data_type: RGBA)
-  vents = Mix(factor: louvre, a: walls, b: steel, data_type: RGBA)
-  roofed = Mix(factor: roof, a: vents, b: steel, data_type: RGBA)
-  trimmed = Mix(factor: max(fascia, hatch), a: roofed, b: trim, data_type: RGBA)
-  glazed = Mix(factor: glass, a: trimmed, b: (0.02, 0.03, 0.04, 1.0), data_type: RGBA)
-  grooved = Mix(factor: groove, a: glazed, b: (0.01, 0.01, 0.01, 1.0), data_type: RGBA)
+  door = Attribute[attribute_name: "door"]().factor
+  glass = Attribute[attribute_name: "glass"]().factor
+  louvre = Attribute[attribute_name: "louvre"]().factor
+  roof = Attribute[attribute_name: "roof"]().factor
+  fascia = Attribute[attribute_name: "fascia"]().factor
+  hatch = Attribute[attribute_name: "bool_cut"]().factor
+  groove = Attribute[attribute_name: "panel_groove"]().factor
+  walls = Mix[RGBA](factor: door, a: paint, b: door_color)
+  vents = Mix[RGBA](factor: louvre, a: walls, b: steel)
+  roofed = Mix[RGBA](factor: roof, a: vents, b: steel)
+  trimmed = Mix[RGBA](factor: max(fascia, hatch), a: roofed, b: trim)
+  glazed = Mix[RGBA](factor: glass, a: trimmed, b: (0.02, 0.03, 0.04, 1.0))
+  grooved = Mix[RGBA](factor: groove, a: glazed, b: (0.01, 0.01, 0.01, 1.0))
   return PrincipledBSDF(
     base_color: grooved,
     metallic: 0.3 + roof * 0.5,
@@ -51,9 +51,9 @@ shader(material: true) graph Concrete() -> (surface: Shader) {
 geometry graph refuge() -> Geometry {
   "A hut on a plinth: a window, a door, vents, a roof and a mast, a round hatch, grooves around the hatch and the door and round the walls"
   // What the tools store, read back as fields; p and n, the position and the normal
-  front = NamedAttribute(name: "poly_front", data_type: BOOLEAN).attribute
-  side = NamedAttribute(name: "poly_side", data_type: BOOLEAN).attribute
-  cell = NamedAttribute(name: "bevel_face", data_type: BOOLEAN).attribute
+  front = NamedAttribute[BOOLEAN](name: "poly_front").attribute
+  side = NamedAttribute[BOOLEAN](name: "poly_side").attribute
+  cell = NamedAttribute[BOOLEAN](name: "bevel_face").attribute
   p = Position()
   n = Normal().normal
   "Box" #blue {
@@ -71,11 +71,11 @@ geometry graph refuge() -> Geometry {
     doorway = n.y < -0.99 and p.x > 0.3 and p.x < 1.2 and p.z < 2.2
     opened = box
       |> poly_extrude(selection: window, distance: -0.12, inset: 0.08, individual: false)
-      |> StoreNamedAttribute(name: "glass", value: front, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "glass", value: front)
       // Marks pile up: take the window's away, so that front is the door's alone
       |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "poly_*")
       |> poly_extrude(selection: doorway, distance: -0.08, inset: 0.06, individual: false)
-      |> StoreNamedAttribute(name: "door", value: front, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "door", value: front)
   }
   "Vents" #violet {
     // On the right wall, nine faces of the box, each pushed in on its own
@@ -83,7 +83,7 @@ geometry graph refuge() -> Geometry {
     vented = opened
       |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "poly_*")
       |> poly_extrude(selection: grille, distance: -0.04, inset: 0.03)
-      |> StoreNamedAttribute(name: "louvre", value: front or side, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "louvre", value: front or side)
   }
   "Roof" #orange {
     // The top grown out flat (the soffit), pushed up (the fascia), then up and in (the roof)
@@ -97,10 +97,10 @@ geometry graph refuge() -> Geometry {
       // Drop the sides so far: the front stays to be pushed, and side is the next one's alone
       |> RemoveNamedAttribute(name: "poly_side")
       |> poly_extrude(selection: front, distance: 0.16, individual: false)
-      |> StoreNamedAttribute(name: "fascia", value: side, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "fascia", value: side)
       |> RemoveNamedAttribute(name: "poly_side")
       |> poly_extrude(selection: front, distance: 0.55, taper: 0.4, individual: false)
-      |> StoreNamedAttribute(name: "roof", value: front or side, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "roof", value: front or side)
     mast = Cylinder(vertices: 16, radius: 0.05, depth: 1.5).mesh
       |> TransformGeometry(translation: (0.3, 0.2, 4.0))
   }
@@ -114,8 +114,8 @@ geometry graph refuge() -> Geometry {
   "Grooves" #yellow {
     // Along the seam of the hatch; around the door, the edges between its faces and the others;
     // and two belts round the walls, along the bottom edges of two rows of faces
-    seam = NamedAttribute(name: "bool_seam", data_type: BOOLEAN).attribute
-    door = NamedAttribute(name: "door", data_type: INT).attribute
+    seam = NamedAttribute[BOOLEAN](name: "bool_seam").attribute
+    door = NamedAttribute[INT](name: "door").attribute
     belts = abs(p.z - 0.31) < 0.001 or abs(p.z - 2.31) < 0.001
     grooved = holed
       |> panel_lines(

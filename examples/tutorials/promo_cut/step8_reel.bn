@@ -13,7 +13,7 @@ use transitions
 
 compositor graph title_card() -> Color {
   "The title over a backdrop in the colours of the podium: magenta at its heart, a deep blue at its edges"
-  title = Image(image: "promo-cut-plate-c.png").image
+  title = Image[image: "promo-cut-plate-c.png"]().image
   heart = circle_mask(title, radius: 0.1, feather: 1.1).mask
   return over(title, b: keymix(a: (0.35, 0.02, 0.25, 1.0), b: (0.01, 0.01, 0.06, 1.0), mask: heart))
 }
@@ -36,9 +36,9 @@ compositor graph burst(at: Float, width: Float = 6.0 in 1.0..) -> Float {
 
 compositor graph promo_cut() -> Color {
   "A loop of 96 frames: the podium pushed out by the hills in print, developed; an iris to the title, whose neon flickers on; a dip through magenta back to the podium; glitches at the cuts, scanlines, a lens"
-  a = Image(image: "promo-cut-plate-a.png").image
-  b = Image(image: "promo-cut-plate-b.png").image
-  title = Image(image: "promo-cut-plate-c.png").image
+  a = Image[image: "promo-cut-plate-a.png"]().image
+  b = Image[image: "promo-cut-plate-b.png"]().image
+  title = Image[image: "promo-cut-plate-c.png"]().image
   // The hills come in printed, and a wipe develops them
   hills = linear_wipe(
     comic(b),

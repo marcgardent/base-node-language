@@ -46,7 +46,7 @@ geometry graph "lift by height"(mesh: Geometry, amount: Float = 0.2) -> Geometry
 
 ```bn
 geometry graph "raise tops"(mesh: Geometry, height: Float = 0.5) -> Geometry {
-  parts = SeparateGeometry(mesh, selection: Normal().z > 0.9, domain: FACE)
+  parts = SeparateGeometry[FACE](mesh, selection: Normal().z > 0.9)
   raised = SetPosition(parts.selection, offset: CombineXYZ(z: height))
   return JoinGeometry(raised, parts.inverted)
 }

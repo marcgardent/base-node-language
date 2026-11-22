@@ -12,37 +12,24 @@ geometry graph "Seams from UV"(
   "Are Edge Corners in the Same Place?" {
     corners_of_edge = CornersOfEdge()
     vector_math = distance(
-      EvaluateAtIndex(
+      EvaluateAtIndex[CORNER, FLOAT_VECTOR](
         value: uv_map,
-        index: OffsetCornerInFace(corner_index: CornersOfEdge().corner_index, offset: 1),
-        domain: CORNER,
-        data_type: FLOAT_VECTOR),
-      EvaluateAtIndex(
+        index: OffsetCornerInFace(corner_index: CornersOfEdge().corner_index, offset: 1)),
+      EvaluateAtIndex[CORNER, FLOAT_VECTOR](
         value: uv_map,
-        index: CornersOfEdge(sort_index: 1).corner_index,
-        domain: CORNER,
-        data_type: FLOAT_VECTOR)) @ hide
+        index: CornersOfEdge(sort_index: 1).corner_index)) @ hide
     vector_math_2 = distance(
-      EvaluateAtIndex(
-        value: uv_map,
-        index: corners_of_edge.corner_index,
-        domain: CORNER,
-        data_type: FLOAT_VECTOR),
-      EvaluateAtIndex(
+      EvaluateAtIndex[CORNER, FLOAT_VECTOR](value: uv_map, index: corners_of_edge.corner_index),
+      EvaluateAtIndex[CORNER, FLOAT_VECTOR](
         value: uv_map,
         index: OffsetCornerInFace(
           corner_index: CornersOfEdge(sort_index: 1).corner_index,
-          offset: 1),
-        domain: CORNER,
-        data_type: FLOAT_VECTOR)) @ hide
+          offset: 1))) @ hide
     boolean_math = vector_math_2 > Threshold or vector_math > Threshold @ hide
   }
   compare = corners_of_edge.total < 2
   "Are Edge Corners in the Same Place?" .. {
-    evaluate_on_domain = EvaluateOnDomain(
-      value: compare ? true : boolean_math,
-      domain: EDGE,
-      data_type: BOOLEAN)
+    evaluate_on_domain = EvaluateOnDomain[EDGE, BOOLEAN](value: compare ? true : boolean_math)
   }
   return ("Seam Edges": evaluate_on_domain)
 }

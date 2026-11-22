@@ -79,13 +79,12 @@ geometry graph "Ease Functions"(
     math_12 = 1.0 - ease_in_out @ hide
     compare_2 = Value > math_12 @ hide
     switch_2 = compare_2
-      ? MapRange(value: menu_switch.output, to_min: math_12, clamp: false)
-      : MapRange(value: menu_switch.output, to_min: math_12, to_max: 0.0, clamp: false)
+      ? MapRange[clamp: false](value: menu_switch.output, to_min: math_12)
+      : MapRange[clamp: false](value: menu_switch.output, to_min: math_12, to_max: 0.0)
   }
   return (
-    Value: MapRange(
-      value: Mix(factor: ease_factor, a: clamp, b: switch_2, clamp_factor: false),
+    Value: MapRange[clamp: false](
+      value: Mix[clamp_factor: false](factor: ease_factor, a: clamp, b: switch_2),
       to_min: to_min,
-      to_max: to_max,
-      clamp: false))
+      to_max: to_max))
 }

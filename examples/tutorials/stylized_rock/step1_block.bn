@@ -36,15 +36,13 @@ geometry graph rock_block(
     // Three planes meet at a corner of the block: the three points of a face of the hull. The
     // corner lies along that face's normal, at 1 over the distance of the face from the centre
     n = Normal().normal
-    corners = StoreNamedAttribute(
+    corners = StoreNamedAttribute[FLOAT_VECTOR, FACE](
       hull,
       name: "corner",
-      value: n / (n ⋅ Position()),
-      data_type: FLOAT_VECTOR,
-      domain: FACE)
+      value: n / (n ⋅ Position()))
     // The dual mesh has a point a face of the hull, and a face a point: the facets
     block = DualMesh(corners)
-      |> SetPosition(position: NamedAttribute(name: "corner", data_type: FLOAT_VECTOR).attribute)
+      |> SetPosition(position: NamedAttribute[FLOAT_VECTOR](name: "corner").attribute)
       |> RemoveNamedAttribute(name: "corner")
   }
   // Seen in perspective from above, the block is an egg and its facets are still flat: dividing

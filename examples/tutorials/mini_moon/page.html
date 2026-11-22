@@ -157,7 +157,7 @@
     {{code step5_dust.bn Regolith}}
     <ul>
       <li><code>shader(material: true) graph Regolith</code> is the node tree of a material named <em>Regolith</em>; <code>SetMaterial(material: Regolith)</code> gives it to the moon.</li>
-      <li><code>Attribute(attribute_name: "young")</code> reads, at each point of the surface, the value stored on the vertices around it.</li>
+      <li><code>Attribute[attribute_name: "young"]()</code> reads, at each point of the surface, the value stored on the vertices around it.</li>
       <li><code>TextureCoordinate().object</code>: the noises are pinned to the object, in 3D. They need no UV map, so they work on the sphere, or on any mesh, as they are.</li>
       <li><code>patches</code>, a large noise, makes darker and lighter areas. The grey is 0.07 to 0.15, up to 0.2 more around young craters: the Moon reflects about an eighth of the light it receives.</li>
       <li><code>relief</code> sums a grain of noise and two layers of <code>pits</code>, all as heights in metres. <code>Bump</code>, at <code>distance</code> 1.0 and <code>strength</code> 1.0, reads them in those units and turns them into a normal: the sun lights each pit and grain as relief, and no vertex moves.</li>

@@ -15,12 +15,12 @@ shader graph refuge_paint(
     glow: Float = 0.0 in 0.0..10.0
 ) -> Shader {
   "Painted steel, the door darker, the vents bare steel, the window dark glass that glows with glow"
-  door = Attribute(attribute_name: "door").factor
-  glass = Attribute(attribute_name: "glass").factor
-  louvre = Attribute(attribute_name: "louvre").factor
-  walls = Mix(factor: door, a: paint, b: door_color, data_type: RGBA)
-  vents = Mix(factor: louvre, a: walls, b: steel, data_type: RGBA)
-  glazed = Mix(factor: glass, a: vents, b: (0.02, 0.03, 0.04, 1.0), data_type: RGBA)
+  door = Attribute[attribute_name: "door"]().factor
+  glass = Attribute[attribute_name: "glass"]().factor
+  louvre = Attribute[attribute_name: "louvre"]().factor
+  walls = Mix[RGBA](factor: door, a: paint, b: door_color)
+  vents = Mix[RGBA](factor: louvre, a: walls, b: steel)
+  glazed = Mix[RGBA](factor: glass, a: vents, b: (0.02, 0.03, 0.04, 1.0))
   return PrincipledBSDF(
     base_color: glazed,
     metallic: 0.3,
@@ -42,9 +42,9 @@ shader(material: true) graph Concrete() -> (surface: Shader) {
 geometry graph refuge() -> Geometry {
   "A hut on a plinth: a window, a door, vents"
   // What the tools store, read back as fields; p and n, the position and the normal
-  front = NamedAttribute(name: "poly_front", data_type: BOOLEAN).attribute
-  side = NamedAttribute(name: "poly_side", data_type: BOOLEAN).attribute
-  cell = NamedAttribute(name: "bevel_face", data_type: BOOLEAN).attribute
+  front = NamedAttribute[BOOLEAN](name: "poly_front").attribute
+  side = NamedAttribute[BOOLEAN](name: "poly_side").attribute
+  cell = NamedAttribute[BOOLEAN](name: "bevel_face").attribute
   p = Position()
   n = Normal().normal
   "Box" #blue {
@@ -62,11 +62,11 @@ geometry graph refuge() -> Geometry {
     doorway = n.y < -0.99 and p.x > 0.3 and p.x < 1.2 and p.z < 2.2
     opened = box
       |> poly_extrude(selection: window, distance: -0.12, inset: 0.08, individual: false)
-      |> StoreNamedAttribute(name: "glass", value: front, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "glass", value: front)
       // Marks pile up: take the window's away, so that front is the door's alone
       |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "poly_*")
       |> poly_extrude(selection: doorway, distance: -0.08, inset: 0.06, individual: false)
-      |> StoreNamedAttribute(name: "door", value: front, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "door", value: front)
   }
   "Vents" #violet {
     // On the right wall, nine faces of the box, each pushed in on its own
@@ -74,7 +74,7 @@ geometry graph refuge() -> Geometry {
     vented = opened
       |> RemoveNamedAttribute(pattern_mode: Wildcard, name: "poly_*")
       |> poly_extrude(selection: grille, distance: -0.04, inset: 0.03)
-      |> StoreNamedAttribute(name: "louvre", value: front or side, domain: FACE)
+      |> StoreNamedAttribute[FACE](name: "louvre", value: front or side)
   }
   hut = vented
     |> SetMaterial(material: RefugePaint)
