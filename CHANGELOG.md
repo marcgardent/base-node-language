@@ -13,6 +13,12 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   appended in a session that had loaded the font brings its copy as `Bfont Regular.001`, which a
   String to Curves then wrote as `font: "Bfont Regular.001"`: the text depended on what the
   session had done before (T3D GN Presets, 2 groups, on the CI).
+- Fixed: a String to Curves without a font, and a Font node without one, read as `font: _`;
+  they were written as the built-in font, or as `Font(font: "None")`, which did not build.
+- Fixed: a named string that a datablock input reads first, `title = "Bfont Regular"` then
+  `StringToCurves(font: title)`, is a Font node named `title` (Object, Collection, Material and
+  Image alike); it was a String node linked to nothing, and the name was lost. A Font, Object,
+  Collection, Material or Image node made in Blender reads to such a constant.
 
 ## [1.0.0-rc.1] - 2026-11-22
 

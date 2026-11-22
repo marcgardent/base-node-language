@@ -19,18 +19,17 @@ from ..blender import sugar
 from ..lang import ast
 from ..lang.lexer import KEYWORDS
 from ..lang.printer import to_source
-from ..blender.typecheck import (MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type,
-                                switch_value_type, type_setting)
+from ..blender.typecheck import (DATABLOCK_NODES, MIX_TYPES, SWITCH, SWITCH_PROP, SWITCH_VALUES, branches_type, infer_type, switch_value_type, type_setting)
 from ..blender.ir import (CLOSURE_INPUT, CLOSURE_OUTPUT, FOREACH_INPUT, FOREACH_OUTPUT, REPEAT_INPUT, REPEAT_OUTPUT,
                        SIMULATION_INPUT, SIMULATION_OUTPUT, ZONE_INPUTS, ZONE_OUTPUTS)
-from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
+from ..blender.schema import (CLOSURE_TO_LIST, COMBINE_BUNDLE, DATABLOCKS, EVALUATE_CLOSURE, FIELD_TYPES, IMPLICIT, ITEM_NODES, ITEM_TYPES, NO_VALUE,
                            CURVE, CURVES, DEPRECATED, MATERIAL, MATERIAL_OUTPUTS, RAMP, RESERVED, SEPARATE_BUNDLE, SIGNATURE_ITEMS,
                            SIGNATURE_NODES, TYPES, input_key, key, snake)
 from . import comments, modules, outputs as material_outputs
 from .modules import graph_name, module_of, template_of
 from .schema import (DEPRECATION, PANEL_OPTIONS, SOCKET_TYPES, TREE_FLAGS, TREE_TYPES, BlenderSchema, data_value, fresh_item,
-                     fresh_item_options, fresh_item_value, fresh_options, item_option_names, option_names, root_panel,
-                     prop_value, rounded, same_option, snapshot, socket_keys, text_name, ui_name)
+                     fresh_item_options, fresh_item_value, fresh_options, id_name, item_option_names, option_names,
+                     root_panel, prop_value, rounded, same_option, snapshot, socket_keys, text_name, ui_name)
 
 KINDS = {v: k for k, v in TREE_TYPES.items()}
 IMPLICIT_CALLS = {mode: name for name, (mode, _type) in IMPLICIT.items()}
@@ -60,7 +59,11 @@ SUBJECTS = {"geometry": "GEOMETRY", "compositor": "RGBA"}
 CONST_NODES = {"ShaderNodeValue": None, "FunctionNodeInputInt": "integer", "FunctionNodeInputBool": "boolean",
                "FunctionNodeInputVector": "vector", "FunctionNodeInputColor": "value",
                "FunctionNodeInputString": "string", "ShaderNodeRGB": None,
-               "CompositorNodeRGB": None}
+               "CompositorNodeRGB": None,
+               # A datablock by its name, `font = "Bfont Regular"`: the checker makes the node again
+               # from the type of the input it feeds (typecheck.DATABLOCK_NODES)
+               **{bl_idname: prop for _name, prop, bl_idname in DATABLOCK_NODES.values()}}
+DATABLOCK_INPUTS = {bl_idname for _name, _prop, bl_idname in DATABLOCK_NODES.values()}
 
 # Outputs of a zone's input node that its body reads by a name of their own
 BODY_NAMES = {REPEAT_INPUT: {"Iteration": "iteration"}, SIMULATION_INPUT: {"Delta Time": "delta_time"},
@@ -639,6 +642,12 @@ class GraphReader:
             return None
         prop = CONST_NODES[node.bl_idname]
         value = node.outputs[0].default_value if prop is None else getattr(node, prop)
+        if node.bl_idname in DATABLOCK_INPUTS:
+            # A string the checker makes a datablock node of only when an input of its type reads it:
+            # one that holds none, or feeds nothing, stays a call
+            if value is None or not node.outputs[0].is_linked:
+                return None
+            return self.string(id_name(value), node, node.outputs[0])
         if node.bl_idname == "ShaderNodeValue":
             return number(value)
         if node.bl_idname == "FunctionNodeInputInt":
@@ -649,6 +658,13 @@ class GraphReader:
             # Written as its rebuilt node will be read back: a string has no quotes nor newlines in text
             return self.string(value, node, node.outputs[0])
         return ast.Tuple([number(v) for v in value], 0, 0)
+
+    def link_type(self, node, sock):
+        """The type the checker gives what an output links: a datablock constant (`font = "Bfont Regular"`)
+        is a String until an input of its type reads it, which a switch or a zone item does not tell."""
+        if node.bl_idname in DATABLOCK_INPUTS and self.constant(node) is not None:
+            return "String"
+        return SOCKET_TYPES.get(sock.type)
 
     def spec(self, node):
         return self.schema.node_of(self.kind, node.bl_idname)
@@ -861,7 +877,7 @@ class GraphReader:
         links = incoming.get(sock.identifier)
         wanted = SOCKET_TYPES.get(sock.type)
         if links:
-            value, given = self.use(*links[0]), SOCKET_TYPES.get(links[0][1].type)
+            value, given = self.use(*links[0]), self.link_type(*links[0])
         elif sock.type == "MENU":
             self.warn(f"{word} '{zout.name}': menu value of '{sock.name}', "
                       "not yet supported in text")
@@ -1232,7 +1248,7 @@ class GraphReader:
             if e is None:
                 return None
             if links:
-                found.append((sock.identifier, SOCKET_TYPES.get(links[0][1].type), True, 0))
+                found.append((sock.identifier, self.link_type(*links[0]), True, 0))
             else:
                 found.append((sock.identifier, literal_text_type(e), False,
                               len(e.items) if isinstance(e, ast.Tuple) else 0))
@@ -1297,7 +1313,7 @@ class GraphReader:
         by position cannot, and write a switch's data_type only when its first item does not tell it."""
         for sock in items:
             links = incoming.get(sock.identifier)
-            given = SOCKET_TYPES.get(links[0][1].type) if links else literal_type(snapshot(sock), sock)
+            given = self.link_type(*links[0]) if links else literal_type(snapshot(sock), sock)
             wanted = SOCKET_TYPES.get(sock.type)
             if shape.typed and not shape.named and given is not None and given != wanted:
                 self.warn(f"'{node.name}': item '{sock.name}' is a {wanted} receiving a {given}; "
@@ -1307,7 +1323,7 @@ class GraphReader:
             given = "Float"
             for sock in items:
                 links = incoming.get(sock.identifier)
-                t = SOCKET_TYPES.get(links[0][1].type) if links else literal_type(snapshot(sock), sock)
+                t = self.link_type(*links[0]) if links else literal_type(snapshot(sock), sock)
                 if t == "Menu" and not links:
                     given = None  # a menu item's name tells no type: data_type: MENU is written
                     break
@@ -1489,6 +1505,9 @@ class GraphReader:
         value = snapshot(sock)
         if sock.identifier in defaults and same(value, defaults[sock.identifier]):
             return None
+        if value is None and SOCKET_TYPES.get(sock.type) in DATABLOCKS and defaults.get(sock.identifier) is not None:
+            # No datablock where a new node holds one: a String to Curves without its font
+            return ast.Ref(NO_VALUE, 0, 0)
         if value is None:
             return None
         t = sock.type
@@ -1813,6 +1832,8 @@ def prop_literal(prop, value):
         return ast.Number(int(value), True, 0, 0)
     if prop.kind == "FLOAT":
         return number(value)
+    if prop.kind == "ID" and value is None:
+        return ast.Ref(NO_VALUE, 0, 0)  # no datablock where a new node holds one: Font(font: _)
     return ast.String(str(value), 0, 0)
 
 

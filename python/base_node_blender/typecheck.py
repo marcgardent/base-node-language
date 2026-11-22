@@ -63,6 +63,14 @@ CONST_NODES = {"Float": ("Value", None, "ShaderNodeValue"), "Int": ("Integer", "
                "String": ("String", "string", "FunctionNodeInputString")}
 # The Color node of a shader or a compositor tree (the RGB) holds its color on its output
 RGB_NODES = {b: ("Color", None, b) for b in ("ShaderNodeRGB", "CompositorNodeRGB")}
+# A named string that a datablock input takes first, by its type: (the input node it makes instead of
+# a String node, its property holding the datablock, its bl_idname). `font = "Bfont Regular"` read by
+# StringToCurves(font: font) is a Font node, where the tree kind has one
+DATABLOCK_NODES = {"Font": ("Font", "font", "GeometryNodeInputFont"),
+                   "Object": ("Object", "object", "GeometryNodeInputObject"),
+                   "Collection": ("Collection", "collection", "GeometryNodeInputCollection"),
+                   "Material": ("Material", "material", "GeometryNodeInputMaterial"),
+                   "Image": ("Image", "image", "GeometryNodeInputImage")}
 
 
 @dataclass
@@ -1022,6 +1030,26 @@ class GraphChecker:
             node.props[made[1]] = value
         self.nodes.append(node)
         return Const(node.id, outputs, None, stmt.name, lit)
+
+    def datablock_const(self, const, type):
+        """`font = "Bfont Regular"` first read by a Font input: its String node becomes a Font node,
+        which holds the font by that name. A String node something already reads stays one, and so
+        does one of a tree kind without that input node: the datablock input takes its value."""
+        made = DATABLOCK_NODES[type]
+        node = next((n for n in self.nodes if n.id == const.node), None)
+        if node is None or node.bl_idname != CONST_NODES["String"][2] \
+                or any(link.node == node.id for n in self.nodes for _ident, link in n.links):
+            return
+        spec = self.schema.node(self.g.kind, made[0])
+        if spec is None or spec.bl_idname != made[2]:
+            return
+        inputs, outputs = self.schema.sockets(self.g.kind, spec, {})
+        if inputs or len(outputs) != 1 or outputs[0].type != type:
+            return
+        node.bl_idname = spec.bl_idname
+        node.props = {made[1]: const.lit.value}
+        node.n_inputs, node.n_outputs = 0, 1
+        const.outputs = outputs
 
     def look(self, node, look):
         """`@ "Label" #color hide mute`: the Blender properties of how a node is shown."""
@@ -2262,6 +2290,8 @@ class GraphChecker:
             value = float(v.value)
         elif prop.kind in ("STRING", "ID") and isinstance(v, Lit) and v.type == "String":
             value = v.value
+        elif prop.kind == "ID" and isinstance(v, Sym) and v.name == NO_VALUE:
+            value = None  # no datablock: a Font node left without its font
         elif prop.kind == "ID":
             self.error(a, f'{prop.name} expects a datablock name ({prop.datablock or "ID"}): "Name"')
             return
@@ -2407,6 +2437,8 @@ class GraphChecker:
             self.error(at, f"{label}: a bare type ({v.type}) only applies to an item")
             return
         where = where or (f"{label}.{sock.key}" if label != "return" else f"output '{sock.name}'")
+        if isinstance(v, Const) and v.lit.type == "String" and sock.type in DATABLOCK_NODES:
+            self.datablock_const(v, sock.type)
         if isinstance(v, Const) and not can_link(v.socket.type, sock.type):
             v = v.lit
         if isinstance(v, Out):
@@ -2424,7 +2456,10 @@ class GraphChecker:
             self.error(at, f"{where} only accepts links")
             return
         if isinstance(v, Sym):
-            if sock.type in BARE_NAMES and v.name != NO_VALUE:
+            if sock.type in DATABLOCKS and v.name == NO_VALUE:
+                # No datablock at all: a String to Curves left without its font
+                node.values[sock.identifier] = None
+            elif sock.type in BARE_NAMES and v.name != NO_VALUE:
                 # A menu item, a material: a name bound to nothing in the graph is its own
                 node.values[sock.identifier] = v.name
             else:

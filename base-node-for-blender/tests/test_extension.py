@@ -258,6 +258,20 @@ geometry graph box() -> Geometry {
     print("   ✓ Named constants kept")
 
 
+def bundled_font():
+    """A font Blender ships that is not its own built-in one: loaded from its data files."""
+    path = Path(bpy.utils.system_resource("DATAFILES", path="fonts")) / "DejaVuSansMono.woff2"
+    return bpy.data.fonts.load(str(path), check_existing=True)
+
+
+def hand_tree(name, kind="GeometryNodeTree"):
+    """A new node group of that name, to make by hand as in the editor: an old one goes."""
+    old = bpy.data.node_groups.get(name)
+    if old is not None:
+        bpy.data.node_groups.remove(old)
+    return bpy.data.node_groups.new(name, kind)
+
+
 def test_builtin_font_by_any_name():
     """Blender's own font reads as "Bfont Regular" whatever this file names it: a library appended
     beside a file that already loaded it brings its own copy, "Bfont Regular.001". The text was
@@ -297,6 +311,74 @@ geometry graph label(font: Font = "Bfont Regular") -> Geometry {
         if font.users == 0:
             bpy.data.fonts.remove(font)
     print("   ✓ Bfont Regular.001 reads as Bfont Regular")
+
+
+def test_font_everywhere():
+    """A font in every place it goes: a node's socket, a Font node, a named constant (a switch's too),
+    a font other than Blender's own, and no font at all (`_`), read back to the same tree."""
+    print("-> Test: fonts in every place...")
+    from base_node.host import build_source, export_tree
+
+    other = bundled_font().name
+    src = f'''
+geometry graph fonts(geometry: Geometry, b: Bool) -> Geometry {{
+  plain = StringToCurves(string: "a").curve_instances
+  mono = StringToCurves(string: "b", font: "{other}").curve_instances
+  bare = StringToCurves(string: "c", font: _).curve_instances
+  title = "{other}"
+  named = StringToCurves(string: "d", font: title).curve_instances
+  own = "Bfont Regular"
+  builtin = StringToCurves(string: "e", font: own).curve_instances
+  empty = StringToCurves(string: "f", font: Font(font: _)).curve_instances
+  switched = StringToCurves(string: "g", font: Switch(b, title, own, input_type: FONT)).curve_instances
+  return JoinGeometry(geometry, plain, mono, bare, named, builtin, empty, switched)
+}}
+'''
+    tree = build_source(src, filename="fonts.bn")[0]
+    stc = {n.inputs["String"].default_value: n for n in tree.nodes if n.bl_idname == "GeometryNodeStringToCurves"}
+    held = {k: n.inputs["Font"].default_value for k, n in stc.items()}
+    assert held["a"].filepath == "<builtin>" and held["b"].name == other and held["c"] is None, held
+    # A named font is a Font node of that name, linked; a Font node may hold none
+    fed = {k: n.inputs["Font"].links[0].from_node for k, n in stc.items() if n.inputs["Font"].is_linked}
+    assert sorted(fed) == ["d", "e", "f", "g"], fed
+    assert (fed["d"].name, fed["d"].bl_idname, fed["d"].font.name) == ("title", "GeometryNodeInputFont", other)
+    assert fed["e"].name == "own" and fed["e"].font.filepath == "<builtin>"
+    assert fed["f"].font is None
+    assert not [n for n in tree.nodes if n.bl_idname == "FunctionNodeInputString"], "no String node left"
+
+    exported, warnings = export_tree(tree)
+    assert not warnings, warnings
+    for line in (f'font: "{other}"', "font: _", f'title = "{other}"', "font: title", 'own = "Bfont Regular"',
+                 "font: own", "Font(font: _)", "input_type: FONT"):
+        assert line in exported, f"'{line}' lost:\n{exported}"
+    again, _ = export_tree(build_source(exported, filename="fonts.bn")[0])
+    assert again == exported, f"not stable:\n{exported}\n---\n{again}"
+
+    # Made in Blender: a String to Curves without its font, a Font node of another font
+    tree = hand_tree("fonts_by_hand")
+    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    out = tree.nodes.new("NodeGroupOutput")
+    join = tree.nodes.new("GeometryNodeJoinGeometry")
+    tree.links.new(join.outputs[0], out.inputs[0])
+    none = tree.nodes.new("GeometryNodeStringToCurves")
+    none.inputs["Font"].default_value = None
+    fed = tree.nodes.new("GeometryNodeStringToCurves")
+    font = tree.nodes.new("GeometryNodeInputFont")
+    font.font = bpy.data.fonts[other]
+    tree.links.new(font.outputs[0], fed.inputs["Font"])
+    for n in (none, fed):
+        tree.links.new(n.outputs[0], join.inputs[0])
+    exported, _ = export_tree(tree)
+    assert "font: _" in exported and f'font = "{other}"' in exported, exported
+    tree.name = "fonts_by_hand.original"
+    rebuilt = build_source(exported, filename="fonts_by_hand.bn")[0]
+    fonts = sorted((n.inputs["Font"].default_value is None, n.inputs["Font"].is_linked)
+                   for n in rebuilt.nodes if n.bl_idname == "GeometryNodeStringToCurves")
+    assert fonts == [(False, True), (True, False)], fonts
+    assert export_tree(rebuilt)[0] == exported
+    for t in (tree, rebuilt):
+        bpy.data.node_groups.remove(t)
+    print("   ✓ Fonts read back to the same tree")
 
 
 def test_comments():
@@ -3678,6 +3760,7 @@ def main():
         test_datablock_inputs,
         test_named_constants,
         test_builtin_font_by_any_name,
+        test_font_everywhere,
         test_comments,
         test_targets_and_linter,
         test_pipe_symbol,
