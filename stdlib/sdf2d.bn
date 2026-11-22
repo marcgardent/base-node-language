@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module sdf2d
 // @module sdf2d
-// @version 1.0.0-rc.5
+// @version 1.0.0-rc.6
 // @target blender
 // @edition 2026
 // @description 2D signed distance fields, boolean operations, and 2D primitive SDF shapes

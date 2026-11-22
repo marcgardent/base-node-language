@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module curves2d
 // @module curves2d
-// @version 1.0.0-rc.5
+// @version 1.0.0-rc.6
 // @target blender
 // @edition 2026
 // @description 2D curves, resampling, curvature analysis, and path operations

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 
-__version__ = "1.0.0rc5"
-STDLIB_VERSION = "1.0.0-rc.5"
+__version__ = "1.0.0rc6"
+STDLIB_VERSION = "1.0.0-rc.6"
 
 from .errors import BnError, Diagnostic
 from .format import format_source

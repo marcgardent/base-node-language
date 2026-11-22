@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module grade
 // @module grade
-// @version 1.0.0-rc.5
+// @version 1.0.0-rc.6
 // @target blender
 // @edition 2026
 // @description Compositor colour tools on premultiplied images: Nuke's Grade and ColorCorrect, saturation by Rec. 709, Rec. 2020 or ACEScg luma, hue shift, exposure in stops, soft clip, clamp, Cineon log2lin and lin2log

@@ -6,4 +6,4 @@
 - License: GPL-3.0-or-later ([LICENSE](LICENSE))
 - Groups: 4
 
-These texts are the node groups of Unravel read as Base Node text by Base Node 1.0.0-rc.5 on Blender 5.3.0, a derived work of Unravel under its license, GPL-3.0-or-later.
+These texts are the node groups of Unravel read as Base Node text by Base Node 1.0.0-rc.6 on Blender 5.3.0, a derived work of Unravel under its license, GPL-3.0-or-later.

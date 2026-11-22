@@ -6,4 +6,4 @@
 - License: CC0-1.0 ([LICENSE](LICENSE))
 - Groups: 2
 
-These texts are the node groups of Principal Components read as Base Node text by Base Node 1.0.0-rc.5 on Blender 5.3.0, a derived work of Principal Components under its license, CC0-1.0.
+These texts are the node groups of Principal Components read as Base Node text by Base Node 1.0.0-rc.6 on Blender 5.3.0, a derived work of Principal Components under its license, CC0-1.0.

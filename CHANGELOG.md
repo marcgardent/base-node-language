@@ -7,6 +7,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+## [1.0.0-rc.6] - 2026-11-22
+
 ### Language
 
 - Fixed: the names a zone gives its body hold a value there, as its items do, so `<` after them
