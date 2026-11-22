@@ -114,6 +114,20 @@ pub struct Member {
     pub col: usize,
 }
 
+/// `Math[ADD, use_clamp: true](a, b)`: a setting of a node, what no wire can feed.
+///
+/// Its value is a literal, a name (an enum value, a template's type, `_`), a tuple of them or a
+/// call of them, such as `Ramp(…)`: never a name that holds a value. Which settings a node has,
+/// the host says.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Setting {
+    /// None for a setting given by position
+    pub name: Option<String>,
+    pub value: Expr,
+    pub line: usize,
+    pub col: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Call {
     pub name: String,
@@ -125,6 +139,9 @@ pub struct Call {
     /// `attribute_or<Vector>(…)`: the types a template is called with, as written; None when inferred
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub type_args: Option<Vec<String>>,
+    /// `Math[ADD](a, b)`: the settings written in brackets, in source order
+    #[serde(default)]
+    pub settings: Vec<Setting>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -318,8 +335,8 @@ pub struct Frame {
     pub continued: bool,
 }
 
-/// `name(arguments) -> { … return … }`: a call that takes a body, written only as the value of
-/// an assignment. The name may be qualified, as any call's. Which names take a body, what their
+/// `name[settings](arguments) -> { … return … }`: a call that takes a body, its settings optional,
+/// written only as the value of an assignment. The name may be qualified, as any call's. Which names take a body, what their
 /// arguments are, what the body sees and what it returns, the host says.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BodyCall {
@@ -329,6 +346,9 @@ pub struct BodyCall {
     pub line: usize,
     pub col: usize,
     pub end: usize,
+    /// `name[SETTING](…) -> {`: the settings written in brackets, in source order
+    #[serde(default)]
+    pub settings: Vec<Setting>,
 }
 
 /// `graph(x: Float, …) -> Float { … return … }`: a graph with no name, a value, written only as

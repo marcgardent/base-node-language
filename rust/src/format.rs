@@ -590,23 +590,24 @@ fn body_head(name: &str, z: &AssignValue, pad: &str, assign_line: usize) -> Vec<
     match z {
         AssignValue::NamelessGraph(g) => nameless_head(name, g, pad, assign_line),
         AssignValue::BodyCall(c) => {
+            let named = with_settings(&c.name, &c.settings);
             let line = format!(
                 "{}{} = {}({}) -> {{",
                 pad,
                 name,
-                c.name,
+                named,
                 format_args(&c.args)
             );
-            if char_len(&line) <= WIDTH || c.args.is_empty() {
+            if char_len(&line) <= WIDTH || (c.args.is_empty() && c.settings.is_empty()) {
                 return vec![(assign_line, line)];
             }
-            spread(
-                &format!("{}{} = {}(", pad, name, c.name),
-                &c.args,
-                assign_line,
-                pad,
-                ") -> {",
-            )
+            let lead = format!("{}{} = ", pad, name);
+            let call = CallParts {
+                name: &c.name,
+                settings: &c.settings,
+                args: &c.args,
+            };
+            call_lines(&lead, &call, assign_line, pad, ") -> {")
         }
         AssignValue::Expr(_) => unreachable!(),
     }
@@ -717,25 +718,24 @@ fn layout(
     }
     let inner = format!("{}{}", pad, INDENT);
     match e {
-        Expr::Call(c) if !c.args.is_empty() => {
+        Expr::Call(c) if !c.args.is_empty() || !c.settings.is_empty() => {
             let outputs = c
                 .outputs
                 .as_ref()
                 .map(|o| format!(" -> {}", signature_outputs(o, c.single_output)))
                 .unwrap_or_default();
-            let head = format!("{}{}(", lead, callee(c));
-            let mut lines = spread(
-                &head,
-                &c.args,
-                origin,
-                pad,
-                &format!("){}{}", outputs, tail),
-            );
+            let name = typed(c);
+            let call = CallParts {
+                name: &name,
+                settings: &c.settings,
+                args: &c.args,
+            };
+            let mut lines = call_lines(lead, &call, origin, pad, &format!("){}{}", outputs, tail));
             if let Some(outs) = c.outputs.as_ref() {
                 let too_long = char_len(&lines.last().unwrap().1) > WIDTH;
                 if too_long && !outs.is_empty() && !c.single_output {
                     // Declared outputs too long for the closing line: one per line as well
-                    lines = spread(&head, &c.args, origin, pad, ") -> (");
+                    lines = call_lines(lead, &call, origin, pad, ") -> (");
                     for (i, o) in outs.iter().enumerate() {
                         let close = if i + 1 == outs.len() {
                             format!("){}", tail)
@@ -894,13 +894,94 @@ fn spread(
     pad: &str,
     close: &str,
 ) -> Vec<(usize, String)> {
+    spread_with(head, items, origin, pad, close, argument)
+}
+
+/// `head` then one item per line one indent further in, as `item` lays it out, the last one
+/// ending with `close`.
+fn spread_with<T>(
+    head: &str,
+    items: &[T],
+    origin: usize,
+    pad: &str,
+    close: &str,
+    item: fn(&T, &str, &str) -> Vec<(usize, String)>,
+) -> Vec<(usize, String)> {
     let inner = format!("{}{}", pad, INDENT);
     let mut lines = vec![(origin, head.to_string())];
     for (i, a) in items.iter().enumerate() {
         let tail = if i + 1 == items.len() { close } else { "," };
-        lines.extend(argument(a, &inner, tail));
+        lines.extend(item(a, &inner, tail));
     }
     lines
+}
+
+/// What of a call or of a call with a body is printed before its closing parenthesis.
+struct CallParts<'a> {
+    /// With the types it is called with, when written
+    name: &'a str,
+    settings: &'a [Setting],
+    args: &'a [Arg],
+}
+
+/// A call too long for its line, after `lead`, `close` after its last argument.
+///
+/// Its arguments spread, one per line. Its settings stay with its name while that first line
+/// fits, else they spread first, one per line, the last one ending with `](`; the arguments then
+/// follow on that line while they fit there, else they spread in turn.
+fn call_lines(
+    lead: &str,
+    c: &CallParts,
+    origin: usize,
+    pad: &str,
+    close: &str,
+) -> Vec<(usize, String)> {
+    if c.settings.is_empty() {
+        return spread(&format!("{}{}(", lead, c.name), c.args, origin, pad, close);
+    }
+    let head = format!("{}{}(", lead, with_settings(c.name, c.settings));
+    if !c.args.is_empty() && char_len(&head) <= WIDTH {
+        return spread(&head, c.args, origin, pad, close);
+    }
+    let open = format!("{}{}[", lead, c.name);
+    let mut lines = spread_with(&open, c.settings, origin, pad, "](", setting_lines);
+    let (at, last) = lines.pop().unwrap();
+    let flat = format!("{}{}{}", last, format_args(c.args), close);
+    if char_len(&flat) <= WIDTH || c.args.is_empty() {
+        lines.push((at, flat));
+        return lines;
+    }
+    lines.extend(spread(&last, c.args, at, pad, close));
+    lines
+}
+
+/// A setting on a line of its own at `pad`, laid out like any value.
+fn setting_lines(s: &Setting, pad: &str, tail: &str) -> Vec<(usize, String)> {
+    let lead = match s.name {
+        Some(ref name) => format!("{}{}: ", pad, name),
+        None => pad.to_string(),
+    };
+    layout(&s.value, &lead, pad, tail, 0, s.line)
+}
+
+pub fn format_settings(items: &[Setting]) -> String {
+    items
+        .iter()
+        .map(|s| match s.name {
+            Some(ref name) => format!("{}: {}", name, format_expr(&s.value, 0)),
+            None => format_expr(&s.value, 0),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// A name, then its settings in brackets when it has some: `Math[ADD]`.
+fn with_settings(name: &str, settings: &[Setting]) -> String {
+    if settings.is_empty() {
+        name.to_string()
+    } else {
+        format!("{}[{}]", name, format_settings(settings))
+    }
 }
 
 /// An argument on a line of its own at `pad`, laid out like any value.
@@ -1129,9 +1210,14 @@ fn type_params(g: &Graph) -> String {
 }
 
 /// A call's name, with the types it is called with when written: `attribute_or<Vector>`.
-fn callee(c: &Call) -> String {
+fn typed(c: &Call) -> String {
     match c.type_args {
         Some(ref types) if !types.is_empty() => format!("{}<{}>", c.name, types.join(", ")),
         _ => c.name.clone(),
     }
+}
+
+/// A call's name, its types and its settings, all before `(`: `Math[ADD]`, `f<Vector>`.
+fn callee(c: &Call) -> String {
+    with_settings(&typed(c), &c.settings)
 }

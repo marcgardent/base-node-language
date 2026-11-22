@@ -95,9 +95,47 @@ def type_params(g):
     return "<" + ", ".join(f"{t.name}: {' | '.join(t.types)}" for t in g.type_params) + ">"
 
 
-def callee(e):
+def typed(e):
     """A call's name, with the types it is called with when written: `attribute_or<Vector>`."""
-    return f"{e.name}<{', '.join(e.type_args)}>" if e.type_args else e.name
+    type_args = getattr(e, "type_args", None)
+    return f"{e.name}<{', '.join(type_args)}>" if type_args else e.name
+
+
+def callee(e):
+    """A call's name, its types and its settings, all before `(`: `Math[ADD]`, `f<Vector>`."""
+    return typed(e) + (f"[{settings(e.settings)}]" if e.settings else "")
+
+
+def settings(items):
+    return ", ".join(setting(s) for s in items)
+
+
+def setting(s):
+    return f"{s.name}: {expr(s.value)}" if s.name is not None else expr(s.value)
+
+
+def setting_lines(s, pad, tail):
+    """A setting on a line of its own at `pad`, laid out like any value."""
+    return layout(s.value, pad + (f"{s.name}: " if s.name is not None else ""), pad, tail, 0, s.line)
+
+
+def call_lines(lead, e, origin, pad, close):
+    """A call too long for its line, after `lead`, `close` after its last argument.
+
+    Its arguments spread, one per line. Its settings stay with its name while that first line
+    fits, else they spread first, one per line, the last one ending with `](`; the arguments then
+    follow on that line while they fit there, else they spread in turn."""
+    if not e.settings:
+        return spread(f"{lead}{typed(e)}(", e.args, origin, pad, close)
+    head = f"{lead}{callee(e)}("
+    if e.args and len(head) <= WIDTH:
+        return spread(head, e.args, origin, pad, close)
+    lines = spread(f"{lead}{typed(e)}[", e.settings, origin, pad, "](", setting_lines)
+    at, last = lines.pop()
+    flat = last + args(e.args) + close
+    if len(flat) <= WIDTH or not e.args:
+        return lines + [(at, flat)]
+    return lines + spread(last, e.args, at, pad, close)
 
 
 def one_per_line(items, pad=INDENT * 2):
@@ -197,10 +235,10 @@ def body_head(s, pad):
     z = s.value
     if isinstance(z, ast.NamelessGraph):
         return nameless_head(s, pad)
-    line = f"{pad}{s.name} = {z.name}({args(z.args)}) -> {{"
-    if len(line) <= WIDTH or not z.args:
+    line = f"{pad}{s.name} = {callee(z)}({args(z.args)}) -> {{"
+    if len(line) <= WIDTH or not z.args and not z.settings:
         return [(s.line, line)]
-    return spread(f"{pad}{s.name} = {z.name}(", z.args, s.line, pad, ") -> {")
+    return call_lines(f"{pad}{s.name} = ", z, s.line, pad, ") -> {")
 
 
 def nameless_head(s, pad):
@@ -249,12 +287,12 @@ def layout(e, lead, pad, tail="", outer=0, origin=0):
     if parenthesized(e, outer):
         return layout(e, lead + "(", pad, ")" + tail, 0, origin)
     inner = pad + INDENT
-    if isinstance(e, ast.Call) and e.args:
+    if isinstance(e, ast.Call) and (e.args or e.settings):
         outputs = f" -> {signature_outputs(e.outputs, e.single_output)}" if e.outputs is not None else ""
-        lines = spread(f"{lead}{callee(e)}(", e.args, origin, pad, ")" + outputs + tail)
+        lines = call_lines(lead, e, origin, pad, ")" + outputs + tail)
         if len(lines[-1][1]) > WIDTH and e.outputs and not e.single_output:
             # Declared outputs too long for the closing line: one per line as well
-            lines = spread(f"{lead}{callee(e)}(", e.args, origin, pad, ") -> (")
+            lines = call_lines(lead, e, origin, pad, ") -> (")
             for i, o in enumerate(e.outputs):
                 lines += param_lines(o, inner, ")" + tail if i == len(e.outputs) - 1 else ",")
         return lines
@@ -340,12 +378,13 @@ def chained(e, lead, pad, tail, origin):
     return lines
 
 
-def spread(head, items, origin, pad, close=")"):
-    """`head` then one argument per line one indent further in, the last one ending with `close`."""
+def spread(head, items, origin, pad, close=")", item=None):
+    """`head` then one argument (or what `item` lays out) per line one indent further in, the
+    last one ending with `close`."""
     inner = pad + INDENT
     lines = [(origin, head)]
     for i, a in enumerate(items):
-        lines += argument(a, inner, close if i == len(items) - 1 else ",")
+        lines += (item or argument)(a, inner, close if i == len(items) - 1 else ",")
     return lines
 
 

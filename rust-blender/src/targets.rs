@@ -2448,6 +2448,7 @@ fn material_output(graph: &Graph, file: Option<&File>) -> Option<Expr> {
         outputs: None,
         single_output: false,
         type_args: None,
+        settings: Vec::new(),
     }))
 }
 
@@ -2692,6 +2693,7 @@ impl Inline<'_, '_> {
                 outputs: None,
                 single_output: false,
                 type_args: None,
+                settings: Vec::new(),
             }));
         }
         let mut names = HashSet::new();
@@ -3016,6 +3018,7 @@ fn math_comparisons(e: &mut Expr) {
         outputs: None,
         single_output: false,
         type_args: None,
+        settings: Vec::new(),
     });
     *e = if negated {
         Expr::BinOp(base_node::ast::BinOp {
@@ -3113,6 +3116,7 @@ fn ternaries(e: &mut Expr, geometry: bool) {
         outputs: None,
         single_output: false,
         type_args: None,
+        settings: Vec::new(),
     });
 }
 

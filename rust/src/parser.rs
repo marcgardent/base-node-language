@@ -385,7 +385,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `<Vector>(` or `<Float, Color>(` after a call's name: the types of a template.
+    /// `<Vector>(` or `<Float, Color>[` after a call's name: the types of a template.
     ///
     /// A name that holds a value is no template: `Math(a < b, c > (d))` compares.
     fn at_type_args(&self, name: &str) -> bool {
@@ -399,7 +399,7 @@ impl<'a> Parser<'a> {
             }
             i += 2;
         }
-        self.peek(i).is(">") && self.peek(i + 1).is("(")
+        self.peek(i).is(">") && (self.peek(i + 1).is("(") || self.peek(i + 1).is("["))
     }
 
     fn at_description(&self) -> bool {
@@ -672,8 +672,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `name(…) -> {`, the name qualified or not: a call that takes a body. The arrow tells it
-    /// from `x = f(a)` followed by a frame with no title.
+    /// `name(…) -> {` or `name[…](…) -> {`, the name qualified or not: a call that takes a body.
+    /// The arrow tells it from `x = f(a)` followed by a frame with no title.
     fn at_body_call(&self) -> bool {
         if !self.at("IDENT") {
             return false;
@@ -684,10 +684,16 @@ impl<'a> Parser<'a> {
         {
             i += 2;
         }
+        if self.token(i).is("[") {
+            match self.matching(i, "[", "]") {
+                Some(j) => i = j + 1,
+                None => return false,
+            }
+        }
         if !self.token(i).is("(") {
             return false;
         }
-        match self.matching(i) {
+        match self.matching(i, "(", ")") {
             Some(j) => self.token(j + 1).is("->") && self.token(j + 2).is("{"),
             None => false,
         }
@@ -699,6 +705,11 @@ impl<'a> Parser<'a> {
         while self.accept("::").is_some() {
             name = format!("{}::{}", name, self.advance().text);
         }
+        let settings = if self.at("[") {
+            self.settings()?
+        } else {
+            Vec::new()
+        };
         self.advance(); // "("
         let args = self.args(false)?;
         self.advance(); // "->"
@@ -717,6 +728,7 @@ impl<'a> Parser<'a> {
             line: t.line,
             col: t.col,
             end: end.line,
+            settings,
         })
     }
 
@@ -744,12 +756,13 @@ impl<'a> Parser<'a> {
         Ok((body, end))
     }
 
-    fn matching(&self, i: usize) -> Option<usize> {
+    /// Index of the `close` closing the `open` at token i, or None.
+    fn matching(&self, i: usize, open: &str, close: &str) -> Option<usize> {
         let mut depth = 0;
         for (j, token) in self.tokens.iter().enumerate().skip(i) {
-            if token.is("(") {
+            if token.is(open) {
                 depth += 1;
-            } else if token.is(")") {
+            } else if token.is(close) {
                 depth -= 1;
                 if depth == 0 {
                     return Some(j);
@@ -1117,6 +1130,7 @@ impl<'a> Parser<'a> {
                 outputs: None,
                 single_output: false,
                 type_args: None,
+                settings: Vec::new(),
             }));
         }
         if self.accept("IDENT").is_some() {
@@ -1139,23 +1153,34 @@ impl<'a> Parser<'a> {
                 self.expect(">", None)?;
                 type_args = Some(types);
             }
-            if self.accept("(").is_some() {
-                let args = self.args(false)?;
-                self.tall(self.height + 1, &t)?;
-                return Ok(Expr::Call(Call {
+            let mut settings = Vec::new();
+            let mut height = 0;
+            if self.at("[") {
+                // Right after a call's name, brackets are its settings: its inputs follow
+                settings = self.settings()?;
+                height = self.height;
+                self.expect(
+                    "(",
+                    Some("'(' and the inputs after the settings: Name[SETTING](…)"),
+                )?;
+            } else if self.accept("(").is_none() {
+                return Ok(Expr::Ref(Ref {
                     name,
-                    args,
                     line: t.line,
                     col: t.col,
-                    outputs: None,
-                    single_output: false,
-                    type_args,
                 }));
             }
-            return Ok(Expr::Ref(Ref {
+            let args = self.args(false)?;
+            self.tall(height.max(self.height) + 1, &t)?;
+            return Ok(Expr::Call(Call {
                 name,
+                args,
                 line: t.line,
                 col: t.col,
+                outputs: None,
+                single_output: false,
+                type_args,
+                settings,
             }));
         }
         if self.accept("(").is_some() {
@@ -1259,6 +1284,176 @@ impl<'a> Parser<'a> {
         Ok(args)
     }
 
+    /// `[ADD, use_clamp: true]` after a call's name, `[` the current token: its settings, up to
+    /// `]`, which is consumed. A setting is `name: value` or a value, the positional ones first.
+    /// Leaves the height of the tallest value.
+    fn settings(&mut self) -> Result<Vec<Setting>, BnError> {
+        let start = self.advance();
+        self.enter()?;
+        if self.at("]") {
+            return Err(self.fail(
+                "empty settings: a call with none writes no brackets, Name(…)",
+                Some(&start),
+            ));
+        }
+        let mut out: Vec<Setting> = Vec::new();
+        let mut height = 0;
+        while self.accept("]").is_none() {
+            let t = self.tok().clone();
+            let name = if t.is("IDENT") && self.peek(1).is(":") {
+                self.advance();
+                self.advance();
+                Some(t.text.clone())
+            } else {
+                if out.iter().any(|s| s.name.is_some()) {
+                    return Err(self.fail("positional setting after named setting", None));
+                }
+                None
+            };
+            let value = self.setting_value()?;
+            out.push(Setting {
+                name,
+                value,
+                line: t.line,
+                col: t.col,
+            });
+            height = height.max(self.height);
+            if self.accept(",").is_none() {
+                self.expect("]", Some("',' or ']' after a setting"))?;
+                break;
+            }
+        }
+        self.leave();
+        self.height = height;
+        Ok(out)
+    }
+
+    /// What a setting holds: a literal, a name (an enum value, a template's type, `_`), a tuple
+    /// of them or a call of them, such as `Ramp(…)`. No wire feeds a setting: a name that holds
+    /// a value is refused. Leaves the height of the value.
+    fn setting_value(&mut self) -> Result<Expr, BnError> {
+        let t = self.tok().clone();
+        self.height = 1;
+        if t.is("NUMBER")
+            || t.is("STRING")
+            || t.is_with_text("KEYWORD", "true")
+            || t.is_with_text("KEYWORD", "false")
+        {
+            return self.primary();
+        }
+        if t.is("-") && self.peek(1).is("NUMBER") {
+            self.advance();
+            if let Expr::Number(n) = self.primary()? {
+                return Ok(Expr::Number(Number {
+                    value: -n.value,
+                    is_int: n.is_int,
+                    line: t.line,
+                    col: t.col,
+                }));
+            }
+        }
+        if t.is("IDENT") {
+            self.advance();
+            if self.accept("(").is_some() {
+                let args = self.setting_args()?;
+                self.tall(self.height + 1, &t)?;
+                return Ok(Expr::Call(Call {
+                    name: t.text,
+                    args,
+                    line: t.line,
+                    col: t.col,
+                    outputs: None,
+                    single_output: false,
+                    type_args: None,
+                    settings: Vec::new(),
+                }));
+            }
+            if self.values.contains(&t.text) {
+                return Err(self.fail(
+                    format!(
+                        "'{}' holds a value, and no wire feeds a setting: give it in the parentheses, Name[SETTING](input: value)",
+                        t.text
+                    ),
+                    Some(&t),
+                ));
+            }
+            return Ok(Expr::Ref(Ref {
+                name: t.text,
+                line: t.line,
+                col: t.col,
+            }));
+        }
+        if self.accept("(").is_some() {
+            self.enter()?;
+            let mut items = vec![self.setting_value()?];
+            let mut height = self.height;
+            while self.accept(",").is_some() {
+                if self.at(")") {
+                    break;
+                }
+                items.push(self.setting_value()?);
+                height = height.max(self.height);
+            }
+            self.expect(")", None)?;
+            self.leave();
+            if items.len() == 1 {
+                return Ok(items.remove(0));
+            }
+            self.tall(height + 1, &t)?;
+            return Ok(Expr::Tuple(Tuple {
+                items,
+                line: t.line,
+                col: t.col,
+            }));
+        }
+        Err(self.fail(
+            format!(
+                "expected a setting's value (a literal, an enum value, a tuple), found {}",
+                t.describe()
+            ),
+            None,
+        ))
+    }
+
+    /// The arguments of a call in a setting, `Ramp((0.0, (0.0, 0.0, 0.0)), interpolation: EASE)`,
+    /// up to `)`, which is consumed: values as a setting holds. Leaves the height of the tallest.
+    fn setting_args(&mut self) -> Result<Vec<Arg>, BnError> {
+        self.enter()?;
+        let mut args: Vec<Arg> = Vec::new();
+        let mut height = 0;
+        while self.accept(")").is_none() {
+            let t = self.tok().clone();
+            let name = if (t.is("IDENT") || t.is("STRING")) && self.peek(1).is(":") {
+                self.advance();
+                self.advance();
+                Some(t.text.clone())
+            } else {
+                if args.iter().any(|a| a.name.is_some()) {
+                    return Err(self.fail("positional argument after named argument", None));
+                }
+                None
+            };
+            let value = self.setting_value()?;
+            args.push(Arg {
+                name,
+                value,
+                line: t.line,
+                col: t.col,
+                options: Vec::new(),
+                type_decl: None,
+                alias: None,
+            });
+            height = height.max(self.height);
+            if self.accept(",").is_none() {
+                self.expect(")", None)?;
+                break;
+            }
+        }
+        self.leave();
+        self.height = height;
+        Ok(args)
+    }
+
     fn at_item_options(&self) -> bool {
         if !self.tok().is("IDENT") && !self.tok().is("STRING") {
             return false;
@@ -1324,6 +1519,7 @@ impl<'a> Parser<'a> {
         }
         if let Expr::Call(c) = e {
             if c.outputs.is_none()
+                && c.settings.is_empty()
                 && c.args
                     .iter()
                     .all(|a| a.name.is_some() && a.type_decl.is_none())

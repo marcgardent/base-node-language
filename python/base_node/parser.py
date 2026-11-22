@@ -208,7 +208,7 @@ class Parser:
                 return out
 
     def at_type_args(self, name):
-        """`<Vector>(` or `<Float, Color>(` after a call's name: the types of a template.
+        """`<Vector>(` or `<Float, Color>[` after a call's name: the types of a template.
 
         A name that holds a value is no template: `Math(a < b, c > (d))` compares."""
         if name in self.values or not self.at("<") or self.peek().kind != "IDENT":
@@ -218,7 +218,7 @@ class Parser:
             if self.peek(i + 1).kind != "IDENT":
                 return False
             i += 2
-        return self.peek(i).kind == ">" and self.peek(i + 1).kind == "("
+        return self.peek(i).kind == ">" and self.peek(i + 1).kind in ("(", "[")
 
     def at_description(self):
         # A string alone: `"Title" {` and `"Title" #color {` are frames
@@ -340,13 +340,18 @@ class Parser:
         return ast.Frame(label and label.text, color and color.text, body, t.line, t.col, end.line, continued)
 
     def at_body_call(self):
-        """`name(…) -> {`, the name qualified or not: a call that takes a body. The arrow tells it
-        from `x = f(a)` followed by a frame with no title."""
+        """`name(…) -> {` or `name[…](…) -> {`, the name qualified or not: a call that takes a body.
+        The arrow tells it from `x = f(a)` followed by a frame with no title."""
         if not self.at("IDENT"):
             return False
         i = self.i + 1
         while self.tokens[i].kind == "::" and self.tokens[i + 1].kind in ("IDENT", "STRING"):
             i += 2
+        if self.tokens[i].kind == "[":
+            j = self.matching(i)
+            if j is None:
+                return False
+            i = j + 1
         if self.tokens[i].kind != "(":
             return False
         j = self.matching(i)
@@ -357,13 +362,14 @@ class Parser:
         name = t.text
         while self.accept("::"):
             name = f"{name}::{self.advance().text}"
+        settings = self.settings() if self.at("[") else []
         self.advance()
         args = self.args()
         self.advance()
         self.advance()
         # Its body sees the names around and its items, by their keys: `r = f(n, v: 0.0) -> {`
         body, end = self.block({a.alias or ast.key(a.name) for a in args if a.name is not None})
-        return ast.BodyCall(name, args, body, t.line, t.col, end.line)
+        return ast.BodyCall(name, args, body, t.line, t.col, end.line, settings)
 
     def block(self, names=None):
         """Statements up to `}`, which is consumed: (body, the closing token).
@@ -385,17 +391,17 @@ class Parser:
         return body, self.advance()
 
     def matching(self, i):
-        """Index of the `)` closing the `(` at token i, or None.
+        """Index of the `)` closing the `(` at token i, or of the `]` closing a `[`, or None.
 
         All are paired in one pass: looking ahead from each `(` in turn would read a
         text of nested calls once per level."""
         if self.closing is None:
-            self.closing, opened = {}, []
+            self.closing, opened = {}, {"(": [], "[": []}
             for j, tok in enumerate(self.tokens):
-                if tok.kind == "(":
-                    opened.append(j)
-                elif tok.kind == ")" and opened:
-                    self.closing[opened.pop()] = j
+                if tok.kind in opened:
+                    opened[tok.kind].append(j)
+                elif tok.kind in CLOSES and opened[CLOSES[tok.kind]]:
+                    self.closing[opened[CLOSES[tok.kind]].pop()] = j
         return self.closing.get(i)
 
     def nameless(self):
@@ -569,11 +575,17 @@ class Parser:
                 while self.accept(","):
                     type_args.append(self.advance().text)
                 self.expect(">")
-            if self.accept("("):
-                args = self.args()
-                self.tall(self.height + 1, t)
-                return ast.Call(name, args, t.line, t.col, type_args=type_args)
-            return ast.Ref(name, t.line, t.col)
+            settings, height = [], 0
+            if self.at("["):
+                # Right after a call's name, brackets are its settings: its inputs follow
+                settings = self.settings()
+                height = self.height
+                self.expect("(", what="'(' and the inputs after the settings: Name[SETTING](…)")
+            elif not self.accept("("):
+                return ast.Ref(name, t.line, t.col)
+            args = self.args()
+            self.tall(max(height, self.height) + 1, t)
+            return ast.Call(name, args, t.line, t.col, type_args=type_args, settings=settings)
         if self.accept("("):
             self.enter()
             items = [self.expr()]
@@ -638,6 +650,94 @@ class Parser:
         self.height = height
         return args
 
+    def settings(self):
+        """`[ADD, use_clamp: true]` after a call's name, `[` the current token: its settings, up to
+        `]`, which is consumed. A setting is `name: value` or a value, the positional ones first.
+        Leaves the height of the tallest value."""
+        start = self.advance()
+        self.enter()
+        if self.at("]"):
+            self.fail("empty settings: a call with none writes no brackets, Name(…)", start)
+        out, height = [], 0
+        while not self.accept("]"):
+            t = self.tok
+            if t.kind == "IDENT" and self.peek().kind == ":":
+                self.advance()
+                self.advance()
+                out.append(ast.Setting(t.text, self.setting_value(), t.line, t.col))
+            else:
+                if any(s.name for s in out):
+                    self.fail("positional setting after named setting")
+                out.append(ast.Setting(None, self.setting_value(), t.line, t.col))
+            height = max(height, self.height)
+            if not self.accept(","):
+                self.expect("]", what="',' or ']' after a setting")
+                break
+        self.leave()
+        self.height = height
+        return out
+
+    def setting_value(self):
+        """What a setting holds: a literal, a name (an enum value, a template's type, `_`), a tuple
+        of them or a call of them, such as `Ramp(…)`. No wire feeds a setting: a name that holds
+        a value is refused. Leaves the height of the value."""
+        t = self.tok
+        self.height = 1
+        if t.kind in ("NUMBER", "STRING") or t.kind == "KEYWORD" and t.text in ("true", "false"):
+            return self.primary()
+        if t.kind == "-" and self.peek().kind == "NUMBER":
+            self.advance()
+            n = self.primary()
+            return ast.Number(-n.value, n.is_int, t.line, t.col)
+        if t.kind == "IDENT":
+            self.advance()
+            if self.accept("("):
+                args = self.setting_args()
+                self.tall(self.height + 1, t)
+                return ast.Call(t.text, args, t.line, t.col)
+            if t.text in self.values:
+                self.fail(f"'{t.text}' holds a value, and no wire feeds a setting: "
+                          "give it in the parentheses, Name[SETTING](input: value)", t)
+            return ast.Ref(t.text, t.line, t.col)
+        if self.accept("("):
+            self.enter()
+            items, height = [self.setting_value()], self.height
+            while self.accept(","):
+                if self.at(")"):
+                    break
+                items.append(self.setting_value())
+                height = max(height, self.height)
+            self.expect(")")
+            self.leave()
+            if len(items) == 1:
+                return items[0]
+            self.tall(height + 1, t)
+            return ast.Tuple(items, t.line, t.col)
+        self.fail(f"expected a setting's value (a literal, an enum value, a tuple), found {describe(t)}")
+
+    def setting_args(self):
+        """The arguments of a call in a setting, `Ramp((0.0, (0.0, 0.0, 0.0)), interpolation: EASE)`,
+        up to `)`, which is consumed: values as a setting holds. Leaves the height of the tallest."""
+        self.enter()
+        args, height = [], 0
+        while not self.accept(")"):
+            t = self.tok
+            name = None
+            if t.kind in ("IDENT", "STRING") and self.peek().kind == ":":
+                name = t.text
+                self.advance()
+                self.advance()
+            elif any(a.name for a in args):
+                self.fail("positional argument after named argument")
+            args.append(ast.Arg(name, self.setting_value(), t.line, t.col))
+            height = max(height, self.height)
+            if not self.accept(","):
+                self.expect(")")
+                break
+        self.leave()
+        self.height = height
+        return args
+
     def at_item_options(self):
         """`name(` … `):` ahead: an item with options, not a call given as a value."""
         if self.tok.kind not in ("IDENT", "STRING") or self.peek().kind != "(":
@@ -664,9 +764,13 @@ class Parser:
         """The type written before `=`: `Float`, or `Float(structure_type: SINGLE)`."""
         if isinstance(e, ast.Ref):
             return ast.Param(name, e.name, e.line, e.col)
-        if isinstance(e, ast.Call) and e.outputs is None and all(a.name and a.type is None for a in e.args):
+        if isinstance(e, ast.Call) and e.outputs is None and not e.settings and \
+                all(a.name and a.type is None for a in e.args):
             return ast.Param(name, e.name, e.line, e.col, options=e.args)
         self.fail("type expected before '=': name: Type = value", at)
+
+
+CLOSES = {")": "(", "]": "["}  # what each closing bracket closes
 
 
 def describe(tok):

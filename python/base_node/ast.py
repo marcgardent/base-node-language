@@ -57,6 +57,19 @@ class Arg:
 
 
 @dataclass
+class Setting:
+    """`Math[ADD, use_clamp: true](a, b)`: a setting of a node, what no wire can feed.
+
+    Its value is a literal, a name (an enum value, a template's type, `_`), a tuple of them or a
+    call of them, such as `Ramp(…)`: never a name that holds a value. Which settings a node has,
+    the host says."""
+    name: str | None  # None for a setting given by position
+    value: object
+    line: int
+    col: int
+
+
+@dataclass
 class Call:
     name: str
     args: list
@@ -67,6 +80,8 @@ class Call:
     single_output: bool = False  # `-> Float` rather than `-> (name: Float)`
     # `attribute_or<Vector>(…)`: the types a template is called with, as written; None when inferred
     type_args: list | None = None
+    # `Math[ADD](a, b)`: the settings written in brackets, in source order
+    settings: list = field(default_factory=list)  # of Setting
 
 
 @dataclass
@@ -170,7 +185,7 @@ class Frame:
 
 @dataclass
 class BodyCall:
-    """`name(arguments) -> { … return … }`: a call that takes a body.
+    """`name[settings](arguments) -> { … return … }`: a call that takes a body, its settings optional.
 
     Written only as the value of an assignment. The name may be qualified, as any call's.
     Which names take a body, what their arguments are, what the body sees beside the names
@@ -182,6 +197,7 @@ class BodyCall:
     line: int
     col: int
     end: int = 0  # line of the closing brace
+    settings: list = field(default_factory=list)  # of Setting: `name[SETTING](…) -> {`
 
 
 @dataclass
