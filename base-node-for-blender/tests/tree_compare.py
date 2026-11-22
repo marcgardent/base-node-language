@@ -72,6 +72,9 @@ CLASSES = (
     "tree-asset",            # its asset data (catalog, tags, description…)
     "tree-animation",        # its drivers and animation, as far as their presence
     "float-below-1e-6",      # a float (setting, default, interface) differs by 1e-6 or less
+    "interface-output",      # the default, min or max of an interface output: no evaluation reads them,
+                             # a Group Output made anew takes its socket's value from them
+    "default-implicit",      # the value of an input an implicit field feeds (`= Normal()`): not read
     "default-unavailable",   # the value of an input that its node does not show (unavailable) differs
     "link-unavailable",      # a link into or out of a socket its node does not show (unavailable),
                              # which Blender does not follow, on one side only
@@ -492,6 +495,8 @@ class Comparator:
                     continue  # a linked input's value is not read
                 elif unavailable(s):
                     kind = "default-unavailable"
+                elif implicit(n, s):
+                    kind = "default-implicit"
                 else:
                     kind = "default"
             elif ident in ("select", "show_expanded"):
@@ -981,9 +986,26 @@ class Comparator:
             if p in fx and p in fy and same(vx, vy):
                 continue
             kind = kx or ky
+            if kind == "interface" and p in ("default_value", "min_value", "max_value"):
+                if getattr(x, "in_out", None) == "OUTPUT":
+                    kind = "interface-output"
+                elif p == "default_value" and getattr(x, "default_input", "VALUE") != "VALUE" \
+                        and getattr(y, "default_input", "VALUE") == getattr(x, "default_input", "VALUE"):
+                    kind = "default-implicit"  # an implicit field feeds the input: its value is not read
             if kind == "interface" and p in fx and p in fy and floats(vx) and floats(vy) and close(vx, vy):
                 kind = "float-below-1e-6"
             diff(kind, None, f"{item_label(x)}.{p}", vx, vy)
+
+
+def implicit(node, socket):
+    """Whether an input of a group node is fed, when unlinked, by an implicit field of the group's
+    interface (`Normal: Vector = Normal()`): its own value is then not read."""
+    tree = getattr(node, "node_tree", None)
+    if tree is None:
+        return False
+    item = next((i for i in tree.interface.items_tree if i.item_type == "SOCKET" and i.in_out == "INPUT"
+                 and i.identifier == socket.identifier), None)
+    return item is not None and getattr(item, "default_input", "VALUE") != "VALUE"
 
 
 def unavailable(socket):

@@ -292,6 +292,20 @@ def test_interface():
     changed(lambda b: setattr(item(b, "Size"), "hide_in_modifier", True), "interface")
     changed(lambda b: setattr(item(b, "Size"), "default_value", 2.0 + 1e-6), "float-below-1e-6")
     changed(lambda b: b.interface.new_panel("Extra"), "interface-extra")
+    changed(lambda b: setattr(next(i for i in b.interface.items_tree if getattr(i, "in_out", "") == "OUTPUT"),
+                              "description", "x"), "interface")
+
+    def implicit(t):
+        v = t.interface.new_socket("Normal", in_out="INPUT", socket_type="NodeSocketVector")
+        v.default_input = "NORMAL"
+        v.default_value = (0, 0, 1)
+        f = t.interface.new_socket("Out", in_out="OUTPUT", socket_type="NodeSocketFloat")
+        f.default_value = 1.0
+        return t
+    changed(lambda b: setattr(item(b, "Normal"), "default_value", (0, 0, 0)), "default-implicit",
+            base=lambda: implicit(sample()))
+    changed(lambda b: setattr(item(b, "Out"), "max_value", 5.0), "interface-output",
+            base=lambda: implicit(sample()))
     # A new socket is a socket more on the Group Input
     changed(lambda b: b.interface.new_socket("More", in_out="INPUT", socket_type="NodeSocketInt"),
             "interface-extra", "socket-count")
@@ -366,6 +380,17 @@ def test_group_node_and_nested():
     other = sample("Other")
     node(outer2, "GeometryNodeGroup").node_tree = other
     expect(diffs(outer, outer2, names), "group-tree")
+    # An input an implicit field feeds: its value is not read
+    clear()
+    inner = sample("Inner")
+    v = inner.interface.new_socket("Normal", in_out="INPUT", socket_type="NodeSocketVector")
+    v.default_input = "NORMAL"
+    outer = bpy.data.node_groups.new("Outer", "GeometryNodeTree")
+    g = outer.nodes.new("GeometryNodeGroup")
+    g.node_tree = inner
+    outer2 = twin(outer)
+    node(outer2, "GeometryNodeGroup").inputs["Normal"].default_value = (0, 0, 1)
+    expect(diffs(outer, outer2), "default-implicit")
 
 
 def test_tree_level():
