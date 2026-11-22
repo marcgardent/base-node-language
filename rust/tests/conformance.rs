@@ -84,7 +84,15 @@ fn settings_in_brackets_read_as_python_reads_them() {
     read_as_written("../conformance/bracket-cases.json");
 }
 
-/// The cases of a file of conformance/: each prints back as `formatted`, or is refused at `error`.
+/// Strings with escapes, inf and nan, sets of enum values: read and printed back as
+/// python/tests/test_conformance.py does.
+#[test]
+fn exact_values_read_as_python_reads_them() {
+    read_as_written("../conformance/exact-cases.json");
+}
+
+/// The cases of a file of conformance/: each prints back as `formatted`, or is refused at `error`
+/// with `message`.
 fn read_as_written(path: &str) {
     let corpus: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
@@ -95,6 +103,9 @@ fn read_as_written(path: &str) {
             let e = parse(text, "case.bn").expect_err(name);
             let d = &e.diagnostics[0];
             assert_eq!(format!("{}:{}", d.line, d.col), error, "{name}");
+            if let Some(message) = case["message"].as_str() {
+                assert_eq!(d.message, message, "{name}");
+            }
         } else {
             let formatted =
                 format_source(text, "case.bn").unwrap_or_else(|e| panic!("{name}: {e}"));

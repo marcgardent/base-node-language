@@ -60,8 +60,9 @@ Without `@offer`, a file offers `library` when it has a `@module`, `groups` alwa
 ## 2. Identifiers and Keywords
 
 - **Identifier**: Unicode letters, digits, and `_`, not starting with a digit (`height`, `frequency_2`, `p`).
-- **Quoted name**: `"Point Count"`. Referenced in expressions by its `snake_case` key (`point_count`), or given an explicit key via `as`: `"Scale" as random_scale: Float`.
-- **Reserved words**: `graph`, `return`, `true`, `false`, `and`, `or`, `xor`, `not`, `dot`, `cross`. Host sockets matching a reserved word take a trailing `_` (`not_`).
+- **Quoted name**: `"Point Count"`. Referenced in expressions by its `snake_case` key (`point_count`), or given an explicit key via `as`: `"Scale" as random_scale: Float`. A graph of a module is called by its name quoted after the module when that name is not identifiers joined by `::`: `c2::"parallel contour 2d"(…)`; `m::"a::b"` is the name `m::a::b`, written so.
+- **String**: `"…"` on one line, its characters as written but for `\`, which starts an escape: `\"`, `\\`, `\n` (a line feed), `\t`, `\r`, and `\u{…}`, any character by its code in 1 to 6 hex digits (`\u{1F600}`), a Unicode scalar value (at most `10ffff`, no surrogate). Another escape is an error at its `\` (`unknown escape '\q': a string's escapes are \", \\, \n, \t, \r and \u{…}, a character's code in 1 to 6 hex digits`), and so is a line break inside a string (`unclosed string`), written `\n`. A quoted name, a description, a frame's title, a look's label and the file of a `use` are strings. Tree → Text writes `\"`, `\\`, `\n`, `\t`, `\r`, every other control character (U+0000 to U+001F, U+007F) as `\u{…}` in lowercase hex without leading zeros (`\u{1b}`), and any other character as itself: any string reads back as it was.
+- **Reserved words**: `graph`, `return`, `true`, `false`, `and`, `or`, `xor`, `not`, `dot`, `cross`, `inf`, `nan`. `inf` and `nan` are floats, infinity and not a number, written so wherever a number is ([5](#5-expressions)): `-inf` is the negation of `inf` as `-1.0` is of `1.0`, a NaN of any sign is written `nan`, and `inf_x`, `Inf` are names. A reserved word names nothing: `inf = 1.0`, an input, an item or a type parameter of that name is refused at the word (`'inf' is a reserved word: choose another name`). Host sockets matching a reserved word take a trailing `_` (`not_`, `inf_`), and a label or a name that is one is written quoted (`."inf"`).
 - **Contextual keywords**: `use`, `from`, `_`. The zones are no words of the language: `repeat`, `simulate` and `foreach` are names a host gives to calls that take a body ([6](#6-calls-with-a-body-and-nameless-graphs)), and may name a state, a local or a graph.
 - **Enum values**: an identifier in a call's settings is an enum value, or a template's type: `Math[POWER]`, `StoreNamedAttribute[domain: FACE]` ([5](#5-expressions)).
 
@@ -351,8 +352,11 @@ settings  := '[' setting (',' setting)* ','? ']'
 setting   := IDENT ':' value | value                          positional ones first
 value     := NUMBER | '-' NUMBER | STRING | 'true' | 'false'
            | IDENT                                            an enum value, a template's type, `_`
-           | '(' value (',' value)* ','? ')'                  a tuple
+           | '(' ')' | '(' value ',' ')'                      a tuple of none, of one: (LEFT,)
+           | '(' value (',' value)+ ','? ')'                  a tuple
+           | '(' value ')'                                    the value alone
            | IDENT '(' (value | IDENT ':' value) (',' …)* ')'  a call of values: Ramp(…), Curve(…)
+NUMBER    := digits ('.' digits)? (('e' | 'E') ('+' | '-')? digits)? | 'inf' | 'nan'
 ```
 
 ```bn
@@ -556,6 +560,6 @@ A `.bn` text may come from anyone. Reading one ends with a tree or an error, nev
 | Source size | 4 MiB | The bytes of the text, in UTF-8 |
 | Nesting | 32 | What is open at once: `(…)`, the arguments or options of a call, a `{…}` block (frame, panel, the body of a call or of a nameless graph), each prefix `-` or `not`, and the branches of each `? :` (a chain `a ? x : b ? y : …` opens one per `?`) |
 | Expression height | 256 | The nodes one inside another in an expression: a name or a literal is 1, and each operator, call, tuple or `.socket` is one more than the tallest of what it holds. A chain counts for its length: `a + b + c` is 3, and so is a pipe of two steps |
-| Integer | 2⁶³ − 1 | The digits of an integer literal; a float literal must be finite (`1e999` is refused) |
+| Integer | 2⁶³ − 1 | The digits of an integer literal; a float literal written with digits must be finite (`1e999` is refused), infinity is written `inf` |
 
 A host that reads the file a `use` names reads a regular file no larger than a source, inside the roots the modules resolve in (§1).

@@ -590,7 +590,8 @@ fn body_head(name: &str, z: &AssignValue, pad: &str, assign_line: usize) -> Vec<
     match z {
         AssignValue::NamelessGraph(g) => nameless_head(name, g, pad, assign_line),
         AssignValue::BodyCall(c) => {
-            let named = with_settings(&c.name, &c.settings);
+            let callee_name = call_name(&c.name);
+            let named = with_settings(&callee_name, &c.settings);
             let line = format!(
                 "{}{} = {}({}) -> {{",
                 pad,
@@ -603,7 +604,7 @@ fn body_head(name: &str, z: &AssignValue, pad: &str, assign_line: usize) -> Vec<
             }
             let lead = format!("{}{} = ", pad, name);
             let call = CallParts {
-                name: &c.name,
+                name: &callee_name,
                 settings: &c.settings,
                 args: &c.args,
             };
@@ -750,9 +751,10 @@ fn layout(
         }
         Expr::Tuple(t) if !t.items.is_empty() => {
             let mut lines = vec![(origin, format!("{}(", lead))];
+            let one = if t.items.len() == 1 { "," } else { "" };
             for (i, item) in t.items.iter().enumerate() {
                 let close = if i + 1 == t.items.len() {
-                    format!("){}", tail)
+                    format!("{one}){}", tail)
                 } else {
                     ",".to_string()
                 };
@@ -1060,8 +1062,12 @@ pub fn format_arg(a: &Arg) -> String {
 }
 
 /// A float as Python's `repr` spells it, so both printers write the same text: the shortest
-/// digits that read back the same, with an exponent below 1e-4 and from 1e16 (`1e-05`, `1e+18`).
+/// digits that read back the same, with an exponent below 1e-4 and from 1e16 (`1e-05`, `1e+18`),
+/// and `inf`, `-inf`, `nan` (of any sign).
 fn float_repr(v: f64) -> String {
+    if v.is_nan() {
+        return "nan".to_string();
+    }
     if v != 0.0 && v.is_finite() {
         let sci = format!("{:e}", v);
         if let Some((mantissa, exp)) = sci.split_once('e') {
@@ -1097,13 +1103,15 @@ pub fn format_expr(e: &Expr, outer: usize) -> String {
             }
         }
         Expr::Tuple(t) => {
+            // One item takes a comma, else it reads as the item alone: `(LEFT,)`
             format!(
-                "({})",
+                "({}{})",
                 t.items
                     .iter()
                     .map(|i| format_expr(i, 0))
                     .collect::<Vec<_>>()
-                    .join(", ")
+                    .join(", "),
+                if t.items.len() == 1 { "," } else { "" }
             )
         }
         Expr::Ref(r) => r.name.clone(),
@@ -1211,9 +1219,10 @@ fn type_params(g: &Graph) -> String {
 
 /// A call's name, with the types it is called with when written: `attribute_or<Vector>`.
 fn typed(c: &Call) -> String {
+    let name = call_name(&c.name);
     match c.type_args {
-        Some(ref types) if !types.is_empty() => format!("{}<{}>", c.name, types.join(", ")),
-        _ => c.name.clone(),
+        Some(ref types) if !types.is_empty() => format!("{}<{}>", name, types.join(", ")),
+        _ => name,
     }
 }
 

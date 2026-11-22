@@ -39,9 +39,9 @@ pub fn highlight(source: &str) -> String {
                 TokenKind::Eof => None,
             };
             let Some(class) = class else { continue };
-            // A token may span lines (a string): mark from its start on.
+            // As many characters as it takes in the source: a string's quotes and escapes too.
             let (mut line, mut col) = (t.line.saturating_sub(1), t.col.saturating_sub(1));
-            for _ in t.text.chars() {
+            for _ in 0..t.width {
                 if line >= classes.len() {
                     break;
                 }
@@ -90,6 +90,14 @@ mod tests {
         assert!(html.contains(r#"<span class="t">Geometry</span>"#));
         assert!(html.contains(r#"<span class="n">1.0</span>"#));
         assert_eq!(html.matches(r#"class="line""#).count(), 4);
+    }
+
+    #[test]
+    fn a_string_with_escapes_is_one_string() {
+        let html = highlight(r#"x = F(s: "a \"b\" \u{1F600}", t: 1.0)"#);
+        assert!(html.contains(r#"<span class="s">&quot;a \&quot;b\&quot; \u{1F600}&quot;</span>"#));
+        assert!(html.contains(r#"<span class="n">1.0</span>"#));
+        assert!(highlight("x = inf").contains(r#"<span class="n">inf</span>"#));
     }
 
     #[test]

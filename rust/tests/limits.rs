@@ -213,7 +213,7 @@ impl Rng {
     }
 }
 
-const FRAGMENTS: [&str; 34] = [
+const FRAGMENTS: [&str; 37] = [
     "(",
     ")",
     "[",
@@ -248,6 +248,9 @@ const FRAGMENTS: [&str; 34] = [
     "999999999999999999999999999999",
     "1e999",
     "//",
+    "\\",
+    "\\u{",
+    "inf",
 ];
 
 /// The source with a few pieces dropped, doubled or put in, cut on character boundaries.

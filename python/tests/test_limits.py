@@ -105,11 +105,9 @@ def test_source_too_large():
 
 
 def test_quote_cannot_be_left():
-    # A label read from a node, written back: what would close the string is replaced
-    text = quote('x" }\ngeometry graph evil() -> Float {\r')
-    assert text[0] == text[-1] == '"' and '"' not in text[1:-1]
-    assert "\n" not in text and "\r" not in text
-    assert [t.kind for t in tokenize(text)] == ["STRING", "EOF"]
+    # A label read from a node, written back: what would close the string is escaped, and read back
+    label = 'x" }\ngeometry graph evil() -> Float {\r\\'
+    assert [(t.kind, t.text) for t in tokenize(quote(label))] == [("STRING", label), ("EOF", "")]
 
 
 def corpus():
@@ -120,7 +118,7 @@ def corpus():
 
 FRAGMENTS = ["(", ")", "[", "]", "{", "}", ",", ":", "::", "=", "->", "|>", ".", "..", "@", "#", '"', "\n", "-", "not ",
              "closure(", "repeat(", "simulate(", "foreach(", "use ", " as ", " in ", "return ", "graph ", "é", "\x00",
-             "9" * 30, "1e999", "//"]
+             "9" * 30, "1e999", "//", "\\", "\\u{", "inf"]
 
 
 def mutated(source, rng):

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::ast::*;
 use crate::errors::BnError;
 use crate::lexer::tokenize;
-use crate::tokens::Token;
+use crate::tokens::{Token, WORD_NUMBERS};
 
 // What a reader accepts, the same in every implementation (spec/reference.md, "Limits"): a .bn text
 // may come from anyone, and reading it must end with a tree or an error, never a crash or a hang.
@@ -115,6 +115,9 @@ impl<'a> Parser<'a> {
         if self.at(kind_or_punct) {
             Ok(self.advance())
         } else {
+            if kind_or_punct == "IDENT" {
+                self.not_reserved(0)?;
+            }
             let desc = what.unwrap_or(kind_or_punct);
             Err(self.fail(
                 format!("expected {}, found {}", desc, self.tok().describe()),
@@ -138,6 +141,19 @@ impl<'a> Parser<'a> {
                 None,
             ))
         }
+    }
+
+    /// Refuses a reserved word where a name is written: `inf = 1.0`, `f(true: x)`; the token
+    /// `offset` ahead.
+    fn not_reserved(&self, offset: usize) -> Result<(), BnError> {
+        let t = self.peek(offset);
+        if t.is_reserved() {
+            return Err(self.fail(
+                format!("'{}' is a reserved word: choose another name", t.text),
+                Some(t),
+            ));
+        }
+        Ok(())
     }
 
     fn fail(&self, message: impl Into<String>, tok: Option<&Token>) -> BnError {
@@ -432,6 +448,9 @@ impl<'a> Parser<'a> {
                 self.expect("IDENT", Some("name"))?
             };
             let mut alias = None;
+            if self.at_text("IDENT", "as") {
+                self.not_reserved(1)?;
+            }
             if self.at_text("IDENT", "as") && self.peek(1).is("IDENT") {
                 if !header {
                     return Err(
@@ -548,6 +567,9 @@ impl<'a> Parser<'a> {
                 col: t.col,
                 look,
             }));
+        }
+        if self.peek(1).is("=") {
+            self.not_reserved(0)?;
         }
         if self.at("IDENT") && self.peek(1).is("=") {
             if t.text == "dot" || t.text == "cross" {
@@ -1069,6 +1091,18 @@ impl<'a> Parser<'a> {
         let t = self.tok().clone();
         self.height = 1;
         if self.accept("NUMBER").is_some() {
+            if WORD_NUMBERS.contains(&t.text.as_str()) {
+                return Ok(Expr::Number(Number {
+                    value: if t.text == "inf" {
+                        f64::INFINITY
+                    } else {
+                        f64::NAN
+                    },
+                    is_int: false,
+                    line: t.line,
+                    col: t.col,
+                }));
+            }
             let is_int = !t.text.contains('.') && !t.text.contains('e') && !t.text.contains('E');
             // The lexer gives digits only: what does not parse is out of range
             let val: f64 = if is_int {
@@ -1221,6 +1255,13 @@ impl<'a> Parser<'a> {
         while self.accept(")").is_none() {
             let t = self.tok().clone();
             self.height = 0;
+            let as_key =
+                (t.is("IDENT") || t.is("STRING")) && self.peek(1).is_with_text("IDENT", "as");
+            if as_key {
+                self.not_reserved(2)?;
+            } else if self.peek(1).is(":") {
+                self.not_reserved(0)?;
+            }
             if (t.is("IDENT") || t.is("STRING"))
                 && self.peek(1).is_with_text("IDENT", "as")
                 && self.peek(2).is("IDENT")
@@ -1300,6 +1341,9 @@ impl<'a> Parser<'a> {
         let mut height = 0;
         while self.accept("]").is_none() {
             let t = self.tok().clone();
+            if self.peek(1).is(":") {
+                self.not_reserved(0)?;
+            }
             let name = if t.is("IDENT") && self.peek(1).is(":") {
                 self.advance();
                 self.advance();
@@ -1384,19 +1428,21 @@ impl<'a> Parser<'a> {
             }));
         }
         if self.accept("(").is_some() {
+            // A set of enum values is a tuple too: `(LEFT, RIGHT)`, `(LEFT,)`, `()`
             self.enter()?;
-            let mut items = vec![self.setting_value()?];
-            let mut height = self.height;
-            while self.accept(",").is_some() {
-                if self.at(")") {
-                    break;
-                }
+            let mut items = Vec::new();
+            let (mut height, mut comma) = (0, false);
+            while !self.at(")") {
                 items.push(self.setting_value()?);
                 height = height.max(self.height);
+                if self.accept(",").is_none() {
+                    break;
+                }
+                comma = true;
             }
             self.expect(")", None)?;
             self.leave();
-            if items.len() == 1 {
+            if items.len() == 1 && !comma {
                 return Ok(items.remove(0));
             }
             self.tall(height + 1, &t)?;
@@ -1423,6 +1469,9 @@ impl<'a> Parser<'a> {
         let mut height = 0;
         while self.accept(")").is_none() {
             let t = self.tok().clone();
+            if self.peek(1).is(":") {
+                self.not_reserved(0)?;
+            }
             let name = if (t.is("IDENT") || t.is("STRING")) && self.peek(1).is(":") {
                 self.advance();
                 self.advance();

@@ -50,9 +50,20 @@ def label(n):
 
 
 def quote(s):
-    """A string of the text. It has no escape, so a quote or a line break in a name read from
-    elsewhere (a node's label, a socket) would end it early and be read as code: they are replaced."""
-    return '"' + s.replace('"', "'").replace("\r\n", " ").replace("\n", " ").replace("\r", " ") + '"'
+    r"""A string of the text, any string read back as it is: `"` and `\` escaped, the line breaks,
+    the tabs and the other control characters by their escape, `\n` or `\u{1b}`."""
+    return '"' + "".join(ESCAPED.get(c) or (f"\\u{{{ord(c):x}}}" if c < " " or c == "\x7f" else c) for c in s) + '"'
+
+
+ESCAPED = {'"': '\\"', "\\": "\\\\", "\n": "\\n", "\t": "\\t", "\r": "\\r"}
+
+
+def call_name(n):
+    """A call's name: `m::"Big Blend"` when what follows the module is not a chain of identifiers."""
+    module, sep, rest = n.partition("::")
+    if not sep or all(part.isidentifier() and part not in RESERVED for part in rest.split("::")):
+        return n
+    return f"{module}::{quote(rest)}"
 
 
 def graph(g):
@@ -98,7 +109,8 @@ def type_params(g):
 def typed(e):
     """A call's name, with the types it is called with when written: `attribute_or<Vector>`."""
     type_args = getattr(e, "type_args", None)
-    return f"{e.name}<{', '.join(type_args)}>" if type_args else e.name
+    name = call_name(e.name)
+    return f"{name}<{', '.join(type_args)}>" if type_args else name
 
 
 def callee(e):
@@ -300,7 +312,8 @@ def layout(e, lead, pad, tail="", outer=0, origin=0):
         lines = [(origin, lead + "(")]
         for i, item in enumerate(e.items):
             last = i == len(e.items) - 1
-            lines += layout(item, inner, inner, ")" + tail if last else ",", 0, item.line)
+            close = ("," if len(e.items) == 1 else "") + ")" + tail
+            lines += layout(item, inner, inner, close if last else ",", 0, item.line)
         return lines
     if isinstance(e, ast.Member):
         return layout(e.target, lead, pad, f".{label(e.socket)}{tail}", 9, origin)
@@ -425,7 +438,8 @@ def expr(e, outer=0):
     if isinstance(e, ast.Bool):
         return "true" if e.value else "false"
     if isinstance(e, ast.Tuple):
-        return "(" + ", ".join(expr(i) for i in e.items) + ")"
+        # One item takes a comma, else it reads as the item alone: `(LEFT,)`
+        return "(" + ", ".join(expr(i) for i in e.items) + ("," if len(e.items) == 1 else "") + ")"
     if isinstance(e, ast.Ref):
         return e.name
     if isinstance(e, ast.Member):

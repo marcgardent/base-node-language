@@ -3,7 +3,7 @@
 import functools
 import re
 
-RESERVED = {"graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross"}
+RESERVED = {"graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross", "inf", "nan"}
 
 
 @functools.lru_cache(maxsize=4096)  # asked for every key, on each check while typing

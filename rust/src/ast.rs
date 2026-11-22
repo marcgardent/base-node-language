@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const RESERVED: &[&str] = &[
-    "graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross",
+    "graph", "return", "true", "false", "and", "or", "xor", "not", "dot", "cross", "inf", "nan",
 ];
 
 pub fn is_reserved(s: &str) -> bool {
@@ -66,8 +66,38 @@ pub fn label_display(n: &str) -> String {
     }
 }
 
+/// A string of the text, any string read back as it is: `"` and `\` escaped, the line breaks,
+/// the tabs and the other control characters by their escape, `\n` or `\u{1b}`.
 pub fn quote(s: &str) -> String {
-    format!("\"{}\"", s)
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            '\0'..='\x1f' | '\x7f' => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
+            _ => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// A call's name: `m::"Big Blend"` when what follows the module is not a chain of identifiers.
+pub fn call_name(n: &str) -> String {
+    match n.split_once("::") {
+        Some((module, rest))
+            if !rest
+                .split("::")
+                .all(|part| is_identifier(part) && !is_reserved(part)) =>
+        {
+            format!("{}::{}", module, quote(rest))
+        }
+        _ => n.to_string(),
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

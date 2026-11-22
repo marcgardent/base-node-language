@@ -609,7 +609,7 @@ impl<'a> Builder<'a> {
                 number(n.value, n.is_int),
                 Some(if n.is_int { "Int" } else { "Float" }),
             ),
-            Expr::String(s) => Val::Lit(format!("\"{}\"", s.value), Some("String")),
+            Expr::String(s) => Val::Lit(base_node::ast::quote(&s.value), Some("String")),
             Expr::Bool(b) => Val::Lit(b.value.to_string(), Some("Bool")),
             Expr::Tuple(t) => {
                 let items: Vec<Val> = t.items.iter().map(|i| self.expr(i)).collect();
@@ -1099,6 +1099,10 @@ fn arg_names(args: &[Arg]) -> Vec<String> {
 fn number(v: f64, is_int: bool) -> String {
     if is_int {
         format!("{}", v as i64)
+    } else if v.is_nan() {
+        "nan".to_string()
+    } else if v.is_infinite() {
+        format!("{v}")
     } else {
         let s = format!("{v}");
         if s.contains('.') || s.contains('e') {
@@ -1314,6 +1318,23 @@ mod tests {
         assert_eq!(grid.inputs[0].value.as_deref(), Some("2.0"));
         assert_eq!(grid.inputs[1].value.as_deref(), Some("10"));
         assert!(grid.inputs.iter().all(|i| i.link.is_none()));
+    }
+
+    #[test]
+    fn a_literal_is_shown_as_written() {
+        let t = &build(
+            "geometry graph g() -> Geometry {\n  return MeshGrid(size_x: -inf, size_y: nan) |> SetID(id: \"a \\\"b\\\"\\n\")\n}\n",
+        )[0];
+        let values: Vec<_> = t
+            .nodes
+            .iter()
+            .flat_map(|n| n.inputs.iter().filter_map(|i| i.value.as_deref()))
+            .collect();
+        assert!(
+            values.contains(&"-inf") && values.contains(&"nan"),
+            "{values:?}"
+        );
+        assert!(values.contains(&r#""a \"b\"\n""#), "{values:?}");
     }
 
     #[test]

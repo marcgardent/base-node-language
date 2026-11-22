@@ -4,6 +4,9 @@ pub const KEYWORDS: &[&str] = &[
     "graph", "return", "true", "false", "and", "or", "xor", "not",
 ];
 
+/// The numbers written as words: floats no digits write.
+pub const WORD_NUMBERS: &[&str] = &["inf", "nan"];
+
 pub const PUNCT: &[&str] = &[
     "::", "|>", "|", "->", "<=", ">=", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}", ",",
     ":", "..", ".", "=", "+", "-", "*", "/", "⋅", "·", "×", "@", "?",
@@ -25,18 +28,37 @@ pub enum TokenKind {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
     pub kind: TokenKind,
+    /// Of a string, its value: the escapes read.
     pub text: String,
     pub line: usize,
     pub col: usize,
+    /// The characters of the source it takes: a string's quotes and escapes too.
+    pub width: usize,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, text: impl Into<String>, line: usize, col: usize) -> Self {
+    pub fn new(
+        kind: TokenKind,
+        text: impl Into<String>,
+        line: usize,
+        col: usize,
+        width: usize,
+    ) -> Self {
         Self {
             kind,
             text: text.into(),
             line,
             col,
+            width,
+        }
+    }
+
+    /// A word the language keeps, never a name: a keyword, or `inf` and `nan`, which are numbers.
+    pub fn is_reserved(&self) -> bool {
+        match self.kind {
+            TokenKind::Keyword => true,
+            TokenKind::Number => WORD_NUMBERS.contains(&self.text.as_str()),
+            _ => false,
         }
     }
 

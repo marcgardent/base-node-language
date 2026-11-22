@@ -1,0 +1,194 @@
+{
+  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "cases": [
+    {
+      "name": "string_escapes",
+      "about": "Every escape of a string, printed as written: a quote, a backslash, the line breaks, a tab, other control characters",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"say \\\"hi\\\"\\\\ \\n\\t\\r \\u{0}\\u{1b}\\u{7f} é ✓ 😀\"]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"say \\\"hi\\\"\\\\ \\n\\t\\r \\u{0}\\u{1b}\\u{7f} é ✓ 😀\"]()\n  return a\n}\n"
+    },
+    {
+      "name": "string_escapes_canonical",
+      "about": "A string prints in one spelling: \\u{…} of a character that needs none is the character, in lowercase hex with no leading zeros where one is needed; a raw tab is \\t",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u{41}\\u{01F600}\\u{0007}\\u{1B}\tend\"]()\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"A😀\\u{7}\\u{1b}\\tend\"]()\n  return a\n}\n"
+    },
+    {
+      "name": "quoted_names_with_escapes",
+      "about": "A name in quotes takes the escapes too: a graph, an input with its key, a panel, a description, a frame, a look, a socket",
+      "text": "geometry graph \"say \\\"hi\\\"\"(\n    \"tab\\there\" as t: Float,\n    \"a \\\"panel\\\"\" {\n        \"back\\\\slash\" as b: Float\n    }\n) -> Float {\n  \"a line\\nanother\"\n  \"frame \\\"one\\\"\" {\n    x = SeparateXYZ(Position()) @ \"the \\\"x\\\"\"\n  }\n  return x.\"say \\\"x\\\"\" + t + b\n}\n",
+      "formatted": "geometry graph \"say \\\"hi\\\"\"(\n    \"tab\\there\" as t: Float,\n    \"a \\\"panel\\\"\" {\n        \"back\\\\slash\" as b: Float\n    }\n) -> Float {\n  \"a line\\nanother\"\n  \"frame \\\"one\\\"\" {\n    x = SeparateXYZ(Position()) @ \"the \\\"x\\\"\"\n  }\n  return x.\"say \\\"x\\\"\" + t + b\n}\n"
+    },
+    {
+      "name": "use_source_with_escapes",
+      "about": "The file a use names is a string too",
+      "text": "use m from \"a \\\"b\\\".bn\"\n\ngeometry graph g(a: Float) -> Float {\n  x = m::f(a)\n  return a\n}\n",
+      "formatted": "use m from \"a \\\"b\\\".bn\"\n\ngeometry graph g(a: Float) -> Float {\n  x = m::f(a)\n  return a\n}\n"
+    },
+    {
+      "name": "qualified_name_quoted",
+      "about": "A graph of a module whose name is no identifier is called by its name in quotes",
+      "text": "use m\n\ngeometry graph g(a: Float) -> Float {\n  x = m::\"Big Blend\"(a)\n  y = m::\"true\"(a)\n  r = m::\"Big Blend\"(a) -> {\n    return a\n  }\n  return a\n}\n",
+      "formatted": "use m\n\ngeometry graph g(a: Float) -> Float {\n  x = m::\"Big Blend\"(a)\n  y = m::\"true\"(a)\n  r = m::\"Big Blend\"(a) -> {\n    return a\n  }\n  return a\n}\n"
+    },
+    {
+      "name": "qualified_name_chain",
+      "about": "After the module, a chain of identifiers needs no quotes: `m::\"x::y\"` is the name `m::x::y`",
+      "text": "use m\n\ngeometry graph g(a: Float) -> Float {\n  x = m::\"x::y\"(a)\n  y = m::\"f\"(a)\n  return a\n}\n",
+      "formatted": "use m\n\ngeometry graph g(a: Float) -> Float {\n  x = m::x::y(a)\n  y = m::f(a)\n  return a\n}\n"
+    },
+    {
+      "name": "unknown_escape",
+      "about": "An escape the language does not know is refused at its backslash, with the escapes",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"a\\qb\"]()\n  return a\n}\n",
+      "error": "2:24",
+      "message": "unknown escape '\\q': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "escape_u_without_braces",
+      "about": "\\u takes its code in braces",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u41\"]()\n  return a\n}\n",
+      "error": "2:23",
+      "message": "unknown escape '\\u': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "escape_u_empty",
+      "about": "\\u{} has no code",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u{}\"]()\n  return a\n}\n",
+      "error": "2:23",
+      "message": "unknown escape '\\u{}': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "escape_u_too_long",
+      "about": "\\u{…} takes 6 hex digits at most",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u{0000041}\"]()\n  return a\n}\n",
+      "error": "2:23",
+      "message": "unknown escape '\\u{0000041}': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "escape_u_past_unicode",
+      "about": "\\u{…} past 10ffff is no character",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u{110000}\"]()\n  return a\n}\n",
+      "error": "2:23",
+      "message": "unknown escape '\\u{110000}': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "escape_u_surrogate",
+      "about": "\\u{…} of a surrogate is no character",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"\\u{d800}\"]()\n  return a\n}\n",
+      "error": "2:23",
+      "message": "unknown escape '\\u{d800}': a string's escapes are \\\", \\\\, \\n, \\t, \\r and \\u{…}, a character's code in 1 to 6 hex digits"
+    },
+    {
+      "name": "line_break_in_string",
+      "about": "A raw line break inside a string leaves it unclosed: a line break is written \\n",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = String[string: \"one\n  two\"]()\n  return a\n}\n",
+      "error": "2:22",
+      "message": "unclosed string"
+    },
+    {
+      "name": "inf_and_nan",
+      "about": "inf and nan are float literals, -inf the negation of inf: as a value, a default, a range, a setting",
+      "text": "geometry graph g(a: Float = inf, b: Float = -inf in -inf..inf) -> Float {\n  x = a * -inf + nan\n  y = Value[value: -inf]()\n  z = Math[ADD](Value: inf, Value_001: nan)\n  return x + y + z\n}\n",
+      "formatted": "geometry graph g(a: Float = inf, b: Float = -inf in -inf..inf) -> Float {\n  x = a * -inf + nan\n  y = Value[value: -inf]()\n  z = Math[ADD](Value: inf, Value_001: nan)\n  return x + y + z\n}\n"
+    },
+    {
+      "name": "nan_has_no_sign",
+      "about": "A NaN prints nan, whatever its sign",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = -nan\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float) -> Float {\n  x = nan\n  return a\n}\n"
+    },
+    {
+      "name": "words_like_inf",
+      "about": "Only the words themselves are numbers: inf_x, Inf and nan2 are names",
+      "text": "geometry graph g(a: Float) -> Float {\n  inf_x = 1.0\n  Inf = inf_x\n  nan2 = Inf\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float) -> Float {\n  inf_x = 1.0\n  Inf = inf_x\n  nan2 = Inf\n  return a\n}\n"
+    },
+    {
+      "name": "digits_stay_finite",
+      "about": "A float written with digits must be finite: inf is how infinity is written",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = 1e999\n  return a\n}\n",
+      "error": "2:7",
+      "message": "number too large"
+    },
+    {
+      "name": "inf_bound",
+      "about": "inf is a reserved word: no name binds it",
+      "text": "geometry graph g(a: Float) -> Float {\n  inf = 1.0\n  return a\n}\n",
+      "error": "2:3",
+      "message": "'inf' is a reserved word: choose another name"
+    },
+    {
+      "name": "true_bound",
+      "about": "Nor does a name bind a keyword",
+      "text": "geometry graph g(a: Float) -> Float {\n  true = 1.0\n  return a\n}\n",
+      "error": "2:3",
+      "message": "'true' is a reserved word: choose another name"
+    },
+    {
+      "name": "nan_input",
+      "about": "A graph's input is no reserved word",
+      "text": "geometry graph g(nan: Float) -> Float {\n  return a\n}\n",
+      "error": "1:18",
+      "message": "'nan' is a reserved word: choose another name"
+    },
+    {
+      "name": "inf_graph",
+      "about": "Nor a graph's name",
+      "text": "geometry graph inf(a: Float) -> Float {\n  return a\n}\n",
+      "error": "1:16",
+      "message": "'inf' is a reserved word: choose another name"
+    },
+    {
+      "name": "inf_key",
+      "about": "Nor the key an input takes with as",
+      "text": "geometry graph g(\"Inf\" as inf: Float) -> Float {\n  return a\n}\n",
+      "error": "1:27",
+      "message": "'inf' is a reserved word: choose another name"
+    },
+    {
+      "name": "inf_item",
+      "about": "Nor an item",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = F(inf: 1.0)\n  return a\n}\n",
+      "error": "2:9",
+      "message": "'inf' is a reserved word: choose another name"
+    },
+    {
+      "name": "nan_type_parameter",
+      "about": "Nor a template's type",
+      "text": "geometry graph g<nan: Float | Vector>(a: nan) -> nan {\n  return a\n}\n",
+      "error": "1:18",
+      "message": "'nan' is a reserved word: choose another name"
+    },
+    {
+      "name": "reserved_socket_quoted",
+      "about": "A socket named like a reserved word is written in quotes",
+      "text": "geometry graph g(a: Float) -> Float {\n  x = Thing().\"inf\"\n  y = Thing(\"nan\": 1.0)\n  return a\n}\n",
+      "formatted": "geometry graph g(a: Float) -> Float {\n  x = Thing().\"inf\"\n  y = Thing(\"nan\": 1.0)\n  return a\n}\n"
+    },
+    {
+      "name": "flag_set_one",
+      "about": "A set of enum values, Blender's flag enums, is a tuple: one value takes a trailing comma",
+      "text": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT,)]()\n}\n",
+      "formatted": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT,)]()\n}\n"
+    },
+    {
+      "name": "flag_set_empty",
+      "about": "The empty set is ()",
+      "text": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: ()]()\n}\n",
+      "formatted": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: ()]()\n}\n"
+    },
+    {
+      "name": "flag_set_two",
+      "about": "Several values, as any tuple",
+      "text": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT, RIGHT)]()\n}\n",
+      "formatted": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT, RIGHT)]()\n}\n"
+    },
+    {
+      "name": "flag_set_parentheses",
+      "about": "Without a comma, parentheses hold the value alone",
+      "text": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: (LEFT), handle_type: ((VECTOR))]()\n}\n",
+      "formatted": "geometry graph g() -> Bool {\n  return HandleTypeSelection[mode: LEFT, handle_type: VECTOR]()\n}\n"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import math
 from . import ast
 from .errors import BnError, Diagnostic
 from .header import edition_error
-from .lexer import tokenize
+from .lexer import WORD_NUMBERS, tokenize
 
 # How the comparisons are spelled, and the products of two vectors: AZERTY has neither sign of
 # these, `dot` and `cross` are written in their place (the editor swaps them as you type), `·` too
@@ -88,7 +88,15 @@ class Parser:
     def expect(self, kind, text=None, what=None):
         if self.at(kind, text):
             return self.advance()
+        if kind == "IDENT":
+            self.not_reserved()
         self.fail(f"expected {what or text or kind}, found {describe(self.tok)}")
+
+    def not_reserved(self, tok=None):
+        """Refuses a reserved word where a name is written: `inf = 1.0`, `f(true: x)`."""
+        tok = tok or self.tok
+        if reserved(tok):
+            self.fail(f"'{tok.text}' is a reserved word: choose another name", tok)
 
     def fail(self, message, tok=None):
         tok = tok or self.tok
@@ -241,6 +249,8 @@ class Parser:
                 continue
             name = self.accept("STRING") or self.expect("IDENT", what="name")
             alias = None
+            if self.at("IDENT", "as"):
+                self.not_reserved(self.peek())
             if self.at("IDENT", "as") and self.peek().kind == "IDENT":
                 if not header:
                     self.fail("'as' can only be used in the header of a named graph")
@@ -290,6 +300,8 @@ class Parser:
                 fields = self.args(named_only=True)
                 return ast.Return(ast.Record(fields, t.line, t.col), t.line, t.col, self.look())
             return ast.Return(self.expr(), t.line, t.col, self.look())
+        if self.peek().kind == "=":
+            self.not_reserved()
         if self.at("IDENT") and self.peek().kind == "=":
             if t.text in WORDS:
                 self.fail(f"'{t.text}' is reserved for {'dot' if t.text == 'dot' else 'cross'} product: "
@@ -545,6 +557,8 @@ class Parser:
         t = self.tok
         self.height = 1
         if self.accept("NUMBER"):
+            if t.text in WORD_NUMBERS:
+                return ast.Number(float(t.text), False, t.line, t.col)
             is_int = not any(c in t.text for c in ".eE")
             # Digits are counted first: Python refuses to read an integer of thousands of them
             if is_int and (len(t.text) > 19 or int(t.text) > MAX_INT) or not is_int and math.isinf(float(t.text)):
@@ -611,6 +625,8 @@ class Parser:
         while not self.accept(")"):
             t = self.tok
             self.height = 0
+            if self.peek().kind == ":" or t.kind in ("IDENT", "STRING") and self.peek().text == "as":
+                self.not_reserved(self.peek(2) if self.peek().text == "as" else t)
             if t.kind in ("IDENT", "STRING") and self.peek().text == "as" and self.peek().kind == "IDENT" \
                     and self.peek(2).kind == "IDENT" and self.peek(3).kind in (":", "("):
                 # `Selection as captured: m`, an item under a key of its own
@@ -661,6 +677,8 @@ class Parser:
         out, height = [], 0
         while not self.accept("]"):
             t = self.tok
+            if self.peek().kind == ":":
+                self.not_reserved()
             if t.kind == "IDENT" and self.peek().kind == ":":
                 self.advance()
                 self.advance()
@@ -700,16 +718,18 @@ class Parser:
                           "give it in the parentheses, Name[SETTING](input: value)", t)
             return ast.Ref(t.text, t.line, t.col)
         if self.accept("("):
+            # A set of enum values is a tuple too: `(LEFT, RIGHT)`, `(LEFT,)`, `()`
             self.enter()
-            items, height = [self.setting_value()], self.height
-            while self.accept(","):
-                if self.at(")"):
-                    break
+            items, height, comma = [], 0, False
+            while not self.at(")"):
                 items.append(self.setting_value())
                 height = max(height, self.height)
+                if not self.accept(","):
+                    break
+                comma = True
             self.expect(")")
             self.leave()
-            if len(items) == 1:
+            if len(items) == 1 and not comma:
                 return items[0]
             self.tall(height + 1, t)
             return ast.Tuple(items, t.line, t.col)
@@ -723,6 +743,8 @@ class Parser:
         while not self.accept(")"):
             t = self.tok
             name = None
+            if self.peek().kind == ":":
+                self.not_reserved()
             if t.kind in ("IDENT", "STRING") and self.peek().kind == ":":
                 name = t.text
                 self.advance()
@@ -771,6 +793,11 @@ class Parser:
 
 
 CLOSES = {")": "(", "]": "["}  # what each closing bracket closes
+
+
+def reserved(tok):
+    """A word the language keeps, never a name: a keyword, or `inf` and `nan`, which are numbers."""
+    return tok.kind == "KEYWORD" or tok.kind == "NUMBER" and tok.text in WORD_NUMBERS
 
 
 def describe(tok):

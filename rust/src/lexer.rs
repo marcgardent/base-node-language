@@ -1,5 +1,8 @@
 use crate::errors::BnError;
-use crate::tokens::{Token, TokenKind, KEYWORDS, PUNCT};
+use crate::tokens::{Token, TokenKind, KEYWORDS, PUNCT, WORD_NUMBERS};
+
+/// What the error of an unknown escape lists.
+const ESCAPES_TOLD: &str = r#"a string's escapes are \", \\, \n, \t, \r and \u{…}, a character's code in 1 to 6 hex digits"#;
 
 pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>, BnError> {
     let chars: Vec<char> = source.chars().collect();
@@ -42,7 +45,7 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
             }
             if !strict {
                 let text: String = chars[start..i].iter().collect();
-                tokens.push(Token::new(TokenKind::Comment, text, line, col));
+                tokens.push(Token::new(TokenKind::Comment, text, line, col, i - start));
                 col += i - start;
             }
             continue;
@@ -57,6 +60,8 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
             let s: String = chars[start..i].iter().collect();
             let k = if KEYWORDS.contains(&s.as_str()) {
                 TokenKind::Keyword
+            } else if WORD_NUMBERS.contains(&s.as_str()) {
+                TokenKind::Number
             } else {
                 TokenKind::Ident
             };
@@ -95,19 +100,38 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
             kind = TokenKind::Color;
         } else if c == '"' {
             i += 1;
+            let mut value = String::new();
             while i < n && chars[i] != '"' && chars[i] != '\n' {
-                i += 1;
+                if chars[i] == '\\' && i + 1 < n && chars[i + 1] != '\n' {
+                    let (read, end) = escape(&chars, i);
+                    match read {
+                        Some(c) => value.push(c),
+                        None if strict => {
+                            let written: String = chars[i..end].iter().collect();
+                            return Err(BnError::new(
+                                filename,
+                                line,
+                                col + i - start,
+                                format!("unknown escape '{written}': {ESCAPES_TOLD}"),
+                            ));
+                        }
+                        None => value.extend(&chars[i..end]),
+                    }
+                    i = end;
+                } else {
+                    value.push(chars[i]);
+                    i += 1;
+                }
             }
             if i < n && chars[i] == '"' {
                 i += 1;
-                text = chars[start + 1..i - 1].iter().collect();
                 kind = TokenKind::String;
             } else if strict {
                 return Err(BnError::new(filename, line, col, "unclosed string"));
             } else {
-                text = chars[start + 1..i].iter().collect();
                 kind = TokenKind::OpenString;
             }
+            text = value;
         } else {
             let mut matched_p = None;
             for &p in PUNCT {
@@ -135,10 +159,41 @@ pub fn tokenize(source: &str, filename: &str, strict: bool) -> Result<Vec<Token>
             }
         }
 
-        tokens.push(Token::new(kind, text, line, col));
+        tokens.push(Token::new(kind, text, line, col, i - start));
         col += i - start;
     }
 
-    tokens.push(Token::new(TokenKind::Eof, "", line, col));
+    tokens.push(Token::new(TokenKind::Eof, "", line, col, 0));
     Ok(tokens)
+}
+
+/// The escape at `chars[i]`, a `\`: (the character it stands for, or None when it is none the
+/// language knows, the index after it). An unknown one ends after its letter, or after the hex
+/// digits and the `}` of a `\u{…}`.
+fn escape(chars: &[char], i: usize) -> (Option<char>, usize) {
+    match chars[i + 1] {
+        '"' => return (Some('"'), i + 2),
+        '\\' => return (Some('\\'), i + 2),
+        'n' => return (Some('\n'), i + 2),
+        't' => return (Some('\t'), i + 2),
+        'r' => return (Some('\r'), i + 2),
+        'u' if chars.get(i + 2) == Some(&'{') => {}
+        _ => return (None, i + 2),
+    }
+    let mut j = i + 3;
+    while j < chars.len() && chars[j].is_ascii_hexdigit() {
+        j += 1;
+    }
+    if chars.get(j) != Some(&'}') {
+        return (None, j);
+    }
+    let digits: String = chars[i + 3..j].iter().collect();
+    let code = if (1..=6).contains(&digits.len()) {
+        u32::from_str_radix(&digits, 16)
+            .ok()
+            .and_then(char::from_u32)
+    } else {
+        None
+    };
+    (code, j + 1)
 }

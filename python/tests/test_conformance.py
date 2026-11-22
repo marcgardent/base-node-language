@@ -82,6 +82,9 @@ CHEVRON_CASES = json.loads((CONFORMANCE_DIR / "chevron-cases.json").read_text(en
 BRACKET_CASES = json.loads((CONFORMANCE_DIR / "bracket-cases.json").read_text(encoding="utf-8"))["cases"]
 
 
+EXACT_CASES = json.loads((CONFORMANCE_DIR / "exact-cases.json").read_text(encoding="utf-8"))["cases"]
+
+
 @pytest.mark.parametrize("case", CHEVRON_CASES, ids=lambda c: c["name"])
 def test_chevrons_read_as_rust_reads_them(case):
     """`name < … > (`: a call with types, or comparisons where name holds a value (rust/tests/conformance.rs)."""
@@ -94,12 +97,19 @@ def test_settings_in_brackets_read_as_rust_reads_them(case):
     read_as_written(case)
 
 
+@pytest.mark.parametrize("case", EXACT_CASES, ids=lambda c: c["name"])
+def test_exact_values_read_as_rust_reads_them(case):
+    """Strings with escapes, inf and nan, sets of enum values: read and printed back as rust/tests/conformance.rs does."""
+    read_as_written(case)
+
+
 def read_as_written(case):
-    """A case of conformance/: it prints back as `formatted`, or is refused at `error`."""
+    """A case of conformance/: it prints back as `formatted`, or is refused at `error` with `message`."""
     if "error" in case:
         with pytest.raises(BnError) as err:
             parse(case["text"], "case.bn")
         d = err.value.diagnostics[0]
         assert f"{d.line}:{d.col}" == case["error"]
+        assert d.message == case.get("message", d.message)
     else:
         assert format_source(case["text"]) == case["formatted"]
