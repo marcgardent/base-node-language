@@ -19,15 +19,15 @@
   },
   ".uSDF_Segment": {
    "status": "ok",
-   "text": "0e73a6ce68d961b9"
+   "text": "591174f552e4995d"
   },
   "PT_ARB_BachchaTajTomb": {
    "status": "ok",
-   "text": "02f819571e465e1e"
+   "text": "d27de4aa6240af1c"
   },
   "PT_ARB_CircularMaze(103)": {
    "status": "ok",
-   "text": "ea10afc9ba5533f2"
+   "text": "74a14771f6aa93ea"
   },
   "PT_ARB_Constellation(44)": {
    "status": "ok",
@@ -47,7 +47,7 @@
   },
   "PT_ARB_Cosmos(96)": {
    "status": "ok",
-   "text": "0cc521086a9eed7a"
+   "text": "ef875328dc54788c"
   },
   "PT_ARB_CrossHatch(59)": {
    "status": "ok",
@@ -55,27 +55,27 @@
   },
   "PT_ARB_EightStars(48)": {
    "status": "ok",
-   "text": "4afb7235927eaa29"
+   "text": "bcf62db39b09ecd2"
   },
   "PT_ARB_Hive": {
    "status": "ok",
-   "text": "c94d2907c2ae3d88"
+   "text": "9c1c91f2307c6867"
   },
   "PT_ARB_HookedHexagons(7)": {
    "status": "ok",
-   "text": "e79665cc42173508"
+   "text": "775a922fce9c87d4"
   },
   "PT_ARB_HookedStars(9)": {
    "status": "ok",
-   "text": "5db84ee2669d3b5f"
+   "text": "3af840bd33921c9b"
   },
   "PT_ARB_HookedVs(10)": {
    "status": "ok",
-   "text": "fa6a9f0de7c29eb1"
+   "text": "f930dc0183c7f446"
   },
   "PT_ARB_MiniSuns": {
    "status": "ok",
-   "text": "bdda45808c989c94",
+   "text": "d09f9bd887ca97d8",
    "warnings": [
     "frame 'Frame' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.001' is split: its nodes depend on nodes of another frame that depend on them",
@@ -86,11 +86,11 @@
   },
   "PT_ARB_MultiAngleHive": {
    "status": "ok",
-   "text": "3efd1dfce9cf96cb"
+   "text": "b1a205890adca1e6"
   },
   "PT_ARB_PentaHexa(35)": {
    "status": "ok",
-   "text": "efc265cb3cde01dc"
+   "text": "39b973c0f89173a2"
   },
   "PT_ARB_PointingStars(45)": {
    "status": "ok",
@@ -98,7 +98,7 @@
   },
   "PT_ARB_ScatteredSuns": {
    "status": "ok",
-   "text": "f5f57065b08f14e6"
+   "text": "00d547120baad25b"
   },
   "PT_ARB_ShipWheel(46)": {
    "status": "ok",
@@ -106,46 +106,46 @@
   },
   "PT_ARB_StarSquare(13)": {
    "status": "ok",
-   "text": "1215b71b4557ca0c"
+   "text": "87db8ad89286d43b"
   },
   "PT_ARB_ThreeSpikes(20)": {
    "status": "ok",
-   "text": "83a206c743a7bfe1"
+   "text": "b3d4749a3a22ae81"
   },
   "PT_ARB_TiedStars(8)": {
    "status": "ok",
-   "text": "8cca5099c1d1b5ff"
+   "text": "f2d1a9f07bab4feb"
   },
   "PT_ARB_Web(21)": {
    "status": "ok",
-   "text": "cbb2ed69e2c11f00"
+   "text": "0d9f847c4cf8db4c"
   },
   "PT_ARB_Web(28)": {
    "status": "ok",
-   "text": "6d672cdfe54d786c"
+   "text": "0650a77137108932"
   },
   "PT_ARB_Web(41)": {
    "status": "ok",
-   "text": "7878bbf2dfb73224"
+   "text": "e0476011c5529734"
   },
   "PT_BasicBrick": {
    "status": "ok",
-   "text": "106047ff1bba3abb"
+   "text": "f2bcb9f3c078a582"
   },
   "PT_BoxStar": {
    "status": "ok",
-   "text": "c5571a7e6ff90efb"
+   "text": "ed5a3332662d5d80"
   },
   "PT_CircleCoin": {
    "status": "ok",
-   "text": "a72e5919f8384264",
+   "text": "c994e340c394a05f",
    "warnings": [
     "appearance of Group Input not exported: collapsed"
    ]
   },
   "PT_ConvergingLeafs": {
    "status": "ok",
-   "text": "214ae5698b4a5fe5",
+   "text": "79d52ba025de01ca",
    "warnings": [
     "frame 'Frame.005' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.006' is split: its nodes depend on nodes of another frame that depend on them",
@@ -154,15 +154,15 @@
   },
   "PT_Diamond": {
    "status": "ok",
-   "text": "56f5be59dfb5cf1f"
+   "text": "8246f6a0d141f81a"
   },
   "PT_DoubleQuad": {
    "status": "ok",
-   "text": "a868f0095150efdd"
+   "text": "91b3942b3cc4e5e0"
   },
   "PT_DoubleSquareTile": {
    "status": "ok",
-   "text": "0031d54f15da6d3d",
+   "text": "617d009eb637273e",
    "warnings": [
     "frame 'Frame.014' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.016' is split: its nodes depend on nodes of another frame that depend on them"
@@ -174,23 +174,23 @@
   },
   "PT_HVBoards": {
    "status": "ok",
-   "text": "efee73b175bca4b4"
+   "text": "4cc7a8a33c227672"
   },
   "PT_HexBoards": {
    "status": "ok",
-   "text": "0662860eeb92737f"
+   "text": "e913444937e19fc1"
   },
   "PT_HexBricks": {
    "status": "ok",
-   "text": "7173082bf1d57aeb"
+   "text": "e0db096dc47273bd"
   },
   "PT_HexLens": {
    "status": "ok",
-   "text": "8bb13a2b83f4d5c7"
+   "text": "7e54c04d081f4f5e"
   },
   "PT_HexParallelogram": {
    "status": "ok",
-   "text": "39dfc29a9f83440e"
+   "text": "c73591ee1fb33d8d"
   },
   "PT_HexTile": {
    "status": "ok",
@@ -198,11 +198,11 @@
   },
   "PT_LampLikeTile": {
    "status": "ok",
-   "text": "32bfa059a4f5bb34"
+   "text": "4dea75af787c82fc"
   },
   "PT_Penrose": {
    "status": "ok",
-   "text": "18fac6bcc892e66b",
+   "text": "6ca41a1af380ccc7",
    "warnings": [
     "frame 'Frame.020' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.023' is split: its nodes depend on nodes of another frame that depend on them"
@@ -210,7 +210,7 @@
   },
   "PT_PolyDiamond": {
    "status": "ok",
-   "text": "faf2d24376fd8e52",
+   "text": "be695aa0938fb8cd",
    "warnings": [
     "appearance of Group Input not exported: collapsed",
     "frame 'Frame' is split: its nodes depend on nodes of another frame that depend on them",
@@ -221,30 +221,30 @@
   },
   "PT_QuadBoard": {
    "status": "ok",
-   "text": "bab971c18e117f63"
+   "text": "ee5485d8b64a4b9c"
   },
   "PT_QuadFlower": {
    "status": "ok",
-   "text": "35d09f214462271d",
+   "text": "32f62d8b9fbca468",
    "warnings": [
     "frame 'Frame.005' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   },
   "PT_RectV": {
    "status": "ok",
-   "text": "8e8928635d169a7d"
+   "text": "95d3ac25879f5531"
   },
   "PT_RoseBoards": {
    "status": "ok",
-   "text": "8cce590fbe49fb75"
+   "text": "2c66334b9a09d508"
   },
   "PT_RotatedScales": {
    "status": "ok",
-   "text": "23c7ef618319f49c"
+   "text": "8051e9671fd31474"
   },
   "PT_Scales": {
    "status": "ok",
-   "text": "a5c2f0b28ebb28d3"
+   "text": "fcf7d0637fa1d673"
   },
   "PT_SquareAndRhombus": {
    "status": "ok",
@@ -252,19 +252,19 @@
   },
   "PT_SquareDiamond": {
    "status": "ok",
-   "text": "787f2c61474c24c8"
+   "text": "3c1a3f760fa292a2"
   },
   "PT_SquareNet": {
    "status": "ok",
-   "text": "d0aaf13648a8ccbd"
+   "text": "0c30317c271169d3"
   },
   "PT_SquaryDiamondBoard": {
    "status": "ok",
-   "text": "67be2dfee7c633d9"
+   "text": "c7c3d8ee781bc8f7"
   },
   "PT_SquaryFan": {
    "status": "ok",
-   "text": "aea3b66d13dc31b0"
+   "text": "4f60dfa61fab43d7"
   },
   "PT_SquaryFlower": {
    "status": "ok",
@@ -272,7 +272,7 @@
   },
   "PT_SquaryMedal": {
    "status": "ok",
-   "text": "62e04bd2c3bbf96c"
+   "text": "600b8d2a4f6315d1"
   },
   "PT_SquaryOctstar": {
    "status": "ok",
@@ -280,43 +280,43 @@
   },
   "PT_StarInOctagon": {
    "status": "ok",
-   "text": "9daab08e4b74dc8f"
+   "text": "8b0cdb21216c185d"
   },
   "PT_TCH_45Maze": {
    "status": "ok",
-   "text": "52f3a256a866ae61"
+   "text": "8cf33c3a5703d32d"
   },
   "PT_TCH_CyberChip": {
    "status": "ok",
-   "text": "1cf79e29cbecad52"
+   "text": "e905221b8ba7ea0d"
   },
   "PT_TCH_FullWire": {
    "status": "ok",
-   "text": "62913b213e87e12b"
+   "text": "b6b0acccc87b36bb"
   },
   "PT_TCH_HexTruchet": {
    "status": "ok",
-   "text": "c5593d17779f05f8"
+   "text": "199fa37bd96c9dd7"
   },
   "PT_TCH_QuarterDisk": {
    "status": "ok",
-   "text": "932efe19e1d07f94"
+   "text": "7f60efa0aa3beeb6"
   },
   "PT_TriangleTile": {
    "status": "ok",
-   "text": "7b140377a3647bea"
+   "text": "47d7a66e6dbc68f6"
   },
   "PT_VTile": {
    "status": "ok",
-   "text": "35ab8ef8bb6229df"
+   "text": "f78a4f7f87055bca"
   },
   "PT_WireHexOverlap": {
    "status": "ok",
-   "text": "c188f3cb859ea31a"
+   "text": "e790882d4a0885ff"
   },
   "SDF_Arc": {
    "status": "ok",
-   "text": "51896bb2b5b87743"
+   "text": "350560147fdb7ee3"
   },
   "SDF_Circle": {
    "status": "ok",
@@ -324,7 +324,7 @@
   },
   "SDF_Ellipse": {
    "status": "ok",
-   "text": "789ed844495852c7"
+   "text": "12a56adedc0bc59b"
   },
   "SDF_Exclude": {
    "status": "ok",
@@ -340,7 +340,7 @@
   },
   "SDF_NStar": {
    "status": "ok",
-   "text": "92ca6918fe97f0e2"
+   "text": "a22e8a0d5d94b471"
   },
   "SDF_Pie": {
    "status": "ok",
@@ -352,7 +352,7 @@
   },
   "SDF_Segment": {
    "status": "ok",
-   "text": "a65c4b61383fce40"
+   "text": "9adef68598fb8e28"
   },
   "SDF_Subtract": {
    "status": "ok",
@@ -376,7 +376,7 @@
   },
   "WPG_10(p4)": {
    "status": "ok",
-   "text": "ab4e86f7b54296ec"
+   "text": "e21e7de00579dbf4"
   },
   "WPG_11(p4m)": {
    "status": "ok",
@@ -384,47 +384,47 @@
   },
   "WPG_12(p4g)": {
    "status": "ok",
-   "text": "1fe2990bfd38a6b5"
+   "text": "2a763b767aeb87a7"
   },
   "WPG_13(p3)": {
    "status": "ok",
-   "text": "9dcd07151c0ce189"
+   "text": "b6c6eca32a0ede54"
   },
   "WPG_14(p3ml)": {
    "status": "ok",
-   "text": "d992fef7500c9af7"
+   "text": "eb1b6952adda5cba"
   },
   "WPG_15(p3lm)": {
    "status": "ok",
-   "text": "49a4605d55992138"
+   "text": "2e5c86fa05f812b1"
   },
   "WPG_16(p6)": {
    "status": "ok",
-   "text": "b125e4f7cff7c543"
+   "text": "dc08fe07dfb5e2c4"
   },
   "WPG_17(p6m)": {
    "status": "ok",
-   "text": "fcf6a7bff4a990b0"
+   "text": "a04b71b02109d3d3"
   },
   "WPG_2(p2)": {
    "status": "ok",
-   "text": "129103b7d8bb9b2e"
+   "text": "bcafadb0d6b65e5a"
   },
   "WPG_3(pm)": {
    "status": "ok",
-   "text": "3385818b445b691a"
+   "text": "e8c66151d13cc1ce"
   },
   "WPG_4(pg)": {
    "status": "ok",
-   "text": "1469d1d9a30ccb6a"
+   "text": "6112713d18d37aea"
   },
   "WPG_5(pmm)": {
    "status": "ok",
-   "text": "eca66f7aaaeb0c23"
+   "text": "76bb0f01fc6ca7b7"
   },
   "WPG_6(pmg)": {
    "status": "ok",
-   "text": "8e24ef5fa9dcb726"
+   "text": "f1a8255f8ffcccf0"
   },
   "WPG_7(pgg)": {
    "status": "ok",
@@ -440,11 +440,11 @@
   },
   "uPT_CorssMirror": {
    "status": "ok",
-   "text": "df3d2b085e760a6f"
+   "text": "0236933f0151c18d"
   },
   "uPT_CrossRotation": {
    "status": "ok",
-   "text": "ef867ff46c18d1d2"
+   "text": "b957d956018551f2"
   },
   "uPT_RatioBox": {
    "status": "ok",
@@ -456,7 +456,7 @@
   },
   "uPT_SquareMirror": {
    "status": "ok",
-   "text": "1e014040ed9081dd"
+   "text": "8ec6a73f62e7cfbb"
   },
   "material:Material": {
    "status": "ok",

@@ -7,27 +7,27 @@
  "groups": {
   "i32 2f": {
    "status": "ok",
-   "text": "dfc24632cdbed852"
+   "text": "d0dcc602651e8f61"
   },
   "i32 4f": {
    "status": "ok",
-   "text": "825c9c7fc010a472"
+   "text": "1ba34bd1e0570d70"
   },
   "i32 4p": {
    "status": "ok",
-   "text": "d04d6bdac62e35a4"
+   "text": "7ad01c3c8bacf2eb"
   },
   "i32 cMc": {
    "status": "ok",
-   "text": "632441c218cdbf0f"
+   "text": "74b449b0fb907ba1"
   },
   "i32 dAddSub": {
    "status": "ok",
-   "text": "fba083f54e68e4b9"
+   "text": "d44d46d8d355af7a"
   },
   "i32 dMulPow2": {
    "status": "ok",
-   "text": "e16ec1894d91a00b"
+   "text": "d97b10abcc3578b9"
   },
   "i32 mBeB": {
    "status": "ok",
@@ -35,11 +35,11 @@
   },
   "i32 mBits": {
    "status": "ok",
-   "text": "c758096fbf80a578"
+   "text": "ae7c97475283612f"
   },
   "i32 the Mandelbrot Set": {
    "status": "ok",
-   "text": "812c9dde0048101d"
+   "text": "a0ec3bfae4aa5adf"
   }
  }
 }

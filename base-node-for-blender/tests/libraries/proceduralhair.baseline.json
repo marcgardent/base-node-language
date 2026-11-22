@@ -7,125 +7,125 @@
  "groups": {
   ".shape_range": {
    "status": "ok",
-   "text": "56439bd16db7a789"
+   "text": "000038f58ee76492"
   },
   "Attach Hair Curves to Surface": {
    "status": "ok",
-   "text": "8f6914810bb76da6"
+   "text": "f558087eaa7cabdf"
   },
   "Attachment Info": {
    "status": "ok",
-   "text": "95904c9a7d85b542"
+   "text": "91bcc37f81c261df"
   },
   "Blend Hair Curves": {
    "status": "ok",
-   "text": "664475bbe1e1b040"
+   "text": "6232e57d9cd8f885"
   },
   "Braid Hair Curves": {
    "status": "ok",
-   "text": "17e40d95f7803f7e"
+   "text": "3df52b44d1a9a346"
   },
   "Clump Hair Curves": {
    "status": "ok",
-   "text": "316056a72dfada8c"
+   "text": "37207e0fcdfd85bf"
   },
   "Create Guide Index Map": {
    "status": "ok",
-   "text": "28005e95d598d8fd"
+   "text": "83e05fc08b9d2f9c"
   },
   "Curl Hair Curves": {
    "status": "ok",
-   "text": "318ad40ec5ebfbec"
+   "text": "8218463a2c034575"
   },
   "Curve Info": {
    "status": "ok",
-   "text": "6ee45ae98057bff6"
+   "text": "c8aa669c97b2fb6e"
   },
   "Curve Root": {
    "status": "ok",
-   "text": "2f6b104dcafe93df"
+   "text": "3b9adbdcf8653dfc"
   },
   "Curve Segment": {
    "status": "ok",
-   "text": "0aad77a038e2171d"
+   "text": "751ac3f0d0001412"
   },
   "Curve Tip": {
    "status": "ok",
-   "text": "c57cf40f298d3d4d"
+   "text": "aad68bfddab28c69"
   },
   "Displace Hair Curves": {
    "status": "ok",
-   "text": "7c02f270c17a8764"
+   "text": "6dc8544a9dc33391"
   },
   "Duplicate Hair Curves": {
    "status": "ok",
-   "text": "af0b8667160d6ac5"
+   "text": "c4c005becb862d64"
   },
   "Frizz Hair Curves": {
    "status": "ok",
-   "text": "c6a87223290fce80"
+   "text": "f8e800de2fbc669d"
   },
   "Generate Hair Curves": {
    "status": "ok",
-   "text": "77929ff98c93de8b"
+   "text": "ecd94c9408ef8be9"
   },
   "Get Attachment Surface": {
    "status": "ok",
-   "text": "962ae349364289b6"
+   "text": "9279ff37b6e02ead"
   },
   "Get Hair Surface Geometry": {
    "status": "ok",
-   "text": "6eddad18709a3df6"
+   "text": "d24ce255b47c2f9d"
   },
   "Get Rest Geometry": {
    "status": "ok",
-   "text": "d84728ee53496f4f"
+   "text": "15521a5afac98509"
   },
   "Hair Curves Noise": {
    "status": "ok",
-   "text": "04a640b2a9d2f33a"
+   "text": "f8390095d62ba9e4"
   },
   "Interpolate Hair Curves": {
    "status": "ok",
-   "text": "65201c1196ff7159",
+   "text": "67e6bfbcbf3e753e",
    "warnings": [
     "frame 'Frame.002' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   },
   "Redistribute Curve Points": {
    "status": "ok",
-   "text": "bc8a64c8b79b7ab3"
+   "text": "f9b0cc2103e4f1ef"
   },
   "Rest Surface": {
    "status": "ok",
-   "text": "65c4050394db5adc"
+   "text": "17996de0157f1346"
   },
   "Restore Curve Segment Length": {
    "status": "ok",
-   "text": "c22752c2a5c5187f"
+   "text": "10c7b9c2dcb604c3"
   },
   "Roll Hair Curves": {
    "status": "ok",
-   "text": "144678c797db28fc",
+   "text": "f24d0a89df573dd4",
    "warnings": [
     "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   },
   "Rotate Hair Curves": {
    "status": "ok",
-   "text": "711666956cc533b7"
+   "text": "0db313b127effb8e"
   },
   "Set Attachment Surface": {
    "status": "ok",
-   "text": "291b403a49e1706e"
+   "text": "92da6e1e3ee86aff"
   },
   "Set Hair Curve Profile": {
    "status": "ok",
-   "text": "97461fc35e783bf7"
+   "text": "55698e25e6027a84"
   },
   "Shrinkwrap Hair Curves": {
    "status": "ok",
-   "text": "17baab7902fb9657",
+   "text": "70461af3eca4a8f2",
    "warnings": [
     "frame 'Frame.003' is split: its nodes depend on nodes of another frame that depend on them",
     "frame 'Frame.004' is split: its nodes depend on nodes of another frame that depend on them"
@@ -133,21 +133,21 @@
   },
   "Smooth Hair Curves": {
    "status": "ok",
-   "text": "4ff8b78f332443c0",
+   "text": "ee211be76e7b2d82",
    "warnings": [
     "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   },
   "Straighten Hair Curves": {
    "status": "ok",
-   "text": "4ef25d78569ede6f",
+   "text": "a2ff2e688a1253fa",
    "warnings": [
     "frame 'Optimization' is split: its nodes depend on nodes of another frame that depend on them"
    ]
   },
   "Trim Hair Curves": {
    "status": "ok",
-   "text": "51fdf34a67b45075"
+   "text": "9cc40c1244f659ee"
   }
  }
 }

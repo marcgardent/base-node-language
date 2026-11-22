@@ -7,35 +7,35 @@
  "groups": {
   "Tessera Engine": {
    "status": "ok",
-   "text": "1ec398b4c220f634"
+   "text": "58dfaceeec9fd1d0"
   },
   "Tessera · Bed": {
    "status": "ok",
-   "text": "d50a2d9a2856e1a9"
+   "text": "a79cb47d2ae2bd29"
   },
   "Tessera · Color": {
    "status": "ok",
-   "text": "4695eb1637d474a5"
+   "text": "00fca3cc63dd1757"
   },
   "Tessera · Inset": {
    "status": "ok",
-   "text": "36e7c96219dfbdd1"
+   "text": "9918c445f4d05f11"
   },
   "Tessera · Map": {
    "status": "ok",
-   "text": "298232305fc2cc11"
+   "text": "01c6c38478a43be6"
   },
   "Tessera · Pieces": {
    "status": "ok",
-   "text": "d1779320cceeae9c"
+   "text": "a8720605753fa862"
   },
   "Tessera · Region": {
    "status": "ok",
-   "text": "5b340428e7620070"
+   "text": "d023297ecc7981e6"
   },
   "Tessera · Solidify": {
    "status": "ok",
-   "text": "4fc536153d7d474d"
+   "text": "d33dea8ca91d68fb"
   }
  }
 }

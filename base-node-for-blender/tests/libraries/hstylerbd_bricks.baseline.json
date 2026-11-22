@@ -7,31 +7,31 @@
  "groups": {
   "RBD Assemble": {
    "status": "ok",
-   "text": "8de5c286d9b67e08"
+   "text": "e64062f08fbbb98d"
   },
   "RBD Bricks": {
    "status": "ok",
-   "text": "5181977cc6fa4f4f"
+   "text": "986994c2ec65529f"
   },
   "RBD Bullet Solver": {
    "status": "ok",
-   "text": "decf0b4ac0d2db5a"
+   "text": "8909e1079e1e050c"
   },
   "RBD Configure": {
    "status": "ok",
-   "text": "9265a03fa3e97d25"
+   "text": "d0d6da2170ddb7be"
   },
   "RBD Constraints From Rules": {
    "status": "ok",
-   "text": "ac3e1d450d17cd76"
+   "text": "7906ee4e59b503be"
   },
   "RBD Playback": {
    "status": "ok",
-   "text": "b268aa7aa20c96e7"
+   "text": "deb9015674ef599f"
   },
   "RBD Select": {
    "status": "ok",
-   "text": "7b361605a63b33f8"
+   "text": "931a48c6e4f8fd64"
   }
  }
 }
