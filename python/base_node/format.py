@@ -5,16 +5,22 @@ from .lexer import tokenize
 from .parser import parse, too_deep
 
 
-def format_source(source, filename="<text>"):
-    """The canonical text of `source`. Raises BnError when it does not parse."""
+def format_source(source, filename="<text>", edit=None):
+    """The canonical text of `source`. Raises BnError when it does not parse.
+
+    `edit(file)`, when given, changes the parsed ast.File in place before it is printed: a tool that
+    knows more than the syntax (the names of a node's inputs) writes through the formatter, which
+    keeps the comments and the blank lines."""
     try:
-        return _format(source, filename)
+        return _format(source, filename, edit)
     except RecursionError:
         raise too_deep(filename) from None
 
 
-def _format(source, filename):
+def _format(source, filename, edit=None):
     file = parse(source, filename)
+    if edit is not None:
+        edit(file)
     rows = source.split("\n")
 
     comments = [c for c in tokenize(source, filename, strict=False) if c.kind == "COMMENT"]
