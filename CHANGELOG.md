@@ -18,6 +18,17 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   (`MeshBoolean[DIFFERENCE](a, b, c)`), and the fixed inputs of Separate Bundle, Evaluate Closure and
   Closure to List. A pipe into a node gives the input that goes first unnamed. Graphs, groups and
   functions take their values by position or by name.
+- Changed, a text needs an edit: a string has escapes, `\"`, `\\`, `\n`, `\t`, `\r` and `\u{…}`, and any
+  string reads back as it was; a backslash in a string starts one (`"C:\\Users"`), an unknown one is an
+  error (`unknown escape '\q': …`). Tree → Text no longer turns a `"` into `'` nor a line break into a
+  space, in a string, a name, a description, a label or a frame's title.
+- Changed, a text needs an edit: `inf` and `nan` are numbers, infinity and not a number (`-inf`), and
+  reserved words: a name `inf` or `nan` is refused (`'inf' is a reserved word: choose another name`).
+- Added: a setting that holds a set of enum values takes a tuple of them, `SetHandleType[mode: (LEFT,)]`,
+  `mode: ()` for none; a one-item tuple takes a comma. Tree → Text writes them, which it left out.
+- Fixed: a module's graph whose name is no identifier is printed quoted, `m::"Big Blend"(a)`.
+- Changed: a graph that leaves its return out has no Group Output node; with outputs, the checker warns
+  (`no return in 'g': …`). A field of the return may be a literal, the value of an output nothing feeds.
 
 ### Blender add-on
 
@@ -29,6 +40,20 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   Inputs* (the text's context menu, and the button beside such an error in the sidebar) those of the
   call under the cursor, the rest of the text as it is. In a node's parentheses the suggestions are
   its inputs, `name: `, and the values only where one may go by position.
+- Fixed: Tree → Text writes a value unless it is, bit for bit, the one it leaves out: a float within
+  1e-6 of a default was dropped (`0.79999995` read back `0.8`, `5e-07` read back `0.0`), `-0.0` became
+  `0.0`, a bound of ±3.40282e38 became the largest float, a ramp or a curve within 1e-5 of a new node's
+  was left out. A value past the largest float32 is infinity, no longer an export error.
+- Fixed: a flag-set setting (`mode` of Handle Type Selection and Set Handle Type) is written and built:
+  `{LEFT}` read back `{LEFT, RIGHT}`.
+- Fixed: the value of a Group Output's input nothing feeds is written when a new output holds another
+  (Material Library VX's Ceramic: a colour of alpha 0 read back with alpha 1).
+- Fixed: an unconnected Math of two numbers (`0.5 × -1`) stays a Math, where it was read `-0.5`, a Value
+  node; a second Separate XYZ of one vector stays a call, where `v.x` merged it into the first.
+- Fixed: a tree with no Group Output node reads with no return, and builds without one.
+- Fixed: a group a module built and edited in the file since is written as a graph of the text: the
+  `use` rebuilt it from the module, the edit lost. A `use` is written while the group reads as the
+  module's graph built afresh.
 
 ### Tools
 
@@ -38,6 +63,10 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
   setting makes, alone or with another, and Blender's identifier of a socket where it is not its key:
   `base_node_blender.backend.BackendSchema` reads them, and the checker runs without Blender on every
   text of `corpus/v1`.
+- Added: the library tests compare each tree with the tree built back on Blender's data
+  (`tests/tree_compare.py`) and fail on any difference but those the reference lists in "What the
+  text does not carry". The corpus and the baselines are written again: strings with escapes, the
+  values no longer dropped, the flag sets.
 
 ## [1.0.0-rc.4] - 2026-11-22
 
