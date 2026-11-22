@@ -7,6 +7,8 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+## [1.0.0-rc.5] - 2026-11-22
+
 ### Language
 
 - Changed, a text needs an edit: a node's inputs are given by name, the key of their socket:

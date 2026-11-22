@@ -1,6 +1,6 @@
 // Base Node Standard Library — Module qc
 // @module qc
-// @version 1.0.0-rc.4
+// @version 1.0.0-rc.5
 // @target blender
 // @edition 2026
 // @description Compositor quality control after Nuke: the test patterns of its image generators (SMPTE colour bars at 75 %, colour wheel, ramp, radial, rectangle, grid, checkerboard, constant) and the checks of an image (false colour by stops of luminance, clip check above 1 and below 0, NaN and infinity check, zebra, alpha over a checker, difference as heat)

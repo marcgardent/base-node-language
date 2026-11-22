@@ -1,6 +1,6 @@
 [package]
 name = "base-node-blender"
-version = "1.0.0-rc.4"
+version = "1.0.0-rc.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Base Node (.bn) for Blender: the targets a text is checked against or translated to, the standard library, and what a file offers the add-on (wasm32 compatible)"
