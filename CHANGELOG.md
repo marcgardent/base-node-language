@@ -7,6 +7,13 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Blender add-on
+
+- Fixed: Blender's own font reads as `"Bfont Regular"` whatever the file names it. A library
+  appended in a session that had loaded the font brings its copy as `Bfont Regular.001`, which a
+  String to Curves then wrote as `font: "Bfont Regular.001"`: the text depended on what the
+  session had done before (T3D GN Presets, 2 groups, on the CI).
+
 ## [1.0.0-rc.1] - 2026-11-22
 
 The release candidate of 1.0.0 LTS. A text written for 0.13.1 needs an edit where it writes a zone,

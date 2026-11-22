@@ -258,6 +258,47 @@ geometry graph box() -> Geometry {
     print("   ✓ Named constants kept")
 
 
+def test_builtin_font_by_any_name():
+    """Blender's own font reads as "Bfont Regular" whatever this file names it: a library appended
+    beside a file that already loaded it brings its own copy, "Bfont Regular.001". The text was
+    otherwise not the same in a session that had loaded the font before (T3D GN Presets on the CI)."""
+    print("-> Test: the built-in font reads by one name...")
+    import tempfile
+
+    from base_node.host import build_source, export_tree
+
+    src = '''
+geometry graph label(font: Font = "Bfont Regular") -> Geometry {
+  return StringToCurves(string: "Hi", font: font).curve_instances
+}
+'''
+    tree = build_source(src, filename="label.bn")[0]
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / "label.blend")
+        bpy.data.libraries.write(path, {tree})
+        bpy.data.node_groups.remove(tree)
+        assert any(f.filepath == "<builtin>" for f in bpy.data.fonts), "the built-in font is loaded"
+        with bpy.data.libraries.load(path, link=False) as (_src, dst):
+            dst.node_groups = ["label"]
+    appended = dst.node_groups[0]
+    stc = next(n for n in appended.nodes if n.bl_idname == "GeometryNodeStringToCurves")
+    font = stc.inputs["Font"].default_value
+    assert font is not None and font.name != "Bfont Regular" and font.filepath == "<builtin>", font
+    try:
+        exported, _ = export_tree(appended)
+        assert exported == src.lstrip(), exported
+        # Built again, it names the font a file holds first, whatever it is called
+        rebuilt = build_source(exported, filename="label.bn")[0]
+        item = next(i for i in rebuilt.interface.items_tree if i.item_type == "SOCKET" and i.name == "font")
+        assert item.default_value is not None and item.default_value.filepath == "<builtin>", item.default_value
+        assert export_tree(rebuilt)[0] == exported
+    finally:
+        bpy.data.node_groups.remove(bpy.data.node_groups["label"])
+        if font.users == 0:
+            bpy.data.fonts.remove(font)
+    print("   ✓ Bfont Regular.001 reads as Bfont Regular")
+
+
 def test_comments():
     """Comments are kept in the tree, on the nodes they go with, and written back in their places."""
     print("-> Test: comments survive Text -> Tree -> Text...")
@@ -3636,6 +3677,7 @@ def main():
         test_build_and_round_trip,
         test_datablock_inputs,
         test_named_constants,
+        test_builtin_font_by_any_name,
         test_comments,
         test_targets_and_linter,
         test_pipe_symbol,

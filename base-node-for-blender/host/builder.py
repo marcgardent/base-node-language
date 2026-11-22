@@ -19,15 +19,13 @@ from ..blender.schema import (ITEM_NODES, MATERIAL, SIGNATURE_NODES, TYPES, is_m
 from ..blender.typecheck import REPEAT_ITEMS
 from . import comments, modules, outputs
 from .arrange import arrange_nodes
-from .schema import (ALIASES, DEPRECATION, PANEL_OPTIONS, TREE_FLAGS, TREE_TYPES, BlenderSchema, fresh_item, fresh_options,
-                     datablocks, id_type, item_option_names, new_item, root_panel, same_option, socket_keys,
-                     socket_types, text_name, ui_name)
+from .schema import (ALIASES, BUILTIN_FONT, BUILTIN_PATH, DEPRECATION, PANEL_OPTIONS, TREE_FLAGS, TREE_TYPES,
+                     BlenderSchema, builtin_font, fresh_item, fresh_options, datablocks, id_type, item_option_names,
+                     new_item, root_panel, same_option, socket_keys, socket_types, text_name, ui_name)
 
 DATABLOCKS = {"OBJECT": "objects", "COLLECTION": "collections", "MATERIAL": "materials",
               "IMAGE": "images", "TEXTURE": "textures", "FONT": "fonts",
               "SOUND": "sounds", "SCENE": "scenes", "MASK": "masks", "TEXT": "texts"}
-# The name of Blender's own font, loaded when a text names it: font: Font = "Bfont Regular"
-BUILTIN_FONT = "Bfont Regular"
 
 # Item options set after the links: a Viewer's auto_remove drops an item nothing feeds yet
 LATE_OPTIONS = {"auto_remove"}
@@ -177,11 +175,12 @@ class Builder:
         """The datablock `name` of `collection` (bpy.data.materials…), a material the text defines first."""
         if kind.upper() == "MATERIAL" and name in self.materials:
             return self.materials[name]
-        found = collection.get(name)
-        if found is None and kind.upper() == "FONT" and name == BUILTIN_FONT:
-            # Blender's own font is in every file once loaded: a String to Curves new in the editor loads it
-            found = bpy.data.fonts.load("<builtin>", check_existing=True)
-        return found
+        if kind.upper() in ("FONT", "VECTORFONT") and name == BUILTIN_FONT:
+            # Blender's own font, under whatever name this file gives it ("Bfont Regular.001" once a
+            # library brought its own copy), loaded when the file has none: a new String to Curves loads it
+            return next((f for f in bpy.data.fonts if builtin_font(f)), None) \
+                or bpy.data.fonts.load(BUILTIN_PATH, check_existing=True)
+        return collection.get(name)
 
     def fail(self, node, message):
         raise BnError([Diagnostic(self.filename, node.line, node.col, message)])

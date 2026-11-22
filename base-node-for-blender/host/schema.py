@@ -506,8 +506,21 @@ def fresh_item_value(bl_idname, collection, socket_type):
     return _fresh_values[k]
 
 
+# Blender's own font, by the name it has in a file that loads it alone. A file appended beside one
+# that already holds it brings its own copy, "Bfont Regular.001": the same font, read by this name
+BUILTIN_FONT = "Bfont Regular"
+BUILTIN_PATH = "<builtin>"
+
+
+def builtin_font(font):
+    """Whether a datablock is Blender's own font, whatever it is named in this file."""
+    return isinstance(font, bpy.types.VectorFont) and font.filepath == BUILTIN_PATH and font.library is None
+
+
 def id_name(value):
-    """A property's value as the text holds it: a datablock by its name."""
+    """A property's value as the text holds it: a datablock by its name, Blender's own font by BUILTIN_FONT."""
+    if builtin_font(value):
+        return BUILTIN_FONT
     return value.name if isinstance(value, bpy.types.ID) else value
 
 
@@ -521,7 +534,7 @@ def snapshot(sock):
     """A socket's default_value as plain Python: tuples for vectors, names for datablocks."""
     value = getattr(sock, "default_value", None)
     if isinstance(value, bpy.types.ID):
-        return value.name
+        return id_name(value)
     if hasattr(value, "__len__") and not isinstance(value, str):
         return tuple(value)
     return value

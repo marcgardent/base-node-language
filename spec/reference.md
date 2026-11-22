@@ -125,7 +125,7 @@ compositor graph look(image: Color) -> Color {
   }
   ```
 - **Pipes**: the image a filter works on is written first and passed on with `|>`, through the output it picks when the filter has several (`Glare(…).image`), as a geometry is in a geometry tree.
-- **Datablocks**: a node property that points to a datablock is written by its name: `ImageTexture(vector: uv, image: "Bricks")`. The datablock must be in the file.
+- **Datablocks**: a node property that points to a datablock is written by its name: `ImageTexture(vector: uv, image: "Bricks")`. The datablock must be in the file. Blender's own font is `"Bfont Regular"`, whatever the file names it (a library appended beside it brings its copy as `Bfont Regular.001`): Tree → Text writes it by that name, and Text → Tree finds it under any name, loading it when the file has none.
 - **Materials by name**: a material is written by its bare name, as a graph is called: `SetMaterial(material: Clay)`, `m: Material = Clay`. It is the material a graph of the text defines, else the file's. A name bound in the graph is that value, not a material: a material named like a binding of the graph, or whose name makes no identifier (`"Old Brick"`), is written in quotes, as is any other datablock (object, collection, image).
 
 ### 3.1 Types
