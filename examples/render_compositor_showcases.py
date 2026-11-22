@@ -13,7 +13,7 @@ of a showcase gives it another scene or size.
     blender --background --factory-startup --python examples/render_compositor_showcases.py -- --webp transitions [--frames 96]
 
 renders the last compositor graph of that showcase with a `phase` input as a looping animated WebP,
-site/images/<name>.webp, at 640×427 (3:2, the cards of site/packs.html): its phase from 0 to 1 over
+site/images/<name>.webp, at 640×427 (3:2, the size of a showcase card): its phase from 0 to 1 over
 the frames.
 """
 

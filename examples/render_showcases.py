@@ -12,7 +12,7 @@ still of its check script (reaction_diffusion_check.py for showcase-reaction-dif
 differential_growth_check.py for showcase-differential-growth).
 
 `--webp <slug>` renders that showcase alone as a looping animated WebP, site/images/<slug>.webp, at
-640×427 (3:2, the cards of site/packs.html): `--frames` frames (72) of its phase from 0 to 1, or, for
+640×427 (3:2, the size of a showcase card): `--frames` frames (72) of its phase from 0 to 1, or, for
 a simulation, the frames from `--start` on (1), the frames before it simulated but not rendered.
 """
 
