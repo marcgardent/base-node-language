@@ -122,7 +122,7 @@ def test_a_long_record_spreads_one_field_per_line():
 
 
 def test_a_long_operator_chain_breaks_before_each_operator():
-    switch = "Switch(switch: o.x > 0.0, true_: SetPosition(geometry, offset: o), input_type: GEOMETRY)"
+    switch = "Switch[GEOMETRY](switch: o.x > 0.0, true_: SetPosition(geometry, offset: o))"
     text = printed(f"  return {switch} + {switch} - geometry")
     assert body_of(text) == (
         f"  return {switch}\n"

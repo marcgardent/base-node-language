@@ -62,7 +62,7 @@ def test_a_type_alone_is_an_item_with_no_value(schema):
 
 
 def test_foreach_items_main_then_generated(schema):
-    g = compile_one(graph("  e = foreach(geometry, domain: FACE, selection: false, h: Position().z) -> {\n"
+    g = compile_one(graph("  e = foreach[FACE](geometry, selection: false, h: Position().z) -> {\n"
                           "    return (aire: h * 2.0, rang: index, mesh: element, couleur: h)\n  }\n"
                           "  return e.mesh", "Geometry"), schema)
     zin, zout = zone(g, ir.FOREACH_INPUT)
@@ -118,8 +118,8 @@ def test_a_state_key_is_checked_like_a_name(schema):
      "t.bn:3:13  'w' is not a simulate state; states: v"),
     ("  s = simulate(m: Shader) -> {\n    return ()\n  }\n  return geometry",
      "t.bn:2:16  a simulate state cannot have type Shader"),
-    ("  e = foreach(geometry, domain: FACES) -> {\n    return ()\n  }\n  return e",
-     "t.bn:2:25  domain expects one of POINT, EDGE, FACE, CORNER, CURVE, INSTANCE, LAYER"),
+    ("  e = foreach[domain: FACES](geometry) -> {\n    return ()\n  }\n  return e",
+     "t.bn:2:15  domain expects one of POINT, EDGE, FACE, CORNER, CURVE, INSTANCE, LAYER"),
     ("  e = foreach(geometry, index: 1.0) -> {\n    return ()\n  }\n  return e",
      "t.bn:2:25  'index' is the element's index: choose another item name"),
     ("  e = foreach(geometry) -> {\n    return element\n  }\n  return e",
@@ -136,24 +136,12 @@ def test_wrong_zones_are_reported(schema, body, message):
 @pytest.mark.parametrize("body, message", [
     ("  s = simulate(geometry) -> {\n    return ()\n  }\n  return s",
      "t.bn:2:7  simulate expects named states: simulate(state: start, …) -> { … }"),
-    ("  e = foreach(domain: FACE) -> {\n    return ()\n  }\n  return e",
+    ("  e = foreach[FACE]() -> {\n    return ()\n  }\n  return e",
      "t.bn:2:7  foreach expects geometry first, then named items: "
-     "foreach(geometry, domain: FACE, item: field, …) -> { … }"),
+     "foreach[FACE](geometry, item: field, …) -> { … }"),
     ("  e = foreach(geometry, a as b: 0.0) -> {\n    return ()\n  }\n  return e",
      "t.bn:2:25  'a as b': 'as' only aliases an item of an item node"),
 ])
 def test_the_shape_of_a_zone_is_the_checker_s(schema, body, message):
     assert type(parse(graph(body), "t.bn").graphs[0].body[0].value).__name__ == "BodyCall"
     assert errors(graph(body), schema) == [message]
-
-
-@pytest.mark.parametrize("body, message", [
-    ("  s = simulate(mesh: geometry) {\n    return (mesh: mesh)\n  }\n  return s",
-     "t.bn:2:7  simulate takes a body after '->': s = simulate(state: start) -> { … }"),
-    ("  e = foreach(geometry, domain: FACE) {\n    return (mesh: element)\n  }\n  return e",
-     "t.bn:2:7  foreach takes a body after '->': f = foreach(geometry, domain: FACE, item: field) -> { … }"),
-    ("  f = closure(x: Float) -> (y: Float) {\n    return (y: x * 2.0)\n  }\n  return geometry",
-     "t.bn:2:7  closure(…) is now written as a graph with no name: f = graph(x: Float) -> Float { … }"),
-])
-def test_the_spellings_of_before_say_what_to_write(schema, body, message):
-    assert errors(graph(body), schema)[0] == message

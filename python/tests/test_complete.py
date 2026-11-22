@@ -34,9 +34,23 @@ def test_given_arguments_are_not_suggested_again(schema):
     assert "offset" not in got and "selection" in got
 
 
-def test_enum_values_after_the_prop(schema):
-    assert labels(HEAD + "  x = Math(operation: ", schema) == list(MATH_OPS)
-    assert labels(HEAD + "  x = Math(operation: SI", schema)[0] == "SINE"
+def test_enum_values_after_the_setting(schema):
+    assert labels(HEAD + "  x = Math[operation: ", schema) == list(MATH_OPS)
+    assert labels(HEAD + "  x = Math[operation: SI", schema)[0] == "SINE"
+
+
+def test_brackets_offer_the_settings_and_parentheses_the_inputs(schema):
+    # In brackets: the enum values by position, then the names of the settings; no value of the graph
+    got = labels(HEAD + "  x = Math[", schema)
+    assert got == [*MATH_OPS, "operation", "use_clamp"], got
+    # A setting written is not offered again, whether by position or by name
+    got = labels(HEAD + "  x = Math[ADD, ", schema)
+    assert got == ["use_clamp"], got
+    assert labels(HEAD + "  x = Math[use_clamp: ", schema) == ["true", "false"]
+    # In parentheses: inputs, never a setting
+    got = labels(HEAD + "  x = Math[ADD](", schema)
+    assert got[:2] == ["Value", "Value_001"] and "operation" not in got and "use_clamp" not in got, got
+    assert "domain" not in labels(HEAD + "  return SetShadeSmooth(", schema)
 
 
 def test_repeated_inputs_are_named_by_identifier(schema):
@@ -45,7 +59,7 @@ def test_repeated_inputs_are_named_by_identifier(schema):
 
 
 def test_props_change_the_inputs(schema):
-    got = labels(HEAD + "  x = VectorMath(operation: SCALE, ", schema)
+    got = labels(HEAD + "  x = VectorMath[SCALE](", schema)
     assert got[:2] == ["vector", "scale"], got
 
 
@@ -186,6 +200,11 @@ def test_signature_of_the_call_the_cursor_is_in(schema):
     assert dict((k, st) for k, _t, st in s.inputs)["offset"] == "current"
     s = sig(HEAD + "  return geometry |> SetPosition(", schema)
     assert s.inputs[0][2] == "given"  # the pipe gives the first input
+    # Past its settings, a call's inputs; in its brackets, its settings
+    s = sig(HEAD + "  x = Math[ADD](1.0, ", schema)
+    assert [(k, st) for k, _t, st in s.inputs] == [("Value", "given"), ("Value_001", "")]
+    s = sig(HEAD + "  x = Math[ADD, ", schema)
+    assert [(k, st) for k, _t, st in s.inputs] == [("operation", "given"), ("use_clamp", "")]
     assert sig(HEAD + "  return SetPosition(geometry)", schema) is None
     assert sig(HEAD + "  x = 1.0", schema) is None
 

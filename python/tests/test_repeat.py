@@ -117,10 +117,10 @@ def test_repeat_is_a_name_like_any_other(schema):
     assert len([n for n in g.nodes if n.bl_idname == ir.REPEAT_INPUT]) == 1
 
 
-def test_the_spelling_without_an_arrow_says_what_to_write(schema):
-    # `r = repeat(…) {` reads as a call, then a frame with no title: the call of a zone with no body is refused
-    old = graph("  r = repeat(3, s: 0.0) {\n    return s\n  }\n  return r")
-    assert errors(old, schema)[0] == "t.bn:2:7  repeat takes a body after '->': r = repeat(10, state: start) -> { … }"
+def test_a_zone_takes_its_body_after_an_arrow(schema):
+    # `r = repeat(…) {` reads as a call, then a frame with no title: no node is called repeat
+    framed = graph("  r = repeat(3, s: 0.0) {\n    return s\n  }\n  return r")
+    assert errors(framed, schema)[0] == "t.bn:2:7  unknown node 'repeat' in a geometry tree"
     # A frame with no title after a call of any other name is what it was
     framed = graph("  a = sin(t)\n  {\n    b = a * 2.0\n  }\n  return b")
     assert to_source(parse(framed)) == framed

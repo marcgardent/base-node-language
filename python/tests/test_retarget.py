@@ -20,9 +20,6 @@ class TwoTrees(FakeSchema):
     def node_names(self, kind):
         return [n for n in super().node_names("geometry") if kind == "geometry" or n in SHARED]
 
-    def renamed(self, kind):
-        return {}
-
 
 MATHS = """\
 geometry graph double(x: Float) -> Float {

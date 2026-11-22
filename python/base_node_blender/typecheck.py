@@ -64,15 +64,19 @@ CONST_NODES = {"Float": ("Value", None, "ShaderNodeValue"), "Int": ("Integer", "
 # The Color node of a shader or a compositor tree (the RGB) holds its color on its output
 RGB_NODES = {b: ("Color", None, b) for b in ("ShaderNodeRGB", "CompositorNodeRGB")}
 # The input node of a datablock, by its type: (its text name, its property holding the datablock).
-# A datablock bound to a name is that node, written as a call: `o = Object(object: "Thing")`
+# A datablock bound to a name is that node, written as a call: `o = Object[object: "Thing"]()`
 DATABLOCK_NODES = {"Font": ("Font", "font"), "Object": ("Object", "object"),
                    "Collection": ("Collection", "collection"), "Material": ("Material", "material"),
                    "Image": ("Image", "image")}
 # Input nodes whose value is an array the schema does not list among their settings, by bl_idname:
-# (the property, whether it holds integers). Written as an argument: Rotation(rotation_euler: (0.1, 0.0, 0.0))
+# (the property, whether it holds integers). Written as a setting: Rotation[rotation_euler: (0.1, 0.0, 0.0)]()
 VALUE_PROPS = {"FunctionNodeInputRotation": ("rotation_euler", False),
                "FunctionNodeInputVector": ("vector", False),
                "FunctionNodeInputIntVector": ("vector", True)}
+# Nodes that hold their value on an output, by bl_idname: (the setting the text names it by, the
+# output). Written as a setting: Normal[normal: (0.0, 0.0, 1.0)](). A Value and an RGB node are
+# named literals instead: `size = 0.5`, `tint = (1.0, 0.5, 0.0, 1.0)`
+OUTPUT_PROPS = {"ShaderNodeNormal": ("normal", "Normal"), "CompositorNodeNormal": ("normal", "Normal")}
 
 
 @dataclass
@@ -184,31 +188,6 @@ def deprecations(file, filename="<text>", find=None):
                 callable_[f"{prefix}::{k}"] = g
     callable_.update((key(g.name), g) for g in file.graphs)
     return deprecated_calls(file.graphs, callable_, filename)
-
-
-def old_spellings(file, filename="<text>", find=None):
-    """An error at each call, in a parsed text, of a zone's name with no body, as zones were written
-    before (`repeat(…) {`, `closure(…) -> … {`), for a reader with no schema to check it with.
-
-    The name is the zone when nothing else in the text has it: no graph of the text, none a `use`
-    brings, no name the graph binds, and no `use` of a module `find` does not find (its graphs are unknown: the call may be
-    one of them). `find` is the one of `deprecations`. The checker says the same of a text it checks."""
-    from .targets import _assigns, _module
-
-    find = find or _module
-    taken = {key(g.name) for g in file.graphs} | {g.name for g in file.graphs}
-    for u in file.uses:
-        module = find(u.name)
-        if module is None:
-            return []
-        taken.update(u.names if u.names is not None else (key(g.name) for g in module.graphs))
-    out = []
-    for g in file.graphs:
-        # A call on a name the graph binds evaluates the closure it holds
-        mine = taken | {a.name for a in _assigns(g.body)}
-        out += [Diagnostic(filename, c.line, c.col, zones.old_spelling(c.name))
-                for c in _calls(g.body) if c.name not in mine and zones.old_spelling(c.name)]
-    return sorted(out, key=lambda d: (d.line, d.col))
 
 
 @dataclass
@@ -1041,11 +1020,11 @@ class GraphChecker:
         made = DATABLOCK_NODES.get(sock.type)
         spec = self.schema.node(self.g.kind, made[0]) if made else None
         if spec is not None:
-            hint += f', or name a {made[0]} node: {const.label} = {made[0]}({made[1]}: "{value}")'
+            hint += f', or name a {made[0]} node: {const.label} = {made[0]}[{made[1]}: "{value}"]()'
         return f"{where} expects {sock.type}, receives a String ({const.label}): {hint}"
 
     def value_prop(self, spec, node, v, a):
-        """`Rotation(rotation_euler: (0.1, 0.0, 0.0))`, `Vector(vector: (1.0, 2.0, 3.0, 4.0))`: the value
+        """`Rotation[rotation_euler: (0.1, 0.0, 0.0)]()`, `Vector[vector: (1.0, 2.0, 3.0, 4.0)]()`: the value
         of an input node that no literal makes, a tuple of as many numbers as the node holds. A Vector's
         vector_dimensions follow the tuple, unless written."""
         prop, integers = VALUE_PROPS[spec.bl_idname]
@@ -1200,6 +1179,7 @@ class GraphChecker:
         zout.items = []
         self.nodes += [zin, zout]
         geometry = self.zone_value(e.geometry)
+        self.foreach_settings(e, zout)
         selection, given, values, items = None, set(), [], []
         for a in e.args:
             k = key(a.name)
@@ -1207,12 +1187,6 @@ class GraphChecker:
                 self.error(a, f"'{a.name}' given twice")
                 continue
             given.add(k)
-            if k == "domain":
-                if isinstance(a.value, ast.Ref) and a.value.name in FOREACH_DOMAINS:
-                    zout.props["domain"] = a.value.name
-                else:
-                    self.error(a, f"domain expects one of {', '.join(FOREACH_DOMAINS)}")
-                continue
             if k == "selection":
                 selection = (self.eval(a.value), a)
                 continue
@@ -1256,6 +1230,18 @@ class GraphChecker:
         self.body(e, name, zone, zin, zin_outputs, names)
         zout.n_outputs = len(zone.outputs)
         return Out(zout.id, zone.outputs, None, name)
+
+    def foreach_settings(self, e, zout):
+        """`foreach[FACE](…)`: the domain, its one setting, by position or named."""
+        for n, s in enumerate(e.settings):
+            if s.name not in (None, "domain"):
+                self.error(s, f"foreach has no setting '{s.name}'; settings: domain")
+            elif n:
+                self.error(s, "setting 'domain' given twice")
+            elif isinstance(s.value, ast.Ref) and s.value.name in FOREACH_DOMAINS:
+                zout.props["domain"] = s.value.name
+            else:
+                self.error(s, f"domain expects one of {', '.join(FOREACH_DOMAINS)}")
 
     def body(self, e, name, zone, zin, zin_outputs, names):
         """Check a zone's body, which sees the outer names and `names`, outputs of the zone's input."""
@@ -1440,12 +1426,8 @@ class GraphChecker:
         node = ir.Node("", spec.bl_idname, line=c.line, col=c.col)
         positional = [(piped, c)] if piped is not None else []
         named = []
+        self.settings(c, spec, node)
         for a in c.args:
-            if a.name is not None and a.type is None and a.name in spec.props:
-                v = self.eval(a.value)
-                if isinstance(v, (Lit, Sym)):
-                    self.prop(node, spec.props[a.name], v, a)
-                    continue
             if a.name is None:
                 positional.append((None if is_no_value(a.value) else self.eval(a.value), a.value))
             else:
@@ -1893,11 +1875,6 @@ class GraphChecker:
             evaluate = self.schema.node(self.g.kind, "EvaluateClosure")
             if evaluate is not None:
                 return self.signature_call(c, evaluate, piped, target=self.env[c.name])
-        if spec is None and c.name not in self.graphs and not self.is_function(c.name) \
-                and self.existing_group(c) is None and not self.unsure and zones.old_spelling(c.name):
-            # A zone's name called with no body, when nothing else has that name: `repeat(…) {` as it was written
-            self.error(c, zones.old_spelling(c.name))
-            return None
         if c.outputs is not None:
             self.error(c, f"'->' declares items of SeparateBundle or EvaluateClosure, not {c.name}")
             return None
@@ -1919,6 +1896,11 @@ class GraphChecker:
                 self.error(a, f"'{a.name}: {a.type.type} = …' gives an item type: for item nodes, "
                               "zones, or EvaluateClosure")
                 return None
+        if c.settings and (c.name in self.graphs or self.is_function(c.name) or spec is None
+                           and (c.name == EMPTY_GROUP or self.existing_group(c) is not None)):
+            # A graph, a group of the file, a function: none has settings, only a node does
+            self.error(c.settings[0], f"{c.name} has no settings")
+            return None
         if self.is_function(c.name):
             operands = [(piped, c)] if piped is not None else []
             for a in c.args:
@@ -1930,12 +1912,8 @@ class GraphChecker:
 
         positional = [(piped, c)] if piped is not None else []
         named = []
-        data = []  # ramps and curves: values of their own, not expressions
         failed = False
         for a in c.args:
-            if spec is not None and a.name in spec.data and not a.alias and not a.options:
-                data.append(a)
-                continue
             if a.alias and not items:
                 self.error(a, f"'{a.name} as {a.alias}': only item node items take an alias key")
             if a.options and not items:
@@ -1976,11 +1954,6 @@ class GraphChecker:
                 if self.unsure:
                     return None
                 # A node, a graph of the file, or, written in lower case, a function such as sin
-                renamed = getattr(self.schema, "renamed", None)
-                now = renamed(self.g.kind).get(c.name) if renamed else None
-                if now is not None:
-                    self.error(c, f"unknown node '{c.name}' in a {self.g.kind} tree; it is now written {now}")
-                    return None
                 funcs = sorted(sugar.FUNCS) if c.name[:1].islower() else []
                 nodes = self.schema.node_names(self.g.kind)
                 close = suggest(c.name, nodes, [*self.graphs, *funcs])
@@ -1988,21 +1961,7 @@ class GraphChecker:
                 self.error(c, f"unknown node '{c.name}' in a {self.g.kind} tree{hint}")
                 return None
             node.bl_idname = spec.bl_idname
-            for a in data:
-                self.data_prop(node, spec.data[a.name], a)
-            rest = []
-            value = None
-            for name, v, a in named:
-                if name in spec.props and isinstance(v, (Lit, Sym)) and not a.alias:
-                    self.prop(node, spec.props[name], v, a, c.name)
-                elif VALUE_PROPS.get(spec.bl_idname, (None,))[0] == name and not a.alias:
-                    value = (v, a)
-                else:
-                    rest.append((name, v, a))
-            named = rest
-            if value is not None:
-                # Once its dimensions are set: they make the array that holds it
-                self.value_prop(spec, node, *value)
+            self.settings(c, spec, node)
             if spec.bl_idname in ITEM_NODES:
                 inputs, outputs = self.item_sockets(c, spec, node, positional, named)
                 if inputs is None:
@@ -2143,7 +2102,7 @@ class GraphChecker:
                 keys.append(alias)
                 continue
             if isinstance(v, Sym) and not shape.typed and node.props.get("data_type") == "MENU":
-                # A menu item's name: IndexSwitch(i, Read, Compute, data_type: MENU)
+                # A menu item's name: IndexSwitch[MENU](i, Read, Compute)
                 items.append((name, "Menu"))
                 keys.append(alias)
                 values.append((alias or name, v, a))
@@ -2289,7 +2248,7 @@ class GraphChecker:
         return types
 
     def type_setting(self, v, prop, a, owner):
-        """`data_type: T` in a template's body: the value of the setting for T's type, or None."""
+        """`Mix[data_type: T]` in a template's body: the value of the setting for T's type, or None."""
         t = self.type_args[v.name]
         values = TYPE_SETTINGS.get(t, ())
         chosen = next((x for x in values if not prop.items or x in prop.items), None)
@@ -2297,6 +2256,93 @@ class GraphChecker:
             self.error(a, f"{v.name} is {t}: {owner} has no {prop.name} for {t}; "
                           f"values: {short_list(prop.items)}")
         return chosen
+
+    def settings(self, c, spec, node):
+        """The settings a call writes in brackets, into node.props and node.data: `Math[ADD,
+        use_clamp: true]`. A setting by position is an enum value: it goes to the first enum setting
+        of the node, in Blender's order, that holds it (a template's type to the first one that has a
+        value for it). The others are named."""
+        given = set()
+        value = None
+        names = setting_names(spec)
+        for s in c.settings:
+            v = self.setting_value(s)
+            if v is None:
+                continue
+            if s.name is None:
+                prop = self.positional_setting(c, spec, s, v)
+                if prop is None:
+                    continue
+                name = prop.name
+            else:
+                name = s.name
+            if name in given:
+                self.error(s, f"setting '{name}' given twice")
+                continue
+            given.add(name)
+            if name in spec.data:
+                self.data_prop(node, spec.data[name], s)
+            elif name in spec.props:
+                self.prop(node, spec.props[name], v, s, c.name)
+            elif spec.bl_idname in VALUE_PROPS and VALUE_PROPS[spec.bl_idname][0] == name:
+                value = (v, s)
+            elif spec.bl_idname in OUTPUT_PROPS and OUTPUT_PROPS[spec.bl_idname][0] == name:
+                if isinstance(v, Lit) and isinstance(v.value, tuple) and len(v.value) == 3:
+                    node.out_values[OUTPUT_PROPS[spec.bl_idname][1]] = v.value
+                else:
+                    self.error(s, f"{name} expects 3 numbers: {name}: (0.0, 0.0, 1.0)")
+            else:
+                close = difflib.get_close_matches(name, names, 1)
+                hint = f"; did you mean {close[0]}?" if close else ""
+                listed = f"; settings: {short_list(names)}" if names else ": it has none"
+                self.error(s, f"{c.name} has no setting '{name}'{hint}{listed}")
+        if value is not None:
+            # Once its dimensions are set: they make the array that holds it
+            self.value_prop(spec, node, *value)
+
+    def setting_value(self, s):
+        """What a setting holds, as the checker sees it: Lit, Sym (an enum value, a template's type,
+        `_`), or the ast.Call of a ramp or curves. None after an error."""
+        v = s.value
+        if isinstance(v, ast.Ref):
+            if v.name in self.env:
+                # A name only the zone or the checker knows holds a value: `iteration`, `index`
+                self.error(v, f"'{v.name}' holds a value, and no wire feeds a setting: "
+                              "give it in the parentheses, Name[SETTING](input: value)")
+                return None
+            return Sym(v.name)
+        if isinstance(v, ast.Call):
+            return v
+        return self.eval(v)
+
+    def positional_setting(self, c, spec, s, v):
+        """The enum setting a setting given by position goes to, or None after an error."""
+        enums = [p for p in spec.props.values() if p.kind == "ENUM"]
+        if isinstance(v, Sym) and v.name in self.type_args:
+            t = self.type_args[v.name]
+            values = TYPE_SETTINGS.get(t, ())
+            found = next((p for p in enums if any(x in p.items for x in values)), None)
+            # Else the first setting of a type, which says what it holds
+            found = found or next((p for p in enums if any(x in p.items for v in TYPE_SETTINGS.values() for x in v)),
+                                  None)
+            if found is None:
+                self.error(s, f"{v.name} is {t}: {c.name} has no setting of a type")
+            return found
+        word = v.name if isinstance(v, Sym) and v.name != NO_VALUE else \
+            v.value if isinstance(v, Lit) and v.type == "String" else None
+        if word is None:
+            names = setting_names(spec)
+            self.error(s, f"{c.name}: a setting by position is an enum value; name the others, "
+                          f"{c.name}[{names[0] if names else 'name'}: …]")
+            return None
+        found = next((p for p in enums if word in p.items), None)
+        if found is None:
+            values = [x for p in enums for x in p.items]
+            close = difflib.get_close_matches(word, values, 1)
+            hint = f"; did you mean {close[0]}?" if close else ""
+            listed = f"; settings: {short_list([p.name for p in enums])}" if enums else ""
+            self.error(s, f"no setting of {c.name} takes {word}{hint}{listed}")
+        return found
 
     def prop(self, node, prop, v, a, owner=None):
         if isinstance(v, Const):
@@ -2307,7 +2353,7 @@ class GraphChecker:
                 node.props[prop.name] = value
             return
         if prop.kind == "ENUM":
-            value = v.name if isinstance(v, Sym) else v.value if v.type == "String" else None
+            value = v.name if isinstance(v, Sym) else v.value if isinstance(v, Lit) and v.type == "String" else None
             if value is None:
                 self.error(a, f"{prop.name} expects a value like {prop.items[0] if prop.items else 'MODE'}")
                 return
@@ -2686,6 +2732,14 @@ def other_output(v, wanted, env):
     # Written as it is in the text: the name it was given, else the call
     name = next((k for k, x in env.items() if x is v), f"{v.label}(…)")
     return f"; did you mean {', '.join(f'{name}.{k}' for k in fits[:3])}?" if fits else ""
+
+
+def setting_names(spec):
+    """The settings of a node, in Blender's order: its properties, ramps and curves, and the value an
+    input node holds in an array (VALUE_PROPS)."""
+    held = [VALUE_PROPS[spec.bl_idname][0]] if spec.bl_idname in VALUE_PROPS else []
+    held += [OUTPUT_PROPS[spec.bl_idname][0]] if spec.bl_idname in OUTPUT_PROPS else []
+    return [*spec.props, *spec.data, *held]
 
 
 def short_list(items, limit=12):

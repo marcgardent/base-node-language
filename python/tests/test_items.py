@@ -29,7 +29,7 @@ def test_fixture_prints_back_unchanged(fixture_text):
 
 
 def test_each_named_value_is_a_capture_item(schema):
-    src = graph('  c = CaptureAttribute(geometry, hauteur: t, "Rest Position": Position(), domain: FACE)\n'
+    src = graph('  c = CaptureAttribute[FACE](geometry, hauteur: t, "Rest Position": Position())\n'
                 "  return c.hauteur + c.rest_position.z")
     g, c = node(src, schema, "GeometryNodeCaptureAttribute")
     assert c.items == [("hauteur", "Float"), ("Rest Position", "Vector")]
@@ -56,7 +56,7 @@ def test_an_index_switch_takes_the_type_of_its_first_item(schema):
 
 
 def test_a_written_data_type_wins(schema):
-    _g, s = node(graph("  return IndexSwitch(i, 1, 2, data_type: FLOAT)"), schema, "GeometryNodeIndexSwitch")
+    _g, s = node(graph("  return IndexSwitch[FLOAT](i, 1, 2)"), schema, "GeometryNodeIndexSwitch")
     assert s.props == {"data_type": "FLOAT"} and s.items == [("0", "Float"), ("1", "Float")]
 
 

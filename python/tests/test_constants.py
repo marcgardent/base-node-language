@@ -64,13 +64,13 @@ def errors(body):
 
 
 def test_a_datablock_node_is_a_call_that_names_it():
-    g = compile_one('  f = Font(font: "Bfont Regular")\n  return StringToCurves(string: "Hi", font: f)')
+    g = compile_one('  f = Font[font: "Bfont Regular"]()\n  return StringToCurves(string: "Hi", font: f)')
     f = next(n for n in g.nodes if n.name == "f")
     assert (f.bl_idname, f.props) == ("GeometryNodeInputFont", {"font": "Bfont Regular"})
     stc = next(n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves")
     assert [(ident, link.node) for ident, link in stc.links] == [("Font", f.id)]
     assert "Font" not in stc.values
-    g = compile_one('  o = Object(object: "Cube")\n  a = ObjectInfo(o)\n  return ObjectInfo(o)')
+    g = compile_one('  o = Object[object: "Cube"]()\n  a = ObjectInfo(o)\n  return ObjectInfo(o)')
     o = next(n for n in g.nodes if n.name == "o")
     assert (o.bl_idname, o.props) == ("GeometryNodeInputObject", {"object": "Cube"})
     infos = [n for n in g.nodes if n.bl_idname == "GeometryNodeObjectInfo"]
@@ -87,7 +87,7 @@ def test_a_named_string_is_no_datablock():
     # A String node, which no datablock input reads: the message says what to write
     assert errors('  f = "Bfont Regular"\n  return StringToCurves(string: "Hi", font: f)') == [
         't.bn:3:39  StringToCurves.font expects Font, receives a String (f): write the name in place, '
-        'font: "Bfont Regular", or name a Font node: f = Font(font: "Bfont Regular")']
+        'font: "Bfont Regular", or name a Font node: f = Font[font: "Bfont Regular"]()']
     # A Sound has no input node: the name in place only
     assert errors('  s = "Beep"\n  a = SampleSoundFrequencies(sound: s)\n  return geometry') == [
         't.bn:3:30  SampleSoundFrequencies.sound expects Sound, receives a String (s): write the name '
@@ -101,31 +101,31 @@ def test_no_datablock_is_an_underscore():
     g = compile_one('  return StringToCurves(string: "Hi", font: _)')
     stc = next(n for n in g.nodes if n.bl_idname == "GeometryNodeStringToCurves")
     assert stc.values == {"String": "Hi", "Font": None}
-    g = compile_one("  return StringToCurves(font: Font(font: _))")
+    g = compile_one("  return StringToCurves(font: Font[font: _]())")
     assert next(n for n in g.nodes if n.bl_idname == "GeometryNodeInputFont").props == {"font": None}
     # Elsewhere `_` is still no name
     assert errors("  return StringToCurves(string: _)") == ["t.bn:2:25  unknown name '_'"]
 
 
 def test_values_no_literal_makes():
-    g = compile_one("  return Rotation(rotation_euler: (0.1, 0.2, 0.3))", out="Rotation")
+    g = compile_one("  return Rotation[rotation_euler: (0.1, 0.2, 0.3)]()", out="Rotation")
     assert g.nodes[-1].props == {"rotation_euler": (0.1, 0.2, 0.3)}
     # The dimensions first, from the tuple unless written
-    g = compile_one("  return Vector(vector: (1.0, 2.0, 3.0, 4.0))", out="Vector")
+    g = compile_one("  return Vector[vector: (1.0, 2.0, 3.0, 4.0)]()", out="Vector")
     assert list(g.nodes[-1].props.items()) == [("vector_dimensions", 4), ("vector", (1.0, 2.0, 3.0, 4.0))]
-    g = compile_one("  return Vector(vector: (1.0, 2.0, 3.0, 4.0), vector_dimensions: 4)", out="Vector")
+    g = compile_one("  return Vector[vector_dimensions: 4, vector: (1.0, 2.0, 3.0, 4.0)]()", out="Vector")
     assert list(g.nodes[-1].props.items()) == [("vector_dimensions", 4), ("vector", (1.0, 2.0, 3.0, 4.0))]
-    g = compile_one("  return IntegerVector(vector: (1, 2, 3))", out="Vector")
+    g = compile_one("  return IntegerVector[vector: (1, 2, 3)]()", out="Vector")
     assert g.nodes[-1].props == {"vector_dimensions": 3, "vector": (1, 2, 3)}
     assert type(g.nodes[-1].props["vector"][0]) is int
 
 
 def test_values_no_literal_makes_are_checked():
-    assert errors("  r = Rotation(rotation_euler: (0.1, 0.2))\n  return geometry") == \
+    assert errors("  r = Rotation[rotation_euler: (0.1, 0.2)]()\n  return geometry") == \
         ["t.bn:2:16  rotation_euler expects 3 numbers, receives 2"]
-    assert errors("  v = Vector(vector: (1.0, 2.0), vector_dimensions: 3)\n  return geometry") == \
-        ["t.bn:2:14  vector expects 3 numbers (vector_dimensions), receives 2"]
-    assert errors("  v = IntegerVector(vector: (1.5, 2.0, 3.0))\n  return geometry") == \
+    assert errors("  v = Vector[vector_dimensions: 3, vector: (1.0, 2.0)]()\n  return geometry") == \
+        ["t.bn:2:36  vector expects 3 numbers (vector_dimensions), receives 2"]
+    assert errors("  v = IntegerVector[vector: (1.5, 2.0, 3.0)]()\n  return geometry") == \
         ["t.bn:2:21  vector expects whole numbers"]
-    assert errors("  r = Rotation(rotation_euler: 1.0)\n  return geometry") == \
+    assert errors("  r = Rotation[rotation_euler: 1.0]()\n  return geometry") == \
         ["t.bn:2:16  rotation_euler expects a tuple of numbers"]

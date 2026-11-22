@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from base_node import EDITION, STDLIB_VERSION, BnError, __version__, format_source, parse
-from base_node_blender import check_targets, deprecations, infer, load_target, old_spellings
+from base_node_blender import check_targets, deprecations, infer, load_target
 
 
 def _serialize_ast(obj: Any) -> Any:
@@ -97,8 +97,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     not: `blender@latest`, `blender@lts`, the version each names in this version of the tool.
 
     A file that promises no target fits whatever accepts it: the targets that do are printed.
-    The calls of a graph marked deprecated are warned of, and fail nothing. A zone written as it
-    was before (`repeat(…) {`) is an error that says what to write: no target has a node of that name."""
+    The calls of a graph marked deprecated are warned of, and fail nothing."""
     from base_node_blender import header
 
     exit_code = 0
@@ -123,11 +122,6 @@ def cmd_check(args: argparse.Namespace) -> int:
             # A warning stops nothing: the file is still what the lines below say of it
             for warning in deprecations(file_ast, p.name):
                 print(warning, file=sys.stderr)
-            old = old_spellings(file_ast, p.name)
-            if old:
-                print(f"Error in '{path_str}':\n{BnError(old)}", file=sys.stderr)
-                exit_code = 1
-                continue
             if not promised:
                 print(f"{path_str}:")
                 for line in infer(file_ast).lines():

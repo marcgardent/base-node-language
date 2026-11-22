@@ -151,11 +151,6 @@ class FakeSchema:
     def node_names(self, kind):
         return list(NODES) if kind == "geometry" else []
 
-    def renamed(self, kind):
-        # Like Blender: what a node was written before its UI name, the full bl_idname too
-        return {"MeshGrid": "Grid", "ValToRGB": "ColorRamp", "GeometryNodeMeshGrid": "Grid"} \
-            if kind == "geometry" else {}
-
     def sockets(self, kind, spec, props):
         self.calls += 1
         _spec, inputs, outputs = NODES[spec.name]

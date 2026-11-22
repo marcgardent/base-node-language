@@ -31,8 +31,8 @@ def test_wave_is_nine_nodes_and_nine_links(schema, fixture_text):
 
 
 def test_unary_math_has_one_input(schema):
-    msgs = errors(graph("  x = Math(t, t, operation: SINE)\n  return geometry"), schema)
-    assert msgs == ["t.bn:2:15  Math takes 1 input(s): value"]
+    msgs = errors(graph("  x = Math[SINE](t, t)\n  return geometry"), schema)
+    assert msgs == ["t.bn:2:21  Math takes 1 input(s): value"]
 
 
 def test_unknown_input_lists_inputs(schema):
@@ -41,8 +41,8 @@ def test_unknown_input_lists_inputs(schema):
 
 
 def test_unknown_enum_value_suggests(schema):
-    msgs = errors(graph("  x = Math(t, operation: SINUS)\n  return geometry"), schema)
-    assert msgs[0].startswith("t.bn:2:15  operation: unknown SINUS; did you mean SINE?; values: ADD,")
+    msgs = errors(graph("  x = Math[operation: SINUS](t)\n  return geometry"), schema)
+    assert msgs[0].startswith("t.bn:2:12  operation: unknown SINUS; did you mean SINE?; values: ADD,")
 
 
 def test_type_mismatch(schema):
@@ -68,7 +68,7 @@ def test_duplicate_sockets_by_identifier(schema):
 
 
 def test_pipe_inserts_first_argument(schema):
-    g = compile_one(graph("  return geometry\n    |> SubdivideMesh(level: 2)\n    |> SetShadeSmooth(domain: FACE)"),
+    g = compile_one(graph("  return geometry\n    |> SubdivideMesh(level: 2)\n    |> SetShadeSmooth[FACE]()"),
                     schema)
     sub, smooth = g.nodes[2], g.nodes[3]
     assert sub.links == [("Mesh", ir.Link(ir.GROUP_INPUT, "geometry"))]
@@ -225,7 +225,7 @@ def test_a_float_literal_does_not_go_into_an_int(schema):
 
 def test_a_gizmo_links_the_value_it_moves(schema):
     g = compile_one(graph("  m = CombineTransform(Position())\n"
-                          "  return geometry + LinearGizmo(t, position: Position(), draw_style: BOX)\n"
+                          "  return geometry + LinearGizmo[BOX](t, position: Position())\n"
                           "    + TransformGizmo(m, position: Position())"), schema)
     linear = next(n for n in g.nodes if n.bl_idname == "GeometryNodeGizmoLinear")
     assert [ident for ident, _ in linear.links] == ["Value", "Position"]
@@ -250,9 +250,9 @@ def test_a_failed_argument_keeps_its_place(schema):
 
 
 def test_datablock_property_takes_a_name(schema):
-    g = compile_one(graph('  i = Image(image: "brick")\n  return geometry'), schema)
+    g = compile_one(graph('  i = Image[image: "brick"]()\n  return geometry'), schema)
     assert next(n for n in g.nodes if n.name == "i").props == {"image": "brick"}
-    msgs = errors(graph("  i = Image(image: 3)\n  return geometry"), schema)
+    msgs = errors(graph("  i = Image[image: 3]()\n  return geometry"), schema)
     assert msgs == ['t.bn:2:13  image expects a datablock name (Image): "Name"']
 
 
@@ -289,12 +289,12 @@ def test_no_graph_calls_a_material(schema):
 
 
 def test_ramp_and_curves_are_node_data(schema):
-    src = graph("  r = ColorRamp(factor: t, color_ramp: Ramp((0.0, (0.0, 0.0, 0.0)), (0.5, (1.0, 0.5, 0.0, 1.0)), "
-                "interpolation: EASE))\n"
-                "  f = FloatCurve(value: r.alpha, mapping: Curve((0.0, 0.0), (0.5, 0.8, VECTOR), (1.0, -1.0), "
-                "extend: HORIZONTAL))\n"
-                "  c = RGBCurves(color: r.color, mapping: Curves(c: Curve((0.0, 0.1), (1.0, 0.9)), "
-                "black_level: (0.1, 0.1, 0.1)))\n"
+    src = graph("  r = ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0)), (0.5, (1.0, 0.5, 0.0, 1.0)), "
+                "interpolation: EASE)](factor: t)\n"
+                "  f = FloatCurve[mapping: Curve((0.0, 0.0), (0.5, 0.8, VECTOR), (1.0, -1.0), "
+                "extend: HORIZONTAL)](value: r.alpha)\n"
+                "  c = RGBCurves[mapping: Curves(c: Curve((0.0, 0.1), (1.0, 0.9)), "
+                "black_level: (0.1, 0.1, 0.1))](color: r.color)\n"
                 "  return SetPosition(geometry, offset: CombineXYZ(x: c.color, z: f))")
     g = compile_one(src, schema)
     by_name = {n.name: n for n in g.nodes if n.name}
@@ -308,17 +308,17 @@ def test_ramp_and_curves_are_node_data(schema):
 
 
 @pytest.mark.parametrize("value, message", [
-    ("3", "2:40  color_ramp expects Ramp((position, color), …)"),
-    ("Ramp()", "2:40  a Ramp has one stop at least: (position, color)"),
-    ("Ramp((2.0, (1.0, 1.0, 1.0)))", "2:45  a Ramp stop's position is from 0.0 to 1.0, not 2.0"),
-    ("Ramp((0.5, 1.0))", "2:45  a Ramp stop is (position, color): (0.5, (1.0, 0.5, 0.0, 1.0))"),
+    ("3", "2:29  color_ramp expects Ramp((position, color), …)"),
+    ("Ramp()", "2:29  a Ramp has one stop at least: (position, color)"),
+    ("Ramp((2.0, (1.0, 1.0, 1.0)))", "2:34  a Ramp stop's position is from 0.0 to 1.0, not 2.0"),
+    ("Ramp((0.5, 1.0))", "2:34  a Ramp stop is (position, color): (0.5, (1.0, 0.5, 0.0, 1.0))"),
     ("Ramp((0.5, (1.0, 1.0, 1.0)), interpolation: SMOOTH)",
-     "2:69  interpolation expects one of EASE, CARDINAL, LINEAR, B_SPLINE, CONSTANT"),
+     "2:58  interpolation expects one of EASE, CARDINAL, LINEAR, B_SPLINE, CONSTANT"),
     ("Ramp((0.5, (1.0, 1.0, 1.0)), mode: HSV)",
-     "2:69  Ramp has no setting 'mode'; settings: interpolation, color_mode, hue_interpolation"),
+     "2:58  Ramp has no setting 'mode'; settings: interpolation, color_mode, hue_interpolation"),
 ])
 def test_a_ramp_says_what_it_expects(schema, value, message):
-    assert errors(graph(f"  r = ColorRamp(factor: t, color_ramp: {value})\n  return geometry"), schema) == \
+    assert errors(graph(f"  r = ColorRamp[color_ramp: {value}](factor: t)\n  return geometry"), schema) == \
         [f"t.bn:{message}"]
 
 
@@ -334,7 +334,7 @@ def test_a_ramp_says_what_it_expects(schema, value, message):
      "2:66  'tone' is a setting of the Curves, not of one Curve"),
 ])
 def test_curves_say_what_they_expect(schema, node, value, message):
-    assert errors(graph(f"  r = {node}(mapping: {value})\n  return geometry"), schema) == [f"t.bn:{message}"]
+    assert errors(graph(f"  r = {node}[mapping: {value}]()\n  return geometry"), schema) == [f"t.bn:{message}"]
 
 
 # Deprecated graphs: `kind(deprecated: "what to use instead") graph …`

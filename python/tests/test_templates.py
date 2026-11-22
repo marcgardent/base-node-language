@@ -38,9 +38,6 @@ class Typed(FakeSchema):
         names = super().node_names("geometry") + list(TYPED)
         return [n for n in names if kind == "geometry" or n in SHARED]
 
-    def renamed(self, kind):
-        return {}
-
     def groups(self, kind):
         return {}
 
@@ -61,8 +58,8 @@ geometry graph attribute_or<T: Float | Int | Bool | Vector | Color | Rotation | 
     name: String,
     fallback: T
 ) -> (value: T) {
-  a = NamedAttribute(name: name, data_type: T)
-  return (value: Switch(switch: a.exists, false_: fallback, true_: a.attribute, input_type: T))
+  a = NamedAttribute[T](name: name)
+  return (value: Switch[T](switch: a.exists, false_: fallback, true_: a.attribute))
 }
 
 geometry graph twice<T: Float | Vector>(x: T) -> (y: T) {
@@ -70,7 +67,7 @@ geometry graph twice<T: Float | Vector>(x: T) -> (y: T) {
 }
 
 geometry graph blend<T: Float | Vector | Color>(a: T, b: T, t: Float = 0.5) -> (value: T) {
-  return (value: Mix(factor: t, a: a, b: b, data_type: T))
+  return (value: Mix[T](factor: t, a: a, b: b))
 }
 
 geometry graph pick<T: Float | Vector>(name: String, fallback: T) -> (value: T) {
@@ -223,7 +220,7 @@ def test_a_text_calls_its_own_template_through_a_use_only():
 
 def test_a_module_template_is_checked_for_each_type():
     module = ("geometry graph blend<T: Float | Matrix>(a: T, b: T) -> (value: T) {\n"
-              "  return (value: Mix(factor: 0.5, a: a, b: b, data_type: T))\n}\n")
+              "  return (value: Mix[T](factor: 0.5, a: a, b: b))\n}\n")
     with pytest.raises(BnError) as err:
         compile_source(module, Typed(), "attrs.bn")
     msgs = [d.message for d in err.value.diagnostics]

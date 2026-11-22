@@ -338,11 +338,6 @@ class Schema(Protocol):
     def node_names(self, kind):
         """Every text name of the tree kind, for suggestions."""
 
-    def renamed(self, kind):
-        """{former name: text name} of the nodes whose name changed, to tell an old text how to read now.
-
-        Optional: a schema without it has no former name to suggest."""
-
     def sockets(self, kind, spec, props):
         """(inputs, outputs) available once `props` are set: lists of Socket."""
 

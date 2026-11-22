@@ -8,7 +8,7 @@ from ._core import (EDITION, MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, STDLIB_V
 from .header import Header, header
 from .targets import (Inference, Issue, Target, check_target, check_targets, infer, load_target, promise_names,
                       target_names, translate, variant_names)
-from .typecheck import check, deprecations, old_spellings
+from .typecheck import check, deprecations
 
 
 def compile_source(source, schema, filename="<text>", load=None, warnings=None):
@@ -37,7 +37,6 @@ __all__ = [
     "check",
     "compile_source",
     "deprecations",
-    "old_spellings",
     "tokenize",
     "to_source",
     "format_source",

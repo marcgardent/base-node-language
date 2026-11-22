@@ -43,11 +43,11 @@ def test_a_label_that_starts_with_a_digit_is_no_identifier():
     assert not node_name("3D Cursor")[:1].isalpha()
 
 
-def test_an_old_name_says_how_it_is_written_now(schema):
+def test_a_name_no_node_has_is_unknown(schema):
     assert errors(graph("  m = MeshGrid(size_x: 1)\n  return m.mesh"), schema) == [
-        "t.bn:2:7  unknown node 'MeshGrid' in a geometry tree; it is now written Grid"]
+        "t.bn:2:7  unknown node 'MeshGrid' in a geometry tree; did you mean Grid?"]
     assert errors(graph("  m = GeometryNodeMeshGrid(size_x: 1)\n  return m.mesh"), schema) == [
-        "t.bn:2:7  unknown node 'GeometryNodeMeshGrid' in a geometry tree; it is now written Grid"]
+        "t.bn:2:7  unknown node 'GeometryNodeMeshGrid' in a geometry tree"]
 
 
 @pytest.mark.parametrize("written", ["set_position", "setposition", "SETPOSITION", "Set_Position"])

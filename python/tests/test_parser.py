@@ -6,7 +6,7 @@ from base_node.lexer import tokenize
 # Snippets from the spec: they must all parse, formulas included
 SPEC_SNIPPETS = [
     "geometry graph g(v: Vector, geometry: Geometry) -> Geometry {\n"
-    "  a = SetPosition(geometry, offset: v)\n  return Math(a, b, operation: POWER)\n}",
+    "  a = SetPosition(geometry, offset: v)\n  return Math[POWER](a, b)\n}",
     "geometry graph g(v: Vector) -> Float {\n  return SeparateXYZ(v).z\n}",
     "geometry graph g() -> Float {\n  p = Position()\n  return sin(p.x) + cos(p.y) * p.z\n}",
     "geometry graph g(geometry: Geometry) -> Geometry {\n"

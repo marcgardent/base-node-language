@@ -225,35 +225,3 @@ def test_check_warns_of_deprecated_calls_and_passes(tmp_path, capsys):
     assert "warning: 'plane' is deprecated: use Grid" in capsys.readouterr().err
     # The other commands read and write the mark as any setting
     assert main(["fmt", "--check", str(path)]) == 0 and main(["parse", str(path)]) == 0
-
-
-def test_check_says_how_a_zone_of_before_is_written(tmp_path, capsys):
-    """`base-node check`: a zone in the spelling of before is an error that says what to write, when
-    the name is the zone's (nothing else in the text has it)."""
-    from base_node_cli.cli import main
-
-    def text(body, before=""):
-        return before + "geometry graph g(n: Int) -> Float {\n" + body + "  return 1.0\n}\n"
-
-    path = tmp_path / "old.bn"
-    cases = [
-        ("  r = repeat(n, v: 1.0) {\n    return (v: v * 2.0)\n  }\n",
-         "old.bn:2:7  repeat takes a body after '->': r = repeat(10, state: start) -> { … }"),
-        ("  s = simulate(v: 1.0) {\n    return (v: v)\n  }\n",
-         "old.bn:2:7  simulate takes a body after '->': s = simulate(state: start) -> { … }"),
-        ("  f = closure(x: Float) -> Float {\n    return x\n  }\n",
-         "old.bn:2:7  closure(…) is now written as a graph with no name: f = graph(x: Float) -> Float { … }"),
-    ]
-    for body, message in cases:
-        for target in ([], ["--target", "blender"]):
-            path.write_text(text(body), encoding="utf-8")
-            assert main(["check", *target, str(path)]) == 1
-            captured = capsys.readouterr()
-            assert captured.err == f"Error in '{path}':\n{message}\n" and captured.out == ""
-    # A graph of the text of that name is what the call calls: the targets answer
-    mine = "geometry graph repeat(n: Int, v: Float) -> Float {\n  return v\n}\n\n"
-    path.write_text(text("  r = repeat(n, v: 1.0)\n", mine), encoding="utf-8")
-    assert main(["check", "--target", "blender", str(path)]) == 0
-    # The new spelling passes
-    path.write_text(text("  r = repeat(n, v: 1.0) -> {\n    return (v: v * 2.0)\n  }\n"), encoding="utf-8")
-    assert main(["check", "--target", "blender", str(path)]) == 0

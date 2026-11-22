@@ -271,7 +271,7 @@ def test_a_math_comparison_is_a_float_of_numbers_only():
 
 
 def test_a_condition_is_a_comparison_written_with_math():
-    g = compile_one(graph("  gt = a > b\n  ne = a != b\n  hand = Math(a, b, operation: LESS_THAN)\n"
+    g = compile_one(graph("  gt = a > b\n  ne = a != b\n  hand = Math[LESS_THAN](a, b)\n"
                           "  flipped = 1.0 - hand\n  sum = a + b\n  not_from_one = 2.0 - hand\n"
                           "  swapped = hand - 1.0\n  twice = 1.0 - sum", FLOATS), NoCompare())
     found = {n.name: math_condition(n, g.nodes) for n in g.nodes if n.name}
@@ -291,7 +291,7 @@ def test_is_condition_follows_names(monkeypatch):
         checkers.append(self)
 
     monkeypatch.setattr(typecheck.GraphChecker, "__init__", keep)
-    compile_one(graph("  gt = a >= b\n  hand = 1.0 - Math(a, b, operation: COMPARE)\n  sum = a + b\n"
+    compile_one(graph("  gt = a >= b\n  hand = 1.0 - Math[COMPARE](a, b)\n  sum = a + b\n"
                       "  yes = true", FLOATS), NoCompare())
     c = checkers[-1]
     assert {k: c.is_condition(c.env[k]) for k in ("gt", "hand", "sum", "yes", "a")} == {

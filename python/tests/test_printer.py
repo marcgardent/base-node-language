@@ -7,14 +7,14 @@ from base_node.printer import to_source
 CANONICAL = [
     "geometry graph wave(geometry: Geometry, t: Float) -> Geometry {\n"
     "  p = Position()\n"
-    "  s = Math(SeparateXYZ(p).x, t, operation: ADD)\n"
-    "  h = Math(Math(s, operation: SINE), 0.2, operation: MULTIPLY)\n"
+    "  s = Math[ADD](SeparateXYZ(p).x, t)\n"
+    "  h = Math[MULTIPLY](Math[SINE](s), 0.2)\n"
     "  return SetPosition(geometry, offset: CombineXYZ(z: h))\n"
     "}\n",
     "geometry graph g(geometry: Geometry) -> Geometry {\n"
     "  return geometry\n"
     "    |> SubdivideMesh(level: 2)\n"
-    "    |> SetShadeSmooth(domain: FACE)\n"
+    "    |> SetShadeSmooth[FACE]()\n"
     "    |> SetMaterial(material: \"Rust\")\n"
     "}\n",
     'geometry graph "Smooth by Angle"(mesh: Geometry, "Fur Density": Float) -> (Mesh: Geometry, n: Int) {\n'
