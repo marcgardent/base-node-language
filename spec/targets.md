@@ -96,8 +96,8 @@ it: cycles, eevee, gltf`.
 A translator only renames. A node becomes one node: its new name, and the inputs and settings whose
 names change. `inputs` renames the named arguments of the call, `settings` the named settings in
 its brackets; a setting written by position stays as it is, in the brackets:
-`MixRGB[MULTIPLY](a, fac: f)` becomes `Mix[MULTIPLY](a, factor: f)`, and
-`MixRGB[blend_type: MULTIPLY](a)` becomes `Mix[mode: MULTIPLY](a)`. What is more than a rename,
+`MixLegacy[MULTIPLY](color1: a, color2: b)` becomes `Mix[MULTIPLY](a: a, b: b)`, and
+`MixLegacy[blend_type: MULTIPLY](color1: a)` becomes `Mix[blend: MULTIPLY](a: a)`. What is more than a rename,
 one node of the source made of several nodes of the target, is a **bridge**: a graph of one of the
 target's bridge modules, which the translator names by its module,
 `"Kuwahara": "blender_interop::kuwahara"`, or with its renames,
@@ -394,24 +394,24 @@ rules on the same cases.
 | `PrincipledBSDF.base_color`, `Background.color` | A constant, a texture's color, a color attribute's (`ColorAttribute`, `Attribute`), the texture times a color attribute, either times a constant |
 | `PrincipledBSDF.alpha` | A constant, a texture or a channel of one, either times a constant; an alpha clip of one of them; a color attribute's alpha as above, when `base_color` has a color attribute too |
 | `metallic`, `roughness`, `specular_ior_level`, `transmission_weight`, `coat_weight`, `coat_roughness`, `sheen_roughness` | A constant, a texture or a channel of one, either times a constant |
-| `thin_film_thickness`, `thin_film_ior` | Their defaults (0, 1.33); with a glTF Material Output that has `Iridescence Factor` and `Iridescence Thickness Minimum` inputs, constants, or a thickness `Mix(SeparateColor(t.color).red, lo, hi)` of two named constants, `lo` given to `Iridescence Thickness Minimum` too (`KHR_materials_iridescence`) |
+| `thin_film_thickness`, `thin_film_ior` | Their defaults (0, 1.33); with a glTF Material Output that has `Iridescence Factor` and `Iridescence Thickness Minimum` inputs, constants, or a thickness `Mix(factor: SeparateColor(color: t.color).red, a: lo, b: hi)` of two named constants, `lo` given to `Iridescence Thickness Minimum` too (`KHR_materials_iridescence`) |
 | `thin_wall`, `diffuse_roughness`, `subsurface_weight`, `transmission_dispersion_scale` | Their defaults: the exporter reads none of them |
 | `coat_tint`, `coat_ior` | Their defaults, or any constant when `coat_weight` is 0: glTF's clearcoat has neither |
 | `emission_color`, `specular_tint`, `sheen_tint`, `Emission.color` | A constant, a texture's color, either times a constant |
 | `normal`, `coat_normal` | A constant, or a `NormalMap` of an image texture's color, tangent space and OpenGL convention, with a constant strength |
-| `anisotropic`, `anisotropic_rotation`, `tangent` | Constants; or a texture's color, either times a constant (read as a gray texture); or the pattern the exporter writes: `s = SeparateXYZ(VectorMath[MULTIPLY_ADD](t.color, (2.0, 2.0, 1.0), (-1.0, -1.0, 0.0)))`, `anisotropic: s.z * strength`, `anisotropic_rotation: (atan2(s.y, s.x) + rotation) / 6.283185`, `tangent: Tangent[UV_MAP]()` |
+| `anisotropic`, `anisotropic_rotation`, `tangent` | Constants; or a texture's color, either times a constant (read as a gray texture); or the pattern the exporter writes: `s = SeparateXYZ(vector: VectorMath[MULTIPLY_ADD](Vector: t.color, Vector_001: (2.0, 2.0, 1.0), Vector_002: (-1.0, -1.0, 0.0)))`, `anisotropic: s.z * strength`, `anisotropic_rotation: (atan2(s.y, s.x) + rotation) / 6.283185`, `tangent: Tangent[UV_MAP]()` |
 | `Background.strength` | 1: the exporter reads a Background as unlit, without its strength |
 | Every other input of `PrincipledBSDF`, `Emission`, `Background`, `VolumeAbsorption` | A constant: the exporter reads its value, or it changes nothing the glTF shows (the radius of a subsurface of weight 0) |
-| `glTFMaterialOutput` | A group named `glTF Material Output` (or `glTF Settings`): `Occlusion` 1, a texture or a channel of one, or `Mix(strength, (1.0, 1.0, 1.0, 1.0), it)` (an `occlusionTexture` and its strength); `Thickness`, `Iridescence Factor` a constant, a texture or a channel, either times a constant; `Iridescence Thickness Minimum` a constant; `Dispersion` 0, or a constant with a `Thickness` that is not 0 (`KHR_materials_dispersion` needs the volume); any other input a constant |
-| `MixShader` | An unlit pattern: `MixShader(LightPath().is_camera_ray, TransparentBSDF(), Emission(color: c))`, the color as a base color, or a `Background` for the Emission; and `MixShader(alpha, TransparentBSDF(), <that unlit Emission>)`, the alpha as above (alpha `BLEND`, or `MASK` with a clip). The Emission's strength is 1 and the Transparent BSDFs are white: the exporter reads neither, nor the shader other rays see |
+| `glTFMaterialOutput` | A group named `glTF Material Output` (or `glTF Settings`): `Occlusion` 1, a texture or a channel of one, or `Mix(factor: strength, a: (1.0, 1.0, 1.0, 1.0), b: it)` (an `occlusionTexture` and its strength); `Thickness`, `Iridescence Factor` a constant, a texture or a channel, either times a constant; `Iridescence Thickness Minimum` a constant; `Dispersion` 0, or a constant with a `Thickness` that is not 0 (`KHR_materials_dispersion` needs the volume); any other input a constant |
+| `MixShader` | An unlit pattern: `MixShader(factor: LightPath().is_camera_ray, a: TransparentBSDF(), b: Emission(color: c))`, the color as a base color, or a `Background` for the Emission; and `MixShader(factor: alpha, a: TransparentBSDF(), b: <that unlit Emission>)`, the alpha as above (alpha `BLEND`, or `MASK` with a clip). The Emission's strength is 1 and the Transparent BSDFs are white: the exporter reads neither, nor the shader other rays see |
 | `TransparentBSDF`, `LightPath` | Only in those patterns |
 | `ImageTexture.vector` | `UVMap`, `TextureCoordinate().uv`, an `Attribute`'s vector (a named UV map), or a `Mapping` of one of them with constant location and scale, a rotation around Z alone, of type Point, Texture or Vector |
 | `ImageTexture` settings | An `image`; `projection` Flat, `interpolation` Linear or Closest, `extension` Repeat, Extend or Mirror: Cubic is written Linear, Clip as Extend, a Box projection as Flat, no image as no texture |
-| `PrincipledBSDF`, once | The exporter reads the last Principled BSDF the surface reaches, its inputs walked in order (in `MixShader(0.5, a, b)`, `b`); a Principled BSDF no link reaches is not in the material |
+| `PrincipledBSDF`, once | The exporter reads the last Principled BSDF the surface reaches, its inputs walked in order (in `MixShader(factor: 0.5, a: one, b: other)`, `other`); a Principled BSDF no link reaches is not in the material |
 | `Attribute.attribute_type`, `Tangent.direction_type`, `NormalMap.space`, `NormalMap.convention` | Geometry; UV Map; Tangent; OpenGL |
 
-An **alpha clip** is `round(a)`, `a > cutoff` (`Math[GREATER_THAN](a, cutoff)`), `cutoff < a`
-(`Math[LESS_THAN](cutoff, a)`), or `1.0 - ` the other two, which is `a >= cutoff` and
+An **alpha clip** is `round(a)`, `a > cutoff` (`Math[GREATER_THAN](Value: a, Value_001: cutoff)`), `cutoff < a`
+(`Math[LESS_THAN](Value: cutoff, Value_001: a)`), or `1.0 - ` the other two, which is `a >= cutoff` and
 `cutoff <= a` (a shader tree has no Compare node: a comparison is these Math nodes there, and a rule
 reads it as them): alpha mode `MASK`, the cutoff a constant. `folded` is
 Math, Vector Math and Mix: Blender computes them on constants before the exporter reads the

@@ -33,7 +33,7 @@ geometry graph "eroded hills"(
 ) -> Geometry {
   "A noise terrain on a Grid, eroded"
   hills = NoiseTexture(vector: Position(), scale: 0.6, detail: 6.0, roughness: 0.55).factor
-  return Grid(size, size, resolution, resolution)
+  return Grid(size_x: size, size_y: size, vertices_x: resolution, vertices_y: resolution)
     |> SetPosition(offset: CombineXYZ(z: (hills - 0.5) * height * 2.0))
     |> erode(iterations: iterations)
     |> SetShadeSmooth()
@@ -51,7 +51,7 @@ geometry graph "reaction diffusion tile"(
     iterations: Int = 3000 in 0..
 ) -> Geometry {
   "A 4 x 4 Grid grown with a Gray-Scott pattern"
-  return Grid(4.0, 4.0, resolution, resolution)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: resolution, vertices_y: resolution)
     |> reaction_diffusion(preset: preset, iterations: iterations)
     |> SetShadeSmooth()
 }
@@ -92,7 +92,7 @@ geometry graph "differential growth coral"(
     (0.02, 0.5, 0.75, 1.0),
     (1.0, 0.72, 0.06, 1.0),
     (0.75, 0.06, 0.24, 1.0))
-  shade = Mix(Clamp(r * 0.42 - 0.1), tint, (0.04, 0.05, 0.08, 1.0))
+  shade = Mix(factor: Clamp(value: r * 0.42 - 0.1), a: tint, b: (0.04, 0.05, 0.08, 1.0))
   size = r < 1.15 ? (0.2, 0.2, 0.5) : (0.24, 0.24, 0.08)
 ```
 
@@ -353,11 +353,11 @@ use math (palette, sine01)
 geometry graph ripples(count: Int = 40 in 2.., waves: Float = 2.5, height: Float = 0.6) -> Geometry {
   "Columns on a grid that rise with a ripple from the centre, coloured by their height"
   p = Position()
-  rise = sine01(length(CombineXYZ(p.x, p.y)) * waves * 0.5) * height + 0.05
+  rise = sine01(length(CombineXYZ(x: p.x, y: p.y)) * waves * 0.5) * height + 0.05
   column = Cube(size: (0.08, 0.08, 1.0)) |> TransformGeometry(translation: (0.0, 0.0, 0.5))
-  return Grid(4.0, 4.0, count, count)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: count, vertices_y: count)
     |> MeshToPoints()
-    |> InstanceOnPoints(instance: column, scale: CombineXYZ(1.0, 1.0, rise))
+    |> InstanceOnPoints(instance: column, scale: CombineXYZ(x: 1.0, y: 1.0, z: rise))
     |> RealizeInstances()
     |> StoreNamedAttribute[FLOAT_COLOR](name: "color", value: palette(Position().z / height))
 }

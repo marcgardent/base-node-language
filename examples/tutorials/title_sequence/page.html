@@ -91,7 +91,7 @@
 
     <h2 id="step-2"><span class="n">2.</span> Revealed letter by letter</h2>
     <p>
-      Time comes in. <code>SceneTime().frame</code> is the frame being played; <code>Clamp((frame - 6) / 36)</code> makes it a <code>progress</code> that stays at 0 until frame 6, runs to 1 by frame 42 and stays there. Every animated part of this tutorial is driven this way, by a progress of its own.
+      Time comes in. <code>SceneTime().frame</code> is the frame being played; <code>Clamp(value: (frame - 6) / 36)</code> makes it a <code>progress</code> that stays at 0 until frame 6, runs to 1 by frame 42 and stays there. Every animated part of this tutorial is driven this way, by a progress of its own.
     </p>
     {{code step2_reveal.bn title_sequence Title}}
     <ol class="steps">

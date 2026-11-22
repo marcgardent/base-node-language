@@ -91,10 +91,10 @@ fn find<'a>(stmts: &'a [Stmt], name: &str) -> Option<&'a Call> {
     })
 }
 
-/// What the arguments of the text's `Math(…)` are: comparisons, or a call with types.
+/// What the arguments of the text's `max(…)` are: comparisons, or a call with types.
 fn math_args(src: &str) -> Vec<&'static str> {
     let file = parse(src, "t.bn").unwrap();
-    let call = find(&file.graphs.last().unwrap().body, "Math").unwrap();
+    let call = find(&file.graphs.last().unwrap().body, "max").unwrap();
     call.args
         .iter()
         .map(|a| match &a.value {
@@ -113,32 +113,32 @@ fn a_name_that_holds_a_value_is_no_template() {
     let compared = ["compared", "compared"];
     let math = |body: &str| math_args(&format!("{HEAD}{body}}}\n"));
     // An input, by its key
-    assert_eq!(math("  return Math(a < b, c > (d))\n"), compared);
-    assert_eq!(math("  return Math(s < b, c > (d))\n"), compared);
+    assert_eq!(math("  return max(a < b, c > (d))\n"), compared);
+    assert_eq!(math("  return max(s < b, c > (d))\n"), compared);
     // A name bound before, in the block or in a frame of it
-    assert_eq!(math("  k = a\n  return Math(k < b, c > (d))\n"), compared);
+    assert_eq!(math("  k = a\n  return max(k < b, c > (d))\n"), compared);
     assert_eq!(
-        math("  {\n    k = a\n  }\n  return Math(k < b, c > (d))\n"),
+        math("  {\n    k = a\n  }\n  return max(k < b, c > (d))\n"),
         compared
     );
     // Inside a body: its items, and the names around
     assert_eq!(
-        math("  r = f(1, v: a) -> {\n    return Math(v < b, k > (v))\n  }\n  return r\n"),
+        math("  r = f(1, v: a) -> {\n    return max(v < b, k > (v))\n  }\n  return r\n"),
         compared
     );
     assert_eq!(
-        math("  h = graph(x: Float) -> Float {\n    return Math(x < a, b > (x))\n  }\n  return h(x: a)\n"),
+        math("  h = graph(x: Float) -> Float {\n    return max(x < a, b > (x))\n  }\n  return h(x: a)\n"),
         compared
     );
     // A name holds no value before its statement, after the body it is an item of, nor in
     // another graph
-    assert_eq!(math("  return Math(k < b, c > (d))\n"), ["typed call"]);
+    assert_eq!(math("  return max(k < b, c > (d))\n"), ["typed call"]);
     assert_eq!(
-        math("  r = f(1, v: a) -> {\n    return v\n  }\n  return Math(v < b, c > (d))\n"),
+        math("  r = f(1, v: a) -> {\n    return v\n  }\n  return max(v < b, c > (d))\n"),
         ["typed call"]
     );
     let other = "geometry graph h(k: Float) -> Float {\n  return k\n}\n\n\
-                 geometry graph g(b: Float) -> Float {\n  return Math(k < b, b > (b))\n}\n";
+                 geometry graph g(b: Float) -> Float {\n  return max(k < b, b > (b))\n}\n";
     assert_eq!(math_args(other), ["typed call"]);
     // Two comparisons in a row are refused, not read as a call
     let err = parse(

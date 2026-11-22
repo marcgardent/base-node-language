@@ -259,7 +259,7 @@ def set_phase(mod, value):
 SIMULATIONS = {
     "reaction_diffusion.bn": """
 geometry graph "growing tile"() -> Geometry {
-  return Grid(4.0, 4.0, 256, 256)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: 256, vertices_y: 256)
     |> growing_reaction_diffusion(steps_per_frame: 100)
     |> SetShadeSmooth()
     |> SetMaterial(material: "ReactionPattern")

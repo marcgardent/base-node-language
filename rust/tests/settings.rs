@@ -51,7 +51,7 @@ fn brackets_are_tokens() {
 
 #[test]
 fn settings_in_source_order_with_optional_keys() {
-    let c = call_of("x = Math[ADD, use_clamp: true](a, 2.0)");
+    let c = call_of("x = Math[ADD, use_clamp: true](Value: a, Value_001: 2.0)");
     let keys: Vec<Option<&str>> = c.settings.iter().map(|s| s.name.as_deref()).collect();
     assert_eq!(keys, vec![None, Some("use_clamp")]);
     assert!(matches!(&c.settings[0].value, Expr::Ref(r) if r.name == "ADD"));
@@ -126,14 +126,14 @@ fn body_call_and_pipe_and_template_take_settings() {
 
 #[test]
 fn a_call_without_brackets_has_no_settings() {
-    let c = call_of("x = Math(a, 2.0)");
+    let c = call_of("x = Math(Value: a, Value_001: 2.0)");
     assert!(c.settings.is_empty());
     assert_eq!(c.args.len(), 2);
 }
 
 #[test]
 fn the_tree_holds_settings_as_their_own_field() {
-    let c = call_of("x = Math[ADD, use_clamp: true](a)");
+    let c = call_of("x = Math[ADD, use_clamp: true](Value: a)");
     let json = serde_json::to_value(&c).unwrap();
     assert_eq!(
         json["settings"],
@@ -151,19 +151,25 @@ fn the_tree_holds_settings_as_their_own_field() {
 
 #[test]
 fn printed_back() {
-    let src = format!("{HEAD}  x = Math[ADD, use_clamp: true](a, 2.0)\n  return x\n}}\n");
+    let src = format!(
+        "{HEAD}  x = Math[ADD, use_clamp: true](Value: a, Value_001: 2.0)\n  return x\n}}\n"
+    );
     assert_eq!(base_node::format_source(&src, "s.bn").unwrap(), src);
 }
 
 #[test]
 fn what_brackets_refuse() {
     for (line, at, says) in [
-        ("x = Math[a](2.0)", (2, 12), "'a' holds a value"),
-        ("x = Math[mode: (1, a)](2.0)", (2, 22), "'a' holds a value"),
-        ("x = Math[](a)", (2, 11), "empty settings"),
+        ("x = Math[a](Value: 2.0)", (2, 12), "'a' holds a value"),
+        (
+            "x = Math[mode: (1, a)](Value: 2.0)",
+            (2, 22),
+            "'a' holds a value",
+        ),
+        ("x = Math[](Value: a)", (2, 11), "empty settings"),
         ("x = Math[ADD]", (3, 3), "'(' and the inputs"),
         (
-            "x = Math[use_clamp: true, ADD](a)",
+            "x = Math[use_clamp: true, ADD](Value: a)",
             (2, 29),
             "positional setting after named",
         ),

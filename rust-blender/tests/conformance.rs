@@ -633,7 +633,10 @@ fn a_translator_renames_inputs_and_settings() {
     let text = base_node::format_file(&out);
     assert!(text.contains("Blur(image, radius: 4.0)"), "{text}");
     // A setting by position stays as it is written, one by name takes its new name
-    assert!(text.contains("Mix[MULTIPLY](a: image, b: blurred)"), "{text}");
+    assert!(
+        text.contains("Mix[MULTIPLY](a: image, b: blurred)"),
+        "{text}"
+    );
     assert!(
         text.contains(
             "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))]("

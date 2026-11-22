@@ -102,7 +102,7 @@ fn a_zone_of_another_shape_is_refused() {
         at(2, 25, "'a as b': 'as' only aliases an item of an item node")
     );
     assert_eq!(
-        said("  g = Grid(1.0, 1.0) -> {\n    return ()\n  }"),
+        said("  g = Grid(size_x: 1.0, size_y: 1.0) -> {\n    return ()\n  }"),
         at(
             2,
             7,

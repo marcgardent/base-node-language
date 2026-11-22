@@ -3,6 +3,21 @@
 Ways of writing a graph that come back in most libraries of node groups. Each is a paragraph and a
 graph you can build as it is.
 
+## Name what goes into a node
+
+A node's inputs go by name; only what the node works on comes first without one, the mesh here. A name
+stays right when a setting or another version of Blender moves the sockets: with `MULTIPLY_ADD`, Math
+has a third value, and the first two keep theirs. In Blender, *Format* writes the names of a text
+whose values go by position, as `base-node fmt --names` does.
+
+```bn
+geometry graph "lift by noise"(mesh: Geometry, height: Float = 0.3, scale: Float = 4.0) -> Geometry {
+  n = NoiseTexture(vector: Position(), scale: scale).factor
+  h = Math[MULTIPLY_ADD](Value: n, Value_001: height, Value_002: -height * 0.5)
+  return mesh |> SetPosition(offset: CombineXYZ(z: h))
+}
+```
+
 ## Read an attribute that may be missing
 
 A named attribute does not exist on every geometry. `NamedAttribute` says whether it found it: switch to
@@ -22,7 +37,7 @@ often chooses where the geometry comes from: the modifier's own, or an object's.
 
 ```bn
 geometry graph source(mode: Menu = Input, geometry: Geometry, object: Object) -> Geometry {
-  return MenuSwitch(mode, Input: geometry, Object: ObjectInfo(object).geometry).output
+  return MenuSwitch(menu: mode, Input: geometry, Object: ObjectInfo(object: object).geometry).output
 }
 ```
 
@@ -59,9 +74,9 @@ seed for each, so that one seed still changes them all.
 
 ```bn
 geometry graph jitter(geometry: Geometry, amount: Float = 0.1, seed: Int) -> Geometry {
-  x = RandomValue(-1.0, 1.0, seed: seed)
-  y = RandomValue(-1.0, 1.0, seed: seed + 1)
-  return SetPosition(geometry, offset: CombineXYZ(x, y) * amount)
+  x = RandomValue(min: -1.0, max: 1.0, seed: seed)
+  y = RandomValue(min: -1.0, max: 1.0, seed: seed + 1)
+  return SetPosition(geometry, offset: CombineXYZ(x: x, y: y) * amount)
 }
 ```
 
@@ -85,7 +100,7 @@ on: the graph can tell the user and fall back in the same step.
 ```bn
 geometry graph "faces only"(mesh: Geometry) -> Geometry {
   empty = DomainSize(mesh).face_count == 0
-  warned = Warning(empty, message: "The input has no faces")
+  warned = Warning(show: empty, message: "The input has no faces")
   return warned ? Cube() : mesh
 }
 ```
@@ -111,7 +126,7 @@ that stops at the ends.
 
 ```bn
 geometry graph blend(a: Float, b: Float, amount: Float(subtype: FACTOR) = 0.5 in 0.0..1.0) -> Float {
-  return Mix(amount, a, b)
+  return Mix(factor: amount, a: a, b: b)
 }
 ```
 

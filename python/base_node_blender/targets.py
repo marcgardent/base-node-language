@@ -740,7 +740,7 @@ def _formula(op):
 
 def _math_comparison(e):
     """A comparison as the Math nodes it writes in a tree with no Compare node (sugar.MATH_COMPARE):
-    `a >= b` is `1.0 - Math[LESS_THAN](a, b)`."""
+    `a >= b` is `1.0 - Math[LESS_THAN](Value: a, Value_001: b)`."""
     operation, negated = MATH_COMPARE[e.op]
     args = [ast.Arg(None, e.left, e.line, e.col), ast.Arg(None, e.right, e.line, e.col)]
     if operation == "COMPARE":

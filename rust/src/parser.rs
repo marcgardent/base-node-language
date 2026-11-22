@@ -387,7 +387,7 @@ impl<'a> Parser<'a> {
 
     /// `<Vector>(` or `<Float, Color>[` after a call's name: the types of a template.
     ///
-    /// A name that holds a value is no template: `Math(a < b, c > (d))` compares.
+    /// A name that holds a value is no template: `max(a < b, c > (d))` compares.
     fn at_type_args(&self, name: &str) -> bool {
         if self.values.contains(name) || !self.at("<") || !self.peek(1).is("IDENT") {
             return false;

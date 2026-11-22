@@ -7,6 +7,38 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Language
+
+- Changed, a text needs an edit: a node's inputs are given by name, the key of their socket:
+  `Math[ADD](Value: a, Value_001: b)`, `CombineXYZ(x: p.x, y: p.y)`. A position depends on Blender's
+  order of the sockets, which a setting or another version of Blender changes; a name does not. By
+  position go only the values a name cannot tell, as a tree reads them back: the geometry a node works
+  on (its first input, linked: the pipe's; the image a compositor node works on), the items of a
+  switch (`IndexSwitch(0, a, b)`), the values of a multi-input with the inputs before them
+  (`MeshBoolean[DIFFERENCE](a, b, c)`), and the fixed inputs of Separate Bundle, Evaluate Closure and
+  Closure to List. A pipe into a node gives the input that goes first unnamed. Graphs, groups and
+  functions take their values by position or by name.
+
+### Blender add-on
+
+- Changed, a text needs an edit: the checker refuses a value by position where the canonical form
+  names the input, at the value, with the name to write: `Math: input 1 is 'Value'; write it by name,
+  Math[ADD](Value: a, …)`. The texts of the standard library, the examples, the conformance cases and
+  the tests give their inputs by name.
+- Added: *Format* writes the inputs of the text's nodes by name, as Blender's sockets go, and *Name
+  Inputs* (the text's context menu, and the button beside such an error in the sidebar) those of the
+  call under the cursor, the rest of the text as it is. In a node's parentheses the suggestions are
+  its inputs, `name: `, and the values only where one may go by position.
+
+### Tools
+
+- Added: `base-node fmt --names` writes the inputs by name without Blender, from the sockets of the
+  Blender the text promises (`@target blender@5.2-lts`), else of the newest; `make names FILES=…`
+  runs it. The backends `targets/backends/blender-<x.y>.json` list, for each node, the sockets each
+  setting makes, alone or with another, and Blender's identifier of a socket where it is not its key:
+  `base_node_blender.backend.BackendSchema` reads them, and the checker runs without Blender on every
+  text of `corpus/v1`.
+
 ## [1.0.0-rc.4] - 2026-11-22
 
 ### Language

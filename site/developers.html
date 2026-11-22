@@ -314,9 +314,9 @@ geometry graph "chrono hud"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   base = hex |> SetPosition(offset: CombineXYZ(z: sine01(phase * 2.0 - length(Position()) * 0.55) * 0.08 - 0.28))
     |> ExtrudeMesh(offset_scale: 0.05) |> SetMaterial(material: "DarkSlate")
   rotor = hud_rotor(phase) // 6-tooth chamfered SDF escapement stepped by math.steps()
-  osc = wave_curve_2d(CurveCircle(160, 1.72), amplitude: 0.09, periods: 12.0, phase: phase * 3.0)
+  osc = wave_curve_2d(CurveCircle(resolution: 160, radius: 1.72), amplitude: 0.09, periods: 12.0, phase: phase * 3.0)
   wave_rib = ribbon_2d(osc, width: 0.055) |> TransformGeometry(translation: (0.0, 0.0, 0.12), rotation: CombineXYZ(z: -tau / 6.0))
-  pointer = arrow_2d(CurveCircle(96, 1.25) |> TrimCurve(start: 0.08, end: 0.42), 0.06, 0.18, 0.22)
+  pointer = arrow_2d(CurveCircle(resolution: 96, radius: 1.25) |> TrimCurve(start: 0.08, end: 0.42), 0.06, 0.18, 0.22)
     |> TransformGeometry(translation: (0.0, 0.0, 0.19), rotation: CombineXYZ(z: tau))
   return base + rotor + ring_2d(1.52, 1.38, 96) + wave_rib + pointer
 }
@@ -338,9 +338,9 @@ geometry graph "metaball symphony"(phase: Float = 0.0 in 0.0..1.0) -> Geometry {
   t = ease_in_out(triangle(phase), 2.5)
   core = metaball_core(phase) |> TransformGeometry(translation: (0.0, 0.0, 0.28))
   tri = triangular_grid_2d(columns: 32, rows: 32, side: 0.12)
-  d_ped = Mix(t, length(Position()) - 0.85, sdf_star_2d(Position(), radius: 0.95, points: 6, indent: 0.5))
+  d_ped = Mix(factor: t, a: length(Position()) - 0.85, b: sdf_star_2d(Position(), radius: 0.95, points: 6, indent: 0.5))
   iso_z = sdf_isolines(d_ped - phase * 0.4, step: 0.22, width: 0.045)
-  pedestal = tri |> SetPosition(offset: CombineXYZ(z: Clamp(-iso_z * 1.8, -0.04, 0.06) - 0.28))
+  pedestal = tri |> SetPosition(offset: CombineXYZ(z: Clamp(value: -iso_z * 1.8, min: -0.04, max: 0.06) - 0.28))
   base_c = CurveCircle(resolution: 160, radius: 1.32)
   morphed = morph_curves_2d(wave_curve_2d(base_c, 0.14, 3.0, phase), wave_curve_2d(base_c, 0.18, 6.0, -phase), factor: t)
   outer = parallel_contour_2d(morphed, offset: 0.11 + sine01(phase * 2.0) * 0.04)
@@ -368,7 +368,7 @@ geometry graph "eroded hills"(
 ) -&gt; Geometry {
   "A noise terrain on a Grid, eroded"
   hills = NoiseTexture(vector: Position(), scale: 0.6, detail: 6.0, roughness: 0.55).factor
-  return Grid(size, size, resolution, resolution)
+  return Grid(size_x: size, size_y: size, vertices_x: resolution, vertices_y: resolution)
     |&gt; SetPosition(offset: CombineXYZ(z: (hills - 0.5) * height * 2.0))
     |&gt; erode(iterations: iterations)
     |&gt; SetShadeSmooth()
@@ -390,7 +390,7 @@ geometry graph "reaction diffusion tile"(
     iterations: Int = 3000 in 0..
 ) -&gt; Geometry {
   "A 4 x 4 Grid grown with a Gray-Scott pattern"
-  return Grid(4.0, 4.0, resolution, resolution)
+  return Grid(size_x: 4.0, size_y: 4.0, vertices_x: resolution, vertices_y: resolution)
     |&gt; reaction_diffusion(preset: preset, iterations: iterations)
     |&gt; SetShadeSmooth()
 }</code></pre>
@@ -434,7 +434,7 @@ geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..
   p = Position()
   // A checker of cells, by the index of each point of the Grid
   cell = mod(Index(), count) + floor(Index() / count)
-  r = length(CombineXYZ(p.x, p.y))
+  r = length(CombineXYZ(x: p.x, y: p.y))
   // Four colours, a 4-tuple each: a Color IndexSwitch
   tint = IndexSwitch(
     mod(cell, 4.0),
@@ -443,11 +443,11 @@ geometry graph "tuple tiles"(count: Int = 14 in 2.., phase: Float = 0.0 in 0.0..
     (1.0, 0.72, 0.06, 1.0),
     (0.75, 0.06, 0.24, 1.0))
   // Darker towards the rim: a Color Mix
-  shade = Mix(Clamp(r * 0.42 - 0.1), tint, (0.04, 0.05, 0.08, 1.0))
+  shade = Mix(factor: Clamp(value: r * 0.42 - 0.1), a: tint, b: (0.04, 0.05, 0.08, 1.0))
   // Tall in the middle, flat around: a Vector Switch
   size = r &lt; 1.15 ? (0.2, 0.2, 0.5) : (0.24, 0.24, 0.08)
   lift = sin(phase * 6.283185 - r * 2.6) * 0.12
-  return Grid(3.9, 3.9, count, count)
+  return Grid(size_x: 3.9, size_y: 3.9, vertices_x: count, vertices_y: count)
     |&gt; StoreNamedAttribute[FLOAT_COLOR](name: "tint", value: shade)
     |&gt; SetPosition(offset: CombineXYZ(z: lift))
     |&gt; InstanceOnPoints(instance: Cube(size: (1.0, 1.0, 1.0)), scale: size)
@@ -467,7 +467,7 @@ geometry graph "sdf rounded box 2d"(
     radius: Float = 0.15 in 0.0..
 ) -> Float {
   "XY-plane rectangle with rounded corners of given half-size (2D: z ignored)"
-  d = CombineXYZ(abs(p.x) - half_size.x + radius, abs(p.y) - half_size.y + radius)
+  d = CombineXYZ(x: abs(p.x) - half_size.x + radius, y: abs(p.y) - half_size.y + radius)
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius
 }
 </script></bn-view>
@@ -495,7 +495,7 @@ use math (bump)
 geometry graph "parallel contour 2d"(curve: Geometry, offset: Float = 0.1) -> Geometry {
   "Offsets each point along the 2D normal in the XY plane"
   t = CurveTangent()
-  normal = CombineXYZ(-t.y, t.x)
+  normal = CombineXYZ(x: -t.y, y: t.x)
   return SetPosition(curve, offset: normal * offset)
 }
 
@@ -507,10 +507,10 @@ geometry graph "ribbon 2d"(
 ) -> Geometry {
   "Generates a flat 2D ribbon along the curve with optional end tapering"
   half = width * 0.5
-  profile = CurveLine(CombineXYZ(-half), CombineXYZ(half))
-  radius = Mix(taper, 1.0, bump(SplineParameter().factor, half_width: 0.5))
+  profile = CurveLine(start: CombineXYZ(x: -half), end: CombineXYZ(x: half))
+  radius = Mix(factor: taper, a: 1.0, b: bump(SplineParameter().factor, half_width: 0.5))
   c = SetCurveRadius(curve, radius: radius)
-  return CurveToMesh(c, profile, Radius())
+  return CurveToMesh(c, profile_curve: profile, scale: Radius())
 }
 </script></bn-view>
         <img class="preview-img" src="images/curves2d.png" alt="2D curve operators rendered from stdlib/curves2d.bn" width="1200" height="800" loading="lazy">
@@ -530,7 +530,7 @@ geometry graph "phyllotaxis spiral 2d"(
   r = f * radius
   x = r * cos(a)
   y = r * sin(a)
-  pts = Points(count, CombineXYZ(x, y))
+  pts = Points(count: count, position: CombineXYZ(x: x, y: y))
   return (Points: pts, Factor: f)
 }
 </script></bn-view>
@@ -548,7 +548,7 @@ geometry graph fbm(
 ) -> Float {
   "Fractal noise: octave layers of increasing frequency and decreasing amplitude"
   r = repeat(octaves, sum: 0.0, amplitude: 0.5, frequency: 1.0) -> {
-    noise = NoiseTexture(p * frequency + (1.7, 9.2, 3.1) * iteration, 1.0, 0.0).factor * 2.0 - 1.0
+    noise = NoiseTexture(vector: p * frequency + (1.7, 9.2, 3.1) * iteration, scale: 1.0, detail: 0.0).factor * 2.0 - 1.0
     return (
       sum: sum + noise * amplitude,
       amplitude: amplitude * persistence,

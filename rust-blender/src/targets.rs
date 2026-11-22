@@ -3068,7 +3068,7 @@ const MATH_COMPARE: [(&str, &str, bool); 6] = [
 ];
 
 /// Every comparison of `e` as the Math nodes it writes in a tree with no Compare node:
-/// `a >= b` is `1.0 - Math[LESS_THAN](a, b)`.
+/// `a >= b` is `1.0 - Math[LESS_THAN](Value: a, Value_001: b)`.
 fn math_comparisons(e: &mut Expr) {
     match e {
         Expr::Call(c) => {
@@ -3779,7 +3779,7 @@ mod tests {
             ..Target::default()
         };
         let f = base_node::parse(
-            "compositor graph g(image: Color) -> Color {\n  return Kuwahara(Cube(image))\n}\n",
+            "compositor graph g(image: Color) -> Color {\n  return Kuwahara(Cube(size: image))\n}\n",
             "t.bn",
         )
         .unwrap();

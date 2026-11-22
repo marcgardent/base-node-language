@@ -114,7 +114,7 @@ pub struct Member {
     pub col: usize,
 }
 
-/// `Math[ADD, use_clamp: true](a, b)`: a setting of a node, what no wire can feed.
+/// `Math[ADD, use_clamp: true](Value: a, Value_001: b)`: a setting of a node, what no wire can feed.
 ///
 /// Its value is a literal, a name (an enum value, a template's type, `_`), a tuple of them or a
 /// call of them, such as `Ramp(…)`: never a name that holds a value. Which settings a node has,
@@ -139,7 +139,7 @@ pub struct Call {
     /// `attribute_or<Vector>(…)`: the types a template is called with, as written; None when inferred
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub type_args: Option<Vec<String>>,
-    /// `Math[ADD](a, b)`: the settings written in brackets, in source order
+    /// `Math[ADD](Value: a, Value_001: b)`: the settings written in brackets, in source order
     #[serde(default)]
     pub settings: Vec<Setting>,
 }

@@ -1497,7 +1497,7 @@ mod tests {
     #[test]
     fn settings_are_drawn_from_the_brackets_arguments_are_inputs() {
         let t = &build(
-            "shader graph g(a: Float, b: Float) -> Float {\n  return Math[ADD, use_clamp: true](a, b)\n}\n",
+            "shader graph g(a: Float, b: Float) -> Float {\n  return Math[ADD, use_clamp: true](Value: a, Value_001: b)\n}\n",
         )[0];
         assert_eq!(t.nodes[1].title, "Add");
         assert_eq!(t.nodes[1].settings, ["Add", "Clamp"]);

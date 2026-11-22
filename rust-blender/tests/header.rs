@@ -33,7 +33,7 @@ fn unknown_directives_are_comments_too() {
     assert_eq!(format_source(src, "g.bn").unwrap(), src);
 }
 
-const MAKER: &str = "geometry graph field() -> Geometry {\n  return Grid(1.0, 1.0, 2, 2)\n}\n";
+const MAKER: &str = "geometry graph field() -> Geometry {\n  return Grid(size_x: 1.0, size_y: 1.0, vertices_x: 2, vertices_y: 2)\n}\n";
 const MODIFIER: &str =
     "geometry graph lift(geometry: Geometry) -> Geometry {\n  return SetPosition(geometry)\n}\n";
 const HELPER: &str = "geometry graph half(x: Float) -> Float {\n  return x / 2.0\n}\n";
