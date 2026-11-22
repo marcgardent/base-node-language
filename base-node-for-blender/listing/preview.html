@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Draft of the extensions.blender.org listing, read from listing.md and listing/. Open it in a browser to review the listing; it is not uploaded anywhere. -->
+<title>Base Node listing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a store page draft. Cover and gallery on the left, the facts of the manifest in a side column, the description below. */
+:root {
+  --bg: #f3f3f2;
+  --surface: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #5d5f66;
+  --line: #dcdcdf;
+  --accent: #d9481a;      /* the cover's orange, darkened for text on light */
+  --blue: #1b84b5;
+  --chip: #ececee;
+  --code-bg: #ececee;
+  --note-bg: #fff3ec;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #18181a; --surface: #222225; --fg: #ececef; --muted: #a2a3ab; --line: #34343a;
+    --accent: #f5793f; --blue: #4cb6e6; --chip: #2d2d31; --code-bg: #2d2d31; --note-bg: #2b211c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #18181a; --surface: #222225; --fg: #ececef; --muted: #a2a3ab; --line: #34343a;
+  --accent: #f5793f; --blue: #4cb6e6; --chip: #2d2d31; --code-bg: #2d2d31; --note-bg: #2b211c;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 64px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+.draft { font-size: 14px; color: var(--muted); background: var(--note-bg); border-radius: 8px; padding: 10px 14px; }
+.draft b { color: var(--fg); }
+
+header.head { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+header.head img.icon { width: 96px; height: 96px; border-radius: 18px; flex: none; }
+.titles { min-width: 0; flex: 1 1 320px; display: grid; gap: 4px; }
+h1 { font-size: 40px; line-height: 1.1; margin: 0; font-weight: 700; text-wrap: balance; }
+.tagline { font-size: 20px; color: var(--muted); margin: 0; }
+.meta-line { font-size: 15px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.meta-line span b { color: var(--fg); font-weight: 600; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.stage { display: grid; gap: 10px; min-width: 0; }
+.viewer { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: #111; border-radius: 10px; overflow: hidden; }
+.viewer img, .viewer video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.caption { font-size: 15px; color: var(--muted); min-height: 1.5em; }
+.thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.thumbs button {
+  flex: none; width: 128px; aspect-ratio: 16 / 9; padding: 0; border: 2px solid transparent; border-radius: 6px;
+  background: #111; overflow: hidden; cursor: pointer; position: relative;
+}
+.thumbs button[aria-current="true"] { border-color: var(--accent); }
+.thumbs button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.thumbs img, .thumbs video { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+.thumbs .badge {
+  position: absolute; right: 4px; bottom: 4px; font: 500 10px/1 var(--font-mono); letter-spacing: .04em;
+  background: rgba(0,0,0,.7); color: #fff; padding: 3px 5px; border-radius: 3px;
+}
+
+aside.facts { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+aside.facts h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px; font-weight: 600; }
+aside.facts dl { margin: 0; display: grid; gap: 12px; }
+aside.facts dt { font-size: 13px; color: var(--muted); }
+aside.facts dd { margin: 0; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 14px; }
+.perm { display: grid; gap: 2px; }
+.perm b { font-weight: 600; }
+a { color: var(--blue); }
+
+article.desc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 28px 24px; min-width: 0; }
+article.desc > * { max-width: 72ch; }
+article.desc h2 { font-size: 24px; margin: 28px 0 8px; text-wrap: balance; }
+article.desc h2.section { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 20px; }
+article.desc ul { padding-left: 1.2em; display: grid; gap: 6px; margin: 0; }
+article.desc p { margin: 0 0 10px; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+kbd { font-family: var(--font-mono); font-size: .82em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--surface); white-space: nowrap; }
+.notes { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 4px; }
+@media (max-width: 520px) { h1 { font-size: 32px; } article.desc { padding: 4px 16px 18px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="draft"><b>Draft of the extensions.blender.org listing</b>, built from <code>base-node-for-blender/listing.md</code> and the images of <code>listing/</code>. The real page will look different: this shows the content, not the site's layout.</p>
+
+  <header class="head">
+    <img class="icon" src="icon.png" alt="Base Node icon: two blue arrows around .bn" width="96" height="96">
+    <div class="titles">
+      <h1>Base Node</h1>
+      <p class="tagline">Nodes as text (.bn): read and write node trees as functions</p>
+      <div class="meta-line">
+        <span>by <b>Marc Gardent</b></span>
+        <span>Version <b>1.0.0</b></span>
+        <span>Blender <b>5.2 LTS</b> and later</span>
+        <span>Add-on</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="Previews">
+      <div class="viewer" id="viewer"></div>
+      <div class="caption" id="caption"></div>
+      <div class="thumbs" id="thumbs" role="list"></div>
+    </section>
+
+    <aside class="facts">
+      <div>
+        <h2>Details</h2>
+        <dl>
+          <div><dt>Tags</dt><dd class="chips">
+            <span class="chip">Node</span><span class="chip">Geometry Nodes</span><span class="chip">Material</span>
+            <span class="chip">Compositing</span><span class="chip">Text Editor</span><span class="chip">Import-Export</span>
+          </dd></div>
+          <div><dt>License</dt><dd>GNU GPL v3.0 or later</dd></div>
+          <div><dt>Copyright</dt><dd>2026 Marc Gardent<br>2024 Leonardo Pike-Excell (Node Arrange)</dd></div>
+          <div><dt>Compatibility</dt><dd>Blender 5.2 LTS and later, tested on 5.2 LTS and 5.3</dd></div>
+          <div><dt>Website</dt><dd><a href="https://basenode.ludopant.com/">basenode.ludopant.com</a></dd></div>
+          <div><dt>Support</dt><dd><a href="https://github.com/marcgardent/base-node-language/issues">github.com/marcgardent/base-node-language/issues</a></dd></div>
+        </dl>
+      </div>
+      <div>
+        <h2>Permissions</h2>
+        <dl>
+          <div class="perm"><dt>Files</dt><dd>Import .bn files and the modules they use from disk</dd></div>
+          <div class="perm"><dt>Clipboard</dt><dd>Copy node trees as .bn text and paste .bn text as nodes</dd></div>
+        </dl>
+      </div>
+    </aside>
+  </div>
+
+  <article class="desc">
+    <h2 class="section">Description</h2>
+    <p>Base Node writes Geometry Nodes, Shader and Compositor node trees as text, and builds the text back into nodes. A tree becomes a <code>.bn</code> file of small functions. You can edit nodes as code, review them in diffs and share them as plain text.</p>
+
+    <h2>Nodes and text in the same area</h2>
+    <ul>
+      <li><kbd>Alt+Z</kbd> in the Node Editor shows the edited tree as <code>.bn</code> text in the same area. Press it again to write the text into the tree and go back to the nodes.</li>
+      <li>While you type, the tree follows the text as soon as the text is valid. A text with errors changes nothing and lists its errors in the sidebar. <kbd>Alt+P</kbd> applies the text by hand when <em>Apply while typing</em> is off.</li>
+      <li>The tree stays the only data. The text is a temporary view, removed when you go back to the nodes. An unchanged text leaves the tree and its layout as they were.</li>
+      <li>Comments are kept in the tree: each <code>//</code> comment is stored on the node of its statement and comes back the next time the text opens. The Node Editor draws them above their nodes.</li>
+      <li><kbd>Ctrl+Shift+C</kbd> copies the edited tree as <code>.bn</code> text, with the groups it calls, to paste in a forum post or a chat. <kbd>Ctrl+Shift+V</kbd> builds the <code>.bn</code> text of the clipboard in the current file. <em>Copy Selected as .bn</em> copies only the selected nodes.</li>
+      <li><kbd>Ctrl+Shift+A</kbd> arranges the selected nodes, or the whole tree: links go left to right, in line with their sockets, and each frame keeps its nodes together. It works in every node editor.</li>
+    </ul>
+
+    <h2>Writing <code>.bn</code></h2>
+    <ul>
+      <li>Suggestions for nodes, sockets and the graphs of used modules with <kbd>Ctrl+Space</kbd> (in <code>.bn</code> texts only; <kbd>Ctrl+Alt+Space</kbd> still maximizes the area). Alt+Space or Shift+Space can be chosen in the preferences.</li>
+      <li>Syntax highlighting, errors underlined as you type and listed in the sidebar, with a suggestion when one is close.</li>
+      <li>Target checks: a text that declares its targets (<code>// @target blender gltf</code>) has what they do not accept pointed out. Targets include the <code>gltf</code> variant (the shader nodes a glTF export keeps) and, as experimental variants, <code>eevee</code> and <code>cycles</code>.</li>
+      <li>Color Ramps and curves (RGB Curves, Float Curve, Vector Curves, Hue Correct) are written in the text, stop by stop and point by point.</li>
+      <li><strong>Format</strong> rewrites a text in the canonical layout and keeps its comments.</li>
+    </ul>
+
+    <h2>Modules and standard library</h2>
+    <ul>
+      <li><code>use math</code> reuses the graphs of another <code>.bn</code> file as node groups.</li>
+      <li>Eleven modules are bundled: <code>math</code> (shaping curves, waves, vectors, noise), <code>sdf2d</code> (2D signed distance fields), <code>curves2d</code> (resampling, curvature, path operations), <code>patterns2d</code> (tilings, grids, radial arrays), <code>planar2d</code> (planar maps: intersections, faces, region boundaries), <code>fillet2d</code> (fillets, chamfers and bevels of 2D corners), and for the compositor <code>mask2d</code> (masks from signed distance fields), <code>merge</code> (over, under, in, out, atop, screen, multiply), <code>grade</code> (grade, color correct, saturation, hue shift, soft clip, log to lin), <code>stmap</code> (STMap remapping) and <code>qc</code> (test patterns and image checks: false color, clipping, NaN, zebra, difference).</li>
+      <li>A <code>use</code> looks in the texts of the .blend, next to the imported file, in a <em>Module Folder</em> you choose, then in the bundled library.</li>
+    </ul>
+
+    <h2>Import</h2>
+    <ul>
+      <li><strong>File &gt; Import &gt; Base Node (.bn)</strong> builds the graphs of one or more <code>.bn</code> files.</li>
+      <li><strong>Drop a <code>.bn</code> file</strong> on the 3D Viewport, the Node Editor or the Text Editor. A dialog shows its title, author and license and the choices it offers: install it as a library in the <em>Module Folder</em>, import its graphs, add an object with its example, or add its modifier to an object. Only files are read: a dropped link or text is ignored.</li>
+      <li>A shader graph also becomes a material of its name. A compositor graph becomes the scene's compositor when the scene has none. A material's own tree opens as text too (<kbd>Alt+Z</kbd>).</li>
+    </ul>
+
+    <h2>Files, clipboard and network</h2>
+    <ul>
+      <li>Files: the add-on reads the <code>.bn</code> files you import or drop and the modules they use. The only file it writes outside the .blend is a dropped file you choose to install as a library, copied into the <em>Module Folder</em> you set.</li>
+      <li>Clipboard: written only by Copy as .bn, read only by Paste .bn.</li>
+      <li>Network: none.</li>
+    </ul>
+
+    <h2>Links</h2>
+    <ul>
+      <li>Language reference, tutorials and examples: <a href="https://basenode.ludopant.com/">basenode.ludopant.com</a></li>
+      <li>Source and issues: <a href="https://github.com/marcgardent/base-node-language">github.com/marcgardent/base-node-language</a></li>
+    </ul>
+
+    <div class="notes">
+      <h2 class="section">Release notes, 1.0.0</h2>
+      <p>First release on Blender Extensions.</p>
+      <ul>
+        <li>Geometry Nodes, Shader and Compositor trees to <code>.bn</code> text and back, in the same area (<kbd>Alt+Z</kbd>).</li>
+        <li>Live apply while typing, errors in the sidebar, suggestions, formatting.</li>
+        <li>Copy and paste trees as <code>.bn</code> text, node arrangement, comments kept in the tree.</li>
+        <li>Import and drag and drop of <code>.bn</code> files, Module Folder for your own modules.</li>
+        <li>Standard library of eleven modules: math, sdf2d, curves2d, patterns2d, planar2d, fillet2d, mask2d, merge, grade, stmap, qc.</li>
+        <li>Blender 5.2 LTS and 5.3.</li>
+      </ul>
+    </div>
+  </article>
+</div>
+
+<script>
+const PREVIEWS = [
+  ["previews/01-cover.png", "Alt+Z switches a node tree between nodes and its .bn text"],
+  ["previews/02-chrono-hud.mp4", "chrono_hud.bn, an animated HUD built from the bundled modules sdf2d, curves2d, patterns2d and math"],
+  ["previews/03-metaball-symphony.mp4", "metaball_symphony.bn, built from the bundled modules"],
+  ["previews/04-differential-growth.mp4", "differential_growth.bn, a simulation written as a .bn file"],
+  ["previews/05-reaction-diffusion.mp4", "reaction_diffusion.bn, a simulation written as a .bn file"],
+  ["previews/06-tuple-tiles-nodes.png", "tuple_tiles.bn built as Geometry Nodes, with its comments"],
+  ["previews/07-tuple-tiles.png", "The render of tuple_tiles.bn"],
+  ["previews/08-sdf2d.png", "sdf2d: 2D signed distance fields and their boolean operations"],
+  ["previews/09-curves2d.png", "curves2d: 2D curve operations"],
+  ["previews/10-patterns2d.png", "patterns2d: tilings, grids and radial arrays"],
+  ["previews/11-qc.png", "qc: test patterns and image checks in the compositor"],
+  ["previews/12-stmap.png", "stmap: image remapping by STMaps in the compositor"],
+];
+const viewer = document.getElementById("viewer");
+const caption = document.getElementById("caption");
+const thumbs = document.getElementById("thumbs");
+const isVideo = (src) => src.endsWith(".mp4");
+
+function media(src, big) {
+  if (isVideo(src)) {
+    const v = document.createElement("video");
+    v.src = src; v.muted = true; v.loop = true; v.playsInline = true;
+    if (big) { v.autoplay = true; v.controls = true; } else { v.preload = "metadata"; }
+    return v;
+  }
+  const i = document.createElement("img");
+  i.src = src; i.alt = ""; i.loading = big ? "eager" : "lazy";
+  return i;
+}
+
+function show(n) {
+  const [src, text] = PREVIEWS[n];
+  viewer.replaceChildren(media(src, true));
+  const m = viewer.firstChild;
+  if (m.tagName === "IMG") m.alt = text;
+  caption.textContent = `${n + 1} / ${PREVIEWS.length}  ·  ${text}`;
+  [...thumbs.children].forEach((b, k) => b.setAttribute("aria-current", k === n ? "true" : "false"));
+}
+
+PREVIEWS.forEach(([src, text], n) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.setAttribute("role", "listitem"); b.setAttribute("aria-label", `Preview ${n + 1}: ${text}`);
+  b.appendChild(media(src, false));
+  if (isVideo(src)) { const s = document.createElement("span"); s.className = "badge"; s.textContent = "MP4"; b.appendChild(s); }
+  b.addEventListener("click", () => show(n));
+  thumbs.appendChild(b);
+});
+show(0);
+</script>
+</body>
+</html>

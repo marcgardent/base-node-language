@@ -14,6 +14,8 @@ extensions/models.py, constants/base.py, files/validators.py) and its documentat
 - icon: PNG, 256 x 256
 - previews: JPEG, PNG, WebP or MP4 (no GIF), shown in a 16:9 frame, at least one, caption at most 255 characters
 - description and release notes: Markdown
+
+listing/preview.html shows this listing in a browser, to review it before upload.
 - uploads under 200 MB
 -->
 
