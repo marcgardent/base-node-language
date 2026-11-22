@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::ast::*;
 use crate::errors::BnError;
 use crate::lexer::tokenize;
@@ -47,6 +49,9 @@ pub struct Parser<'a> {
     nest: usize,
     /// Of the expression just read: 1 for a name, one more for each node above it
     height: usize,
+    /// The names that hold a value where the parser is: the graph's inputs, what the statements
+    /// before bound, the items of the bodies around. Such a name is never a template: `a < b`
+    values: HashSet<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -57,6 +62,7 @@ impl<'a> Parser<'a> {
             i: 0,
             nest: 0,
             height: 0,
+            values: HashSet::new(),
         }
     }
 
@@ -250,6 +256,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_graph(&mut self) -> Result<Graph, BnError> {
+        // A header holds no value: those of the graph before stay there
+        self.values.clear();
         let kind = self.expect("IDENT", Some("tree kind"))?;
         let settings = if self.accept("(").is_some() {
             self.args(true)?
@@ -290,6 +298,7 @@ impl<'a> Parser<'a> {
         };
         let params = flatten(&param_tree);
         let outputs = flatten(&output_tree);
+        self.values = params.iter().map(Param::key).collect();
         self.expect("{", None)?;
         let mut description = None;
         let mut description_line = 0;
@@ -377,8 +386,10 @@ impl<'a> Parser<'a> {
     }
 
     /// `<Vector>(` or `<Float, Color>(` after a call's name: the types of a template.
-    fn at_type_args(&self) -> bool {
-        if !self.at("<") || !self.peek(1).is("IDENT") {
+    ///
+    /// A name that holds a value is no template: `Math(a < b, c > (d))` compares.
+    fn at_type_args(&self, name: &str) -> bool {
+        if self.values.contains(name) || !self.at("<") || !self.peek(1).is("IDENT") {
             return false;
         }
         let mut i = 2;
@@ -558,6 +569,7 @@ impl<'a> Parser<'a> {
                 AssignValue::BodyCall(self.body_call()?)
             } else {
                 let e = self.expr()?;
+                self.values.insert(t.text.clone());
                 let look = self.look()?;
                 return Ok(Stmt::Assign(Assign {
                     name: t.text,
@@ -567,6 +579,7 @@ impl<'a> Parser<'a> {
                     look,
                 }));
             };
+            self.values.insert(t.text.clone());
             return Ok(Stmt::Assign(Assign {
                 name: t.text,
                 value,
@@ -647,7 +660,7 @@ impl<'a> Parser<'a> {
             ));
         }
         self.expect("{", None)?;
-        let (body, end) = self.block()?;
+        let (body, end) = self.block(None)?;
         Ok(Frame {
             label,
             color,
@@ -690,7 +703,13 @@ impl<'a> Parser<'a> {
         let args = self.args(false)?;
         self.advance(); // "->"
         self.advance(); // "{"
-        let (body, end) = self.block()?;
+
+        // Its body sees the names around and its items, by their keys: `r = f(n, v: 0.0) -> {`
+        let items = args
+            .iter()
+            .filter_map(|a| a.alias.clone().or_else(|| a.name.as_deref().map(key)))
+            .collect();
+        let (body, end) = self.block(Some(items))?;
         Ok(BodyCall {
             name,
             args,
@@ -701,14 +720,24 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn block(&mut self) -> Result<(Vec<Stmt>, Token), BnError> {
+    /// With `names`, the body of a call or of a nameless graph: it sees the names around and
+    /// those, and its own stay inside. A frame's names are those of the block it is in.
+    fn block(&mut self, names: Option<HashSet<String>>) -> Result<(Vec<Stmt>, Token), BnError> {
         self.enter()?;
+        let outer = names.map(|n| {
+            let outer = self.values.clone();
+            self.values.extend(n);
+            outer
+        });
         let mut body = Vec::new();
         while !self.at("}") {
             if self.at("EOF") {
                 return Err(self.fail("expected '}' before end of file", None));
             }
             body.push(self.statement()?);
+        }
+        if let Some(outer) = outer {
+            self.values = outer;
         }
         self.leave();
         let end = self.advance();
@@ -743,7 +772,8 @@ impl<'a> Parser<'a> {
         self.expect("->", None)?;
         let (outputs, single) = self.outputs()?;
         self.expect("{", Some("'{' after graph(…) -> …"))?;
-        let (body, end) = self.block()?;
+        let items = params.iter().map(Param::key).collect();
+        let (body, end) = self.block(Some(items))?;
         Ok(NamelessGraph {
             params,
             outputs,
@@ -1100,7 +1130,7 @@ impl<'a> Parser<'a> {
                 name = format!("{}::{}", name, part.text);
             }
             let mut type_args = None;
-            if self.at_type_args() {
+            if self.at_type_args(&name) {
                 self.advance();
                 let mut types = vec![self.advance().text];
                 while self.accept(",").is_some() {

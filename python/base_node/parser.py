@@ -58,6 +58,9 @@ class Parser:
         self.nest = 0    # brackets and blocks open around the current token
         self.height = 0  # of the expression just read: 1 for a name, one more for each node above it
         self.closing = None  # token index of a `(` -> that of its `)`, made when first asked
+        # The names that hold a value where the parser is: the graph's inputs, what the statements
+        # before bound, the items of the bodies around. Such a name is never a template: `a < b`
+        self.values = set()
 
     # Token helpers
 
@@ -150,6 +153,7 @@ class Parser:
         return ast.Use(name.text, names, source, t.line, t.col, alias=alias)
 
     def graph(self):
+        self.values = set()  # a header holds no value: those of the graph before stay there
         kind = self.expect("IDENT", what="tree kind")
         settings = self.args(named_only=True) if self.accept("(") else []
         self.expect("KEYWORD", "graph")
@@ -164,6 +168,7 @@ class Parser:
             t = self.expect("IDENT", what="return type")
             output_tree, single = [ast.Param(t.text, t.text, t.line, t.col)], True
         params, outputs = ast.flatten(param_tree), ast.flatten(output_tree)
+        self.values = {p.key for p in params}
         self.expect("{")
         description = None
         if self.at_description():
@@ -202,9 +207,11 @@ class Parser:
                 self.expect(">", what="'>' after the type parameters")
                 return out
 
-    def at_type_args(self):
-        """`<Vector>(` or `<Float, Color>(` after a call's name: the types of a template."""
-        if not self.at("<") or self.peek().kind != "IDENT":
+    def at_type_args(self, name):
+        """`<Vector>(` or `<Float, Color>(` after a call's name: the types of a template.
+
+        A name that holds a value is no template: `Math(a < b, c > (d))` compares."""
+        if name in self.values or not self.at("<") or self.peek().kind != "IDENT":
             return False
         i = 2
         while self.peek(i).kind == ",":
@@ -294,7 +301,10 @@ class Parser:
             elif self.at_body_call():
                 value = self.body_call()
             else:
-                return ast.Assign(t.text, self.expr(), t.line, t.col, self.look())
+                value = self.expr()
+                self.values.add(t.text)
+                return ast.Assign(t.text, value, t.line, t.col, self.look())
+            self.values.add(t.text)
             # What a body makes shows its look on the return of that body
             return ast.Assign(t.text, value, t.line, t.col)
         self.fail(f"statement expected (name = …, return, or a frame \"title\" {{ … }}), found {describe(t)}")
@@ -351,17 +361,26 @@ class Parser:
         args = self.args()
         self.advance()
         self.advance()
-        body, end = self.block()
+        # Its body sees the names around and its items, by their keys: `r = f(n, v: 0.0) -> {`
+        body, end = self.block({a.alias or ast.key(a.name) for a in args if a.name is not None})
         return ast.BodyCall(name, args, body, t.line, t.col, end.line)
 
-    def block(self):
-        """Statements up to `}`, which is consumed: (body, the closing token)."""
+    def block(self, names=None):
+        """Statements up to `}`, which is consumed: (body, the closing token).
+
+        With `names`, the body of a call or of a nameless graph: it sees the names around and
+        those, and its own stay inside. A frame's names are those of the block it is in."""
         self.enter()
+        outer = self.values
+        if names is not None:
+            self.values = outer | names
         body = []
         while not self.at("}"):
             if self.at("EOF"):
                 self.fail("'}' expected before end of file")
             body.append(self.statement())
+        if names is not None:
+            self.values = outer
         self.leave()
         return body, self.advance()
 
@@ -387,7 +406,7 @@ class Parser:
         self.expect("->")
         outputs, single = self.outputs()
         self.expect("{", what="'{' after graph(…) -> …")
-        body, end = self.block()
+        body, end = self.block({p.key for p in params})
         return ast.NamelessGraph(params, outputs, single, body, t.line, t.col, end.line)
 
     def outputs(self):
@@ -544,7 +563,7 @@ class Parser:
                 part = self.accept("STRING") or self.expect("IDENT", what="identifier or name after '::'")
                 name = f"{name}::{part.text}"
             type_args = None
-            if self.at_type_args():
+            if self.at_type_args(name):
                 self.advance()
                 type_args = [self.advance().text]
                 while self.accept(","):

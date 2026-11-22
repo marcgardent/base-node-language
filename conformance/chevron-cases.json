@@ -1,0 +1,77 @@
+{
+  "about": "How `name < … > (` reads: the types of a template's call, or comparisons when name holds a value where it is written (spec/reference.md, 3.4). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "cases": [
+    {
+      "name": "comparisons_in_arguments",
+      "about": "Two comparisons side by side, of the graph's inputs: no call of a",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(a < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(a < b, c > d)\n}\n"
+    },
+    {
+      "name": "comparisons_chained",
+      "about": "a < b > (c) is two comparisons, which are refused, not a call of a",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = a < b > (c)\n  return x\n}\n",
+      "error": "2:13"
+    },
+    {
+      "name": "bound_name",
+      "about": "A name an earlier statement bound",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return Math(k < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  k = a * 2.0\n  return Math(k < b, c > d)\n}\n"
+    },
+    {
+      "name": "bound_in_a_frame",
+      "about": "A frame is no scope: its names hold after it",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return Math(k < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  \"Setup\" {\n    k = a * 2.0\n  }\n  return Math(k < b, c > d)\n}\n"
+    },
+    {
+      "name": "not_yet_bound",
+      "about": "A name bound later is no value before its statement: the types of a call",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = Math(k < b, c > (d))\n  k = a\n  return x\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  x = Math(k<b, c>(d))\n  k = a\n  return x\n}\n"
+    },
+    {
+      "name": "body_item",
+      "about": "An item of a call with a body, inside that body",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return Math(v < b, c > (v))\n  }\n  return r\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return Math(v < b, c > v)\n  }\n  return r\n}\n"
+    },
+    {
+      "name": "body_item_alias",
+      "about": "An item keyed with as, inside its body",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: Math(dt < b, c > (dt)))\n  }\n  return r.dt\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = simulate(\"Delta Time\" as dt: a) -> {\n    return (dt: Math(dt < b, c > dt))\n  }\n  return r.dt\n}\n"
+    },
+    {
+      "name": "body_item_stays_inside",
+      "about": "After the body, its item is no value",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return Math(v < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  r = repeat(n, v: a) -> {\n    return v\n  }\n  return Math(v<b, c>(d))\n}\n"
+    },
+    {
+      "name": "nameless_graph_input",
+      "about": "An input of a graph with no name, which sees the names around too",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return Math(x < b, a > (x))\n  }\n  return f(x: a)\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  f = graph(x: Float) -> Float {\n    return Math(x < b, a > x)\n  }\n  return f(x: a)\n}\n"
+    },
+    {
+      "name": "template_call",
+      "about": "A real call with types",
+      "text": "use attrs\n\ngeometry graph g(c: Color) -> Color {\n  return attribute_or<Vector>(\"Col\", c).value\n}\n",
+      "formatted": "use attrs\n\ngeometry graph g(c: Color) -> Color {\n  return attribute_or<Vector>(\"Col\", c).value\n}\n"
+    },
+    {
+      "name": "template_passes_its_type",
+      "about": "Inside a template, a call that passes its type on",
+      "text": "use samples\n\ngeometry graph pick<T: Float | Vector>(value: T, i: Int) -> (value: T) {\n  return (value: index_mix<T>(value, i).value)\n}\n",
+      "formatted": "use samples\n\ngeometry graph pick<T: Float | Vector>(value: T, i: Int) -> (value: T) {\n  return (value: index_mix<T>(value, i).value)\n}\n"
+    },
+    {
+      "name": "unknown_name",
+      "about": "A name that is no value: read as a call with types, the reader's checker refuses it",
+      "text": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(x < b, c > (d))\n}\n",
+      "formatted": "geometry graph g(a: Float, b: Float, c: Float, d: Float, n: Int) -> Float {\n  return Math(x<b, c>(d))\n}\n"
+    }
+  ]
+}

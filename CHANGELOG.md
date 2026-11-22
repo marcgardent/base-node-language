@@ -7,6 +7,11 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Language
+
+- Fixed: a name that holds a value takes no types, so `Math(a < b, c > (d))` compares `a`, an input or a
+  bound name, instead of calling it as a template `a<b, c>(d)`.
+
 ## [1.0.0-rc.3] - 2026-11-22
 
 ### Blender add-on

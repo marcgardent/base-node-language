@@ -9,3 +9,4 @@ description = "Base Node (.bn) parser and formatter: the core of the language, w
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
+serde_json = "1.0"

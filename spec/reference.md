@@ -225,7 +225,10 @@ geometry graph tint(geometry: Geometry, color: Color) -> Geometry {
 **The type of a call** is inferred from its arguments, or written:
 
 1. `attribute_or<Vector>("rest", p)` writes it: the arguments are then linked as to any group,
-   converted when Blender converts them (an `Int` to a `Float` input).
+   converted when Blender converts them (an `Int` to a `Float` input). A name that holds a value
+   where it is written takes no types: an input of the graph, a name an earlier statement bound
+   (in a frame too), an item of the body it is in, an input of the graph with no name it is in.
+   There `<` compares: `Math(a < b, c > (d))` is two comparisons when `a` is one of them.
 2. Else each argument given to an input of type `T` that is linked (a name, a node's output, an
    input of the calling graph) gives its type, and all must give the same: `T` is that type.
 3. Else, with no linked argument, a literal gives its own type: `2.0` a `Float`, `2` an `Int`, `true`

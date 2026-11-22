@@ -1902,7 +1902,16 @@ class GraphChecker:
             self.error(c, f"'->' declares items of SeparateBundle or EvaluateClosure, not {c.name}")
             return None
         if c.type_args is not None and c.name not in self.graphs:
-            self.error(c, f"'{c.name}' is not a template: it takes no type")
+            if c.name in self.env:
+                # A name the parser cannot know holds a value, `iteration` in a repeat: `<` compared
+                self.error(c, f"'{c.name}' is a value, not a template: "
+                              f"a comparison goes in parentheses, ({c.name} < {c.type_args[0]})")
+            elif spec is None and not self.unsure and not self.is_function(c.name) \
+                    and self.existing_group(c) is None:
+                # Nothing has that name: `x < y, z > (w)` compares an unknown x as much as it calls it
+                self.unknown(c, c.name)
+            else:
+                self.error(c, f"'{c.name}' is not a template: it takes no type")
             return None
         items = self.takes_items(c.name)
         for a in c.args:

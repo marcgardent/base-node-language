@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from base_node import format_source, parse
+from base_node import BnError, format_source, parse
 from base_node_cli.cli import main as cli_main
 
 MANIFEST_PATH = Path(__file__).resolve().parents[2] / "conformance" / "manifest.json"
@@ -74,3 +74,18 @@ def test_cli_on_conformance_corpus():
         ret_fmt = cli_main(["fmt", "--check", bn_path])
         expected_ret = 0 if entry["canonically_formatted"] else 1
         assert ret_fmt == expected_ret
+
+
+CHEVRON_CASES = json.loads((CONFORMANCE_DIR / "chevron-cases.json").read_text(encoding="utf-8"))["cases"]
+
+
+@pytest.mark.parametrize("case", CHEVRON_CASES, ids=lambda c: c["name"])
+def test_chevrons_read_as_rust_reads_them(case):
+    """`name < … > (`: a call with types, or comparisons where name holds a value (rust/tests/conformance.rs)."""
+    if "error" in case:
+        with pytest.raises(BnError) as err:
+            parse(case["text"], "case.bn")
+        d = err.value.diagnostics[0]
+        assert f"{d.line}:{d.col}" == case["error"]
+    else:
+        assert format_source(case["text"]) == case["formatted"]

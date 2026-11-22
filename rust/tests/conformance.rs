@@ -70,6 +70,28 @@ fn test_examples_and_fixtures() {
     }
 }
 
+/// `name < … > (`: a call with types, or comparisons where name holds a value
+/// (python/tests/test_conformance.py reads the same cases).
+#[test]
+fn chevrons_read_as_python_reads_them() {
+    let corpus: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string("../conformance/chevron-cases.json").unwrap())
+            .unwrap();
+    for case in corpus["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let text = case["text"].as_str().unwrap();
+        if let Some(error) = case["error"].as_str() {
+            let e = parse(text, "case.bn").expect_err(name);
+            let d = &e.diagnostics[0];
+            assert_eq!(format!("{}:{}", d.line, d.col), error, "{name}");
+        } else {
+            let formatted =
+                format_source(text, "case.bn").unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert_eq!(formatted, case["formatted"].as_str().unwrap(), "{name}");
+        }
+    }
+}
+
 #[test]
 fn test_versioning() {
     // One version for the crate and the stdlib (make bump writes both); the crate's is Cargo.toml's
