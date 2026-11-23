@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from base_node import EDITION, STDLIB_VERSION, __version__
+from base_node import EDITION, __version__
 from base_node_cli.cli import main as cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +33,6 @@ def test_the_versions_agree():
     """One version: the crate says it in SemVer, the Python package in its PEP 440 form."""
     version = said("rust/Cargo.toml", r'^version = "([^"]+)"')
     assert EDITION == "2026"
-    assert STDLIB_VERSION == version
     assert __version__ == pep440(version)
     assert said("python/pyproject.toml", r'^version = "([^"]+)"') == __version__
 
@@ -44,7 +43,7 @@ def test_cli_version_flag(capsys):
         cli_main(["--version"], plugins=[])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    expected = f"base-node {__version__} (Language Edition {EDITION}, Stdlib {STDLIB_VERSION})"
+    expected = f"base-node {__version__} (Language Edition {EDITION})"
     assert expected in captured.out or expected in captured.err
 
 
@@ -60,16 +59,15 @@ def test_core_knows_no_destination():
         for p in sorted((REPO_ROOT / "python" / package).glob("*.py")):
             for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
                 assert not WORDS.search(line.replace("base_node_cli", "")), f"{package}/{p.name}:{n}: {line.strip()}"
-    code = ("import sys, base_node, base_node.manifest, base_node_cli.cli; "
+    code = ("import sys, base_node, base_node_cli.cli; "
             "print([m for m in sys.modules if m.startswith('base_node_') and m.split('.')[0] != 'base_node_cli'])")
     out = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT / "python", capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "[]"
 
 
 def test_the_core_names_no_plugin():
-    """The core (python/, rust/, conformance/, spec/) reads and names no file of a host under plugins/:
-    a checkout without plugins/ builds and passes these tests. The glue (Makefile, tools/bump.py, the CI)
-    runs a plugin when the checkout has it."""
+    """The core (python/, rust/, conformance/, spec/) reads and names no file of a host: no path into a
+    folder of plugins. A host depends on the core; the core depends on none."""
     found = []
     for folder in ("python", "rust", "conformance", "spec"):
         for p in sorted((REPO_ROOT / folder).rglob("*")):

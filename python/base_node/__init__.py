@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 
 __version__ = "1.0.0rc7"
-STDLIB_VERSION = "1.0.0-rc.7"
 
 from .errors import BnError, Diagnostic
 from .format import format_source
@@ -24,7 +23,6 @@ __all__ = [
     "__version__",
     "EDITION",
     "EDITIONS",
-    "STDLIB_VERSION",
     "BnError",
     "MAX_SOURCE_BYTES",
     "MAX_NESTING",

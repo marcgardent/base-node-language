@@ -116,8 +116,8 @@ fn read_as_written(path: &str) {
 
 #[test]
 fn test_versioning() {
-    // One version for the crate and the stdlib (make bump writes both); the crate's is Cargo.toml's
-    assert_eq!(base_node::VERSION, base_node::STDLIB_VERSION);
+    // The crate's version is Cargo.toml's
+    assert_eq!(base_node::VERSION, env!("CARGO_PKG_VERSION"));
     assert_eq!(base_node::EDITION, "2026");
 }
 

@@ -76,8 +76,8 @@ The parser does it, in Python (`base_node.parse`) and in Rust (`base_node::parse
 ### Phase 2: Long-Term Support (`1.0.0 LTS`)
 
 One number, `1.0.0`, for the specification and the Python and Rust packages of the core. A host
-library released with the core takes the same number, and says what it promises. What the number
-promises is not the same for each part of the core:
+library has a version of its own, says the version of the core it needs, and says what it promises.
+What the number of the core promises is not the same for each part of it:
 
 | Part | Under the promise | Outside it |
 |---|---|---|
@@ -116,7 +116,7 @@ A pre-release is written in SemVer (`1.0.0-rc.1`) everywhere but in the Python p
 
 Running `base-node --version` reports:
 ```text
-base-node 1.0.0rc7 (Language Edition 2026, Stdlib 1.0.0-rc.7)
+base-node 1.0.0rc7 (Language Edition 2026)
 ```
 
 ---

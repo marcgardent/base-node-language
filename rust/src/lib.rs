@@ -2,7 +2,6 @@
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The latest edition: that of a text that names none.
 pub const EDITION: &str = header::EDITIONS[header::EDITIONS.len() - 1];
-pub const STDLIB_VERSION: &str = "1.0.0-rc.7";
 
 pub mod ast;
 pub mod errors;

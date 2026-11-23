@@ -20,7 +20,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-from base_node import EDITION, STDLIB_VERSION, BnError, __version__, format_source, parse
+from base_node import EDITION, BnError, __version__, format_source, parse
 
 # The entry points of the host libraries installed: each names a module with
 # extend(subparsers, commands), `commands` the parsers of the commands above by name
@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None, plugins: list | None = None) -> int:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {__version__} (Language Edition {EDITION}, Stdlib {STDLIB_VERSION})",
+        version=f"%(prog)s {__version__} (Language Edition {EDITION})",
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
