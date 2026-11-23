@@ -1,37 +1,33 @@
 #!/usr/bin/env python3
-"""Write the version of Base Node everywhere it is written, or check that those places agree.
+"""Write the version of the core of Base Node everywhere it is written, or check that those places agree.
 
     python3 tools/bump.py 1.0.0-rc.1            write it (make bump VERSION=1.0.0-rc.1)
-    python3 tools/bump.py --check               fail unless every place holds the version of stdlib/manifest.json
+    python3 tools/bump.py --check               fail unless every place holds the version of rust/Cargo.toml
     python3 tools/bump.py --check 1.0.0-rc.1    fail unless every place holds that version
-    python3 tools/bump.py 1.0.0-rc.1 --archive  write it, then build site/extensions/ again with Blender
+    python3 tools/bump.py 1.0.0-rc.1 --archive  write it, and have each plugin build its archive again
 
 The version is SemVer, `x.y.z` or `x.y.z-alpha.n`, `x.y.z-beta.n`, `x.y.z-rc.n`. It is written as it is
 but where Python reads it (`version` of pyproject.toml, `__version__`), which takes its PEP 440
-form: `1.0.0-rc.1` is `1.0.0rc1` there. Cargo and Blender's manifest take SemVer and refuse the
-PEP 440 form.
+form: `1.0.0-rc.1` is `1.0.0rc1` there. Cargo refuses the PEP 440 form.
 
-The places are PLACES below: a set of tracked files, and the text around the version in them. A
-place that must hold the version and does not stops the run, so a file moved or reworded is seen
-and not skipped. Versions of anything else (dependencies, the third-party libraries of the tests)
-match none of these texts and are left alone. A Cargo.lock beside a Cargo.toml is
-not tracked; when there is one, the entries of the repository's own crates are written too.
+The places are PLACES below: a set of tracked files of the core, and the text around the version in
+them. A place that must hold the version and does not stops the run, so a file moved or reworded is
+seen and not skipped. Versions of anything else (dependencies) match none of these texts and are left
+alone. A Cargo.lock beside a Cargo.toml is not tracked; when there is one, the entries of the core's
+own crate are written too.
 
-Without --archive the add-on zip of site/extensions/ is only renamed: it still holds the add-on of
-the version before, and --check says so until it is built again.
+A plugin (plugins/<name>/) has its version and its own tools/bump.py: when the checkout has it, this
+one runs it after the core with the same version, which it writes as its own and as the core's it
+needs (`--core`), and with --check and --archive as given.
 """
 
 from __future__ import annotations
 
 import argparse
 import fnmatch
-import hashlib
-import json
-import os
 import re
 import subprocess
 import sys
-import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,42 +41,29 @@ EACH, ONE, ANY = "each", "one", "any"
 #   files: a pattern over the tracked paths (`*` crosses `/`), links left out
 #   need:  EACH, every file holds it; ONE, a file at least does; ANY, no file has to
 PLACES = [
-    ("stdlib/manifest.json", r'"stdlib_version": "{V}"', "semver", EACH),
-    ("stdlib/*.bn", r"^// @version {V}$", "semver", EACH),
     # Python: wherever a package says its version, so that a package split in several is followed
-    ("*.py", r'^__version__ = "{V}"', "pep440", ONE),
-    ("*.py", r'^STDLIB_VERSION = "{V}"', "semver", ONE),
-    ("python/*pyproject.toml", r'^version = "{V}"', "pep440", EACH),
-    ("python/*.py", r"^    // @version {V}$", "semver", ANY),
-    # Rust: the crates' own version (a dependency's is not at the start of a line); VERSION of
+    ("python/*.py", r'^__version__ = "{V}"', "pep440", ONE),
+    ("python/*.py", r'^STDLIB_VERSION = "{V}"', "semver", ONE),
+    ("python/pyproject.toml", r'^version = "{V}"', "pep440", EACH),
+    # Rust: the crate's own version (a dependency's is not at the start of a line); VERSION of
     # rust/src/lib.rs is read from Cargo.toml
-    ("*/Cargo.toml", r'^version = "{V}"', "semver", EACH),
+    ("rust/Cargo.toml", r'^version = "{V}"', "semver", EACH),
     ("rust/src/lib.rs", r'^pub const STDLIB_VERSION: &str = "{V}";', "semver", EACH),
-    # Blender
-    ("base-node-for-blender/blender_manifest.toml", r'^version = "{V}"', "semver", EACH),
-    ("site/extensions/index.json", r'"version": "{V}"', "semver", EACH),
-    ("site/extensions/index.json", r'"archive_url": "\./base_node-{V}\.zip"', "semver", EACH),
-    # Site and documents
-    ("site/index.html", r"<span>\(\.bn\) v{V}</span>", "semver", EACH),
-    ("site/*.html", r"<span>\(\.bn\) v{V}</span>", "semver", ANY),
-    ("README.md", r"dist/base_node-{V}\.zip", "semver", EACH),
+    # Documents
     ("spec/reference.md", r"Specification Version {V} ", "semver", EACH),
-    ("spec/versioning.md", r"\b\w+@{V}", "semver", EACH),
     ("spec/versioning.md", r"Python: base-node {V} ", "pep440", EACH),
-    ("spec/versioning.md", r"Rust:   base-node, base-node-blender {V} ", "semver", EACH),
-    ("spec/versioning.md", r"Blender Extension: {V} ", "semver", EACH),
-    ("spec/versioning.md", r'"stdlib_version": "{V}"', "semver", EACH),
-    ("spec/versioning.md", r'^  "version": "{V}"', "semver", EACH),
-    ("spec/versioning.md", r"^// @version {V}$", "semver", EACH),
+    ("spec/versioning.md", r"Rust:   base-node {V} ", "semver", EACH),
     ("spec/versioning.md", r"\*\*Current status\*\*: Version `{V}`", "semver", EACH),
     ("spec/versioning.md", r"\| PEP 440 \(`{V}`\)", "pep440", EACH),
     ("spec/versioning.md", r"\| SemVer \(`{V}`\)", "semver", EACH),
     ("spec/versioning.md", r"^base-node {V} \(Language Edition", "pep440", EACH),
     ("spec/versioning.md", r"Stdlib {V}\)$", "semver", EACH),
 ]
-# Never read: versions of others
-SKIP = ("base-node-for-blender/tests/libraries/",)
-EXTENSIONS = "site/extensions"
+# Never read: the plugins, which version themselves
+SKIP = ("plugins/",)
+PLUGINS = "plugins"
+
+
 
 
 def forms(version: str) -> dict[str, str]:
@@ -102,8 +85,8 @@ def tracked(root: Path) -> list[str]:
 
 
 def current(root: Path) -> str:
-    """The version the repository is at: `stdlib_version` of stdlib/manifest.json."""
-    return json.loads((root / "stdlib" / "manifest.json").read_text(encoding="utf-8"))["stdlib_version"]
+    """The version the core is at: that of its crate, rust/Cargo.toml."""
+    return re.search(r'(?m)^version = "([^"]+)"', (root / "rust" / "Cargo.toml").read_text(encoding="utf-8"))[1]
 
 
 def pad_boxes(before: str, after: str) -> str:
@@ -174,81 +157,52 @@ def scan(root: Path, version: str, write: bool) -> tuple[list[str], list[str]]:
     return problems, written
 
 
-def archive_problems(root: Path, version: str) -> list[str]:
-    """What is wrong between site/extensions/index.json and the add-on zip it names."""
-    semver = forms(version)["semver"]
-    entry = json.loads((root / EXTENSIONS / "index.json").read_text(encoding="utf-8"))["data"][0]
-    path = root / EXTENSIONS / entry["archive_url"]
-    name = f"{EXTENSIONS}/{path.name}"
-    if not path.is_file():
-        return [f"{name}: named by {EXTENSIONS}/index.json, and missing"]
-    problems = []
-    data = path.read_bytes()
-    if entry["archive_size"] != len(data) or entry["archive_hash"] != "sha256:" + hashlib.sha256(data).hexdigest():
-        problems.append(f"{name}: not the size and hash {EXTENSIONS}/index.json says")
-    with zipfile.ZipFile(path) as z:
-        inside = re.search(r'(?m)^version = "([^"]+)"', z.read("blender_manifest.toml").decode("utf-8"))
-    if not inside or inside.group(1) != semver:
-        problems.append(f"{name}: holds the add-on of {inside.group(1) if inside else '?'}, expected {semver}: "
-                        f"build it again (python3 tools/bump.py {semver} --archive)")
-    return problems
+def plugins(root: Path) -> list[Path]:
+    """The plugins of the checkout that version themselves: plugins/<name>/tools/bump.py."""
+    return sorted(p.parents[1] for p in (root / PLUGINS).glob("*/tools/bump.py"))
 
 
-def rename_archive(root: Path, version: str) -> list[str]:
-    """Give the add-on zip the name index.json now says, when it is the only zip there."""
-    target = root / EXTENSIONS / f"base_node-{forms(version)['semver']}.zip"
-    zips = sorted((root / EXTENSIONS).glob("base_node-*.zip"))
-    if target.exists() or len(zips) != 1:
-        return []
-    zips[0].rename(target)
-    return [f"{EXTENSIONS}/{zips[0].name} -> {target.name}"]
-
-
-def build_archive(root: Path) -> None:
-    """Build the add-on zip and its index into site/extensions/ with Blender (BLENDER, default `blender`)."""
-    blender = os.environ.get("BLENDER", "blender")
-    out = root / EXTENSIONS
-    for old in out.glob("base_node-*.zip"):
-        old.unlink()
-    subprocess.run([str(root / "base-node-for-blender" / "build.sh"), str(out)], check=True,
-                   env={**os.environ, "BLENDER": blender})
-    subprocess.run([blender, "--command", "extension", "server-generate", f"--repo-dir={out}"], check=True)
+def run_plugins(root: Path, args: list[str]) -> int:
+    """Run the bump of each plugin with `args`; the worst exit code."""
+    code = 0
+    for plugin in plugins(root):
+        print(f"{plugin.relative_to(root)}:", flush=True)
+        done = subprocess.run([sys.executable, str(plugin / "tools" / "bump.py"), *args], cwd=plugin)
+        code = max(code, done.returncode)
+    return code
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("version", nargs="?", help="x.y.z or x.y.z-rc.n (with --check: default, the stdlib's)")
+    ap.add_argument("version", nargs="?", help="x.y.z or x.y.z-rc.n (with --check: default, the core's)")
     ap.add_argument("--check", action="store_true", help="write nothing; fail if a place holds another version")
-    ap.add_argument("--archive", action="store_true", help="build site/extensions/ again with Blender")
+    ap.add_argument("--archive", action="store_true", help="have each plugin build its archive again")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     root = a.root.resolve()
     if a.check:
         version = a.version or current(root)
         problems = scan(root, version, write=False)[0]
-        problems += archive_problems(root, version)
         if problems:
             print(f"Not at {version} everywhere:", *problems, sep="\n  ", file=sys.stderr)
-            return 1
-        print(f"{version} everywhere")
-        return 0
+        else:
+            print(f"{version} everywhere in the core")
+        # A plugin's version is its own: it checks its places, and that it needs this core
+        code = run_plugins(root, ["--check", "--core", version, "--core-dir", str(root)])
+        return 1 if problems else code
     if not a.version:
         ap.error("a version is needed: python3 tools/bump.py x.y.z")
     problems, written = scan(root, a.version, write=True)
     if problems:
         print("Nothing written:", *problems, sep="\n  ", file=sys.stderr)
         return 1
-    written += rename_archive(root, a.version)
-    if a.archive:
-        build_archive(root)
     for line in written:
         print(f"  {line}")
     want = forms(a.version)
     python = "" if want["pep440"] == want["semver"] else f" ({want['pep440']} for Python)"
-    print(f"{want['semver']}{python}: {len(written)} files written" if written else f"{want['semver']}: already there")
-    for problem in archive_problems(root, a.version):
-        print(f"To do: {problem}", file=sys.stderr)
-    return 0
+    print(f"{want['semver']}{python}: {len(written)} files of the core written" if written
+          else f"{want['semver']}: already there in the core")
+    return run_plugins(root, [a.version, "--core", a.version] + (["--archive"] if a.archive else []))
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ pub const MAX_NESTING: usize = 32;
 pub const MAX_HEIGHT: usize = 256;
 
 /// The names each zone gives its body, beside its items: they hold a value there, so
-/// `iteration < n` compares (spec/reference.md, 6.1). The same whatever the version of the host
+/// `iteration < n` compares (spec/reference.md, 6). The same whatever the version of the host
 /// and the settings.
 pub const ZONE_NAMES: [(&str, &[&str]); 3] = [
     ("repeat", &["iteration"]),

@@ -7,7 +7,7 @@
 
 The head is the comment and blank lines before the first `use` or graph. `@module`,
 `@version` and `@edition` are those of the standard library, `@target` the targets the file
-promises to fit (spec/targets.md). A directive this module does not know is left alone, for
+promises to fit, which the host says. A directive this module does not know is left alone, for
 other tools to read; one it knows is checked. `@edition` is the language's: a text of an edition
 this reader does not know is refused, here and by the parser (`edition_error`). A host has directives of its own, saying what it
 may do with the file: `read_head` checks that each is written once, with a value, and gives them

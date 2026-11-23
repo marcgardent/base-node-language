@@ -28,19 +28,18 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-unknown-unknown
-      - name: Install wasm-bindgen-cli (the version web/Cargo.toml pins)
+      - name: Install wasm-bindgen-cli (the version plugins/blender/web/Cargo.toml pins)
         run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
-      - name: Build bn-view (site/view/pkg)
-        run: ./web/build.sh
-      - name: Write the reference pages
-        env:
-          PYTHONPATH: ${{ github.workspace }}/python
-        run: python3 -m base_node_cli.cli docs
+      # The site is Base Node for Blender's: plugins/blender/site, served at the root of the domain
+      - name: Build bn-view (plugins/blender/site/view/pkg)
+        run: ./plugins/blender/web/build.sh
+      - name: Write the reference pages (plugins/blender/site/reference, the language's from spec/)
+        run: make docs
       - name: Prepare site
-        run: touch site/.nojekyll
+        run: touch plugins/blender/site/.nojekyll
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
-          path: site
+          path: plugins/blender/site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

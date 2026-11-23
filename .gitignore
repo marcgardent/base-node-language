@@ -35,8 +35,6 @@ python/uv.lock
 
 # Rust
 target/
-# bn-view's wasm, built by web/build.sh (and the Pages workflow)
-site/view/pkg/
 **/*.rs.bk
 Cargo.lock
 
@@ -53,6 +51,3 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
-
-# The reference pages: written by `base-node docs` when the site is deployed
-site/reference/

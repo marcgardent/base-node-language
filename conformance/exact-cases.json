@@ -1,5 +1,5 @@
 {
-  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings, a color as its tuple, the characters of a name (spec/reference.md, 2, 5 and 8). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
+  "about": "Tree -> text -> tree is exact: strings with escapes, inf and nan, sets of enum values in settings, a color as its tuple, the characters of a name (spec/reference.md, 2, 5 and 7). A case is a whole `text`; `formatted` is how it prints back, `error` the line:col of the error that refuses it and `message` its message. Read by python/tests/test_conformance.py and rust/tests/conformance.rs.",
   "cases": [
     {
       "name": "string_escapes",
