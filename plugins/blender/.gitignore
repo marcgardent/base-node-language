@@ -1,0 +1,6 @@
+# The core of the language the add-on embeds: links to the modules of base_node, made by make addon-lang
+addon/lang/
+# bn-view's wasm, built by web/build.sh (and the Pages workflow)
+site/view/pkg/
+# The reference pages: written by `base-node docs` when the site is deployed
+site/reference/

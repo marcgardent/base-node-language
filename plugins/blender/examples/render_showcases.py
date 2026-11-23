@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.join(ROOT, "python"))
 # Load the base_node Blender extension package
 import importlib.util
 
-EXT_DIR = os.path.join(ROOT, "base-node-for-blender")
+EXT_DIR = os.path.join(ROOT, "addon")
 spec = importlib.util.spec_from_file_location(
     "base_node_ext",
     os.path.join(EXT_DIR, "__init__.py"),

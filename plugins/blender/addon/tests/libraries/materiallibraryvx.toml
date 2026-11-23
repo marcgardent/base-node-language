@@ -5,7 +5,7 @@ name = "Material Library VX"
 author = "Mackraken, Blender Foundation"
 homepage = "https://github.com/blender/blender-addons/tree/main/materials_library_vx"
 license = "GPL-2.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "b42d686"
 url = "https://raw.githubusercontent.com/blender/blender-addons/b42d68627734cb18af0e6f41537063984313a284/materials_library_vx/sample_materials.blend"

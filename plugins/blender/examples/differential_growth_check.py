@@ -25,7 +25,7 @@ import numpy as np
 from mathutils import kdtree
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "base-node-for-blender" / "tests"))
+sys.path.insert(0, str(ROOT / "addon" / "tests"))
 import test_libraries  # noqa: E402  (loads the extension as `base_node`)
 
 import base_node  # noqa: E402

@@ -4,7 +4,7 @@ name = "OpenVAT"
 author = "Luke Stilson"
 homepage = "https://github.com/sharpen3d/openvat"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "43b5196"
 url = "https://raw.githubusercontent.com/sharpen3d/openvat/43b519620c710c9081a72eba253222d6fe6f931f/Development/openvat/vat_node_groups.blend"

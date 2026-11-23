@@ -6,8 +6,8 @@ of them: Geometry Nodes groups, shader groups and materials, compositor groups. 
 which kind its groups are (`geometry` by default); a material's record (`material:<name>`) is a shader one.
 
 Written to `site/badges/regression-<kind>.svg`, shown in the README. Needs no Blender:
-    python3 base-node-for-blender/tests/regression_badges.py           # write them again
-    python3 base-node-for-blender/tests/regression_badges.py --check   # fail when one is not as its baselines say
+    python3 addon/tests/regression_badges.py           # write them again
+    python3 addon/tests/regression_badges.py --check   # fail when one is not as its baselines say
 `test_libraries.py` writes them again with the baselines (BASE_NODE_UPDATE_FIXTURES=1).
 """
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         stale = check()
         if stale:
             sys.exit(f"badges not as the baselines say: {', '.join(stale)}; "
-                     "write them again: python3 base-node-for-blender/tests/regression_badges.py")
+                     "write them again: python3 addon/tests/regression_badges.py")
         print("Regression badges as the baselines say")
     else:
         print(f"Regression badges written to {write()}")

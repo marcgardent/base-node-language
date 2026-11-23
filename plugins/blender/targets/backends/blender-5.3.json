@@ -1,6 +1,6 @@
 {
  "blender": "5.3.0",
- "generated_by": "base-node-for-blender/tests/export_backend.py",
+ "generated_by": "addon/tests/export_backend.py",
  "kinds": {
   "geometry": [
    {

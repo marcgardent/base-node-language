@@ -5,7 +5,7 @@ outside the module roots, nor what is not a text of a source's size (a pipe, a
 device, a huge file). host/modules.py is loaded against a minimal fake `bpy`,
 so this runs in plain Python.
 
-    python3 base-node-for-blender/tests/test_modules.py
+    python3 addon/tests/test_modules.py
 """
 
 from __future__ import annotations

@@ -25,7 +25,7 @@ review their diff:
 
 ```bash
 BASE_NODE_UPDATE_FIXTURES=1 blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/test_extension.py
+  --python addon/tests/test_extension.py
 ```
 
 Thanks to Cartesian Caramel for publishing these node groups in the public domain.

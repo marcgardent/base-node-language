@@ -22,7 +22,7 @@ Blender that opens the library, `blender_min = "5.3"`: an older one skips it, an
 
 Run in Blender via:
     blender --background --factory-startup --python-exit-code 1 \
-      --python base-node-for-blender/tests/test_libraries.py [-- <name> ...]
+      --python addon/tests/test_libraries.py [-- <name> ...]
 
 When the change is wanted (a fix, a reader that writes otherwise), write the baselines again and review
 their diff: BASE_NODE_UPDATE_FIXTURES=1. The texts of the last run are kept in the cache

@@ -5,7 +5,7 @@ Each case of conformance/gltf-cases.json is built into a material with the add-o
 the material (a texture, a factor, an extension, an alpha mode), what they refuse must not.
 test_extension.py runs it too; alone:
 
-    blender --background --factory-startup --python-exit-code 1 --python base-node-for-blender/tests/test_gltf_export.py
+    blender --background --factory-startup --python-exit-code 1 --python addon/tests/test_gltf_export.py
 """
 
 from __future__ import annotations

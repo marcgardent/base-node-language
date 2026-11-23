@@ -6,7 +6,7 @@ a **download** button to import it into Blender, and a tag per backend that runs
 graph when the text has several, and a band under it holds the view (Code, Both, Nodes) and the buttons; what
 overflows a line scrolls sideways, with the wheel too, as a Blender header.
 
-All the work is Rust compiled to wasm (this crate, over [`base-node`](../rust), the core of the language, and [`base-node-blender`](../rust-blender), its targets and stdlib): it parses the text,
+All the work is Rust compiled to wasm (this crate, over [`base-node`](../../../rust), the core of the language, and [`base-node-blender`](../rust), its targets and stdlib): it parses the text,
 builds a graph per `graph` (a node per call or operator, a link per argument, its settings in brackets
 shown as its menus and fields, `Math[MULTIPLY, use_clamp: true](Value: a, Value_001: b)` as Multiply and Clamp, a frame per frame, a
 zone's input and output nodes, the text's comments in boxes on the nodes and frames they go with, as the

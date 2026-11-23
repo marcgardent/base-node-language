@@ -3,7 +3,7 @@ name = "T3D GN Presets"
 author = "Tamil Selvan"
 homepage = "https://github.com/Tams3d/T3D-GN-Presets"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: 10 MB, and a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "v1.6.0"
 url = "https://github.com/Tams3d/T3D-GN-Presets/releases/download/v1.6.0/T3D-GN-Presets.zip"

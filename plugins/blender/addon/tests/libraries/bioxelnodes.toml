@@ -4,7 +4,7 @@ name = "Bioxel Nodes"
 author = "OmooLab"
 homepage = "https://github.com/OmooLab/BioxelNodes"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: 14 MB, and a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "v2.0.4"
 url = "https://github.com/OmooLab/BioxelNodes/releases/download/v2.0.4/BioxelNodes.v2.0.4.linux-x64.zip"

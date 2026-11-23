@@ -35,7 +35,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 OUT = ROOT / "site" / "images" / "tutorials"
 FRAMES_DIR = Path(tempfile.gettempdir()) / "base-node-promo-cut"
-sys.path.insert(0, str(ROOT / "base-node-for-blender" / "tests"))
+sys.path.insert(0, str(ROOT / "addon" / "tests"))
 import test_libraries  # noqa: E402,F401  (loads the extension as `base_node`)
 
 from base_node.host import build_source, export_tree  # noqa: E402

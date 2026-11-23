@@ -137,8 +137,8 @@ baselines: Geometry Nodes groups, shader groups and materials, compositor groups
 writes them too; otherwise, and in the CI's check (no Blender needed):
 
 ```bash
-python3 base-node-for-blender/tests/regression_badges.py            # write them
-python3 base-node-for-blender/tests/regression_badges.py --check    # fail when one is not as the baselines say
+python3 addon/tests/regression_badges.py            # write them
+python3 addon/tests/regression_badges.py --check    # fail when one is not as the baselines say
 ```
 
 ## Groups built by an add-on's Python
@@ -173,14 +173,14 @@ as the same text, `evaluates_otherwise`: it evaluates (or renders) otherwise tha
 
 ```bash
 blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/test_libraries.py -- molecularnodes
+  --python addon/tests/test_libraries.py -- molecularnodes
 ```
 
 When a change is wanted (a fix, a reader that writes otherwise), write the baselines again and review their diff:
 
 ```bash
 BASE_NODE_UPDATE_FIXTURES=1 blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/test_libraries.py
+  --python addon/tests/test_libraries.py
 ```
 
 The texts of the last run are in the cache under `texts/<name>`, those of the run before under

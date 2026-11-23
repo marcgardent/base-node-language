@@ -2,8 +2,8 @@
 
 Run in Blender:
     blender --background --factory-startup --python-exit-code 1 \
-      --python base-node-for-blender/tests/export_backend.py            # write targets/backends/blender-<x.y>*
-    ... --python base-node-for-blender/tests/export_backend.py -- --check   # fail when it is not what Blender says
+      --python addon/tests/export_backend.py            # write targets/backends/blender-<x.y>*
+    ... --python addon/tests/export_backend.py -- --check   # fail when it is not what Blender says
 
 For each kind of tree (geometry, shader, compositor), every node the text can write: its text name,
 bl_idname, Blender's label and tooltip, its settings with their values, and the sockets of a new
@@ -12,7 +12,7 @@ builds in, called from a graph of that kind, or the reason it is refused there. 
 Blender that runs refuses (it uses a node that Blender has not) says so for each of its graphs.
 The nodes go to targets/backends/blender-<x.y>.json, the graphs of each module to
 targets/backends/blender-<x.y>/<module>.json: a new module adds its own file, and two branches that
-each add one merge without a conflict. `python/base_node_cli/refdoc.py` reads them to write the
+each add one merge without a conflict. `python/base_node_blender/refdoc.py` reads them to write the
 reference pages, without Blender.
 """
 
@@ -229,7 +229,7 @@ def export():
             kinds[kind] = [node_entry(schema, kind, specs[name]) for name in sorted(specs)]
         data = {
             "blender": bpy.app.version_string,
-            "generated_by": "base-node-for-blender/tests/export_backend.py",
+            "generated_by": "addon/tests/export_backend.py",
             "kinds": kinds,
         }
         stdlib = stdlib_entries(schema)

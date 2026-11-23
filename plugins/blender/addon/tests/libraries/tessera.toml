@@ -7,7 +7,7 @@ name = "Tessera – Mosaic & Tile Studio"
 author = "Tessera"
 homepage = "https://extensions.blender.org/add-ons/tessera-mosaic/"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "1.0.0"
 url = "https://extensions.blender.org/download/sha256:089e1256f64f79cdab89a70956c9d47f17c5796b0e26a56a4a48e6a357c93000/add-on-tessera-mosaic-v1.0.0.zip"

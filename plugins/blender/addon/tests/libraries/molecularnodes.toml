@@ -4,7 +4,7 @@ name = "Molecular Nodes"
 author = "Brady Johnston and contributors"
 homepage = "https://github.com/BradyAJohnston/MolecularNodes"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: 1.8 MB, and a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "v520.2.0"
 url = "https://github.com/BradyAJohnston/MolecularNodes/releases/download/v520.2.0/molecularnodes-520.2.0-macos_arm64.zip"

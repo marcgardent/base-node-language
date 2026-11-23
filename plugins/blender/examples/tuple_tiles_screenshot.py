@@ -9,7 +9,7 @@ import bpy
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[sys.argv.index("--") + 1]
-EXT = os.path.join(ROOT, "base-node-for-blender")
+EXT = os.path.join(ROOT, "addon")
 spec = importlib.util.spec_from_file_location("base_node", os.path.join(EXT, "__init__.py"),
                                               submodule_search_locations=[EXT])
 mod = importlib.util.module_from_spec(spec)

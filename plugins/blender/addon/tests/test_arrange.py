@@ -1,6 +1,6 @@
 """Tests of the node arrangement, without Blender.
 
-    python3 base-node-for-blender/tests/test_arrange.py
+    python3 addon/tests/test_arrange.py
 """
 
 from __future__ import annotations

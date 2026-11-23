@@ -1,7 +1,7 @@
 """Tests for Blender base_node extension.
 
 Run in Blender via:
-    blender --background --factory-startup --python-exit-code 1 --python base-node-for-blender/tests/test_extension.py
+    blender --background --factory-startup --python-exit-code 1 --python addon/tests/test_extension.py
 """
 
 from __future__ import annotations

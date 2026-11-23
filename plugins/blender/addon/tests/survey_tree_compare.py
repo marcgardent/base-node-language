@@ -8,7 +8,7 @@ tree, the groups their group nodes call once each. Hand-made trees follow, for c
 may not hold (`CASES`).
 
     BASE_NODE_CACHE=<dir> blender --background --factory-startup --python-exit-code 1 \
-      --python base-node-for-blender/tests/survey_tree_compare.py -- --out <dir> [<library> ...] [--no-cases]
+      --python addon/tests/survey_tree_compare.py -- --out <dir> [<library> ...] [--no-cases]
 
 writes <dir>/report.md and <dir>/differences.jsonl (one difference a line).
 """

@@ -3,7 +3,7 @@ name = "Unravel"
 author = "Paraminder Dhiman"
 homepage = "https://github.com/paraminder-dhiman/unravel"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "v1.0.0"
 url = "https://github.com/paraminder-dhiman/unravel/releases/download/v1.0.0/unravel-1.0.0.zip"

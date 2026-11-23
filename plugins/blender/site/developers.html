@@ -563,7 +563,7 @@ geometry graph fbm(
 
     <h2 id="targets">Targets</h2>
     <p>
-      A target is what one destination accepts: one file per target in <a href="https://github.com/marcgardent/base-node-language/tree/main/targets"><code>targets/*.json</code></a>,
+      A target is what one destination accepts: one file per target in <a href="https://github.com/marcgardent/base-node-language/tree/main/plugins/blender/targets"><code>targets/*.json</code></a>,
       none defined from another. The language speaks Blender; a destination that is not Blender declares translators from Blender's target.
       A text needs no target: the tool tells which ones accept it, and <code>// @target blender gltf</code> at its head is a promise the editor holds it to.
       <a href="reference/targets.html">Specification</a>.
@@ -612,7 +612,7 @@ geometry graph fbm(
     <h2 id="view">Web component (<code>&lt;bn-view&gt;</code>)</h2>
     <p>
       The examples above are drawn by <code>&lt;bn-view&gt;</code>: base-node compiled to wasm
-      (<code>web/</code>) shows a <code>.bn</code> text read-only, its code beside its node graph, with
+      (<code>plugins/blender/web/</code>) shows a <code>.bn</code> text read-only, its code beside its node graph, with
       a copy button, an enlarge button, and a tag per backend that runs it (Blender Geometry Nodes, Shader,
       Compositor; Blade Pixel Nodes) and the targets it fits. <a href="view/">Demo</a>.
     </p>
@@ -626,10 +626,11 @@ geometry graph fbm(
     <h2 id="packages">Subprojects (Python &amp; Rust)</h2>
     <div class="grid">
       <div class="box">
-        <h3>1. Python (<code>python/</code>)</h3>
-        <p>Zero-dependency lexer, parser, canonical formatter, typechecker, target checker, and CLI.</p>
+        <h3>1. Python (<code>python/</code>, <code>plugins/blender/python/</code>)</h3>
+        <p>Zero-dependency packages: <code>base-node</code>, the core (lexer, parser, canonical formatter, the CLI), and <code>base-node-blender</code>, Blender's nodes (typechecker, target checker, its commands of the CLI).</p>
         <pre><code># Install from GitHub
-pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"
+pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python" \
+  "base-node-blender @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=plugins/blender/python"
 
 # CLI
 base-node fmt file.bn
@@ -643,7 +644,7 @@ issues = blender.check_target(ast, "blender gltf")</code></pre>
         <p>License: <code>MIT OR Apache-2.0</code></p>
       </div>
       <div class="box">
-        <h3>2. Rust / WASM (<code>rust/</code>, <code>rust-blender/</code>)</h3>
+        <h3>2. Rust / WASM (<code>rust/</code>, <code>plugins/blender/rust/</code>)</h3>
         <p><code>wasm32-unknown-unknown</code> compatible crates: <code>base-node</code>, the core, with byte-for-byte identical canonical formatting, and <code>base-node-blender</code>, with the embedded JSON targets.</p>
         <pre><code># Cargo.toml
 [dependencies]
@@ -659,7 +660,7 @@ let fits = infer(&amp;f).fits;</code></pre>
       </div>
     </div>
 
-    <h2 id="stdlib">Standard Library (<code>stdlib/</code>)</h2>
+    <h2 id="stdlib">Standard Library (<code>plugins/blender/stdlib/</code>)</h2>
     <table>
       <thead>
         <tr>
@@ -671,67 +672,67 @@ let fits = infer(&amp;f).fits;</code></pre>
       </thead>
       <tbody>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/math.bn"><code>math.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/math.bn"><code>math.bn</code></a></td>
           <td><code>geometry</code>, <code>compositor</code></td>
           <td>47</td>
           <td>Inigo Quilez curves, easing, bounce, elastic, fbm, Fibonacci, R2 low-discrepancy sequence, analytic SDFs</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/sdf2d.bn"><code>sdf2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/sdf2d.bn"><code>sdf2d.bn</code></a></td>
           <td><code>geometry</code>, <code>compositor</code></td>
           <td>17</td>
           <td>2D segment, rounded box, rhombus, equilateral triangle, hexagon, regular polygon, star, arc, sector, cross, chamfer booleans, polar/grid repetition, isolines</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/curves2d.bn"><code>curves2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/curves2d.bn"><code>curves2d.bn</code></a></td>
           <td><code>geometry</code></td>
           <td>7</td>
           <td>2D curve morphing, parallel offset contour, fractal contour noise, sine wave contour, tapered ribbon, 2D arrow, 2D ring</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/patterns2d.bn"><code>patterns2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/patterns2d.bn"><code>patterns2d.bn</code></a></td>
           <td><code>geometry</code></td>
           <td>5</td>
           <td>Hexagonal honeycomb grid, equilateral triangular grid, Vogel phyllotaxis spiral, R2 stratified jitter points, 2D hatching</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/planar2d.bn"><code>planar2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/planar2d.bn"><code>planar2d.bn</code></a></td>
           <td><code>geometry</code></td>
           <td>4</td>
           <td>Planar map of overlapping curves: faces, split at intersections, shape builder pick, outer boundary contour</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/fillet2d.bn"><code>fillet2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/fillet2d.bn"><code>fillet2d.bn</code></a></td>
           <td><code>geometry</code></td>
           <td>4</td>
           <td>Fillet of a corner and of a polygon, chamfer of a polygon, fillet as Bezier handles</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/mask2d.bn"><code>mask2d.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/mask2d.bn"><code>mask2d.bn</code></a></td>
           <td><code>compositor</code></td>
           <td>9</td>
           <td>Compositor masks drawn by the SDFs of <code>math</code> and <code>sdf2d</code>: circle, box, polygon, star, outline, letterbox</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/merge.bn"><code>merge.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/merge.bn"><code>merge.bn</code></a></td>
           <td><code>compositor</code></td>
           <td>32</td>
           <td>The Merge operations of compositing on premultiplied images: over, under, in, out, atop, xor, stencil, mask, plus, screen, multiply, difference…; premult, unpremult, keymix</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/grade.bn"><code>grade.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/grade.bn"><code>grade.bn</code></a></td>
           <td><code>compositor</code></td>
           <td>20</td>
           <td>The colour tools of compositing: grade, color correct by shadows / midtones / highlights, saturation, hue shift, exposure, soft clip, log2lin / lin2log</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/stmap.bn"><code>stmap.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/stmap.bn"><code>stmap.bn</code></a></td>
           <td><code>compositor</code></td>
           <td>12</td>
           <td>Image remapping by STMaps, as Nuke's STMap: UV ramp, STMap apply, tile, mirror, reformat by fit / fill / distort, each as its STMap and its image</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/stdlib/qc.bn"><code>qc.bn</code></a></td>
+          <td><a href="https://github.com/marcgardent/base-node-language/blob/main/plugins/blender/stdlib/qc.bn"><code>qc.bn</code></a></td>
           <td><code>compositor</code></td>
           <td>24</td>
           <td>Quality control after Nuke: test patterns (SMPTE colour bars, colour wheel, ramp, radial, rectangle, grid, checkerboard, constant) and checks (false colour by stops, clip check, NaN and infinity check, zebra, alpha check, difference as heat)</td>

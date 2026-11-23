@@ -13,8 +13,8 @@ The goal: every Geometry Nodes group of a real library goes `tree -> .bn -> tree
 beside its original, at a fixed version, in CI, so that a change of the reader, the builder or the language
 that changes what happens to any group fails the test until its baseline is written again on purpose.
 
-The machinery exists: `base-node-for-blender/tests/test_libraries.py`, the manifests and baselines in
-`base-node-for-blender/tests/libraries/` (read its README first), and the `blender` job of
+The machinery exists: `addon/tests/test_libraries.py`, the manifests and baselines in
+`addon/tests/libraries/` (read its README first), and the `blender` job of the repository's
 `.github/workflows/ci.yml`. Adding a library is a manifest, a baseline and a line of credits. Molecular Nodes
 (`molecularnodes.toml`) is the worked example.
 
@@ -28,7 +28,7 @@ where they do not run.
 Read the repo's `LICENSE` (and `pyproject.toml`, `blender_manifest.toml`, the README: they may disagree; the
 `LICENSE` file wins, and a `LICENSE.OLD` or upstream notice must be kept if anything is copied).
 
-Base Node's tests live in `base-node-for-blender/`, which is GPL-3.0-or-later (see the root README, *License*).
+Base Node's tests live in `addon/`, which is GPL-3.0-or-later (see this folder's README, *License*).
 
 | Library license | Fetch at test time | Commit the `.blend` / `.bn` | Credit |
 |---|---|---|---|
@@ -41,7 +41,7 @@ Base Node's tests live in `base-node-for-blender/`, which is GPL-3.0-or-later (s
 Fetching is the default even when committing is allowed: nothing large in the repository, and a new version
 is one line of the manifest. The baseline holds only group names, statuses and hashes, never their text.
 Commit a library (`file = "…"` in the manifest, the way `tests/fixtures/everyday_geometry_nodes.blend` is)
-only when Marc wants its `.bn` texts readable in the repo; then add it to the root README's *License* list.
+only when Marc wants its `.bn` texts readable in the repo; then add it to the *License* list of this folder's README.
 When the license is unclear, say so and ask Marc before going on.
 
 ## 2. Find the node groups
@@ -83,7 +83,7 @@ test must run with a Blender at least that recent (CI uses the version in `.gith
 
 ## 3. Manifest and first run
 
-Write `base-node-for-blender/tests/libraries/<name>.toml` like `molecularnodes.toml`: `name`, `author`,
+Write `addon/tests/libraries/<name>.toml` like `molecularnodes.toml`: `name`, `author`,
 `homepage`, `license`, a comment on why it is fetched or committed, `version`, `url` (+ `member`) or `file`,
 `sha256`. `<name>` is short, lowercase, no spaces: it is the baseline's name and the test's argument.
 A library of shader groups or materials adds `trees = ["shader", "material"]`: they are compared by a
@@ -91,7 +91,7 @@ Cycles render rather than evaluated (README, *Shader groups and materials*; `mat
 
 ```bash
 blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/test_libraries.py -- <name>
+  --python addon/tests/test_libraries.py -- <name>
 ```
 
 Run it from a clean checkout of the commit the baseline is for (`git worktree add <scratchpad>/wt -b

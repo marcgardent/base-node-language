@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the extension .zip: base-node-for-blender/build.sh [output dir, default dist]
+# Build the extension .zip: addon/build.sh [output dir, default dist]
 #
 # In the repository, stdlib/, blender/_targets/ and the modules of lang/ and blender/, which are python/base_node's
 # and python/base_node_blender's, are symbolic links to their one source. Blender's `extension build` skips links, so the folder is

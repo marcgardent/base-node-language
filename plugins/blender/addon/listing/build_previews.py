@@ -3,7 +3,7 @@
 extensions.blender.org shows previews in a 16:9 frame: each picture is padded to 16:9 on a dark
 background, at its own resolution (no upscaling). Videos stay mp4 (gif is not accepted).
 
-    python3 base-node-for-blender/listing/build_previews.py   ->  base-node-for-blender/listing/previews/
+    python3 addon/listing/build_previews.py   ->  addon/listing/previews/
 
 The cover (featured.png) and the icon (icon.png) are exported from cover.vectorcraft, not here.
 """

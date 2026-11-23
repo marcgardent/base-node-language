@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXT = ROOT / "base-node-for-blender"
+EXT = ROOT / "addon"
 _spec = importlib.util.spec_from_file_location("base_node", EXT / "__init__.py", submodule_search_locations=[str(EXT)])
 base_node = importlib.util.module_from_spec(_spec)
 sys.modules["base_node"] = base_node

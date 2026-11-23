@@ -6,7 +6,7 @@ name = "H-Style RBD Nodes"
 author = "Excifroge"
 homepage = "https://github.com/excifroge/H-Style-RBD-Nodes"
 license = "GPL-3.0-or-later"
-# Compatible with base-node-for-blender (GPL-3.0-or-later), but fetched at test time rather than
+# Compatible with the add-on, addon/ (GPL-3.0-or-later), but fetched at test time rather than
 # committed: a new version is one line here. The baseline keeps names, statuses and hashes.
 version = "d9a22d0"
 url = "https://raw.githubusercontent.com/excifroge/H-Style-RBD-Nodes/d9a22d0728af799fe7350a2cb3a6b6a54683ff83/Examples/01_wall_smash.blend"

@@ -2,7 +2,7 @@
 
 Run by `test_libraries.py` for a manifest with a `[generate]` table, in its own Blender process:
     blender --background --factory-startup --python-exit-code 1 \
-      --python base-node-for-blender/tests/generate_library.py -- <extension.zip> <out.blend> <generate json>
+      --python addon/tests/generate_library.py -- <extension.zip> <out.blend> <generate json>
 
 That process must be given a throwaway user profile (BLENDER_USER_RESOURCES and the BLENDER_USER_* it
 overrides pointing to a temporary directory): the extension is installed into that profile's

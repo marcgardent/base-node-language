@@ -10,12 +10,12 @@ do not cover them: each folder is under the license of its library, in its `LICE
 (`licenses/` holds those texts once).
 
 The `.blend` files of the libraries stay the source of the non-regression tests
-(`base-node-for-blender/tests/test_libraries.py`): the texts are kept for what they are, the groups
+(`addon/tests/test_libraries.py`): the texts are kept for what they are, the groups
 of real libraries written in the language. `test_libraries.py` writes them with the baselines
 (`BASE_NODE_UPDATE_FIXTURES=1` on the Blender of the baselines); `python/tests/test_corpus.py` checks
 that each one parses, fits the target `blender@5.3` and has the hash its baseline records, and
 `rust/tests/corpus.rs` that the Rust parser reads it and the formatter prints it unchanged
-(`rust-blender/tests/corpus.rs`: that it fits `blender@5.3` in Rust too).
+(`rust/tests/corpus.rs`: that it fits `blender@5.3` in Rust too).
 
 `v1/` is frozen at the final 1.0.0. A later version of the language must still read every text of it.
 
