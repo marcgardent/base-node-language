@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-__version__ = "1.0.0rc7"
+__version__ = "1.0.0rc8"
 
 from .errors import BnError, Diagnostic
 from .format import format_source

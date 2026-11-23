@@ -5,7 +5,7 @@ What changed for a user of the Base Node language and its core, by version. The 
 [Semantic Versioning](https://semver.org/) as [`spec/versioning.md`](spec/versioning.md) says.
 Versions below 1.0.0 are pre-releases: the text format can change between them.
 
-## [Unreleased]
+## [1.0.0-rc.8] - 2026-11-23
 
 ### Repository
 

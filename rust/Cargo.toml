@@ -1,6 +1,6 @@
 [package]
 name = "base-node"
-version = "1.0.0-rc.7"
+version = "1.0.0-rc.8"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Base Node (.bn) parser and formatter: the core of the language, which names no destination (wasm32 compatible)"

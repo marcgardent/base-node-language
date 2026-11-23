@@ -1,6 +1,6 @@
 # Base Node (`.bn`) Language Reference
 
-Language Edition 2026 · Specification Version 1.0.0-rc.7 (release candidate of the LTS).  
+Language Edition 2026 · Specification Version 1.0.0-rc.8 (release candidate of the LTS).  
 See [Versioning Specification](versioning.md) for stability policies and release lifecycles.
 
 This reference is the language: how a text is read, printed and formatted. It names no destination.
