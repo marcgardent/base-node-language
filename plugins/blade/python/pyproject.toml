@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "base-node-blade"
+version = "1.0.0rc7"
+description = "Blade's Pixel Nodes for Base Node (.bn): the target blade, its translator from blender, its bridge"
+authors = [{ name = "Marc Gardent" }]
+license = "MIT OR Apache-2.0"
+requires-python = ">=3.10"
+# The core of the language and Blender's library, which reads the target and translates to it
+dependencies = ["base-node==1.0.0rc7", "base-node-blender==1.0.0rc7"]
+
+# Blender's library finds the targets of this folder here (base_node_blender.targets)
+[project.entry-points."base_node_blender.targets"]
+blade = "base_node_blade:TARGETS"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["base_node_blade"]
+
+[tool.setuptools.package-data]
+base_node_blade = ["_targets/*.json", "_targets/*/*.bn"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

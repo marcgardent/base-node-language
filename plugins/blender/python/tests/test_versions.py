@@ -50,7 +50,7 @@ def test_the_versions_agree():
 def test_targets_have_their_fields():
     """Every target file names itself and lists what it accepts; none extends another."""
     files = list(TARGETS_DIR.glob("*.json"))
-    assert {f.stem for f in files} >= {"blender", "blade"}
+    assert {f.stem for f in files} >= {"blender"}
     variants = [TARGETS_DIR / "blender" / f"{v}.json" for v in ("cycles", "eevee", "gltf")]
     for f in files + variants:
         data = json.loads(f.read_text(encoding="utf-8"))

@@ -5,7 +5,7 @@ translators that carry a text of another target to it. No target is defined from
 
     check_target(file, "blender gltf")   -> the Issues of the text outside it, [] when it fits
     infer(file)                          -> which targets accept it, natively or through a translator
-    translate(file, "blender", "blade")  -> the text renamed for blade
+    translate(file, "blender", "pixels") -> the text renamed for a target `pixels`
 
 `blender` is Blender's own, and has a catalog per version of Blender (targets/blender/<x.y>.json,
 what that Blender reports): `blender@5.3` is one version, `blender` every version targets/blender.json
@@ -15,6 +15,10 @@ variant, the shader nodes one consumer accepts: `blender@5.3 gltf`, `blender eev
 A graph a text calls brings its issues: those of the text, of the stdlib modules it `use`s, and
 of the bridges of the target (modules shipped with it). A name that is not a target's raises
 ValueError.
+
+The targets of another destination are the files of its library's folder, which it adds with
+`add_targets(folder)` or declares as an entry point of the group `base_node_blender.targets` (the
+object it names is the folder): they come after this library's, which they may not name again.
 
 `python -m base_node_blender.targets` rewrites the catalogs of `blender` from the nodes Blender
 reports (targets/backends/blender-<x.y>.json). The `_targets` next to this module is a link
@@ -39,6 +43,8 @@ from .zones import word as zone_word
 HERE = Path(__file__).resolve().parent
 # The targets shipped with this package, then the repository's when run from a checkout
 DIRS = (HERE / "_targets", HERE.parents[1] / "targets")
+# The entry points of the libraries of other destinations installed: each names the folder of its targets
+TARGETS_GROUP = "base_node_blender.targets"
 
 ARITHMETIC = {"+", "-", "*", "/"}
 PRODUCTS = {"⋅", "×", "dot", "cross", "·"}
@@ -138,6 +144,38 @@ def _dir():
         if d.is_dir() and any(d.glob("*.json")):
             return d
     return None
+
+
+_added = []
+
+
+def add_targets(folder):
+    """Make the targets of `folder` known: a file `<name>.json` per target, its bridges beside it,
+    as this library's own. A target this library or a folder added before has is refused."""
+    folder = Path(folder).resolve()
+    if folder in _added:
+        return
+    names = set(_own()) | {p.stem for d in _added for p in d.glob("*.json")}
+    for p in sorted(folder.glob("*.json")):
+        if p.stem in names or p.stem == BLENDER:
+            raise ValueError(f"target '{p.stem}' of {folder} is one there is already")
+    _added.append(folder)
+
+
+_entry_points_read = []
+
+
+def _folders():
+    """The folders of the targets of other destinations: those added, and those of the entry points
+    of the installed libraries, read once (the Blender add-on has none: it ships its targets)."""
+    if not _entry_points_read:
+        _entry_points_read.append(True)
+        if "." not in __package__:
+            from importlib.metadata import entry_points
+
+            for ep in sorted(entry_points(group=TARGETS_GROUP), key=lambda ep: ep.name):
+                add_targets(ep.load())
+    return list(_added)
 
 
 def _json(path):
@@ -268,10 +306,15 @@ def blender():
     return _blender[root]
 
 
-def _others():
-    """The targets that are a file of their own, sorted: every one but `blender`."""
+def _own():
+    """The targets of this library that are a file of their own: every one but `blender`."""
     root = _dir()
-    return sorted(p.stem for p in root.glob("*.json") if p.stem != BLENDER) if root else []
+    return [p.stem for p in root.glob("*.json") if p.stem != BLENDER] if root else []
+
+
+def _others():
+    """The targets that are a file of their own, sorted: every one but `blender`, and those added."""
+    return sorted(_own() + [p.stem for d in _folders() for p in d.glob("*.json")])
 
 
 def _positional(enums, node, value):
@@ -378,9 +421,10 @@ def load_target(name):
                 version = version.removesuffix("-lts")
             return b.target(version, m.group("words").strip() or None)
     elif _bare(name):
-        root = _dir()
-        if root is not None and (root / f"{name}.json").is_file():
-            path = root / f"{name}.json"
+        for root in [_dir()] + _folders():
+            if root is not None and (root / f"{name}.json").is_file():
+                path = root / f"{name}.json"
+                break
     elif Path(name).is_file():
         path = Path(name)
     if path is None:

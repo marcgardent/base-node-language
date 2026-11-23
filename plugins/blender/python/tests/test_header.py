@@ -30,9 +30,9 @@ def test_the_stdlib_head_is_read():
 
 
 def test_text_directives_and_quotes():
-    h = header('// @title "Waves"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target "blender@5.3  gltf", blade\n\n'
+    h = header('// @title "Waves"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target "blender@5.3  gltf", blender\n\n'
                + MAKER)
-    assert (h.title, h.author, h.license, h.target) == ("Waves", "Marc G.", "MIT OR Apache-2.0", ["blender@5.3 gltf", "blade"])
+    assert (h.title, h.author, h.license, h.target) == ("Waves", "Marc G.", "MIT OR Apache-2.0", ["blender@5.3 gltf", "blender"])
     assert h.module is None and h.mesh == "cube"
 
 
@@ -131,8 +131,8 @@ def test_a_graph_named_with_escapes():
 def test_text_directives_read_escapes():
     from base_node.header import header as core_header
     h = core_header(r'// @title "Say \"hi\" \u{1F600}"' + "\n" + r'// @author "A\\B"' + "\n"
-                    + r'// @target "blender@5.3", "bl\u{61}de"' + "\n" + r'// @module "waves"' + "\n" + MAKER)
-    assert (h.title, h.author, h.target, h.module) == ('Say "hi" \U0001F600', "A\\B", ["blender@5.3", "blade"], "waves")
+                    + r'// @target "blender@5.3", "bl\u{65}nder"' + "\n" + r'// @module "waves"' + "\n" + MAKER)
+    assert (h.title, h.author, h.target, h.module) == ('Say "hi" \U0001F600', "A\\B", ["blender@5.3", "blender"], "waves")
     # Free text that is not one string stays as written
     assert core_header('// @title "Waves" and "Ripples"\n' + MAKER).title == '"Waves" and "Ripples"'
     assert core_header('// @title "Waves\n' + MAKER).title == '"Waves'

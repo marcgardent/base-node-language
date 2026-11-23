@@ -1,7 +1,7 @@
 # `<bn-view>`
 
 A Web Component that shows a `.bn` text read-only: its highlighted code beside its node graph, drawn
-like Blender's (and Blade's) Node Editor, with a **copy** button, an **enlarge** button (Esc reduces),
+like Blender's Node Editor, with a **copy** button, an **enlarge** button (Esc reduces),
 a **download** button to import it into Blender, and a tag per backend that runs the text. Its head shows the graph in large type, with the targets it runs on on a line below, a tab per
 graph when the text has several, and a band under it holds the view (Code, Both, Nodes) and the buttons; what
 overflows a line scrolls sideways, with the wheel too, as a Blender header.
@@ -70,7 +70,6 @@ What base-node can tell from the text, not a run in the host:
 | Blender · Geometry Nodes | Every graph is a `geometry`, `shader` or `compositor` graph; its `geometry` graphs fit `blender`, which checks them against the Geometry Nodes of Blender |
 | Blender · Shader | Same; its `shader` graphs fit `blender`, against its shader nodes |
 | Blender · Compositor | Same; its `compositor` graphs fit `blender`, against its compositor nodes |
-| Blade · Pixel Nodes | One `pixel graph`, within `blade` with the graphs it calls; its `use`s are modules `blade` follows: its bridges (`blender_interop`) and the stdlib |
 | target … | A target the text fits ([spec/targets.md](../spec/targets.md)); `← source` when through its translator |
 
 A crossed-out tag says why in its tooltip.

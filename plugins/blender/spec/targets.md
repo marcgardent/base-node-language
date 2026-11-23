@@ -2,9 +2,10 @@
 
 A **target** is what one destination accepts: the kinds of tree, the types, the zones and the nodes
 a text may use there. Blender is a target, with a catalog per version and variants (the part of its
-shaders that survives a glTF export is one); so is Blade. There is one file per target,
+shaders that survives a glTF export is one). There is one file per target,
 [`targets/<name>.json`](../targets/), and no target is defined from another: no `extends`, no
-hierarchy.
+hierarchy. The target of another destination is a file of the same format, which its own library
+adds ([below](#a-target-of-another-destination)).
 
 The language speaks Blender. Its node names are Blender's (the UI name in one word,
 [Blender, 5.1](blender.md#51-node-names)), and its formulas (`a + b`, `n ⋅ up`, `h > 0.5`) are Math, Vector Math,
@@ -14,20 +15,18 @@ own: it declares **translators** from Blender's target to itself.
 ## What a text says, what the tool says
 
 - `// @target blender gltf` at the head of a text is a promise, and it is optional. Several targets
-  are separated by commas (`// @target blender gltf, blade`): each graph then fits one of them. The editor points at
+  are separated by commas (`// @target blender gltf, blender eevee`): each graph then fits one of them. The editor points at
   everything the text uses outside that target, and `base-node check` fails on it.
 - Without `@target` there is nothing to respect. The tool **infers** the targets that accept the
   text and shows them:
 
   ```text
   Compatible: blender, blender cycles, blender eevee
-  Outside blade: kind shader (line 1) and 3 more
   Outside blender gltf: node NoiseTexture (line 2) and 1 more
   ```
 
   A variant of `blender` is about shaders: it is tried for a text that holds a shader graph, and
-  not shown for another (a compositor text says `Compatible: blender, blade (translated from blender)`
-  and nothing of `gltf`).
+  not shown for another (a compositor text says `Compatible: blender`, and nothing of `gltf`).
 
   An inference holds the targets the text fits (by name, with the target each translated one comes
   from), those it does not with their issues (by name), and for each graph, in the order of the
@@ -44,34 +43,38 @@ library (`stdlib/`). A module found nowhere is not followed: its calls are taken
 `use` of every graph of it (`use mine`) lets any call be one of its graphs.
 
 A target is written as a name, an optional version after `@`, and optional words after a space:
-`blade`, `blender@5.3`, `blender gltf`, `blender@5.2-lts gltf`. What a version and a word mean is
+`blender`, `blender@5.3`, `blender gltf`, `blender@5.2-lts gltf`. What a version and a word mean is
 the target's to say; only [`blender`](#blender-by-version) has them. A name that is not a target's
 is an error: Python raises `ValueError`, Rust returns `Err(UnknownTarget)`, with the same message,
-`unknown target 'nope'; targets: blade, blender, blender@5.3; variants of blender, written after
-it: cycles, eevee, gltf`.
+`unknown target 'nope'; targets: blender, blender@5.2-lts, blender@5.3; variants of blender, written
+after it: cycles, eevee, gltf`.
 
 ## The file of a target
 
+The variant `gltf` of `blender` is a file of this format ([below](#blender-by-version)), and so is
+the target of another destination. Here `pixels`, a target made up for the example, with a translator
+from `blender`:
+
 ```json
 {
-  "name": "blade",
-  "description": "Blade's Pixel Nodes",
+  "name": "pixels",
+  "description": "The image nodes of another destination",
   "kinds": ["pixel"],
   "types": ["Float", "Int", "Bool", "Vector", "Color", "Image"],
   "zones": [],
-  "nodes": ["Math", "Mix", "Blur", "Flatten", "Classifier"],
+  "nodes": ["Math", "Mix", "Blur", "Curves", "Median", "Bilateral"],
   "translators": {
     "blender": {
       "kinds": {"compositor": "pixel"},
       "nodes": {
-        "Blur": "Blur",
+        "Blur": {"node": "Blur", "inputs": {"size": "radius"}},
         "RGBCurves": "Curves",
-        "MixRGB": {"node": "Mix", "inputs": {"fac": "factor"}, "settings": {"blend_type": "mode"}},
-        "Kuwahara": "blender_interop::kuwahara"
+        "MixLegacy": {"node": "Mix", "inputs": {"color1": "a", "color2": "b"}, "settings": {"blend_type": "blend"}},
+        "Kuwahara": "blender_bridge::kuwahara"
       }
     }
   },
-  "bridges": ["blade/blender_interop.bn"]
+  "bridges": ["pixels/blender_bridge.bn"]
 }
 ```
 
@@ -82,7 +85,7 @@ it: cycles, eevee, gltf`.
 | `zones` | `repeat`, `foreach`, `simulate`, the calls that take a body, and `closure`, a nameless graph ([Blender, 6.1](blender.md#61-blenders-zones)) |
 | `nodes` | The node names it accepts, implicit inputs (`Position`, `Index`…) among them |
 | `translators` | For each target it translates from, by its name without a version: its kinds, and for each node of that target the node it becomes, or the graph of a bridge (`module::graph`) |
-| `bridges` | Modules shipped with the target, whose graphs stand for the nodes it has no node for: `.bn` files, by their path relative to the target's file; the module is the file's name (`blade/blender_interop.bn` is `blender_interop`) |
+| `bridges` | Modules shipped with the target, whose graphs stand for the nodes it has no node for: `.bn` files, by their path relative to the target's file; the module is the file's name (`pixels/blender_bridge.bn` is `blender_bridge`) |
 | `rules` | For an input of a node, what may feed it (see [Rules](#rules)) |
 | `inputs` | The inputs of the nodes the rules name, in order: a positional argument takes the input of its place. For a pattern, its placeholders |
 | `outputs` | The outputs of the nodes the rules name, in order: a call taken whole is its first |
@@ -100,26 +103,37 @@ its brackets; a setting written by position stays as it is, in the brackets:
 `MixLegacy[blend_type: MULTIPLY](color1: a)` becomes `Mix[blend: MULTIPLY](a: a)`. What is more than a rename,
 one node of the source made of several nodes of the target, is a **bridge**: a graph of one of the
 target's bridge modules, which the translator names by its module,
-`"Kuwahara": "blender_interop::kuwahara"`, or with its renames,
-`{"node": "blender_interop::kuwahara", "inputs": {"size": "radius"}}`. The translator stays a table,
+`"Kuwahara": "blender_bridge::kuwahara"`, or with its renames,
+`{"node": "blender_bridge::kuwahara", "inputs": {"size": "radius"}}`. The translator stays a table,
 and a bridge is just a module: a text may `use` it, and the tools check it as any other.
 
 - A node sent to a bridge is translated when the target has that graph and the graph fits the
-  target. One that does not is an issue of kind `graph` at the call: `blender_interop::kuwahara
+  target. One that does not is an issue of kind `graph` at the call: `blender_bridge::kuwahara
   (node Median)`.
 - `translate` makes the call a call of the module, `Kuwahara(image, size: 8.0)` becoming
-  `blender_interop::kuwahara(image, size: 8.0)`, and the text gets `use blender_interop`, once.
-- A check against the target finds its bridges as modules: the translated text fits `blade`, its
-  calls of `blender_interop` followed into the bridge.
+  `blender_bridge::kuwahara(image, size: 8.0)`, and the text gets `use blender_bridge`, once.
+- A check against the target finds its bridges as modules: the translated text fits `pixels`, its
+  calls of `blender_bridge` followed into the bridge.
 
-`blade` ships one bridge, [`targets/blade/blender_interop.bn`](../targets/blade/blender_interop.bn):
-`kuwahara`, the compositor's Kuwahara made of a Median and a Bilateral.
+In the example, `pixels/blender_bridge.bn` holds `kuwahara`, the compositor's Kuwahara made of a
+Median and a Bilateral.
 
 A text fits a target **through a translator** from target `S` when it fits `S`, each of its kinds
 has a translation and each node it calls is a key of the translator's `nodes` (and, for a bridge,
 the bridge's graph fits the target). A node the
 translator does not list is not translated, even when the target has a node of that name: listing
-it (`"Blur": "Blur"`) is the promise that the two are the same.
+it (`"Median": "Median"`) is the promise that the two are the same.
+
+### A target of another destination
+
+A destination other than Blender has its targets in its own library, which adds them to this one's,
+after them; a target of a name there is already is refused.
+
+- In Python, `base_node_blender.targets.add_targets(folder)` adds the targets of a folder, a
+  `<name>.json` each, their bridges beside them; an installed library may instead name that folder
+  in an entry point of the group `base_node_blender.targets`, read at the first check.
+- In Rust, `base_node_blender::targets::add_targets(files, bridges)` takes the `(name, JSON)` of each
+  target and the `(path, text)` of each bridge, before the first check.
 
 ## The targets
 
@@ -129,9 +143,9 @@ it (`"Blur": "Blur"`) is the promise that the two are the same.
 | `blender@5.3` | geometry, shader, compositor | The same in one version of Blender |
 | `blender gltf`, `blender@5.3 gltf` | shader | A variant: the shader nodes Blender's glTF exporter reads: Principled BSDF, Emission, image textures and their channels, normal maps, UVs, unlit, alpha clip, anisotropy, and [rules](#rules) on what feeds what, checked against the exporter |
 | `blender eevee`, `blender cycles` | shader | Variants, **experimental**: the shader nodes but those Blender says the engine does not take |
-| `blade` | pixel | Blade's Pixel Nodes, a translator from `blender`, and a bridge, `blender_interop` |
 
-The others are written by hand.
+The variants are written by hand. A target of another destination comes with its library
+([above](#a-target-of-another-destination)).
 
 ## `blender`, by version
 

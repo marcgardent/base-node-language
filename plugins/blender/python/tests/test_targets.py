@@ -11,15 +11,14 @@ from base_node_blender import (BnError, check_target, check_targets, header, inf
                                target_names, translate, variant_names)
 from base_node.printer import to_source
 from base_node_blender.targets import (IMPLICIT, Blender, _bridge, _literal, accepted, blender, blender_catalog, catalog,
-                                       graph_issues, inferred_names, promise_refusal, setting_of, sync,
-                                       translation_issues)
+                                       graph_issues, inferred_names, promise_refusal, setting_of, sync)
 
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = catalog(ROOT)
 # The targets shipped with the package and the extension: links in git to targets/
-TARGETS = ["blade", "blender", "blender@5.2-lts", "blender@5.3"]
+TARGETS = ["blender", "blender@5.2-lts", "blender@5.3"]
 # What an inference tries: `blender` as the versions promised, whole and by variant
-INFERRED = ["blade", "blender", "blender cycles", "blender eevee", "blender gltf"]
+INFERRED = ["blender", "blender cycles", "blender eevee", "blender gltf"]
 VARIANTS = "; variants of blender, written after it: cycles, eevee, gltf"
 
 SHIPPED = (ROOT / "python" / "base_node_blender" / "_targets", ROOT / "addon" / "blender" / "_targets")
@@ -88,8 +87,7 @@ def test_a_version_without_a_catalog_says_so():
         load_target("blender@5.3-lts")
     assert str(e.value) == ("unknown target 'blender@5.3-lts'; targets: " + ", ".join(TARGETS) + VARIANTS
                             + "; Blender 5.3 is not an LTS: write 'blender@5.3'")
-    for name in ("blender@", "blender@5", "blender@x", "blender nope", "blender  gltf", "blender@5.3 gltf eevee",
-                 "blade@1.0", "blade gltf"):
+    for name in ("blender@", "blender@5", "blender@x", "blender nope", "blender  gltf", "blender@5.3 gltf eevee"):
         with pytest.raises(ValueError, match="unknown target"):
             load_target(name)
 
@@ -208,7 +206,6 @@ def test_what_an_editor_colors_is_what_every_tree_and_version_accepts():
     assert "Geometry" in accepted("blender", "type") and "Shader" in accepted("blender@5.3", "type")
     assert "ToonBSDF" not in accepted("blender eevee", "node") and "Cube" not in accepted("blender eevee", "node")
     assert accepted("blender gltf", "node") == set(load_target("blender@5.3 gltf").nodes)
-    assert accepted("blade", "node") == set(load_target("blade").nodes)
 
 
 @pytest.mark.parametrize("link", SHIPPED, ids=lambda p: p.parent.name)
@@ -219,13 +216,10 @@ def test_the_shipped_targets_are_a_link_to_the_repository_s(link):
 
 def test_the_hand_written_targets_name_nodes_of_their_destination():
     shader = {n["name"] for n in BACKEND["kinds"]["shader"]}
-    compositor = {n["name"] for n in BACKEND["kinds"]["compositor"]}
     gltf = json.loads((ROOT / "targets" / "blender" / "gltf.json").read_text(encoding="utf-8"))
     assert set(gltf["nodes"]) < shader
     # Every version promised has each of them: the rules read the same in each
     assert all(m.nodes == gltf["nodes"] for m in load_target("blender gltf").members)
-    # Blade's own nodes are its business; what it translates from must be the compositor's
-    assert set(load_target("blade").translators["blender"]["nodes"]) <= compositor
 
 
 def test_a_translator_leads_to_nodes_of_its_target():
@@ -526,27 +520,6 @@ def test_a_stdlib_module_brings_its_nodes():
     assert check_target(parse(to_source(f).replace("geometry graph", "compositor graph")), "blender") == []
 
 
-ONE_TARGET_PER_GRAPH = """// @target blender gltf, blade
-
-shader graph tint(c: Color) -> Shader {
-  return Emission(color: c)
-}
-
-pixel graph soft(image: Color) -> Color {
-  return Blur(image, radius: 2.0)
-}
-"""
-
-
-def test_a_text_may_promise_one_target_per_graph():
-    src = ONE_TARGET_PER_GRAPH
-    f = parse(src)
-    assert infer(f).fits == {}  # neither target takes every graph
-    assert check_targets(f, ["blender gltf", "blade"]) == []
-    assert check_targets(f, ["blender gltf"]) != [] != check_targets(f, ["blade"])
-    assert header(src).target == ["blender gltf", "blade"]
-
-
 def test_blender_takes_the_graphs_of_each_kind_of_tree():
     f = parse("geometry graph lift(mesh: Geometry) -> Geometry {\n"
               "  return SetPosition(mesh, offset: CombineXYZ(z: 1.0))\n}\n\n"
@@ -554,8 +527,7 @@ def test_blender_takes_the_graphs_of_each_kind_of_tree():
               "compositor graph soft(image: Color) -> Color {\n  return Blur(image)\n}\n")
     inf = infer(f)
     assert inf.fits == {"blender": None}
-    assert inf.graphs == [("lift", ["blender"]), ("tint", ["blender", "blender cycles", "blender eevee", "blender gltf"]
-                                                  + (["materialx"] if "materialx" in TARGETS else [])),
+    assert inf.graphs == [("lift", ["blender"]), ("tint", ["blender", "blender cycles", "blender eevee", "blender gltf"]),
                           ("soft", ["blender"])]
     # Each against the nodes of its kind: a geometry node in a shader graph is outside
     wrong = parse("shader graph g(mesh: Geometry) -> Geometry {\n  return SetPosition(mesh)\n}\n")
@@ -579,69 +551,6 @@ COMPOSITE = """compositor graph soften(image: Color, size: Float = 4.0) -> Color
 """
 
 
-def test_a_text_reaches_blade_through_its_translator():
-    f = parse(COMPOSITE)
-    fits = infer(f).fits
-    assert fits["blender"] is None
-    assert fits["blade"] == "blender"
-    out = translate(f, "blender", "blade")
-    assert out.graphs[0].kind == "pixel"
-    assert "pixel graph soften" in to_source(out)
-    assert f.graphs[0].kind == "compositor"  # the text itself is left as it was
-
-
-def test_a_node_the_translator_does_not_list_stays_out():
-    f = parse(COMPOSITE.replace("Blur(image, size: size)", "Pixelate(image)"))
-    inf = infer(f)
-    assert "blade" in inf.outside
-    with pytest.raises(ValueError, match="Pixelate"):
-        translate(f, "blender", "blade")
-
-
-# The same cases as rust/tests/conformance.rs
-
-PAINT = """compositor graph paint(image: Color) -> Color {
-  soft = Kuwahara(image, size: 8.0)
-  return Mix(factor: 0.5, a: image, b: Kuwahara(soft))
-}
-"""
-
-PAINTED = """use blender_interop
-
-pixel graph paint(image: Color) -> Color {
-  soft = blender_interop::kuwahara(image, size: 8.0)
-  return Mix(factor: 0.5, a: image, b: blender_interop::kuwahara(soft))
-}
-"""
-
-
-def test_a_bridge_carries_a_node_blade_has_not():
-    f = parse(PAINT)
-    assert infer(f).fits["blade"] == "blender"
-    text = to_source(translate(f, "blender", "blade"))
-    assert text == PAINTED  # the call is the bridge's, the text uses its module once
-    assert check_target(parse(text), "blade") == []
-    assert infer(parse(text)).fits == {"blade": None}
-
-
-def test_the_bridge_module_fits_its_target():
-    path = ROOT / "targets" / "blade" / "blender_interop.bn"
-    assert load_target("blade").bridges == ["blade/blender_interop.bn"]
-    assert check_target(parse(path.read_text(encoding="utf-8")), "blade") == []
-
-
-def test_a_bridge_graph_outside_its_target_is_refused(tmp_path):
-    blade = json.loads((ROOT / "targets" / "blade.json").read_text(encoding="utf-8"))
-    blade["nodes"].remove("Median")
-    blade["bridges"] = [str(ROOT / "targets" / "blade" / "blender_interop.bn")]
-    path = tmp_path / "narrow.json"
-    path.write_text(json.dumps(blade), encoding="utf-8")
-    issues = translation_issues(parse(PAINT), "blender", str(path))
-    assert [(i.what, i.name, i.line) for i in issues] == [
-        ("graph", "blender_interop::kuwahara (node Median)", 2),
-        ("graph", "blender_interop::kuwahara (node Median)", 3)]
-
-
 def test_a_stdlib_module_used_whole_brings_its_graphs_only():
     used = "use {}\n\ngeometry graph g(c: Color) -> Color {{\n  return SetAlpha(c, alpha: 1.0)\n}}\n"
     assert [str(i) for i in check_target(parse(used.format("merge")), "blender")] == [
@@ -657,7 +566,7 @@ def test_an_unknown_target_is_an_error():
     assert target_names() == TARGETS
     message = "unknown target 'nope'; targets: " + ", ".join(TARGETS) + VARIANTS
     for call in (lambda: load_target("nope"), lambda: check_target(f, "nope"),
-                 lambda: check_target([], "nope"), lambda: check_targets(f, ["blade", "nope"]),
+                 lambda: check_target([], "nope"), lambda: check_targets(f, ["blender", "nope"]),
                  lambda: translate(f, "blender", "nope")):
         with pytest.raises(ValueError) as e:
             call()
@@ -666,41 +575,19 @@ def test_an_unknown_target_is_an_error():
 
 def test_what_inference_holds():
     inf = infer(parse(COMPOSITE))
-    assert list(inf.fits.items()) == [("blade", "blender"), ("blender", None)]
+    assert list(inf.fits.items()) == [("blender", None)]
     # A variant of blender is about shaders: it is not tried for a text that holds none
-    assert list(inf.outside) == [t for t in INFERRED if t not in ("blade", "blender") and " " not in t]
+    assert list(inf.outside) == [t for t in INFERRED if t != "blender" and " " not in t]
     assert inf.graphs == [("soften", ["blender"])]
     lines = [
-        "Compatible: blender, blade (translated from blender)",
+        "Compatible: blender",
     ]
     assert inf.lines() == lines
 
 
-def test_a_translator_renames_a_node():
-    f = parse("compositor graph g(image: Color) -> Color {\n  return RGBCurves(image)\n}\n")
-    assert translate(f, "blender", "blade").graphs[0].body[0].value.name == "Curves"
-
-
-def test_a_translator_renames_inputs_and_settings():
-    f = parse(
-        "compositor graph g(image: Color) -> Color {\n"
-        "  blurred = Blur(image, size: 4.0)\n"
-        "  mixed = MixLegacy[MULTIPLY](color1: image, color2: blurred)\n"
-        "  return ColorRamp[color_ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](factor: mixed)\n"
-        "}\n"
-    )
-    text = to_source(translate(f, "blender", "blade"))
-    assert "Blur(image, radius: 4.0)" in text
-    # A setting by position stays as it is written, one by name takes its new name
-    assert "Mix[MULTIPLY](a: image, b: blurred)" in text
-    assert "ColorRamp[ramp: Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), (1.0, (1.0, 1.0, 1.0, 1.0)))](" in text
-    assert "image: mixed)" in text
-
-
 def test_what_the_editor_shows():
     lines = infer(parse(COMPOSITE)).lines()
-    assert lines[0].startswith("Compatible: blender")
-    assert "blade (translated from blender)" in lines[0]
+    assert lines[0] == "Compatible: blender"
     assert not any(line.startswith("Outside blender ") for line in lines)
     shader = infer(parse("shader graph g() -> Shader {\n  return PrincipledBSDF(roughness: NoiseTexture(scale: 3.0).fac)\n}\n")).lines()
     assert shader[0].startswith("Compatible: blender, blender cycles, blender eevee")

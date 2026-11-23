@@ -64,7 +64,7 @@
   </script></bn-file>
   <bn-file><script type="text/bn">
     // @title Lift the shadows
-    pixel graph lift(image: Float, amount: Float = 0.2) -> Float {
+    compositor graph lift(image: Float, amount: Float = 0.2) -> Float {
       return image + (1.0 - image) * amount
     }
   </script></bn-file>
@@ -73,23 +73,14 @@
     geometry graph g() -> Geometry { return Grid() }
   </script></bn-file>
 
-  <h2>Pixel Nodes (Blade), portable</h2>
-  <bn-view view="split" height="360"><script type="text/bn">
-    // Brightens the dark parts of an image
-    pixel graph lift(image: Float, amount: Float = 0.2 in 0.0..1.0) -> Float {
-      lifted = image + (1.0 - image) * amount
-      return max(min(lifted, 1.0), 0.0)
-    }
-  </script></bn-view>
-
   <h2>A file, its graphs to pick from</h2>
-  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/examples/chrono_hud.bn" height="520"></bn-view>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/plugins/blender/examples/chrono_hud.bn" height="520"></bn-view>
 
   <h2>Shader graphs</h2>
-  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/examples/curve_to_shader.bn" view="nodes"></bn-view>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/plugins/blender/examples/curve_to_shader.bn" view="nodes"></bn-view>
 
   <h2>A repeat zone</h2>
-  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/examples/erosion.bn"></bn-view>
+  <bn-view src="https://raw.githubusercontent.com/marcgardent/base-node-language/main/plugins/blender/examples/erosion.bn"></bn-view>
 </main>
 </body>
 </html>

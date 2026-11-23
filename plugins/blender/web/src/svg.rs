@@ -1,5 +1,4 @@
-//! A laid-out tree as SVG, drawn like Blade's Node Editor (Blender's
-//! look): frames under links under nodes; a node's header in its
+//! A laid-out tree as SVG, drawn like Blender's Node Editor: frames under links under nodes; a node's header in its
 //! category's color, its sockets colored by type, an unlinked input's
 //! value in a field. Colors are CSS classes (`cat-geometry`, `ty-float`)
 //! the page themes, but a color written in the text, which is inline.

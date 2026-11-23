@@ -5,8 +5,8 @@
 //! is the argument's (a positional one has none, unless the callee is a
 //! graph of the same text), its type what flows into it when known.
 //! Variables are evaluated when first needed, as their order does not
-//! matter; the nodes of a statement go into its frame. Like Blade's
-//! `bf-nodes` builder, but for any tree kind and read-only.
+//! matter; the nodes of a statement go into its frame. For any tree kind,
+//! read-only.
 
 use std::collections::HashMap;
 

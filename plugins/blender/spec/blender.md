@@ -354,10 +354,10 @@ then held to them. See [targets](targets.md).
 | `blender@5.3` | The same in one version of Blender. An LTS says so in its name: `blender@5.2-lts` |
 | `blender gltf` | A variant, a word after the target or one of its versions: the shader nodes Blender's glTF exporter turns into a material |
 | `blender eevee`, `blender cycles` | Variants, experimental: the shader nodes Blender says each render engine takes |
-| `blade` | Blade's Pixel Nodes, and what its translator carries from the compositor graphs of `blender` |
 
 `blender@latest` and `blender@lts` are aliases for a command line; a `// @target` that names one is
-an error.
+an error. A destination other than Blender has its targets in its own library, which adds them
+([targets](targets.md#a-target-of-another-destination)).
 
 ## What the Text Does Not Carry
 
@@ -382,7 +382,7 @@ adds three tiers of its own:
 ```
 ┌────────────────────────────────────────────────────────┐
 │ Targets (what each destination accepts)                │
-│         e.g., blender, blender@5.3 gltf, blade         │
+│         e.g., blender, blender@5.3 gltf, blender eevee │
 └──────────────────────────┬─────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────┐
@@ -406,8 +406,10 @@ adds three tiers of its own:
 | Blender library | `python/base_node_blender`, without `bpy`; `rust/` (crate `base-node-blender`) for the targets | The schema of Blender's nodes, the formulas, the zones, the type checker, the graph it resolves, the targets of Blender by version and their variants, completion, the commands `check`, `fmt --names` and `docs` of `base-node` |
 | Blender extension | `addon/`, with `bpy` | The builder and the reader of trees, the editor |
 | `<bn-view>` | `web/`, Rust to wasm | The view of a text, on the core and the Blender library |
-| Blade | Its repository, in Rust | Its own formulas, checker, target, and its translator from Blender's compositor |
-| MaterialX exporter | Its repository | Its target and its writer, on the Blender library |
+
+A destination other than Blender is its own library's: its formulas, its checker, its targets, and
+its translators from Blender's. It adds its targets to this library's with `add_targets`
+([targets](targets.md#a-target-of-another-destination)).
 
 ### Targets (`targets/`)
 
@@ -426,9 +428,7 @@ target defined from another. Its fields and the way a text is checked against it
   catalog (`make backend` run with that Blender) and its number in `promised`.
   [What 5.3 has that 5.2 has not](targets.md#what-blender-53-has-that-blender-52-lts-has-not) is
   outside `blender`: a text that uses it promises `blender@5.3`.
-- The variants (`gltf`) and the other targets (`blade`) are written by hand, and change with their destination.
-- `blade` and `materialx` belong to other projects: they leave this repository before 1.0.0, each for
-  the repository of its destination.
+- The variants (`gltf`, `eevee`, `cycles`) are written by hand, and change with their destination.
 - A target added, or a node added to one, changes no text that fits it; a node taken out of one may.
 
 ### Standard Library (`stdlib/`)
@@ -527,7 +527,6 @@ nodes it adds and removes are the changelog, and `blender@latest` moves with a m
   `blender@5.3` alone: it writes a Switch in a shader tree, which Blender 5.2 has not. A
   comparison in the compositor of Blender 5.2, which has no Compare node, is Math nodes, as in a
   shader tree.
-- [ ] `blade` and `materialx` out of this repository.
 
 ### After 1.0.0
 
@@ -552,7 +551,7 @@ Blender's manifest, as Cargo, refuses the PEP 440 form of a pre-release.
 | Term | Meaning |
 |---|---|
 | **Variant** | A part of Blender's shader nodes that one consumer accepts: `eevee`, `cycles`, `gltf` |
-| **Exporter** | A tool that writes a text as another format (MaterialX). It lives with its format, not here |
+| **Exporter** | A tool that writes a text as another format. It lives with its format, not here |
 | **Standard library** | The modules of `stdlib/`, at one version, the specification's |
 | **Module** | One `.bn` file of the standard library, free or pro |
 | **Pack** | The pro modules sold together, with their showcases |

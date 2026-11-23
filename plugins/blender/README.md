@@ -168,7 +168,7 @@ read the file of the Blender that runs (`targets/backends/blender-<x.y>.json`). 
 | [`rust/`](rust/) | The crate `base-node-blender`, `wasm32`-compatible: target checker and translators, the targets and the stdlib built in, what a file offers the add-on |
 | [`addon/`](addon/) | Blender 5.2+ extension *Base Node* (node tree ⇄ `.bn` text, stdlib bundled) |
 | [`web/`](web/) | `<bn-view>` Web Component: a `.bn` text read-only, its code and node graph (Rust → wasm), copy, enlarge, backend tags |
-| [`targets/`](targets/) | Targets (`blender`, with in `blender/` the catalog of each version of Blender and its variants `gltf`, `eevee`, `cycles`; `blade`), and in `backends/` the nodes of each kind of tree read from Blender |
+| [`targets/`](targets/) | Targets (`blender`, with in `blender/` the catalog of each version of Blender and its variants `gltf`, `eevee`, `cycles`), and in `backends/` the nodes of each kind of tree read from Blender |
 | [`stdlib/`](stdlib/) | Standard `.bn` modules and manifest (`math`, `sdf2d`, `curves2d`, `patterns2d`, `fillet2d`, `planar2d`, `mask2d`, `merge`, `grade`, `stmap`, `qc`) |
 | [`corpus/`](corpus/) | The node groups of third-party libraries as `.bn` text, read by Blender 5.3: version 1 of the language, which a later version must read |
 | [`examples/`](examples/) | Showcases, tutorials and the scripts that render them |
@@ -204,7 +204,6 @@ blender             every node of Blender, by kind of tree, in every version thi
 blender@5.3         the same in one version of Blender; an LTS says so: blender@5.2-lts
 blender gltf        a variant: the shader nodes Blender's glTF exporter turns into a material
 blender eevee       a variant, experimental: the shader nodes EEVEE takes (blender cycles: Cycles)
-blade               Blade's Pixel Nodes, with a translator from blender
 ```
 
 The kind of tree is the first word of a graph (`geometry graph`, `shader graph`, `compositor graph`):
@@ -213,7 +212,7 @@ versions (`blender@5.3 gltf`). On a command line, `blender@latest` and `blender@
 a text does not promise them.
 
 The language speaks Blender: a destination that is not Blender declares translators from Blender's
-target. A text needs no target: the tool tells which ones accept it. `// @target blender gltf` at its head is a
+target, in a target its own library adds ([spec](spec/targets.md#a-target-of-another-destination)). A text needs no target: the tool tells which ones accept it. `// @target blender gltf` at its head is a
 promise the editor and `base-node check` hold it to.
 
 ## Reference pages

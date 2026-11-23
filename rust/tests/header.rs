@@ -171,13 +171,13 @@ fn text_directives_read_escapes() {
         "{}\n{}\n{}\n{}\n{GRAPH}",
         r#"// @title "Say \"hi\" \u{1F600}""#,
         r#"// @author "A\\B""#,
-        r#"// @target "blender@5.3", "bl\u{61}de""#,
+        r#"// @target "blender@5.3", "oth\u{65}r""#,
         r#"// @module "waves""#,
     );
     let h = header(&src, "f.bn", &[]).unwrap();
     assert_eq!(h.title.as_deref(), Some("Say \"hi\" \u{1F600}"));
     assert_eq!(h.author.as_deref(), Some("A\\B"));
-    assert_eq!(h.target, ["blender@5.3", "blade"]);
+    assert_eq!(h.target, ["blender@5.3", "other"]);
     assert_eq!(h.module.as_deref(), Some("waves"));
     // Free text that is not one string stays as written
     let h = header(

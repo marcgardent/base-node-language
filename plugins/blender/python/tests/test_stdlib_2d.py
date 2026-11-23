@@ -45,7 +45,7 @@ def test_2d_modules_parse_and_fit_geometry_nodes(mod_name):
     assert check_target(ast, "blender") == []
     fits = infer(ast).fits
     assert "blender" in fits and "geometry" in tree_kinds(ast)
-    assert "blender gltf" not in fits and "blade" not in fits
+    assert "blender gltf" not in fits
 
 
 def test_planar2d_graphs_signatures():

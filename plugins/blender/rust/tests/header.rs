@@ -69,12 +69,12 @@ fn the_stdlib_head_is_read() {
 #[test]
 fn text_directives_and_quotes() {
     let h = ok(&format!(
-        "// @title \"Waves\"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target \"blender@5.3  gltf\", blade\n\n{MAKER}"
+        "// @title \"Waves\"\n// @author Marc G.\n// @license MIT OR Apache-2.0\n// @target \"blender@5.3  gltf\", blender\n\n{MAKER}"
     ));
     assert_eq!(h.title.as_deref(), Some("Waves"));
     assert_eq!(h.author.as_deref(), Some("Marc G."));
     assert_eq!(h.license.as_deref(), Some("MIT OR Apache-2.0"));
-    assert_eq!(h.target, ["blender@5.3 gltf", "blade"]);
+    assert_eq!(h.target, ["blender@5.3 gltf", "blender"]);
     assert!(h.module.is_none());
     assert_eq!(h.mesh, "cube");
 }
@@ -333,14 +333,15 @@ fn the_drop_example() {
 
 #[test]
 fn an_unknown_target_in_the_head() {
-    let src = "// @target blade, blender-nodes\n\ngeometry graph g() -> Float {\n  return 1.0\n}\n";
+    let src =
+        "// @target blender, blender-nodes\n\ngeometry graph g() -> Float {\n  return 1.0\n}\n";
     let e = header(src, "f.bn").unwrap_err();
     let d = &e.diagnostics[0];
     assert!(
         d.message
-            .starts_with("@target 'blender-nodes': one of blade, "),
+            .starts_with("@target 'blender-nodes': one of blender, "),
         "{}",
         d.message
     );
-    assert_eq!((d.line, d.col), (1, 19));
+    assert_eq!((d.line, d.col), (1, 21));
 }

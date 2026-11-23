@@ -225,8 +225,8 @@ def test_signature_of_the_call_the_cursor_is_in(schema):
 
 def test_a_comment_line_offers_the_targets(schema):
     start, items = at_end("//", schema)
-    assert [i.label for i in items][:2] == ["@target blade", "@target blender"]
-    assert (start, items[0].insert) == (3, " @target blade")  # right after `//`
+    assert [i.label for i in items][:1] == ["@target blender"]
+    assert (start, items[0].insert) == (3, " @target blender")  # right after `//`
     start, items = at_end("  // @target blender g", schema)
     assert [i.insert for i in items] == [" @target blender gltf"] and start == 5
     assert "@target blender@5.3 eevee" in labels("// @tar", schema)

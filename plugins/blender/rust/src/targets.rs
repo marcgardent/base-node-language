@@ -7,7 +7,7 @@
 //! ```text
 //! check_target(&file, "blender gltf")       -> the Issues outside it, [] when it fits
 //! infer(&file)                              -> which targets accept it
-//! translate(&file, "blender", "blade")      -> the text renamed for blade
+//! translate(&file, "blender", "pixels")     -> the text renamed for a target `pixels`
 //! ```
 //!
 //! `blender` is Blender's own, and has a catalog per version of Blender (`targets/blender/<x.y>.json`):
@@ -19,10 +19,13 @@
 //! bridges of the target (modules shipped with it), the stdlib (built in, `crate::stdlib`), and
 //! with the `_with` functions the modules their resolver finds before the stdlib. A name that is
 //! not a target's is an error, [`UnknownTarget`], where Python raises ValueError.
+//!
+//! The targets of another destination are its library's: it adds them, their files and their
+//! bridges, with [`add_targets`] before the first check, after this library's.
 
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -39,8 +42,7 @@ use base_node::ast::{
 /// The targets that are a file of their own, `targets/<name>.json`, sorted by name: every one but
 /// `blender`.
 const FILES: &[(&str, &str)] = &[
-    // One line per target
-    ("blade", include_str!("../../targets/blade.json")),
+    // One line per target: ("<name>", include_str!("../../targets/<name>.json"))
 ];
 
 /// The target of Blender, `targets/blender.json`: the versions it promises, the LTS, the variants.
@@ -57,10 +59,55 @@ const ALIASES: [&str; 2] = ["latest", "lts"];
 
 /// The bridges of the targets, by their path in `targets/` (that of the target's `bridges`, which
 /// are relative to the target's file).
-const BRIDGES: [(&str, &str); 1] = [(
-    "blade/blender_interop.bn",
-    include_str!("../../targets/blade/blender_interop.bn"),
-)];
+const BRIDGES: &[(&str, &str)] = &[
+    // One line per bridge: ("<target>/<module>.bn", include_str!("../../targets/<target>/<module>.bn"))
+];
+
+/// The files and the bridges of the targets of other destinations, as [`add_targets`] adds them.
+type Added = (
+    &'static [(&'static str, &'static str)],
+    &'static [(&'static str, &'static str)],
+);
+static ADDED: Mutex<Vec<Added>> = Mutex::new(Vec::new());
+/// The targets that are a file of their own, once read: this library's, then those added.
+static OTHERS: OnceLock<Vec<Target>> = OnceLock::new();
+
+/// Make the targets of another destination known: `files` its `(name, JSON)`, as
+/// `targets/<name>.json` holds one, and `bridges` the `(path, text)` of their bridges, by the path
+/// the target's `bridges` give. Its library calls it before the first check: once the targets
+/// are read, or for a name there is already, it is refused.
+pub fn add_targets(
+    files: &'static [(&'static str, &'static str)],
+    bridges: &'static [(&'static str, &'static str)],
+) -> Result<(), String> {
+    if OTHERS.get().is_some() {
+        return Err("the targets are read already: add them before the first check".to_owned());
+    }
+    let mut added = ADDED.lock().unwrap();
+    let known: Vec<&str> = FILES
+        .iter()
+        .chain(added.iter().flat_map(|(f, _)| f.iter()))
+        .map(|(name, _)| *name)
+        .collect();
+    if let Some((name, _)) = files
+        .iter()
+        .find(|(name, _)| *name == BLENDER || known.contains(name))
+    {
+        return Err(format!("target '{name}' is one there is already"));
+    }
+    added.push((files, bridges));
+    Ok(())
+}
+
+/// The bridges of every target: this library's, then those added.
+fn bridge_texts() -> Vec<(&'static str, &'static str)> {
+    let added = ADDED.lock().unwrap();
+    BRIDGES
+        .iter()
+        .chain(added.iter().flat_map(|(_, b)| b.iter()))
+        .copied()
+        .collect()
+}
 
 /// A ramp and curves are the value of a node's property (`ColorRamp[color_ramp: Ramp(…)]`), not nodes.
 const DATA_CALLS: [&str; 3] = ["Ramp", "Curve", "Curves"];
@@ -622,12 +669,13 @@ fn blender() -> &'static Blender {
     ALL.get_or_init(Blender::read)
 }
 
-/// The targets that are a file of their own: every one but `blender`.
+/// The targets that are a file of their own: every one but `blender`, and those added.
 fn others() -> &'static [Target] {
-    static ALL: OnceLock<Vec<Target>> = OnceLock::new();
-    ALL.get_or_init(|| {
+    OTHERS.get_or_init(|| {
+        let added = ADDED.lock().unwrap();
         FILES
             .iter()
+            .chain(added.iter().flat_map(|(f, _)| f.iter()))
             .map(|(name, json)| {
                 Target::from_json(json)
                     .unwrap_or_else(|e| panic!("targets/{name}.json is not a target: {e}"))
@@ -1187,7 +1235,7 @@ impl<'a> Modules<'a> {
             .borrow_mut()
             .entry(path.clone())
             .or_insert_with(|| {
-                let (_, text) = BRIDGES.iter().find(|(p, _)| p == path)?;
+                let (_, text) = bridge_texts().into_iter().find(|(p, _)| p == path)?;
                 base_node::parse(text, path).ok().map(Rc::new)
             })
             .clone()

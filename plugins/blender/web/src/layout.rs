@@ -1,8 +1,7 @@
-//! Where the nodes of a tree go (y down): like Blender's node drawing and
-//! Blade's Node Editor, a header, a row per output (its socket on the
-//! right edge), then a row per input (on the left edge); a column per step
-//! from the nodes without inputs, as Blade places a tree built from text,
-//! each node beside what feeds it. A frame wraps its nodes, its title
+//! Where the nodes of a tree go (y down): like Blender's node drawing, a
+//! header, a row per output (its socket on the right edge), then a row per
+//! input (on the left edge); a column per step from the nodes without
+//! inputs, each node beside what feeds it. A frame wraps its nodes, its title
 //! above them. The comments of the text are in boxes, as the Base Node
 //! add-on draws them: over and under the nodes and frames they go with,
 //! the graph's own in a corner, with room left for them.
