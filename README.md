@@ -1,9 +1,11 @@
 # Base Node Language
 
 Base Node (`.bn`) is a text format for node graphs: a graph is a function, a node a call. This
-repository is its core: it reads a text into a syntax tree, prints it and formats it, in Python and in
-Rust. The core knows no destination: a host library says what a kind of tree, a type or a node means,
-and checks a text against it.
+repository is the language: its specification, and its core, which reads a text into a syntax tree,
+prints it and formats it, in Python and in Rust. The core knows no destination: a host library says
+what a kind of tree, a type or a node means, and checks a text against it.
+
+Site: https://basenode.ludopant.com/
 
 ```bn
 use math (bump)
@@ -15,8 +17,9 @@ geometry graph relief(geometry: Geometry, height: Float = 0.4 in 0.0..2.0) -> Ge
 }
 ```
 
-To the core, `geometry`, `SetPosition` and `Geometry` are names. Base Node for Blender, the host of
-Blender's node trees, is in [`plugins/blender/`](plugins/blender/).
+To the core, `geometry`, `SetPosition` and `Geometry` are names. They mean something to a host:
+[Base Node for Blender](https://github.com/marcgardent/base-node-for-blender), the host of Blender's
+node trees, gives them Blender's nodes (site: https://blender.basenode.ludopant.com/).
 
 ## Layout
 
@@ -27,7 +30,7 @@ Blender's node trees, is in [`plugins/blender/`](plugins/blender/).
 | [`conformance/`](conformance/) | `.bn` cases and their expected syntax trees, read by the Python and the Rust tests |
 | [`spec/`](spec/) | The language: [`reference.md`](spec/reference.md), [`versioning.md`](spec/versioning.md) |
 | [`tools/`](tools/) | `bump.py` (writes the version everywhere it is written), `identifiers.py` (the characters of an identifier, from Unicode) |
-| `plugins/` | Hosts, each with its own Makefile, packages and documents |
+| [`site/`](site/) | The site, https://basenode.ludopant.com/: one page, served as it is |
 
 ## Make
 
@@ -35,19 +38,16 @@ Blender's node trees, is in [`plugins/blender/`](plugins/blender/).
 
 | Target | Does |
 |---|---|
-| `make test` | `python-min`, `test-python`, `test-rust` |
+| `make test` | `python-min`, `test-python`, `test-rust`, `wasm`, `bump-check` |
 | `make python-min` | Every tracked `.py` parses with the oldest Python `pyproject.toml` accepts (3.10, fetched by `uv`) |
 | `make test-python` | The Python package (pytest) |
 | `make test-rust` | The crate: `cargo fmt --check`, clippy, tests |
+| `make wasm` | The crate builds for `wasm32-unknown-unknown` |
 | `make identifiers` | Writes `python/base_node/identifiers.py` and `rust/src/identifiers.rs` from the Unicode of this Python |
-| `make bump VERSION=x.y.z` | Writes the version everywhere it is written, in the core and each plugin |
+| `make bump VERSION=x.y.z` | Writes the version everywhere it is written |
+| `make bump-check` | Every place holds the version of `rust/Cargo.toml` |
 | `make release` | Tags the head of `main` `vVERSION` and pushes the tag: the CI runs on it |
 | `make ci` | Runs the CI on the pushed head of the current branch (`BRANCH=…`) |
-
-When the checkout has `plugins/blender`, its targets run from here too (`test-web`, `test-blender`,
-`test-promised`, `test-libraries`, `srt-check`, `extension`, `backend`, `names`, `docs`), and
-`make test`, `test-python` and `test-rust` run its tests after the core's. Without it, these three run
-the core's alone, and its targets stop with `make <target> needs plugins/blender`.
 
 ## Python (`python/`)
 
@@ -114,7 +114,13 @@ A host library depends on the core and gives a text its meaning for one destinat
 - **Rust**: its crate depends on `base-node`, by git or by path.
 
 A host reads its own directives from the head of a file with `read_head`
-([reference, 1.1](spec/reference.md#11-file-head)).
+([reference, 1.1](spec/reference.md#11-file-head)). It has a version of its own and says the version
+of the core it needs ([versioning](spec/versioning.md)).
+
+[Base Node for Blender](https://github.com/marcgardent/base-node-for-blender) is a host: its Python
+distribution `base-node-blender` adds `check`, `fmt --names` and `docs` to `base-node`, its crate
+`base-node-blender` checks a text against Blender's targets, and its add-on embeds the core. It takes
+this repository as a git submodule.
 
 ## Conformance
 
@@ -126,5 +132,6 @@ files: both implementations agree on every case.
 
 ## License
 
-The core (`python/`, `rust/`, `conformance/`, `spec/`, `tools/`): [MIT](LICENSE-MIT) OR
-[Apache-2.0](LICENSE-APACHE). A plugin says its own in its folder.
+[MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
+
+Hosted and sponsored by [Ludopant Creative Studio](https://ludopant.com/).
