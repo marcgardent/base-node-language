@@ -1,6 +1,0 @@
-compositor graph ".log space >1.001"(
-    Input: Float(hide_value: true, optional_label: true)
-) -> (Result: Float) {
-  return (
-    Result: Math[GREATER_THAN](Value: Input, Value_001: 1.0) ? log(Input, 2.7182817) + 1.0 : Input)
-}

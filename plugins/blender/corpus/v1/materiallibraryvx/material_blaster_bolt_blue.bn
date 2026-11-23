@@ -1,7 +1,0 @@
-shader(material: true) graph "Blaster Bolt (Blue)"() -> (surface: Shader) {
-  return (
-    surface: MixShader(
-      factor: LayerWeight(blend: 0.89999).facing,
-      a: Emission(color: (0.8, 0.8, 0.8, 1.0)),
-      b: Emission(color: (0.0, 0.38043475, 1.0, 1.0))))
-}

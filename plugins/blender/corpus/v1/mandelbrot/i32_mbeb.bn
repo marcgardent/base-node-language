@@ -1,5 +1,0 @@
-geometry graph "i32 mBeB"() -> (mBits: Int, eBias: Int) {
-  mBits = 32 @ "mBits" #83314a
-  eBias = 65536 @ "eBias" #83314a
-  return (mBits: mBits, eBias: eBias)
-}

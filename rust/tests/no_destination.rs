@@ -98,8 +98,8 @@ fn plugin_files(root: &Path) -> Vec<String> {
 
 #[test]
 fn the_core_reads_no_plugin() {
-    // A host lives in its own folder and depends on the core: a checkout without it builds the
-    // core and passes its tests, so nothing of the crate names a file there
+    // A host depends on the core, never the other way: nothing of the crate names a file of a
+    // folder of plugins
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let found = plugin_files(root);
     assert!(found.is_empty(), "{}", found.join("\n"));

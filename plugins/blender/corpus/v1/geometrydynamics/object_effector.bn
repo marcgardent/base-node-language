@@ -1,6 +1,0 @@
-geometry graph "Object Effector"(Object: Object(optional_label: true)) -> (Effector: Bundle) {
-  return (
-    Effector: GetBundleItem[BUNDLE](
-      bundle: ObjectInfo(object: Object).geometry |> GetGeometryBundle().bundle,
-      path: "effectors").item)
-}

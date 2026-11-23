@@ -38,11 +38,6 @@ target/
 **/*.rs.bk
 Cargo.lock
 
-# Blender
-*.blend1
-*.blend2
-.cache/
-
 # OS / Editor
 .DS_Store
 Thumbs.db

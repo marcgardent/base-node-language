@@ -1,7 +1,0 @@
-shader graph SDF_Circle(
-    Vector: Vector(hide_value: true),
-    Radius: Float = 0.5 in -10000.0..10000.0
-) -> (Value: Float) {
-  "SDF node"
-  return (Value: length(Vector) - Radius)
-}

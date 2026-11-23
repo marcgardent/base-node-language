@@ -1,6 +1,0 @@
-geometry(is_modifier: false) graph "Set Instancer"(
-    Geometry: Geometry(description: "Atomic geometry that contains vertices and edges"),
-    is_instanced: Bool = true
-) -> Geometry {
-  return StoreNamedAttribute[BOOLEAN](Geometry, name: "is_instanced", value: is_instanced)
-}

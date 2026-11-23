@@ -1,7 +1,0 @@
-geometry graph "Index to Factor"(
-    Index: Int(description: "The index starting at 0 within the overall group of size `Size`"),
-    Size: Int(description: "The size of the group that will be used to compute the factor.")
-) -> (Factor: Float(subtype: FACTOR)) {
-  return (
-    Factor: MapRange(value: Index, from_max: IntegerMath[SUBTRACT](Value: Size, Value_001: 1)))
-}

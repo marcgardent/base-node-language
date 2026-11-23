@@ -1,6 +1,0 @@
-geometry graph "O Float to Target Digits"(
-    Value: Float in -10000.0..10000.0,
-    Target: Int = 4 in 0..9
-) -> (Output: Float) {
-  return (Output: pow(10.0, Target - ceil(log(abs(Value), 10.0))) * Value)
-}

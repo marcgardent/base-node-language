@@ -1,5 +1,0 @@
-# Generated from site/site.toml.
-User-agent: *
-Allow: /
-
-Sitemap: https://basenode.ludopant.com/sitemap.xml

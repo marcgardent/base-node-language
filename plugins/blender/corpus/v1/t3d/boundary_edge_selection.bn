@@ -1,6 +1,0 @@
-geometry graph "Boundary Edge Selection"() -> (Selection: Bool) {
-  "Boundary Edge" {
-    compare = EdgeNeighbors() == 1
-  }
-  return (Selection: compare)
-}

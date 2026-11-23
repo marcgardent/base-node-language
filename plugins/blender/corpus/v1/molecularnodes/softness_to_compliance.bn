@@ -1,5 +1,0 @@
-geometry graph "Softness to Compliance"(
-    Softness: Float(subtype: FACTOR) in 0.0..1.0
-) -> (Compliance: Float) {
-  return (Compliance: pow(max(Softness, 0.0), 5.0))
-}

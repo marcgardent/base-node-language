@@ -1,2 +1,0 @@
-# The texts are hashed in the baselines: the same bytes on every system
-*.bn text eol=lf

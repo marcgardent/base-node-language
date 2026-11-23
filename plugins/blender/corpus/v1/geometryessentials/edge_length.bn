@@ -1,6 +1,0 @@
-geometry graph "Edge Length"() -> (Length: Float) {
-  edge_vertices = EdgeVertices()
-  return (
-    Length: EvaluateOnDomain[EDGE](
-      value: distance(edge_vertices.position_1, edge_vertices.position_2)))
-}

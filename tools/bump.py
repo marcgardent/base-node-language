@@ -4,7 +4,6 @@
     python3 tools/bump.py 1.0.0-rc.1            write it (make bump VERSION=1.0.0-rc.1)
     python3 tools/bump.py --check               fail unless every place holds the version of rust/Cargo.toml
     python3 tools/bump.py --check 1.0.0-rc.1    fail unless every place holds that version
-    python3 tools/bump.py 1.0.0-rc.1 --archive  write it, and have each plugin build its archive again
 
 The version is SemVer, `x.y.z` or `x.y.z-alpha.n`, `x.y.z-beta.n`, `x.y.z-rc.n`. It is written as it is
 but where Python reads it (`version` of pyproject.toml, `__version__`), which takes its PEP 440
@@ -16,9 +15,8 @@ seen and not skipped. Versions of anything else (dependencies) match none of the
 alone. A Cargo.lock beside a Cargo.toml is not tracked; when there is one, the entries of the core's
 own crate are written too.
 
-A plugin (plugins/<name>/) has its version and its own tools/bump.py: when the checkout has it, this
-one runs it after the core with the same version, which it writes as its own and as the core's it
-needs (`--core`), and with --check and --archive as given.
+A host library has its own version, and says the version of the core it needs: its own tools write
+both.
 """
 
 from __future__ import annotations
@@ -43,12 +41,10 @@ EACH, ONE, ANY = "each", "one", "any"
 PLACES = [
     # Python: wherever a package says its version, so that a package split in several is followed
     ("python/*.py", r'^__version__ = "{V}"', "pep440", ONE),
-    ("python/*.py", r'^STDLIB_VERSION = "{V}"', "semver", ONE),
     ("python/pyproject.toml", r'^version = "{V}"', "pep440", EACH),
     # Rust: the crate's own version (a dependency's is not at the start of a line); VERSION of
     # rust/src/lib.rs is read from Cargo.toml
     ("rust/Cargo.toml", r'^version = "{V}"', "semver", EACH),
-    ("rust/src/lib.rs", r'^pub const STDLIB_VERSION: &str = "{V}";', "semver", EACH),
     # Documents
     ("spec/reference.md", r"Specification Version {V} ", "semver", EACH),
     ("spec/versioning.md", r"Python: base-node {V} ", "pep440", EACH),
@@ -57,13 +53,7 @@ PLACES = [
     ("spec/versioning.md", r"\| PEP 440 \(`{V}`\)", "pep440", EACH),
     ("spec/versioning.md", r"\| SemVer \(`{V}`\)", "semver", EACH),
     ("spec/versioning.md", r"^base-node {V} \(Language Edition", "pep440", EACH),
-    ("spec/versioning.md", r"Stdlib {V}\)$", "semver", EACH),
 ]
-# Never read: the plugins, which version themselves
-SKIP = ("plugins/",)
-PLUGINS = "plugins"
-
-
 
 
 def forms(version: str) -> dict[str, str]:
@@ -80,7 +70,7 @@ def forms(version: str) -> dict[str, str]:
 
 def tracked(root: Path) -> list[str]:
     out = subprocess.run(["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True).stdout
-    paths = [p for p in out.decode().split("\0") if p and not p.startswith(SKIP)]
+    paths = [p for p in out.decode().split("\0") if p]
     return [p for p in paths if not (root / p).is_symlink() and (root / p).is_file()]
 
 
@@ -157,26 +147,10 @@ def scan(root: Path, version: str, write: bool) -> tuple[list[str], list[str]]:
     return problems, written
 
 
-def plugins(root: Path) -> list[Path]:
-    """The plugins of the checkout that version themselves: plugins/<name>/tools/bump.py."""
-    return sorted(p.parents[1] for p in (root / PLUGINS).glob("*/tools/bump.py"))
-
-
-def run_plugins(root: Path, args: list[str]) -> int:
-    """Run the bump of each plugin with `args`; the worst exit code."""
-    code = 0
-    for plugin in plugins(root):
-        print(f"{plugin.relative_to(root)}:", flush=True)
-        done = subprocess.run([sys.executable, str(plugin / "tools" / "bump.py"), *args], cwd=plugin)
-        code = max(code, done.returncode)
-    return code
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("version", nargs="?", help="x.y.z or x.y.z-rc.n (with --check: default, the core's)")
     ap.add_argument("--check", action="store_true", help="write nothing; fail if a place holds another version")
-    ap.add_argument("--archive", action="store_true", help="have each plugin build its archive again")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     root = a.root.resolve()
@@ -185,11 +159,9 @@ def main(argv: list[str] | None = None) -> int:
         problems = scan(root, version, write=False)[0]
         if problems:
             print(f"Not at {version} everywhere:", *problems, sep="\n  ", file=sys.stderr)
-        else:
-            print(f"{version} everywhere in the core")
-        # A plugin's version is its own: it checks its places, and that it needs this core
-        code = run_plugins(root, ["--check", "--core", version, "--core-dir", str(root)])
-        return 1 if problems else code
+            return 1
+        print(f"{version} everywhere")
+        return 0
     if not a.version:
         ap.error("a version is needed: python3 tools/bump.py x.y.z")
     problems, written = scan(root, a.version, write=True)
@@ -200,9 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {line}")
     want = forms(a.version)
     python = "" if want["pep440"] == want["semver"] else f" ({want['pep440']} for Python)"
-    print(f"{want['semver']}{python}: {len(written)} files of the core written" if written
-          else f"{want['semver']}: already there in the core")
-    return run_plugins(root, [a.version, "--core", a.version] + (["--archive"] if a.archive else []))
+    print(f"{want['semver']}{python}: {len(written)} files written" if written
+          else f"{want['semver']}: already there")
+    return 0
 
 
 if __name__ == "__main__":

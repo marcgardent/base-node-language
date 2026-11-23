@@ -1,7 +1,0 @@
-shader(material: true) graph "Cranberry Juice"() -> (surface: Shader) {
-  return (
-    surface: MixShader(
-      factor: LightPath().ray_length,
-      a: GlassBSDF[GGX](color: (1.0, 0.41999, 0.41999, 1.0), ior: 1.35099),
-      b: TransparentBSDF(color: (1.0, 0.37799, 0.37799, 1.0))))
-}

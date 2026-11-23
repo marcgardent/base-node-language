@@ -1,8 +1,0 @@
-geometry graph "Integer Distance"(
-    A: Int,
-    B: Int,
-    Distance: Int = 2
-) -> (Cutoff: Bool, Distance: Int) {
-  integer_math = IntegerMath[ABSOLUTE](value: IntegerMath[SUBTRACT](Value: A, Value_001: B))
-  return (Cutoff: integer_math >= Distance, Distance: integer_math)
-}

@@ -1,8 +1,0 @@
-geometry graph Color(
-    Index: Int = Index() in 0..
-) -> (Color: Color(description: "Read the `Color` attribute from the geometry")) {
-  return (
-    Color: EvaluateAtIndex[FLOAT_COLOR](
-      value: NamedAttribute[FLOAT_COLOR](name: "Color").attribute,
-      index: Index))
-}

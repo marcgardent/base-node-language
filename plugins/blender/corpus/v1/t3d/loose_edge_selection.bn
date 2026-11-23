@@ -1,5 +1,0 @@
-geometry graph "Loose Edge Selection"() -> (Selection: Bool) {
-  "Disconnnected Edge" {
-    return (Selection: EdgeNeighbors() == 0)
-  }
-}

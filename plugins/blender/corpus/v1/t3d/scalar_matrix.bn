@@ -1,7 +1,0 @@
-geometry graph "Scalar Matrix"(Value: Float = 1.0) -> Matrix {
-  return CombineMatrix(
-    column_1_row_1: Value,
-    column_2_row_2: Value,
-    column_3_row_3: Value,
-    column_4_row_4: Value)
-}

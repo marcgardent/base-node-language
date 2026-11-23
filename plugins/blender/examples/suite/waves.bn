@@ -1,9 +1,0 @@
-// Waves along x, to lift any mesh
-geometry graph lift(geometry: Geometry, height: Float = 0.2, frequency: Float = 4.0) -> Geometry {
-  p = Position()
-  "Wave" #teal {
-    // One sine along x; the height scales it
-    z = sin(p.x * frequency) * height
-  }
-  return SetPosition(geometry, offset: CombineXYZ(z: z))
-}

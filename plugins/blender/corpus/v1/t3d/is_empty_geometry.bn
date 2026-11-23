@@ -1,5 +1,0 @@
-geometry graph "Is Empty Geometry"() -> ("Is Empty Geometry": Bool) {
-  "Index = 0" {
-    return ("Is Empty Geometry": Index() < 0)
-  }
-}

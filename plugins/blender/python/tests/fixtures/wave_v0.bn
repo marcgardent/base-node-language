@@ -1,6 +1,0 @@
-geometry graph wave(geometry: Geometry, t: Float) -> Geometry {
-  p = Position()
-  s = Math[ADD](Value: SeparateXYZ(vector: p).x, Value_001: t)
-  h = Math[MULTIPLY](Value: Math[SINE](value: s), Value_001: 0.2)
-  return SetPosition(geometry, offset: CombineXYZ(z: h))
-}

@@ -1,8 +1,0 @@
-shader graph SDF_Rectangle(
-    Vector: Vector(hide_value: true),
-    Rect: Vector in -10000.0..10000.0
-) -> (Value: Float) {
-  "SDF node"
-  vector_math = abs(Vector) - Rect
-  return (Value: length(max(vector_math, 0.0)) + min(max(vector_math.x, vector_math.y), 0.0))
-}

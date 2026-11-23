@@ -1,7 +1,0 @@
-shader graph SDF_Intersect(
-    Value: Float = 0.5 in -10000.0..10000.0,
-    Value as value_float: Float = 0.5 in -10000.0..10000.0
-) -> (Value: Float) {
-  "SDF Operation"
-  return (Value: max(Value, value_float))
-}

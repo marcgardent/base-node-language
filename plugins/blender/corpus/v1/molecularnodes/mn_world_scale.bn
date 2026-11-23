@@ -1,4 +1,0 @@
-geometry graph ".MN_world_scale"() -> (world_scale: Float) {
-  value = 0.1
-  return (world_scale: value)
-}

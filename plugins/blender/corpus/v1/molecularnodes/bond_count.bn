@@ -1,9 +1,0 @@
-geometry graph "Bond Count"(
-    Index: Int = Index() in 0..
-) -> (
-    "Is Bonded": Bool(description: "If the point has an edge / bond to another point"),
-    Bonds: Int(description: "The number of bonds or edges that a point has")
-) {
-  edges_of_vertex = EdgesOfVertex(vertex_index: Index)
-  return ("Is Bonded": edges_of_vertex.total > 0, Bonds: edges_of_vertex.total)
-}

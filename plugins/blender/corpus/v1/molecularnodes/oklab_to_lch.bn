@@ -1,9 +1,0 @@
-geometry graph "OKLab to LCh"(
-    OKLab: Vector in -10000.0..10000.0
-) -> (L: Float, C: Float, h: Float(subtype: ANGLE)) {
-  "C" {
-    integer = 2
-    math = sqrt(pow(OKLab.y, integer) + pow(OKLab.z, integer))
-  }
-  return (L: OKLab.x, C: math, h: atan2(OKLab.z, OKLab.y))
-}

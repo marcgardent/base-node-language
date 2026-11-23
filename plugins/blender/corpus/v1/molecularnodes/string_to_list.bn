@@ -1,6 +1,0 @@
-geometry graph "String to List"(
-    String: String(optional_label: true),
-    Separator: String(optional_label: true) = ","
-) -> (List: String) {
-  return (List: TrimString(string: SplitString(string: String, separator: Separator)))
-}

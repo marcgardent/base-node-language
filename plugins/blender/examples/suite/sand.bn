@@ -1,8 +1,0 @@
-// The material the dunes set, written as text like the node groups
-shader(material: true) graph Sand() -> (surface: Shader) {
-  "Grain" #e73 {
-    // Fine noise for a rough, slightly uneven surface
-    n = NoiseTexture(scale: 40.0)
-  }
-  return (surface: PrincipledBSDF(base_color: n.color, roughness: 0.9))
-}

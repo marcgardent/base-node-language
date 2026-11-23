@@ -1,9 +1,0 @@
-geometry graph "Island Center"(Mesh: Geometry, " Merge Connected": Bool) -> (Center: Vector) {
-  {
-    sample_index = Mesh
-      |> ScaleElements(scale: 0.0)
-      |> MergeByDistance(selection: merge_connected, mode: Connected)
-      |> SampleIndex[FLOAT_VECTOR, clamp: true](value: Position(), index: Index())
-  }
-  return (Center: sample_index)
-}

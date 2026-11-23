@@ -1,7 +1,0 @@
-geometry graph "Override Index"(
-    Selection: Bool(hide_value: true) = true,
-    Index: Int(hide_value: true) = Index(),
-    Override: Int
-) -> (Output: Int) {
-  return (Output: Selection ? Override : Index)
-}

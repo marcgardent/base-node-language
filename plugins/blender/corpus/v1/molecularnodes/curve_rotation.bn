@@ -1,7 +1,0 @@
-geometry graph "Curve Rotation"(
-    Normal: Vector(
-      description: "The default direction to use as the Secondary Axis / X axis when computing the rotation") = Normal()
-) -> (Rotation: Rotation(description: "The computed rotation for the point on the curve")) {
-  "Computes the rotation of the point on the curve, by default using the `Normal` attribute and the `Tangent` axis"
-  return (Rotation: AxesToRotation(primary_axis: CurveTangent(), secondary_axis: Normal))
-}

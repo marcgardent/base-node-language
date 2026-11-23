@@ -18,9 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  # The core alone: a checkout without plugins/ builds it and passes its tests
   core:
-    name: Core (Python, Rust, WASM32), without plugins/
+    name: Core (Python, Rust, WASM32)
     runs-on: ubuntu-latest
     steps:
       # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
@@ -29,8 +28,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - name: Remove plugins/
-        run: rm -rf plugins
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
@@ -41,162 +38,18 @@ jobs:
           components: clippy, rustfmt
       - name: Install pytest and build
         run: pip install pytest build
-      - name: Build the wheel (the core and its command line alone)
+      - name: Build the wheel (base_node and base_node_cli, nothing else)
         run: |
           python -m build --wheel --outdir "$RUNNER_TEMP/dist" python
           files=$(unzip -Z1 "$RUNNER_TEMP"/dist/base_node-*.whl)
           echo "$files" | grep -qx base_node/parser.py
-          ! echo "$files" | grep -q "^base_node_blender/"
+          echo "$files" | grep -qx base_node_cli/cli.py
+          ! echo "$files" | grep -Ev '^(base_node/|base_node_cli/|base_node-[^/]*\.dist-info/)'
       - name: "Run the Python tests (parser, formatter, conformance, no destination named)"
         run: make test-python
       - name: "Run the Rust tests (format, clippy, conformance, fixtures, limits, no destination named)"
         run: make test-rust
       - name: Check wasm32-unknown-unknown target
-        working-directory: rust
-        run: cargo check --target wasm32-unknown-unknown
+        run: make wasm
       - name: Check the versions of the core
-        run: python3 tools/bump.py --check
-
-  # plugins/blender: Base Node for Blender, on the core of this checkout (CORE=../.. of its Makefile)
-  blender-python:
-    name: Blender library, Python (pytest)
-    runs-on: ubuntu-latest
-    steps:
-      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
-      - name: Set git's default branch name
-        run: git config --global init.defaultBranch main
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.11"
-      - name: Install pytest and build
-        run: pip install pytest build
-      - name: Build the wheels and run base-node with the Blender library installed (its entry point)
-        run: |
-          python -m build --wheel --outdir "$RUNNER_TEMP/dist" python
-          python -m build --wheel --outdir "$RUNNER_TEMP/dist" plugins/blender/python
-          unzip -Z1 "$RUNNER_TEMP"/dist/base_node_blender-*.whl | grep -qx base_node_blender/_targets/blender/gltf.json
-          python -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install "$RUNNER_TEMP"/dist/*.whl
-          "$RUNNER_TEMP/venv/bin/base-node" check plugins/blender/examples/ripples.bn
-      - name: Run the Python tests
-        run: make -C plugins/blender test-python
-      - name: Run add-on module security tests (no Blender)
-        working-directory: plugins/blender
-        run: python3 addon/tests/test_modules.py
-      - name: Check the regression badges against the baselines (no Blender)
-        working-directory: plugins/blender
-        run: python3 addon/tests/regression_badges.py --check
-      - name: Check the versions of the Blender library, and the core it needs
-        run: make -C plugins/blender bump-check
-
-  blender-rust:
-    name: Blender library and bn-view, Rust & WASM32
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: plugins/blender
-    steps:
-      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
-      - name: Set git's default branch name
-        run: git config --global init.defaultBranch main
-        working-directory: .
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
-        with:
-          toolchain: stable
-          targets: wasm32-unknown-unknown
-          components: clippy, rustfmt
-      - name: "Run the Rust tests of the Blender library (stdlib, targets, head of a file, corpus)"
-        run: make test-rust
-      - name: Check wasm32-unknown-unknown target (the Blender library)
-        working-directory: plugins/blender/rust
-        run: cargo check --target wasm32-unknown-unknown
-      - name: Run the tests of bn-view
-        run: make test-web
-      - name: Build the bn-view wasm
-        working-directory: plugins/blender/web
-        run: cargo build --release --target wasm32-unknown-unknown
-
-  blender:
-    name: Blender ${{ matrix.blender }} Extension & Third-Party Libraries
-    runs-on: ubuntu-latest
-    # The versions of Blender promised (`promised` in plugins/blender/targets/blender.json): the LTS and the latest.
-    # One does not stop the other: each says what it finds.
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Of blender-5.2.4-linux-x64.tar.xz, from download.blender.org/release/Blender5.2/blender-5.2.4.sha256
-          - blender: "5.2.4"
-            sha256: 2fd14c50987426897ba60237ee996edf2b4151f4b1a72a460ca20be58c1d2d86
-          # Of blender-5.3.0-linux-x64.tar.xz, from download.blender.org/release/Blender5.3/blender-5.3.0.sha256
-          - blender: "5.3.0"
-            sha256: dacb8264197a3f7fda6001285a5a506fc97ee943881261c2c3bd63c882f22e05
-    env:
-      BLENDER_VERSION: ${{ matrix.blender }}
-      BLENDER_SHA256: ${{ matrix.sha256 }}
-    defaults:
-      run:
-        working-directory: plugins/blender
-    steps:
-      # actions/checkout runs `git init`: with a default branch name set, git gives no hint about it
-      - name: Set git's default branch name
-        run: git config --global init.defaultBranch main
-        working-directory: .
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - name: Cache Blender
-        id: blender-cache
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          path: ~/blender
-          key: blender-${{ env.BLENDER_VERSION }}-linux-x64
-      - name: Install Blender
-        if: steps.blender-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/blender
-          curl -sSfL --proto '=https' --tlsv1.2 -o "$RUNNER_TEMP/blender.tar.xz" \
-            "https://download.blender.org/release/Blender${BLENDER_VERSION%.*}/blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          echo "${BLENDER_SHA256}  $RUNNER_TEMP/blender.tar.xz" | sha256sum --check --strict
-          tar -xJ -C ~/blender --strip-components=1 -f "$RUNNER_TEMP/blender.tar.xz"
-      - name: Install system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1
-      - name: Cache third-party libraries
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          path: ~/.cache/base-node/libraries
-          # Per Blender: the groups an add-on's Python builds are made by the Blender that runs
-          key: libraries-${{ matrix.blender }}-${{ hashFiles('plugins/blender/addon/tests/libraries/*.toml') }}
-      - name: Build the extension .zip (the core linked into addon/lang/, the links resolved into files)
-        run: |
-          make extension BLENDER="$HOME/blender/blender" DIST="$RUNNER_TEMP/dist"
-          files=$(unzip -Z1 "$RUNNER_TEMP"/dist/base_node-*.zip)
-          for f in lang/parser.py blender/targets.py blender/_targets/blender.json blender/_targets/blender/gltf.json stdlib/manifest.json stdlib/math.bn; do
-            echo "$files" | grep -qx "$f" || { echo "the .zip lacks $f"; exit 1; }
-          done
-      # The runner has no GPU: OpenGL (Mesa's software one) at once, rather than Vulkan tried and failed first
-      - name: Run extension tests
-        run: >-
-          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
-          --python addon/tests/test_extension.py
-      - name: Check the backend the reference reads (nodes, stdlib per kind of tree)
-        if: success() || failure()
-        run: >-
-          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
-          --python addon/tests/export_backend.py -- --check
-      # The third-party libraries take the longest: on main and on demand, not on every pull request
-      # (`make test-libraries` runs them at home before a change to the reader or the builder).
-      - name: Run third-party libraries non-regression
-        if: (success() || failure()) && github.event_name != 'pull_request'
-        run: >-
-          ~/blender/blender --background --factory-startup --gpu-backend opengl --python-exit-code 1
-          --python addon/tests/test_libraries.py
+        run: make bump-check

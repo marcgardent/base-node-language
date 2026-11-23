@@ -1,9 +1,0 @@
-# Principal Components
-
-- Author: Blender Foundation
-- Homepage: <https://projects.blender.org/blender/blender-assets>
-- Version: Blender 5.3.0
-- License: CC0-1.0 ([LICENSE](LICENSE))
-- Groups: 2
-
-These texts are the node groups of Principal Components read as Base Node text by Base Node 1.0.0-rc.7 on Blender 5.3.0, a derived work of Principal Components under its license, CC0-1.0.

@@ -1,4 +1,0 @@
-geometry graph "Is Even"(Value: Int = Index()) -> (Even: Bool, Odd: Bool) {
-  integer_math = IntegerMath[MODULO](Value: Value, Value_001: 2)
-  return (Even: not integer_math, Odd: integer_math)
-}

@@ -1,9 +1,0 @@
-geometry graph "LCh to OKLab"(L: Float, C: Float, h: Float(subtype: ANGLE)) -> (OKLab: Vector) {
-  "a" {
-    math = C * cos(h)
-  }
-  "b" {
-    math_2 = C * sin(h)
-  }
-  return (OKLab: CombineXYZ(x: L, y: math, z: math_2))
-}

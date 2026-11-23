@@ -1,5 +1,0 @@
-geometry graph "Animate Fraction"(Interpolate: Bool, "Smoother Step": Bool, Float: Float) -> Float {
-  "Interpolate the fraction component of a float"
-  math = fract(Float)
-  return Interpolate ? (smoother_step ? MapRange[SMOOTHERSTEP](value: math) : math) : floor(Float)
-}

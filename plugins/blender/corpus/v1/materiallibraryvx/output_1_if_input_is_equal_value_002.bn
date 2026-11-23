@@ -1,6 +1,0 @@
-shader graph "Output 1 if input is equal Value.002"(
-    Value: Float = 0.5 in -10000.0..10000.0,
-    Input: Float = 0.001 in -10000.0..10000.0
-) -> (Value: Float) {
-  return (Value: (Value + 0.01 > Input) * (Value - 0.01 < Input))
-}

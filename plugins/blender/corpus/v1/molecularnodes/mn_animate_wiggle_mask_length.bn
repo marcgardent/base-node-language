@@ -1,3 +1,0 @@
-geometry graph ".MN_animate_wiggle_mask_length"(A: Int) -> (Result: Int) {
-  return (Result: IndexSwitch(A, 2, 5, 6, 12, 20))
-}

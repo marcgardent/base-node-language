@@ -1,9 +1,0 @@
-geometry graph ".average_face_corners_for_edge"("Edge Index": Int, Vector: Vector) -> Vector {
-  return EvaluateAtIndex[EDGE, INT](value: EdgeNeighbors(), index: edge_index) > 2
-    ? FieldAverage[FLOAT_VECTOR, CORNER](
-      value: Vector,
-      group_id: HashValue(
-        value: HashValue(value: edge_index, seed: 137),
-        seed: HashValue(value: VertexOfCorner(), seed: 231))).mean
-    : Vector
-}
