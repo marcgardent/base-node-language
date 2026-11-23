@@ -16,8 +16,8 @@ The core separates two tiers:
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Tier 2: Toolchain & Reference Packages                 │
-│         Python: base-node 1.0.0rc8                     │
-│         Rust:   base-node 1.0.0-rc.8                   │
+│         Python: base-node 1.0.0                        │
+│         Rust:   base-node 1.0.0                        │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -68,12 +68,14 @@ The parser does it, in Python (`base_node.parse`) and in Rust (`base_node::parse
 ## 3. Lifecycle & Stability Policy (Pre-LTS vs LTS)
 
 ### Phase 1: Pre-LTS (`0.x.y`) — Active Rapid Iteration
-- **Current status**: Version `1.0.0-rc.8`.
+- **Status**: over with 1.0.0.
 - **Policy**: **No backwards compatibility guarantee prior to LTS 1.0**.
   - Breaking changes to the grammar, the syntax tree or the interface of the core may occur between minor versions (`0.7` $\to$ `0.8`).
   - No deprecated alias shims or legacy wrappers are retained in the repository.
 
 ### Phase 2: Long-Term Support (`1.0.0 LTS`)
+
+- **Current status**: Version `1.0.0`.
 
 One number, `1.0.0`, for the specification and the Python and Rust packages of the core. A host
 library has a version of its own, says the version of the core it needs, and says what it promises.
@@ -106,8 +108,8 @@ The packages of the core share a synchronized version number:
 
 | Component | Path | Version Scheme |
 |---|---|---|
-| Python reference package | [`python/pyproject.toml`](../python/pyproject.toml) | PEP 440 (`1.0.0rc8`) |
-| Rust WASM crate, the core | [`rust/Cargo.toml`](../rust/Cargo.toml) | SemVer (`1.0.0-rc.8`) |
+| Python reference package | [`python/pyproject.toml`](../python/pyproject.toml) | PEP 440 (`1.0.0`) |
+| Rust WASM crate, the core | [`rust/Cargo.toml`](../rust/Cargo.toml) | SemVer (`1.0.0`) |
 
 A pre-release is written in SemVer (`1.0.0-rc.1`) everywhere but in the Python package, whose `version` and
 `__version__` take the PEP 440 form of the same version (`1.0.0rc1`): Cargo refuses that form.
@@ -116,7 +118,7 @@ A pre-release is written in SemVer (`1.0.0-rc.1`) everywhere but in the Python p
 
 Running `base-node --version` reports:
 ```text
-base-node 1.0.0rc8 (Language Edition 2026)
+base-node 1.0.0 (Language Edition 2026)
 ```
 
 ---
