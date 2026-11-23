@@ -7,7 +7,7 @@ shaders that survives a glTF export is one); so is Blade. There is one file per 
 hierarchy.
 
 The language speaks Blender. Its node names are Blender's (the UI name in one word,
-[reference](reference.md)), and its formulas (`a + b`, `n ⋅ up`, `h > 0.5`) are Math, Vector Math,
+[Blender, 5.1](blender.md#51-node-names)), and its formulas (`a + b`, `n ⋅ up`, `h > 0.5`) are Math, Vector Math,
 Compare and Boolean Math nodes. A destination that is not Blender does not get a dialect of its
 own: it declares **translators** from Blender's target to itself.
 
@@ -79,7 +79,7 @@ it: cycles, eevee, gltf`.
 |---|---|
 | `kinds` | The words a graph may start with: `geometry`, `shader`, `compositor`, `pixel`… |
 | `types` | The socket types its graphs may have |
-| `zones` | `repeat`, `foreach`, `simulate`, the calls that take a body, and `closure`, a nameless graph ([reference, 6](reference.md#6-calls-with-a-body-and-nameless-graphs)) |
+| `zones` | `repeat`, `foreach`, `simulate`, the calls that take a body, and `closure`, a nameless graph ([Blender, 6.1](blender.md#61-blenders-zones)) |
 | `nodes` | The node names it accepts, implicit inputs (`Position`, `Index`…) among them |
 | `translators` | For each target it translates from, by its name without a version: its kinds, and for each node of that target the node it becomes, or the graph of a bridge (`module::graph`) |
 | `bridges` | Modules shipped with the target, whose graphs stand for the nodes it has no node for: `.bn` files, by their path relative to the target's file; the module is the file's name (`blade/blender_interop.bn` is `blender_interop`) |
@@ -222,7 +222,7 @@ Two of them reach further than their name:
 - **`Compare` in the compositor.** A comparison (`a > b`, `==`, …) writes a Compare node where the
   tree has one, and a logical operator (`and`, `or`, `not`) a Boolean Math: the compositor of
   Blender 5.2 has neither. There a comparison of numbers is Math nodes that give a Float, 0 or 1,
-  as in a shader tree ([reference, 5](reference.md#5-expressions)), and the same text builds in
+  as in a shader tree ([Blender, 5](blender.md#5-expressions)), and the same text builds in
   both versions; a comparison of vectors, colors or strings, and a logical operator, are outside
   `blender@5.2-lts`, and so is a graph of `math` that has one, called from a compositor graph
   (built in the compositor tree).
@@ -380,7 +380,7 @@ without `rules` refuses no link.
 ### What the variant `gltf` accepts
 
 Read from the exporter (`io_scene_gltf2/blender/exp/material`) of Blender 5.3, and checked against
-it: `base-node-for-blender/tests/test_gltf_export.py` builds each case of
+it: `addon/tests/test_gltf_export.py` builds each case of
 [`conformance/gltf-cases.json`](../conformance/gltf-cases.json) into a material, exports it to a
 `.glb` and reads it back. A case the rules accept shows its texture, factor, extension or alpha
 mode in the glTF; a case they refuse shows what is lost. The Python and Rust tests check the

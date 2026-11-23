@@ -1,10 +1,10 @@
-# Base Node Language
+# Base Node for Blender
 
-[![Geometry Nodes regression](site/badges/regression-geometry.svg)](base-node-for-blender/tests/libraries/README.md)
-[![Shader regression](site/badges/regression-shader.svg)](base-node-for-blender/tests/libraries/README.md#shader-groups-and-materials)
-[![Compositor regression](site/badges/regression-compositor.svg)](base-node-for-blender/tests/libraries/README.md#compositor-groups)
+[![Geometry Nodes regression](site/badges/regression-geometry.svg)](addon/tests/libraries/README.md)
+[![Shader regression](site/badges/regression-shader.svg)](addon/tests/libraries/README.md#shader-groups-and-materials)
+[![Compositor regression](site/badges/regression-compositor.svg)](addon/tests/libraries/README.md#compositor-groups)
 
-Text format (`.bn`) for node graphs. Reads and writes node trees as functions.
+Text format (`.bn`) for Blender's node graphs. Reads and writes Geometry Nodes, shader and compositor trees as functions.
 
 Site: https://basenode.ludopant.com/
 
@@ -132,14 +132,18 @@ its checks on the render of the passes scene: as it is, its false colour by stop
 
 ## Make
 
-`make help` lists the targets. The common ones:
+The targets run in this folder, or from the root of the checkout, whose Makefile runs the same ones
+here. `CORE` is the checkout of the core (default `../..`). `make help` lists the targets. The common ones:
 
 | Target | Does |
 |---|---|
 | `make test` | Python, Rust, the web component and Blender tests |
 | `make test-libraries` | Third-party node group libraries, round-tripped |
-| `make extension` | The add-on `.zip` in `dist/` |
+| `make extension` | The add-on `.zip` in `dist/` (`DIST=…`) |
 | `make docs` | The reference pages in `site/reference/` |
+| `make backend` | The nodes the Blender it runs reports, and its catalog (`targets/`) |
+| `make names FILES="a.bn b.bn"` | Formats the files, the inputs of Blender's nodes by name, without Blender |
+| `make addon-lang` | Links the modules of the core into `addon/lang/`, the core the add-on embeds |
 
 `BLENDER=/path/to/blender make test-blender` runs another Blender.
 
@@ -156,24 +160,39 @@ A test that needs what the Blender that runs has not is skipped and says why (a 
 promises `blender@5.3` is not built by Blender 5.2); the checks against a file written from Blender
 read the file of the Blender that runs (`targets/backends/blender-<x.y>.json`). The CI runs both.
 
-
 ## Layout
 
-| Path | Description | License |
+| Path | Description |
+|---|---|
+| [`python/`](python/) | The Python library `base-node-blender` (`base_node_blender`: Blender's nodes, the checker, the targets, the reference pages, the commands `check`, `fmt --names` and `docs` of `base-node`), without `bpy` |
+| [`rust/`](rust/) | The crate `base-node-blender`, `wasm32`-compatible: target checker and translators, the targets and the stdlib built in, what a file offers the add-on |
+| [`addon/`](addon/) | Blender 5.2+ extension *Base Node* (node tree ⇄ `.bn` text, stdlib bundled) |
+| [`web/`](web/) | `<bn-view>` Web Component: a `.bn` text read-only, its code and node graph (Rust → wasm), copy, enlarge, backend tags |
+| [`targets/`](targets/) | Targets (`blender`, with in `blender/` the catalog of each version of Blender and its variants `gltf`, `eevee`, `cycles`; `blade`), and in `backends/` the nodes of each kind of tree read from Blender |
+| [`stdlib/`](stdlib/) | Standard `.bn` modules and manifest (`math`, `sdf2d`, `curves2d`, `patterns2d`, `fillet2d`, `planar2d`, `mask2d`, `merge`, `grade`, `stmap`, `qc`) |
+| [`corpus/`](corpus/) | The node groups of third-party libraries as `.bn` text, read by Blender 5.3: version 1 of the language, which a later version must read |
+| [`examples/`](examples/) | Showcases, tutorials and the scripts that render them |
+| [`conformance/`](conformance/) | `gltf-cases.json`: materials and what Blender's glTF exporter makes of them |
+| [`site/`](site/) | The site, https://basenode.ludopant.com/ |
+| [`spec/`](spec/) | [Blender](spec/blender.md) (the language as Blender reads it, its versions), [targets](spec/targets.md) (what a destination accepts, translators, `@target`), [idioms](spec/idioms.md) (ways of writing a graph, each with an example); the language is the core's [reference](../../spec/reference.md) |
+| [`tools/bump.py`](tools/bump.py) | Writes the version of this folder everywhere it is written, and the version of the core it needs (`make bump`, `make bump-check`) |
+| [`Cargo.toml`](Cargo.toml) | The workspace of `rust/` and `web/`, and the one path to the core's crate |
+| [`.github/workflows/`](.github/workflows/) | The CI and the Pages of this folder as a repository of its own; the checkout's root runs the same jobs |
+
+## Where the core is
+
+This folder depends on the core of the language (`base-node`, at the root of the checkout) and reaches
+it through one place per build:
+
+| Build | The one place | Today |
 |---|---|---|
-| [`spec/reference.md`](spec/reference.md) | `.bn` grammar and semantics | MIT OR Apache-2.0 |
-| [`spec/versioning.md`](spec/versioning.md) | Language editions, stdlib, targets, and SemVer lifecycle | MIT OR Apache-2.0 |
-| [`spec/targets.md`](spec/targets.md) | Targets: what a destination accepts, translators, `@target` | MIT OR Apache-2.0 |
-| [`spec/idioms.md`](spec/idioms.md) | Idioms: ways of writing a graph, each with an example | MIT OR Apache-2.0 |
-| [`targets/`](targets/) | Targets (`blender`, with in `blender/` the catalog of each version of Blender and its variants `gltf`, `eevee`, `cycles`; `blade`), and in `backends/` the nodes of each kind of tree read from Blender | MIT OR Apache-2.0 |
-| [`stdlib/`](stdlib/) | Standard `.bn` modules and manifest (`math`, `sdf2d`, `curves2d`, `patterns2d`, `fillet2d`, `planar2d`, `mask2d`, `merge`, `grade`, `stmap`, `qc`) | MIT OR Apache-2.0 |
-| [`conformance/`](conformance/) | Shared `.bn` test corpus and expected ASTs | MIT OR Apache-2.0 |
-| [`python/`](python/) | Zero-dependency Python: the core of the language (`base_node`: parser, formatter), what is Blender's (`base_node_blender`: nodes, checker, targets) and the CLI (`base_node_cli`) | MIT OR Apache-2.0 |
-| [`rust/`](rust/) | `wasm32`-compatible Rust core of the language (`base-node`: parser, formatter, head of a file) | MIT OR Apache-2.0 |
-| [`rust-blender/`](rust-blender/) | What is Blender's in Rust (`base-node-blender`: target checker and translators, the targets and the stdlib built in, what a file offers the add-on), `wasm32`-compatible | MIT OR Apache-2.0 |
-| [`web/`](web/) | `<bn-view>` Web Component: a `.bn` text read-only, its code and node graph (Rust → wasm), copy, enlarge, backend tags | MIT OR Apache-2.0 |
-| [`base-node-for-blender/`](base-node-for-blender/) | Blender 5.2+ extension *Base Node* (node tree ⇄ `.bn` text, stdlib bundled) | GPL-3.0-or-later |
-| [`corpus/`](corpus/) | The node groups of third-party libraries as `.bn` text, read by Blender 5.3: version 1 of the language, which a later version must read | Each library's, in its folder's `LICENSE` |
+| Make | `CORE` of the [`Makefile`](Makefile): every other place below is derived from it, or given it | `../..` |
+| Python | the dependency `base-node==1.0.0rc7` of [`python/pyproject.toml`](python/pyproject.toml); from a checkout, the `PYTHONPATH` the Makefile exports, `$(CORE)/python` | `../../python` |
+| Rust, the library and `web/` | `base-node` in `[workspace.dependencies]` of [`Cargo.toml`](Cargo.toml): a path and the version needed; the crates take it with `workspace = true` | `../../rust` |
+| The add-on | `make addon-lang` links the modules of `$(CORE)/python/base_node` into `addon/lang/` (not in git), and `addon/build.sh` copies them as files into the zip | `../../python/base_node` |
+| The reference pages | `make docs` gives `--core $(CORE)`: the language's pages are its `spec/` (the default of `base-node docs` is the checkout `base_node` is imported from) | `../../spec` |
+| Conformance cases | none: the tests of this folder read its own (`conformance/`, `python/tests/fixtures/`) | |
+| The version | [`tools/bump.py`](tools/bump.py) writes the version of the core needed in the two dependencies above, and `make bump-check` checks it is `$(CORE)`'s | |
 
 ## Targets
 
@@ -199,9 +218,15 @@ promise the editor and `base-node check` hold it to.
 
 ## Reference pages
 
-The site's reference (language, targets, the nodes of Blender, stdlib, idioms) is written from the repository by
-`base-node docs` when the site is deployed; `site/reference/` is not committed. The nodes of each kind of tree,
-and the kinds of tree each stdlib graph builds in, are read from Blender into
+The site's reference (language, Blender, targets, the nodes of Blender, stdlib, idioms) is written by
+`base-node docs` (`make docs`) when the site is deployed, from the core's `spec/` and from this folder's
+`spec/`, `targets/` and `stdlib/`; `site/reference/` is not committed:
+
+```bash
+make docs && python3 -m http.server -d site
+```
+
+The nodes of each kind of tree, and the kinds of tree each stdlib graph builds in, are read from Blender into
 `targets/backends/blender-<x.y>.json` and `targets/backends/blender-<x.y>/<module>.json`, a file per module.
 The CI checks them against Blender: after a change of the stdlib, of the checker or of Blender, write them
 again (`make backend`) and commit them.
@@ -220,22 +245,16 @@ Blender 5.2 LTS and 5.3 are both in: after a change of the stdlib, run `make bac
 5.2 has not promises `blender@5.3`
 ([what 5.3 has that 5.2 has not](spec/targets.md#what-blender-53-has-that-blender-52-lts-has-not)).
 
-```bash
-blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/export_backend.py
-PYTHONPATH=python python3 -m base_node_cli.cli docs && python3 -m http.server -d site
-```
-
 ## Python (`python/`)
 
-Install from GitHub or a local checkout:
+`base-node-blender` depends on `base-node`, the core, of the same version. Install both from GitHub or a local checkout:
 
 ```bash
 # From GitHub (pip / uv)
-pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"
+pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python" "base-node-blender @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=plugins/blender/python"
 
-# From a local clone
-pip install -e ./python
+# From a local clone, at its root
+pip install -e ./python -e ./plugins/blender/python
 ```
 
 Or in `pyproject.toml`:
@@ -243,10 +262,13 @@ Or in `pyproject.toml`:
 ```toml
 dependencies = [
   "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python",
+  "base-node-blender @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=plugins/blender/python",
 ]
 ```
 
-CLI:
+CLI: installed, `base-node` has the commands of this library too (an entry point of the group
+`base_node.cli`); without installing, `python -m base_node_blender.cli …` runs the same, with the core
+and `python/` on `PYTHONPATH`.
 
 ```bash
 base-node fmt file.bn
@@ -275,24 +297,25 @@ print(blender.infer(ast).lines())           # Compatible: …, Outside …: …
 Run tests:
 
 ```bash
-PYTHONPATH=python pytest python/tests
+make test-python      # or: PYTHONPATH=../../python:python pytest python/tests
 ```
 
-## Rust (`rust/`, `rust-blender/`)
+## Rust (`rust/`)
 
-Two crates: `base-node` (`rust/`) is the core of the language, which names no destination; `base-node-blender` (`rust-blender/`) checks a text against a target and holds the targets and the stdlib.
+`base-node-blender` checks a text against a target and holds the targets and the stdlib; it depends on
+`base-node`, the core's crate, by path.
 
 Add to `Cargo.toml` (Cargo discovers each crate's `Cargo.toml` in the repository by its name):
 
 ```toml
 [dependencies]
 # From GitHub
-base-node = { git = "https://github.com/marcgardent/base-node-language.git", branch = "main" }
-base-node-blender = { git = "https://github.com/marcgardent/base-node-language.git", branch = "main" }
+base-node = { git = "https://github.com/marcgardent/base-node-language.git" }
+base-node-blender = { git = "https://github.com/marcgardent/base-node-language.git" }
 
 # Or from a local checkout
 # base-node = { path = "../base-node-language/rust" }
-# base-node-blender = { path = "../base-node-language/rust-blender" }
+# base-node-blender = { path = "../base-node-language/plugins/blender/rust" }
 ```
 
 Or via `cargo add`:
@@ -318,14 +341,13 @@ Run tests and check WebAssembly target:
 ```bash
 make test-rust
 (cd rust && cargo check --target wasm32-unknown-unknown)
-(cd rust-blender && cargo check --target wasm32-unknown-unknown)
 ```
 
-## Blender Extension (`base-node-for-blender/`)
+## Blender Extension (`addon/`)
 
 Add-on for Blender 5.2+ (`id = "base_node"`). The node tree is the only data: its `.bn` text is a temporary view of it.
 
-It reads and writes Geometry Nodes, Shader and Compositor node groups. A shader graph no other graph calls is also a material of its name, its return linked to the Material Output; a compositor graph's Group Output is the Composite, and it becomes the scene's compositor when the scene has none (see the [reference](spec/reference.md#30-shader-and-compositor-graphs)). A material's own tree reads as a `shader(material: true)` graph, whose return is its Material Output, and builds back into that material. A Group node whose node group is missing from the file reads as `Group()`, a Group node with no tree, and builds again as such. Color Ramps and curves are written in the text too: `Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), …)`, `Curve((0.0, 0.0), …)` ([reference](spec/reference.md#5-expressions)).
+It reads and writes Geometry Nodes, Shader and Compositor node groups. A shader graph no other graph calls is also a material of its name, its return linked to the Material Output; a compositor graph's Group Output is the Composite, and it becomes the scene's compositor when the scene has none (see [Blender, 3.0](spec/blender.md#30-shader-and-compositor-graphs)). A material's own tree reads as a `shader(material: true)` graph, whose return is its Material Output, and builds back into that material. A Group node whose node group is missing from the file reads as `Group()`, a Group node with no tree, and builds again as such. Color Ramps and curves are written in the text too: `Ramp((0.0, (0.0, 0.0, 0.0, 1.0)), …)`, `Curve((0.0, 0.0), …)` ([Blender, 5](spec/blender.md#5-expressions)).
 
 | Action | Where | Shortcut |
 |---|---|---|
@@ -377,35 +399,37 @@ To build a folder of `.bn` files into a .blend from the command line, laid out a
 blender -b --python examples/push_bn_into_blend.py -- examples/suite/ gallery.blend
 ```
 
-A `.bn` file dropped on Blender from a file manager (or opened by *File > Import*) opens a dialog with its title, author and license, and the choices its head offers ([reference](spec/reference.md#11-file-head)): *Install as Library* copies it as `<module>.bn` into the *Module Folder* of the preferences (never over another text of that name unless *Overwrite* is ticked), so that `use <module>` finds it in every .blend; *Import into the .blend* builds its graphs as *File > Import* does; *Instantiate the Example* adds an object whose Geometry Nodes modifier is the graph that makes its own geometry; *Add as Modifier* puts the modifier graph on the object the file fell on, else on the selected objects, else on a new mesh (`// @mesh`, a cube by default). The dialog starts on the modifier when the file fell on an object, else on the example, else on the import. A head with an error changes nothing and the status bar gives its line. Blender gives Python only dropped files: a link or a text dragged from a page reaches it as a string the add-on cannot catch, and the add-on downloads nothing. [`examples/drop_example.bn`](examples/drop_example.bn) offers all four; A web page cannot drag a file onto Blender (Blender reads only a file on disk: `file://`, `CF_HDROP`, a file URL), so `<bn-view>` and `<bn-file>` download the `.bn` instead; [`site/drop-test.html`](site/drop-test.html) keeps the drags tried. From a script: `bpy.ops.base_node.drop_bn(filepath=…, action="MODIFIER", target="Cube")`.
+A `.bn` file dropped on Blender from a file manager (or opened by *File > Import*) opens a dialog with its title, author and license, and the choices its head offers ([Blender, 1.1](spec/blender.md#11-file-head)): *Install as Library* copies it as `<module>.bn` into the *Module Folder* of the preferences (never over another text of that name unless *Overwrite* is ticked), so that `use <module>` finds it in every .blend; *Import into the .blend* builds its graphs as *File > Import* does; *Instantiate the Example* adds an object whose Geometry Nodes modifier is the graph that makes its own geometry; *Add as Modifier* puts the modifier graph on the object the file fell on, else on the selected objects, else on a new mesh (`// @mesh`, a cube by default). The dialog starts on the modifier when the file fell on an object, else on the example, else on the import. A head with an error changes nothing and the status bar gives its line. Blender gives Python only dropped files: a link or a text dragged from a page reaches it as a string the add-on cannot catch, and the add-on downloads nothing. [`examples/drop_example.bn`](examples/drop_example.bn) offers all four; A web page cannot drag a file onto Blender (Blender reads only a file on disk: `file://`, `CF_HDROP`, a file URL), so `<bn-view>` and `<bn-file>` download the `.bn` instead; [`site/drop-test.html`](site/drop-test.html) keeps the drags tried. From a script: `bpy.ops.base_node.drop_bn(filepath=…, action="MODIFIER", target="Cube")`.
 
-A `use name` without `from` finds its module in this order: the text `name.bn` of the .blend, `name.bn` next to the imported file, `name.bn` in the *Module Folder* of the add-on preferences, then the standard library bundled with the add-on (`base-node-for-blender/stdlib` is a link to `stdlib/`).
+A `use name` without `from` finds its module in this order: the text `name.bn` of the .blend, `name.bn` next to the imported file, `name.bn` in the *Module Folder* of the add-on preferences, then the standard library bundled with the add-on (`addon/stdlib` is a link to `stdlib/`).
 
-Build the package and install it in a local Blender. In the repository, `base-node-for-blender/stdlib`,
-`blender/_targets` and the modules of `lang/` (the core, `python/base_node`) and of `blender/` (what is
-Blender's, `python/base_node_blender`) are symbolic links to their one source; Blender's `extension build` skips links, so `build.sh` builds a copy with the links resolved
-into files (`BLENDER=` names the blender to run):
+Build the package and install it in a local Blender. In this folder, `addon/stdlib`, `addon/blender/_targets`
+and the modules of `addon/blender/` (what is Blender's, `python/base_node_blender`) are symbolic links
+within this folder; `addon/lang/`, the core the add-on embeds, is made by `make addon-lang`, which links
+there the modules of the core's package `base_node`. Blender's `extension build` skips links, so
+`addon/build.sh` builds a copy with the links resolved into files. `make extension` runs both
+(`BLENDER=` names the blender to run):
 
 ```bash
-base-node-for-blender/build.sh dist
+make extension
 ```
 
 ```bash
 blender --command extension install-file -r user_default -e dist/base_node-1.0.0-rc.7.zip
 ```
 
-Run headless Blender tests:
+Run headless Blender tests (`make test-blender`, or after `make addon-lang`):
 
 ```bash
 blender --background --factory-startup --python-exit-code 1 \
-  --python base-node-for-blender/tests/test_extension.py
+  --python addon/tests/test_extension.py
 ```
 
 ## License
 
-- `spec/`, `targets/`, `stdlib/`, `conformance/`, `python/`, `rust/`, `rust-blender/`: [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
-- `base-node-for-blender/`: GPL-3.0-or-later.
+- `addon/`: GPL-3.0-or-later.
 - `corpus/`: not MIT nor Apache-2.0: each `corpus/v1/<library>/` is a derived work of its library, under that library's license, in its `LICENSE` (GPL-3.0-or-later, GPL-2.0-or-later or CC0-1.0; see [`corpus/README.md`](corpus/README.md)).
-- `base-node-for-blender/tests/fixtures/everyday_geometry_nodes.blend`: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), node groups by Cartesian Caramel, from [blender-remote-asset-library-test-v1](https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1) and its `.bn` text in `everyday_geometry_nodes/` (see [their README](base-node-for-blender/tests/fixtures/README.md)).
+- `addon/tests/fixtures/everyday_geometry_nodes.blend`: [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/), node groups by Cartesian Caramel, from [blender-remote-asset-library-test-v1](https://github.com/cartesiancaramel/blender-remote-asset-library-test-v1) and its `.bn` text in `everyday_geometry_nodes/` (see [their README](addon/tests/fixtures/README.md)).
+- The rest of this folder (`python/`, `rust/`, `web/`, `targets/`, `stdlib/`, `examples/`, `conformance/`, `site/`, `spec/`): [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
 
 Hosted and sponsored by [Ludopant Creative Studio](https://ludopant.com/). The licences above stay as they are.
