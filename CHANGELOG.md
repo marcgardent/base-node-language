@@ -5,6 +5,15 @@ What changed for a user of the Base Node language and its core, by version. The 
 [Semantic Versioning](https://semver.org/) as [`spec/versioning.md`](spec/versioning.md) says.
 Versions below 1.0.0 are pre-releases: the text format can change between them.
 
+## [1.0.0] - 2026-11-23
+
+### Language
+
+- Changed: 1.0.0, the first stable version, the same as 1.0.0-rc.8. From now on the grammar of
+  Edition 2026, the limits of the reference and the interface of the core, in Python, in Rust and
+  on the command line, follow SemVer as [`spec/versioning.md`](spec/versioning.md) says: a text that
+  was read is never refused, nor read as another syntax tree, before 2.0.0.
+
 ## [1.0.0-rc.8] - 2026-11-23
 
 ### Repository
