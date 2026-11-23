@@ -1,6 +1,6 @@
 //! The core names no destination: nothing of Blender, no node, no socket, no kind of tree, no
-//! target, and it depends on no host library. What belongs to a destination is its library's
-//! (rust-blender/). The same rule as python/tests/test_versioning.py, test_core_knows_no_destination.
+//! target, and it depends on no host library. What belongs to a destination is its host library's.
+//! The same rule as python/tests/test_versioning.py, test_core_knows_no_destination.
 
 use std::fs;
 use std::path::Path;
@@ -69,4 +69,38 @@ fn the_rule_finds_what_it_forbids() {
     );
     // No file is excused: the grammar has no word of a destination
     assert_eq!(named("ast.rs", "    pub geometry: Expr,").len(), 1);
+}
+
+/// The lines of the crate's sources, tests and manifest that name a file of a host.
+fn plugin_files(root: &Path) -> Vec<String> {
+    let folder = concat!("plugins", "/");
+    let mut paths = vec![root.join("Cargo.toml")];
+    for dir in ["src", "tests"] {
+        paths.extend(
+            fs::read_dir(root.join(dir))
+                .unwrap()
+                .flatten()
+                .map(|e| e.path()),
+        );
+    }
+    paths.sort();
+    let mut found = Vec::new();
+    for path in &paths {
+        let text = fs::read_to_string(path).unwrap();
+        for (n, line) in text.lines().enumerate() {
+            if line.contains(folder) {
+                found.push(format!("{}:{}: {}", path.display(), n + 1, line.trim()));
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn the_core_reads_no_plugin() {
+    // A host lives in its own folder and depends on the core: a checkout without it builds the
+    // core and passes its tests, so nothing of the crate names a file there
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let found = plugin_files(root);
+    assert!(found.is_empty(), "{}", found.join("\n"));
 }

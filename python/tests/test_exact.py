@@ -134,10 +134,3 @@ def test_a_one_item_tuple_spread_over_lines_keeps_its_comma():
 
 def test_outside_settings_a_comma_makes_no_tuple():
     assert isinstance(value("(a,)"), ast.Ref)
-
-
-def test_a_string_with_escapes_is_one_string_to_a_highlighter():
-    from base_node_cli.refdoc import highlight
-    html = highlight(r'x = F(s: "a \"b\" \u{1F600}", t: inf)')
-    assert '<span class="str">&quot;a \\&quot;b\\&quot; \\u{1F600}&quot;</span>' in html
-    assert '<span class="num">inf</span>' in html

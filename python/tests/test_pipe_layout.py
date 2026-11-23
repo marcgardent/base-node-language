@@ -196,7 +196,7 @@ def test_format_keeps_comments_by_their_code():
 
 
 def corpus():
-    return sorted((ROOT / "stdlib").glob("*.bn")) + sorted((ROOT / "examples").rglob("*.bn"))
+    return sorted((ROOT / "conformance").glob("*.bn")) + sorted((ROOT / "python" / "tests" / "fixtures").glob("*.bn"))
 
 
 @pytest.mark.parametrize("path", corpus(), ids=lambda p: str(p.relative_to(ROOT)))

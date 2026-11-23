@@ -153,7 +153,7 @@ def test_every_place_a_float_lands_is_looked_at(schema):
 
 
 def test_the_command_line_warns_of_a_number_too(tmp_path, capsys):
-    from base_node_cli.cli import main
+    from base_node_blender.cli import main
 
     path = tmp_path / "p.bn"
     path.write_text("geometry graph g(t: Float) -> Float {\n  return t * 16777217.0\n}\n", encoding="utf-8")

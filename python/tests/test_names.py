@@ -1,9 +1,9 @@
 """A name the printer writes, the lexer reads back as that name, wherever a name is written.
 
-The names are those of corpus/v1 and of the backends of Blender 5.2 and 5.3 (each socket, panel,
-graph, item, setting and enum value), adversarial ones and random ones. Each is printed where a
-name goes, the printer deciding bare or quoted, and read back: the name must be the same. A name
-the grammar takes no quote for (a binding, a `use`, an `as`) is written by its key, which must be
+The names are those of the texts of conformance/ and of the fixtures, adversarial ones and random
+ones; a host library tries those of its destination the same way. Each is printed where a name
+goes, the printer deciding bare or quoted, and read back: the name must be the same. A name the
+grammar takes no quote for (a binding, a `use`, an `as`) is written by its key, which must be
 a bare identifier, its own key. rust/tests/names.rs does the same with the Rust core, and
 conformance/name-cases.json holds the keys both must agree on.
 """
@@ -78,34 +78,12 @@ def walk(node, out):
 
 def corpus_names():
     out = set()
-    for path in sorted((ROOT / "corpus" / "v1").rglob("*.bn")):
+    for path in sorted((ROOT / "conformance").glob("*.bn")) + sorted((ROOT / "python" / "tests" / "fixtures").glob("*.bn")):
         walk(parse(path.read_text(encoding="utf-8"), str(path)), out)
     return out
 
 
-def backend():
-    """(names, setting names, enum values) of the two backends."""
-    names, settings, values = set(), set(), set()
-    for version in ("5.2", "5.3"):
-        data = json.loads((ROOT / "targets" / "backends" / f"blender-{version}.json").read_text(encoding="utf-8"))
-        for nodes in data["kinds"].values():
-            for node in nodes:
-                names.update((node["name"], node["label"]))
-                for s in node.get("settings", []):
-                    settings.add(s["name"])
-                    values.update(item["value"] for item in s.get("items") or [])
-                for shape in [node, *node.get("variants", [])]:
-                    for side in ("inputs", "outputs"):
-                        for sock in shape.get(side, []):
-                            names.update(v for v in (sock.get("name"), sock.get("key"), sock.get("identifier")) if v)
-        for path in sorted((ROOT / "targets" / "backends" / f"blender-{version}").glob("*.json")):
-            names.update(json.loads(path.read_text(encoding="utf-8")))
-    return names, settings, values
-
-
-BACKEND_NAMES, BACKEND_SETTINGS, BACKEND_VALUES = backend()
-ALL_NAMES = sorted(corpus_names() | BACKEND_NAMES | BACKEND_SETTINGS | BACKEND_VALUES | set(ADVERSARIAL)
-                   | set(random_names()) | {c["name"] for c in CASES["cases"]})
+ALL_NAMES = sorted(corpus_names() | set(ADVERSARIAL) | set(random_names()) | {c["name"] for c in CASES["cases"]})
 # Most names are words of ASCII letters, digits and `_`, which print and read alike: a few hundred of
 # them stand for the others, and every other name is tried
 PLAIN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -226,17 +204,13 @@ def test_bare_is_what_the_lexer_reads_as_one_name():
         assert is_bare(n) == (one and n not in RESERVED), n
 
 
-def test_the_settings_and_enum_values_of_blender_are_bare():
-    """The grammar takes no quoted setting name: every setting of Blender is written bare."""
-    assert BACKEND_SETTINGS and all(is_bare(s) for s in BACKEND_SETTINGS)
-    # An enum value that is no bare name is written as a string, `NoiseTexture[noise_dimensions: "3D"]`
-    assert "3D" in BACKEND_VALUES and not is_word("3D") and quote("3D") == '"3D"'
-
-
 def test_a_setting_name_reads_back():
-    for s in sorted(BACKEND_SETTINGS):
+    """The grammar takes no quoted setting name: a bare one is written bare and read back."""
+    for s in ("data_type", "mode", "Größe", "_", "x1"):
         place = ("setting", lambda f: setattr(call_of(f).settings[1], "name", s), lambda f: call_of(f).settings[1].name, s)
         assert not mismatches(s, [place])
+    # An enum value that is no bare name is written as a string, `NoiseTexture[noise_dimensions: "3D"]`
+    assert not is_word("3D") and quote("3D") == '"3D"'
 
 
 def test_what_each_rule_says():

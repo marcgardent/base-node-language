@@ -1,5 +1,5 @@
 """The reference corpus, corpus/v1/: the groups of the third-party libraries as the reader of Blender
-writes them (base-node-for-blender/tests/library_corpus.py). Each text parses, fits the target of
+writes them (addon/tests/library_corpus.py). Each text parses, fits the target of
 the Blender it was read with, and is the text its library's baseline hashes; each folder's README and
 LICENSE are what its manifest says. No Blender."""
 
@@ -16,7 +16,7 @@ pytest.importorskip("tomllib")  # The manifests are TOML, which Python reads fro
 
 ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location(
-    "library_corpus", ROOT / "base-node-for-blender" / "tests" / "library_corpus.py")
+    "library_corpus", ROOT / "addon" / "tests" / "library_corpus.py")
 corpus = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(corpus)
 

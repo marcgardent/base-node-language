@@ -4,9 +4,9 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 
-from base_node_cli.cli import main
+from base_node_blender.cli import main
 from base_node.manifest import manifest
-from base_node_cli.refdoc import cells, highlight, markdown, slug
+from base_node_blender.refdoc import cells, highlight, markdown, slug
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -30,7 +30,7 @@ class Anchors(HTMLParser):
 def test_every_page_is_written_and_every_link_lands(tmp_path):
     assert main(["docs", "--root", str(ROOT), "--out", str(tmp_path)]) == 0
     pages = {p.name: p for p in tmp_path.glob("*.html")}
-    expected = {"index.html", "language.html", "versioning.html", "idioms.html", "targets.html", "stdlib.html",
+    expected = {"index.html", "language.html", "versioning.html", "blender.html", "idioms.html", "targets.html", "stdlib.html",
                 "nodes-geometry.html", "nodes-shader.html", "nodes-compositor.html"}
     assert expected <= set(pages)
     modules = manifest(ROOT / "stdlib")["modules"]
@@ -99,3 +99,9 @@ def test_bn_code_is_highlighted():
     assert '<span class="ty">Float</span>' in out
     assert '<span class="str">&quot;a&quot;</span>' in out
     assert '<span class="cmt">// why</span>' in out
+
+
+def test_a_string_with_escapes_is_one_string_to_a_highlighter():
+    html = highlight(r'x = F(s: "a \"b\" \u{1F600}", t: inf)')
+    assert '<span class="str">&quot;a \\&quot;b\\&quot; \\u{1F600}&quot;</span>' in html
+    assert '<span class="num">inf</span>' in html

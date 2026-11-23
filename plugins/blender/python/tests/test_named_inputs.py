@@ -234,7 +234,7 @@ def test_the_backend_gives_the_inputs_the_settings_make():
 
 
 def test_the_command_line_names_the_inputs_without_blender(tmp_path, capsys):
-    from base_node_cli.cli import main
+    from base_node_blender.cli import main
 
     path = tmp_path / "lift.bn"
     path.write_text("// @target blender@5.2-lts\n\n" + TEXT, encoding="utf-8")

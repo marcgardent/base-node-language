@@ -1,6 +1,6 @@
 //! The texts every implementation reads the same: those of `conformance/` and the fixtures of the
 //! Python tests parse, and are in canonical form. What a destination accepts of them is checked
-//! with its library (rust-blender/tests/conformance.rs).
+//! with its host library.
 
 use std::fs;
 use std::path::Path;
@@ -131,7 +131,7 @@ fn a_missing_tree_kind_names_no_kind() {
 #[test]
 fn a_graph_marked_deprecated_is_read_and_written_back() {
     // The mark is a setting of the graph, with no grammar of its own: whoever checks the calls
-    // of a text warns of it (in Python, python/base_node_blender/typecheck.py)
+    // of a text warns of it (a host library's checker)
     let src = "kind(deprecated: \"use twice\") graph double(x: Float) -> Float {\n  return x * 2.0\n}\n\n\
                kind(deprecated: true) graph half(x: Float) -> Float {\n  return x / 2.0\n}\n";
     let file = parse(src, "old.bn").unwrap();

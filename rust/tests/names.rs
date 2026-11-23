@@ -1,8 +1,9 @@
 //! A name the printer writes, the lexer reads back as that name, wherever a name is written: the
 //! test of python/tests/test_names.py, with the Rust core.
 //!
-//! The names are those of corpus/v1 and of the backends of Blender 5.2 and 5.3, those of
-//! conformance/name-cases.json (adversarial and random ones) and random ones of this test. Each
+//! The names are those of the texts of conformance/ and of the fixtures, those of
+//! conformance/name-cases.json (adversarial and random ones) and random ones of this test; a
+//! host library tries those of its destination the same way. Each
 //! is put where a name goes in a syntax tree, printed by the formatter, which decides bare or
 //! quoted, and read back. A name the grammar takes no quote for (a binding, a `use`, an `as`) is
 //! written by its key, which must be a bare identifier, its own key.
@@ -59,48 +60,8 @@ fn corpus(dir: &Path, out: &mut BTreeSet<String>) {
     }
 }
 
-/// (names, setting names) of the two backends: their nodes, sockets, settings, enum values and
-/// the graphs of their modules.
-fn backends() -> (BTreeSet<String>, BTreeSet<String>) {
-    let (mut names, mut settings) = (BTreeSet::new(), BTreeSet::new());
-    let text = |v: &Value| v.as_str().map(str::to_owned);
-    for version in ["5.2", "5.3"] {
-        let dir = root().join("targets/backends");
-        let path = dir.join(format!("blender-{version}.json"));
-        let data: Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
-        for nodes in data["kinds"].as_object().unwrap().values() {
-            for node in nodes.as_array().unwrap() {
-                names.extend(text(&node["name"]));
-                names.extend(text(&node["label"]));
-                for s in node["settings"].as_array().into_iter().flatten() {
-                    settings.extend(text(&s["name"]));
-                    for item in s["items"].as_array().into_iter().flatten() {
-                        names.extend(text(&item["value"]));
-                    }
-                }
-                let variants = node["variants"].as_array().cloned().unwrap_or_default();
-                for shape in std::iter::once(node).chain(variants.iter()) {
-                    for side in ["inputs", "outputs"] {
-                        for sock in shape[side].as_array().into_iter().flatten() {
-                            for field in ["name", "key", "identifier"] {
-                                names.extend(text(&sock[field]));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        for entry in fs::read_dir(dir.join(format!("blender-{version}")))
-            .unwrap()
-            .flatten()
-        {
-            let module: Value =
-                serde_json::from_str(&fs::read_to_string(entry.path()).unwrap()).unwrap();
-            names.extend(module.as_object().unwrap().keys().cloned());
-        }
-    }
-    (names, settings)
-}
+/// Setting names the grammar writes bare.
+const SETTINGS: [&str; 5] = ["data_type", "mode", "Größe", "_", "x1"];
 
 fn cases() -> Vec<Value> {
     let path = root().join("conformance/name-cases.json");
@@ -144,9 +105,9 @@ fn names() -> &'static (Vec<String>, BTreeSet<String>) {
 
 fn collect() -> (Vec<String>, BTreeSet<String>) {
     let mut all = BTreeSet::new();
-    corpus(&root().join("corpus/v1"), &mut all);
-    let (backend, settings) = backends();
-    all.extend(backend);
+    corpus(&root().join("conformance"), &mut all);
+    corpus(&root().join("python/tests/fixtures"), &mut all);
+    let settings: BTreeSet<String> = SETTINGS.iter().map(|s| (*s).to_owned()).collect();
     all.extend(settings.iter().cloned());
     all.extend(
         cases()
@@ -320,7 +281,7 @@ fn every_name_reads_back_wherever_it_is_printed() {
 fn a_setting_name_reads_back() {
     let template = serde_json::to_value(parse(TEMPLATE, "names.bn").unwrap()).unwrap();
     let (_, settings) = names();
-    // The grammar takes no quoted setting name: every setting of Blender is written bare
+    // The grammar takes no quoted setting name: a bare one is written bare
     assert!(!settings.is_empty());
     for s in settings {
         assert!(is_bare(s), "{s}");

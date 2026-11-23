@@ -1,7 +1,6 @@
 //! The head of a .bn file as the core reads it (`// @module`, `// @target`…): what it knows is
 //! checked, what a host adds is given back as written, for the host to judge. The Python package's
-//! `python/base_node/header.py`; what a host makes of the head is tested with its library
-//! (rust-blender/tests/header.rs).
+//! `python/base_node/header.py`; what a host makes of the head is tested with its library.
 
 use base_node::header::directives;
 use base_node::{header, read_head};

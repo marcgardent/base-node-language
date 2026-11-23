@@ -156,7 +156,7 @@ fn source_too_large() {
 fn corpus() -> Vec<String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     let mut sources = Vec::new();
-    for folder in ["conformance", "stdlib", "python/tests/fixtures"] {
+    for folder in ["conformance", "python/tests/fixtures"] {
         let mut paths: Vec<_> = fs::read_dir(root.join(folder))
             .unwrap_or_else(|e| panic!("{folder}: {e}"))
             .map(|entry| entry.unwrap().path())
@@ -165,7 +165,7 @@ fn corpus() -> Vec<String> {
         paths.sort();
         sources.extend(paths.iter().map(|p| fs::read_to_string(p).unwrap()));
     }
-    assert!(sources.len() > 20);
+    assert!(sources.len() >= 7);
     sources
 }
 

@@ -1,6 +1,7 @@
 """A .bn text may come from anyone: reading it ends with a tree or a BnError, never a crash or a hang.
 
-The limits are those of spec/reference.md, "Limits"; rust/tests/limits.rs holds the same cases.
+The limits are those of spec/reference.md, "Limits"; rust/tests/limits.rs holds the same cases. The
+checker of a host library holds them too, in that library's tests.
 """
 
 import random
@@ -8,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from base_node_blender import MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, BnError, compile_source, format_source, parse
+from base_node import MAX_HEIGHT, MAX_NESTING, MAX_SOURCE_BYTES, BnError, format_source, parse
 from base_node.lexer import tokenize
 from base_node.printer import quote
 
@@ -40,12 +41,10 @@ CHAINS = {
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_nesting_up_to_the_limit(shape, schema):
+def test_nesting_up_to_the_limit(shape):
     source = SHAPES[shape](MAX_NESTING)
     parse(source)
     format_source(source)
-    if shape in ("parentheses", "minus", "calls", "zones"):
-        compile_source(source, schema)
 
 
 @pytest.mark.parametrize("shape", SHAPES)
@@ -56,12 +55,10 @@ def test_nesting_past_the_limit_is_an_error(shape, n):
 
 
 @pytest.mark.parametrize("chain", CHAINS)
-def test_chain_up_to_the_limit(chain, schema):
+def test_chain_up_to_the_limit(chain):
     source = CHAINS[chain](MAX_HEIGHT - 1)
     parse(source)
     format_source(source)
-    if chain != "member":
-        compile_source(source, schema)
 
 
 @pytest.mark.parametrize("chain", CHAINS)
@@ -111,8 +108,7 @@ def test_quote_cannot_be_left():
 
 
 def corpus():
-    paths = sorted((ROOT / "conformance").glob("*.bn")) + sorted((ROOT / "stdlib").glob("*.bn")) \
-        + sorted((ROOT / "python" / "tests" / "fixtures").glob("*.bn"))
+    paths = sorted((ROOT / "conformance").glob("*.bn")) + sorted((ROOT / "python" / "tests" / "fixtures").glob("*.bn"))
     return [p.read_text(encoding="utf-8") for p in paths]
 
 
@@ -146,14 +142,14 @@ def test_text_cut_anywhere_only_raises_bn_errors():
             parse("geometry graph g() -> Float {\n  " + tail)
 
 
-def test_mutated_sources_only_raise_bn_errors(schema):
+def test_mutated_sources_only_raise_bn_errors():
     rng = random.Random(20261115)
     sources = corpus()
-    assert len(sources) > 20
+    assert len(sources) >= 7
     for _ in range(1500):
         source = mutated(rng.choice(sources), rng)
         tokenize(source, strict=False)
-        for read in (parse, format_source, lambda s: compile_source(s, schema)):
+        for read in (parse, format_source):
             try:
                 read(source)
             except BnError:

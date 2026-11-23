@@ -178,7 +178,7 @@ def test_an_edition_this_reader_does_not_know():
 
 
 def test_the_command_line_refuses_an_unknown_edition(tmp_path, capsys):
-    from base_node_cli.cli import main
+    from base_node_blender.cli import main
 
     path = tmp_path / "later.bn"
     source = "// @edition 2028\n" + MAKER

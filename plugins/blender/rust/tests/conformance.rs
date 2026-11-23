@@ -686,8 +686,7 @@ fn test_versioning_and_manifest() {
 #[test]
 fn test_a_call_on_a_closure_is_evaluate_closure() {
     // The asset evaluates a closure it holds in a variable: Evaluate Closure, a Geometry Nodes node
-    let path =
-        "../base-node-for-blender/tests/fixtures/everyday_geometry_nodes/bevel_mesh_basic.bn";
+    let path = "../addon/tests/fixtures/everyday_geometry_nodes/bevel_mesh_basic.bn";
     let src = std::fs::read_to_string(path).expect("fixture");
     let file = parse(&src, "bevel_mesh_basic.bn").expect("parses");
     let issues = check_target(&file, "blender");

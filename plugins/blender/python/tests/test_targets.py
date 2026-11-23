@@ -22,7 +22,7 @@ TARGETS = ["blade", "blender", "blender@5.2-lts", "blender@5.3"]
 INFERRED = ["blade", "blender", "blender cycles", "blender eevee", "blender gltf"]
 VARIANTS = "; variants of blender, written after it: cycles, eevee, gltf"
 
-SHIPPED = (ROOT / "python" / "base_node_blender" / "_targets", ROOT / "base-node-for-blender" / "blender" / "_targets")
+SHIPPED = (ROOT / "python" / "base_node_blender" / "_targets", ROOT / "addon" / "blender" / "_targets")
 
 
 def test_the_catalogs_of_blender_are_what_blender_reports():
@@ -598,7 +598,7 @@ def test_a_node_the_translator_does_not_list_stays_out():
         translate(f, "blender", "blade")
 
 
-# The same cases as rust-blender/tests/conformance.rs
+# The same cases as rust/tests/conformance.rs
 
 PAINT = """compositor graph paint(image: Color) -> Color {
   soft = Kuwahara(image, size: 8.0)
