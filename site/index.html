@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Base Node Language</title>
+  <meta name="description" content="Base Node (.bn), a text format for node graphs: its specification and its core, in Python and in Rust.">
+  <link rel="canonical" href="https://basenode.ludopant.com/">
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #0f1115; --panel: #161920; --border: #262b36; --text: #e6e9ef; --muted: #939ab0; --accent: #4f9cf9;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #ffffff; --panel: #f6f8fa; --border: #d0d7de; --text: #1f2328; --muted: #59636e; --accent: #0969da; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--sans); }
+    main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    h1 { font-size: 1.8rem; margin: 0 0 1rem; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 0.5rem; }
+    a { color: var(--accent); }
+    code, pre { font-family: var(--mono); font-size: 0.9em; }
+    pre { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.8rem 1rem; overflow-x: auto; }
+    ul { padding-left: 1.2rem; }
+    footer { color: var(--muted); font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Base Node Language</h1>
+  <p>Base Node (<code>.bn</code>) is a text format for node graphs: a graph is a function, a node a call.
+  Its core reads a text into a syntax tree, prints it and formats it, in Python and in Rust.
+  The core knows no destination: a host library says what a kind of tree, a type or a node means, and checks a text against it.</p>
+
+  <pre><code>use math (bump)
+
+geometry graph relief(geometry: Geometry, height: Float = 0.4 in 0.0..2.0) -> Geometry {
+  "Displaces vertices along Z using a radial bump"
+  h = bump(length(Position()) / 3.0, 0.5, 0.2) * height
+  return SetPosition(geometry, offset: CombineXYZ(z: h))
+}</code></pre>
+
+  <h2>Specification</h2>
+  <ul>
+    <li><a href="https://github.com/marcgardent/base-node-language/blob/main/spec/reference.md">Reference</a>: the grammar of the language</li>
+    <li><a href="https://github.com/marcgardent/base-node-language/blob/main/spec/versioning.md">Versioning</a>: editions, versions, what 1.0.0 promises</li>
+  </ul>
+
+  <h2>Libraries</h2>
+  <ul>
+    <li><a href="https://github.com/marcgardent/base-node-language/tree/main/python">Python</a>: the package <code>base-node</code> (<code>base_node</code>, and the command line <code>base-node</code>), no dependency, Python 3.10 or later</li>
+    <li><a href="https://github.com/marcgardent/base-node-language/tree/main/rust">Rust</a>: the crate <code>base-node</code>, <code>wasm32</code>-compatible</li>
+  </ul>
+  <pre><code>pip install "base-node @ git+https://github.com/marcgardent/base-node-language.git#subdirectory=python"</code></pre>
+
+  <h2>Conformance</h2>
+  <p><a href="https://github.com/marcgardent/base-node-language/tree/main/conformance"><code>conformance/</code></a>: <code>.bn</code> cases and their expected syntax trees, read by the Python and the Rust tests alike.</p>
+
+  <h2>A host</h2>
+  <p>A host library depends on the core and gives a text its meaning for one destination: see
+  <a href="https://github.com/marcgardent/base-node-language#a-host">A host</a> in the README.</p>
+  <p><strong>Base Node for Blender</strong>, the host of Blender's node trees:
+  <a href="https://blender.basenode.ludopant.com/">blender.basenode.ludopant.com</a>
+  (<a href="https://github.com/marcgardent/base-node-for-blender">source</a>).</p>
+
+  <footer>
+    <a href="https://github.com/marcgardent/base-node-language">github.com/marcgardent/base-node-language</a>,
+    MIT OR Apache-2.0. Hosted and sponsored by <a href="https://ludopant.com/">Ludopant Creative Studio</a>.
+  </footer>
+</main>
+</body>
+</html>

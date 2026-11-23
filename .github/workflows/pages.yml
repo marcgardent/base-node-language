@@ -1,3 +1,4 @@
+# The site of the language, https://basenode.ludopant.com/: the files of site/ as they are, nothing built.
 name: Pages
 
 on:
@@ -24,22 +25,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
-        with:
-          toolchain: stable
-          targets: wasm32-unknown-unknown
-      - name: Install wasm-bindgen-cli (the version plugins/blender/web/Cargo.toml pins)
-        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
-      # The site is Base Node for Blender's: plugins/blender/site, served at the root of the domain
-      - name: Build bn-view (plugins/blender/site/view/pkg)
-        run: ./plugins/blender/web/build.sh
-      - name: Write the reference pages (plugins/blender/site/reference, the language's from spec/)
-        run: make docs
       - name: Prepare site
-        run: touch plugins/blender/site/.nojekyll
+        run: touch site/.nojekyll
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
-          path: plugins/blender/site
+          path: site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
