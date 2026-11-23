@@ -1,11 +1,13 @@
 """The reference pages of the site: the language, the targets, the nodes of Blender, the stdlib, the idioms.
 
-    base-node docs [--root .] [--out site/reference]
+    base-node docs [--core <checkout of the core>] [--root .] [--out site/reference]
 
-Everything is read from the repository: `spec/*.md` for the language and the idioms, `targets/*.json`
-for the targets (and `targets/blender/` for the versions and the variants of `blender`), `targets/backends/blender-<x.y>.json` for the nodes of each kind of tree and
-`targets/backends/blender-<x.y>/<module>.json` where each stdlib graph builds (written in Blender by
-`base-node-for-blender/tests/export_backend.py`), and `stdlib/*.bn` with their heads for the modules. No dependency, no Blender: the Pages workflow runs it.
+Everything is read from the checkouts: the language's `spec/*.md` from the core's, and from this
+library's (`root`) its own `spec/*.md` (the targets, the idioms), `targets/*.json` for the targets (and
+`targets/blender/` for the versions and the variants of `blender`), `targets/backends/blender-<x.y>.json`
+for the nodes of each kind of tree and `targets/backends/blender-<x.y>/<module>.json` where each stdlib
+graph builds (written in Blender by `addon/tests/export_backend.py`), and `stdlib/*.bn` with their heads
+for the modules. No dependency, no Blender: the Pages workflow runs it.
 """
 
 from __future__ import annotations
@@ -21,17 +23,19 @@ from base_node.lexer import tokenize, width
 from base_node.manifest import manifest as stdlib_manifest
 from base_node.names import key
 from base_node.parser import parse
-from base_node_blender.targets import ALIASES, BLENDER, NOT_JSON, Blender, Target, catalog
+from .targets import ALIASES, BLENDER, NOT_JSON, Blender, Target, catalog
 
 REPO = "https://github.com/marcgardent/base-node-language"
 KINDS = ("geometry", "shader", "compositor")
 
-# The spec's pages, by the name of their source
-PAGES = {"reference.md": "language.html", "versioning.md": "versioning.html", "idioms.md": "idioms.html",
-         "targets.md": "targets.html"}
+# The spec's pages, by the name of their source: the language's (the core's spec/), then Blender's
+# (this library's spec/)
+PAGES = {"reference.md": "language.html", "versioning.md": "versioning.html", "blender.md": "blender.html",
+         "idioms.md": "idioms.html", "targets.md": "targets.html"}
 
-NAV = (("index.html", "Reference"), ("language.html", "Language"), ("targets.html", "Targets"),
-       ("nodes-geometry.html", "Nodes"), ("stdlib.html", "Stdlib"), ("idioms.html", "Idioms"))
+NAV = (("index.html", "Reference"), ("language.html", "Language"), ("blender.html", "Blender"),
+       ("targets.html", "Targets"), ("nodes-geometry.html", "Nodes"), ("stdlib.html", "Stdlib"),
+       ("idioms.html", "Idioms"))
 
 CSS = """
 :root { color-scheme: dark light; --bg: #0f1115; --panel: #161920; --border: #262b36; --text: #e6e9ef;
@@ -156,25 +160,38 @@ def slug(text):
     return re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", text))
 
 
+def github(path, core):
+    """The address on GitHub of a file of the repository whose checkout is `core`, else None."""
+    path = Path(path).resolve()
+    try:
+        rel = path.relative_to(Path(core).resolve()).as_posix()
+    except ValueError:
+        return None
+    return f"{REPO}/{'tree' if path.is_dir() else 'blob'}/main/{rel}"
+
+
+def spec_dirs(root, core):
+    """The folders of the spec pages: this library's, then the core's."""
+    return [(Path(root) / "spec").resolve(), (Path(core) / "spec").resolve()]
+
+
 class Links:
     """Rewrites the links of a Markdown file: a spec page to its HTML page, a file of the repository to GitHub."""
 
-    def __init__(self, root, source):
-        self.root, self.source = root, source
+    def __init__(self, root, source, core):
+        self.root, self.source, self.core = root, source, core
 
     def __call__(self, url):
         if re.match(r"[a-z]+:|#", url):
             return url
         path, _, anchor = url.partition("#")
         target = (self.source.parent / path).resolve()
-        if target.name in PAGES and target.parent == (self.root / "spec").resolve():
+        if target.name in PAGES and target.parent in spec_dirs(self.root, self.core):
             return PAGES[target.name] + (f"#{anchor}" if anchor else "")
-        try:
-            rel = target.relative_to(self.root.resolve()).as_posix()
-        except ValueError:
+        address = github(target, self.core)
+        if address is None:
             return url
-        kind = "tree" if target.is_dir() else "blob"
-        return f"{REPO}/{kind}/main/{rel}" + (f"#{anchor}" if anchor else "")
+        return address + (f"#{anchor}" if anchor else "")
 
 
 def inline(text, link=lambda u: u):
@@ -359,11 +376,11 @@ def toc_html(toc):
 VIEWS = {"idioms.md"}
 
 
-def spec_page(root, name):
-    source = root / "spec" / name
+def spec_page(root, name, core):
+    source = next((d / name for d in spec_dirs(root, core) if (d / name).is_file()), Path(core) / "spec" / name)
     text = source.read_text(encoding="utf-8")
     toc = []
-    body = markdown(text, Links(root, source), toc, views=name in VIEWS)
+    body = markdown(text, Links(root, source, core), toc, views=name in VIEWS)
     title = next((t for level, _i, t in toc if level == 1), name)
     # The contents after the title
     first = body.find("</h1>")
@@ -404,9 +421,9 @@ def node_link(name, backend):
     return f"<code>{esc(name)}</code>"
 
 
-def targets_page(root, targets, backend):
+def targets_page(root, targets, backend, core):
     targets, b = targets
-    title, spec = spec_page(root, "targets.md")
+    title, spec = spec_page(root, "targets.md", core)
     body = [spec, '<h2 id="every-target">Every target<a class="anchor" href="#every-target">#</a></h2>']
     codes = lambda xs: ", ".join(f"<code>{esc(x)}</code>" for x in xs) or "—"
     link = lambda name: f'<a href="#{anchor_of(name)}">{esc(name)}</a>'
@@ -638,7 +655,7 @@ def default_text(p):
     return value_text(v)
 
 
-def module_page(root, module, info, manifest, backend):
+def module_page(root, module, info, manifest, backend, core):
     source = (root / "stdlib" / info["file"]).read_text(encoding="utf-8")
     tree = parse(source, info["file"])
     builds = backend["stdlib"].get(module, {})
@@ -651,8 +668,8 @@ def module_page(root, module, info, manifest, backend):
                 f'<tr><th>Version</th><td>{esc(info.get("version", ""))} (edition {esc(info.get("edition", ""))})</td></tr>'
                 f"<tr><th>Depends on</th><td>{deps}</td></tr>"
                 f'<tr><th>Import</th><td><code>use {esc(module)}</code> or <code>use {esc(module)} (name, …)</code></td></tr>'
-                f'<tr><th>Source</th><td><a href="{REPO}/blob/main/stdlib/{info["file"]}"><code>stdlib/{info["file"]}</code></a>'
-                + "".join(f' · example <a href="{REPO}/blob/main/{e.relative_to(root).as_posix()}"><code>{e.relative_to(root).as_posix()}</code></a>' for e in examples)
+                f'<tr><th>Source</th><td><a href="{github(root / "stdlib" / info["file"], core)}"><code>stdlib/{info["file"]}</code></a>'
+                + "".join(f' · example <a href="{github(e, core)}"><code>{e.relative_to(root).as_posix()}</code></a>' for e in examples)
                 + "</td></tr></tbody></table>")
     for p in module_intro(source):
         body.append(f"<p>{inline(p)}</p>")
@@ -736,23 +753,24 @@ def index_page(manifest, backend, targets):
             + "</div>")
 
 
-def build(root, out):
-    """Write the reference pages of the repository at `root` into `out`. Returns the paths written."""
-    root, out = Path(root), Path(out)
+def build(root, out, core):
+    """Write the reference pages of this library's checkout at `root` into `out`, the language's from
+    the checkout of the core at `core`. Returns the paths written."""
+    root, out, core = Path(root), Path(out), Path(core)
     manifest = stdlib_manifest(root / "stdlib")
     backend = catalog(root)
     targets = read_targets(root)
     version = manifest.get("stdlib_version", "")
     pages = {"index.html": ("Reference", index_page(manifest, backend, targets)),
-             "targets.html": targets_page(root, targets, backend),
+             "targets.html": targets_page(root, targets, backend, core),
              "stdlib.html": ("Standard library", stdlib_page(manifest, backend))}
     for name, target in PAGES.items():
         if target not in pages:  # targets.html is its spec and the targets
-            pages[target] = spec_page(root, name)
+            pages[target] = spec_page(root, name, core)
     for kind in KINDS:
         pages[f"nodes-{kind}.html"] = (f"{kind} nodes", nodes_page(kind, backend, targets))
     for module, info in manifest["modules"].items():
-        pages[f"stdlib-{module}.html"] = (module, module_page(root, module, info, manifest, backend))
+        pages[f"stdlib-{module}.html"] = (module, module_page(root, module, info, manifest, backend, core))
     out.mkdir(parents=True, exist_ok=True)
     written = []
     for name, (title, body) in pages.items():

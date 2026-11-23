@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "base-node-blender"
+version = "1.0.0rc7"
+description = "Base Node (.bn) for Blender: its nodes, the checker, the targets, and their commands for base-node"
+readme = "README.md"
+authors = [{ name = "Marc Gardent" }]
+license = "MIT OR Apache-2.0"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics",
+]
+# The core of the language, of the same version
+dependencies = ["base-node==1.0.0rc7"]
+
+# base-node finds the commands of this library here (base_node_cli.cli)
+[project.entry-points."base_node.cli"]
+blender = "base_node_blender.cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["base_node_blender"]
+
+[tool.setuptools.package-data]
+base_node_blender = [
+  "py.typed", "_targets/*.json", "_targets/*/*.bn",
+  # The blender target: the catalog of each version of Blender, and its variants
+  "_targets/blender/*.json",
+  # What each version of Blender reported of its nodes: their sockets, for base-node fmt --names
+  "_targets/backends/*.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

@@ -1,6 +1,8 @@
 # base-node
 
-Python reference implementation of Base Node (`.bn`), a text format for node graphs: parser, formatter, target checker and CLI, with no dependency.
+Python reference implementation of Base Node (`.bn`), a text format for node graphs: the core of the
+language (parser, formatter) and its command line, with no dependency. It knows no destination: a host
+library gives a text its meaning for one, and adds its commands to `base-node`.
 
 ```bn
 geometry graph relief(geometry: Geometry, height: Float = 0.4 in 0.0..2.0) -> Geometry {
@@ -20,26 +22,22 @@ pip install "base-node @ git+https://github.com/marcgardent/base-node-language.g
 ```bash
 base-node fmt file.bn
 base-node fmt --check file.bn
-base-node fmt --names file.bn          # and the inputs of Blender's nodes by name, without Blender
-base-node check file.bn                # its @target, or the targets it fits
-base-node check --target "blender gltf" file.bn
-base-node check --target blender@latest file.bn   # the newest Blender this version knows
+base-node parse file.bn
 base-node ast file.bn
-base-node docs                 # the site's reference pages, from a checkout of the repository
 ```
+
+A host library installed adds its commands: its distribution declares a module with
+`extend(subparsers, commands)` as an entry point of the group `base_node.cli`.
 
 ## Library
 
 ```python
-import base_node as bn              # the core: the text, knowing no destination
-import base_node_blender as blender  # Blender's nodes, the checker, the targets
+import base_node as bn  # the core: the text, knowing no destination
 
 ast = bn.parse(source)
 formatted = bn.format_source(source)
-issues = blender.check_target(ast, "blender gltf")  # [] when it fits
-fits = blender.infer(ast).fits             # target -> None, or the target it translates from
 ```
 
-The language, the targets, the standard library and the Blender extension are described in the repository: <https://github.com/marcgardent/base-node-language>.
+The language is described in the repository: <https://github.com/marcgardent/base-node-language>.
 
 License: MIT OR Apache-2.0.

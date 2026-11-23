@@ -2,7 +2,7 @@
 
 targets/backends/blender-<x.y>.json holds, for each node of each kind of tree, its settings, the inputs
 and outputs of a new node, and the inputs each setting that changes them makes (`variants`), as
-base-node-for-blender/tests/export_backend.py writes them from Blender. That is enough to find the
+addon/tests/export_backend.py writes them from Blender. That is enough to find the
 input a value goes to, and so to name the inputs of a text on a command line (naming.name_inputs);
 the add-on asks Blender itself (host/schema.py).
 """

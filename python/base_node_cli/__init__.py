@@ -1,1 +1,1 @@
-"""The command line of Base Node: `base-node` (cli.py), and the reference pages it writes (refdoc.py)."""
+"""The command line of Base Node: `base-node` (cli.py), which the host libraries installed extend."""

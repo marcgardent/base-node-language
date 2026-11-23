@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "base-node"
 version = "1.0.0rc7"
-description = "Base Node (.bn) parser, formatter, and target checker"
+description = "Base Node (.bn) parser and formatter: the core of the language, and its command line"
 readme = "README.md"
 authors = [{ name = "Marc Gardent" }]
 license = "MIT OR Apache-2.0"
@@ -22,20 +22,13 @@ base-node = "base_node_cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["base_node*"]
+include = ["base_node", "base_node_cli"]
 
-# base_node is the core of the language, base_node_blender what is Blender's (its nodes, its targets),
-# base_node_cli the command line
+# base_node is the core of the language, base_node_cli the command line: a host library adds its
+# commands to it by an entry point of the group base_node.cli
 [tool.setuptools.package-data]
 base_node = ["py.typed"]
 base_node_cli = ["py.typed"]
-base_node_blender = [
-  "py.typed", "_targets/*.json", "_targets/*/*.bn",
-  # The blender target: the catalog of each version of Blender, and its variants
-  "_targets/blender/*.json",
-  # What each version of Blender reported of its nodes: their sockets, for base-node fmt --names
-  "_targets/backends/*.json",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
