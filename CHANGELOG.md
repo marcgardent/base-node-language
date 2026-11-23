@@ -7,6 +7,53 @@ Versions below 1.0.0 are pre-releases: the text format can change between them.
 
 ## [Unreleased]
 
+### Layout
+
+- Changed: the root of the repository is the core of the language, for developers: `python/` (the
+  distribution `base-node`: `base_node` and the command line `base_node_cli`), `rust/` (the crate
+  `base-node`), `conformance/`, `spec/` (the language only), `tools/`. Base Node for Blender is
+  `plugins/blender/`, on its own: `python/base_node_blender` is `plugins/blender/python/`, with its
+  tests and fixtures; `rust-blender/` is `plugins/blender/rust/`; `base-node-for-blender/` is
+  `plugins/blender/addon/`; `web/`, `targets/`, `stdlib/`, `corpus/`, `examples/` and `site/` are
+  under `plugins/blender/`, and so are `conformance/gltf-cases.json`, `spec/targets.md`,
+  `spec/idioms.md` and the Blender chapters of the reference (`plugins/blender/spec/blender.md`).
+  The baselines of the third-party libraries and the texts of `corpus/v1` are the same files; the
+  site is served at the same addresses.
+
+### Core
+
+- Changed: `base-node` has the commands of the language, `fmt [--check]`, `parse` and `ast`. A host
+  library adds its own through an entry point of the group `base_node.cli`, a module with
+  `extend(subparsers, commands)`: installed with `base-node-blender`, `base-node` has `check`,
+  `fmt --names` and `docs` as before; from a checkout, `python -m base_node_blender.cli` is that
+  `base-node`.
+- Changed: the distribution `base-node` holds `base_node` and `base_node_cli` only.
+
+### Base Node for Blender
+
+- Added: the distribution `base-node-blender`, which depends on `base-node` of the same version; its
+  own Makefile, `tools/bump.py`, version and README; its crates are one workspace whose one path
+  outside it is the core's crate.
+- Added: a library of another destination makes its targets known to Blender's library:
+  `base_node_blender.targets.add_targets(folder)` or an entry point of the group
+  `base_node_blender.targets` in Python, `base_node_blender::targets::add_targets(files, bridges)` in
+  Rust. The target format keeps its translators and bridges.
+- Changed: `base-node docs` reads the language's pages from the checkout of the core (`--core`,
+  default: the one `base_node` is imported from); the reference has a page `blender.html`.
+- Changed: the add-on embeds the core as before; `make addon-lang` links its modules into
+  `addon/lang/`, no longer in git, and the zip holds the same files.
+- Removed: the target `blade` (Blade's Pixel Nodes), its translator from `blender`, its bridge
+  `blender_interop` and its backend tag of `<bn-view>`: they live in its own sources.
+- Changed: the grass of the tutorial `forest_edge` is made of stalks (`stalk`, `Stalks`).
+
+### Tools
+
+- Changed: `tools/bump.py` writes and checks the version of the core, then runs the
+  `tools/bump.py` of each plugin, which writes its own version and the version of the core it needs.
+- Changed: the CI tests the core in a checkout without `plugins/`, and Base Node for Blender in jobs
+  of its own; Pages deploys `plugins/blender/site`. The CI and Pages of Base Node for Blender as a
+  repository of its own are in `plugins/blender/.github/workflows/`, not run here.
+
 ## [1.0.0-rc.7] - 2026-11-22
 
 ### Tests
@@ -243,7 +290,7 @@ a closure or a target; [`spec/versioning.md`](spec/versioning.md) says what 1.0.
 - Changed: a variant of `blender` is tried by the inference only for a text that holds a shader.
 - Added: the catalog of Blender 5.2 LTS. `blender` is now Blender 5.2 LTS and Blender 5.3: a text
   that says `blender` fits both, `blender@5.2-lts` and `blender@lts` name the LTS.
-  [`spec/targets.md`](spec/targets.md#what-blender-53-has-that-blender-52-lts-has-not) lists what
+  [`spec/targets.md`](plugins/blender/spec/targets.md#what-blender-53-has-that-blender-52-lts-has-not) lists what
   5.3 has that 5.2 has not; a text that uses it says `// @target blender@5.3`.
 
 ### Standard library
@@ -327,8 +374,8 @@ a closure or a target; [`spec/versioning.md`](spec/versioning.md) says what 1.0.
 
 - Changed: profiles become targets: what a destination accepts, inferred from the text, promised
   with `@target`. The targets are `blender-geometry`, `blender-shader`, `blender-compositor`,
-  `blender-gp`, `gltf` (checked against Blender's glTF exporter) and `blade`, with bridges between
-  them. A text no longer starts with `@profile`.
+  `blender-gp`, `gltf` (checked against Blender's glTF exporter) and a target of another
+  destination, with bridges between them. A text no longer starts with `@profile`.
 - Added: templates, graphs generic over a value's type, built as one group per use.
 - Added: a tuple chooses the type of a Switch, Mix or Compare.
 - Added: a shader graph that is a material is set by its bare name from a geometry graph of the

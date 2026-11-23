@@ -51,7 +51,7 @@ shader(material: true) graph Stone() -> (surface: Shader) {
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.85))
 }
 
-shader(material: true) graph Blades() -> (surface: Shader) {
+shader(material: true) graph Stalks() -> (surface: Shader) {
   tint = Mix[RGBA](factor: ObjectInfo().random, a: (0.08, 0.18, 0.03), b: (0.24, 0.26, 0.08))
   return (surface: PrincipledBSDF(base_color: tint, roughness: 0.6))
 }
@@ -148,20 +148,20 @@ geometry graph rock() -> Geometry {
     |> SetMaterial(material: Stone)
 }
 
-geometry graph blade(turn: Float, lean: Float = 0.3, height: Float = 0.6) -> Geometry {
-  "A blade of grass, leant away from the middle of its tuft"
+geometry graph stalk(turn: Float, lean: Float = 0.3, height: Float = 0.6) -> Geometry {
+  "A stalk of grass, leant away from the middle of its tuft"
   return Cone(vertices: 3, radius_bottom: 0.035, depth: height).mesh
     |> TransformGeometry(rotation: CombineXYZ(x: lean, z: turn))
 }
 
 geometry graph tuft() -> Geometry {
-  "Five blades of grass"
-  blades = blade(turn: 0.0, lean: 0.1, height: 0.7)
-    + blade(turn: 1.3)
-    + blade(turn: 2.5, lean: 0.4, height: 0.5)
-    + blade(turn: 3.8, height: 0.65)
-    + blade(turn: 5.0, lean: 0.45, height: 0.45)
-  return SetMaterial(blades, material: Blades)
+  "Five stalks of grass"
+  stalks = stalk(turn: 0.0, lean: 0.1, height: 0.7)
+    + stalk(turn: 1.3)
+    + stalk(turn: 2.5, lean: 0.4, height: 0.5)
+    + stalk(turn: 3.8, height: 0.65)
+    + stalk(turn: 5.0, lean: 0.45, height: 0.45)
+  return SetMaterial(stalks, material: Stalks)
 }
 
 geometry graph tag(instances: Geometry, layer: Int) -> Geometry {
